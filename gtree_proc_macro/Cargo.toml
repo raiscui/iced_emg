@@ -1,0 +1,17 @@
+[package]
+name = "gtree_proc_macro"
+version = "0.1.0"
+authors = ["cuiluming <cuiluming@chaoway.net>"]
+edition = "2018"
+publish = false
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro = true
+
+[dependencies]
+gtree_macro = { path = "../gtree_macro" }
+syn = { version = "1", features = ["full" ] }
+
+proc-macro2 = { version = "1.0", features = ["nightly"] }
+quote = "1"
