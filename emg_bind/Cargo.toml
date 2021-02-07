@@ -14,7 +14,7 @@ iced = { path = "../../iced" }
 emg  = { path = "../../emg"}
 functionate ={ path="../../functionate"}
 overloadf ={ path="../../overloadf"}
-illicit="1.1.1"
+illicit="1.1.2"
 log = "0.4"
 console_log = { version = "0.2", features = ["color"] }
 
