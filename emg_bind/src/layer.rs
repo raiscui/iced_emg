@@ -42,6 +42,11 @@ impl<'a, Message> Layer<'a, Message> {
         }
     }
 
+    pub fn set_children(mut self, children: Vec<Element<'a, Message>>) -> Self {
+        self.children = children;
+        self
+    }
+
     /// Sets the vertical spacing _between_ elements.
     ///
     /// Custom margins per element do not exist in Iced. You should use this
@@ -61,6 +66,13 @@ impl<'a, Message> Layer<'a, Message> {
     }
 
     pub fn push<E>(mut self, child: E) -> Self
+    where
+        E: Into<Element<'a, Message>>,
+    {
+        self.children.push(child.into());
+        self
+    }
+    pub fn ref_push<E>(&mut self, child: E) -> &mut Self
     where
         E: Into<Element<'a, Message>>,
     {
@@ -145,3 +157,4 @@ where
         Element::new(layer)
     }
 }
+

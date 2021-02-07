@@ -15,9 +15,11 @@ emg  = { path = "../../emg"}
 functionate ={ path="../../functionate"}
 overloadf ={ path="../../overloadf"}
 illicit="1.1.1"
-
+log = "0.4"
+console_log = { version = "0.2", features = ["color"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 iced_web = { version = "0.3", path = "../../iced/web" }
+uuid = { version = "0.8", features = [ "v4","wasm-bindgen"] }
 
 

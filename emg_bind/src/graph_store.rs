@@ -1,12 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-04 11:48:04
+ * @LastEditTime: 2021-02-07 13:06:54
  * @LastEditors: Rais
  * @Description:
  */
 pub use emg::Graph;
 pub use emg::NodeIndex;
+use emg::Outgoing;
 
 use crate::{runtime::Element, runtime::Widget, Layer};
 
@@ -14,25 +15,55 @@ use anymap::any::CloneAny;
 use std::hash::Hash;
 use std::{cell::RefCell, rc::Rc};
 
+use log;
+use log::Level;
+
+pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
+pub type E = String;
+pub type GraphType<'a, Message> = Graph<N<'a, Message>, E>;
+
 thread_local! {
     pub static G_STORE: RefCell<GStore> = RefCell::new(
          GStore::default()
     );
 }
 
+// impl<'a, T, Message> From<T> for Element<'a, Message>
+// where
+//     Message: 'static + Clone,
+//     T: Into<Element<'a, Message>> + Clone,
+// {
+//     fn from(can_into_element: &T) -> Element<'a, Message> {
+//         can_into_element.clone().into()
+//     }
+// }
+
 pub use GElement::{GContainer, GSurface};
+
 #[derive(Clone, Debug)]
 pub enum GElement<'a, Message> {
     GContainer(Layer<'a, Message>),
     GSurface(Element<'a, Message>),
 }
+// impl<'a, Message> Into<Element<'a, Message>> for GElement<'a, Message>
+// where
+//     Message: 'static + Clone,
+// {
+//     fn into(self) -> Element<'a, Message> {
+//         match self {
+//             GElement::GContainer(l) => l.into(),
 
-impl<'a, Message> Into<Element<'a, Message>> for GElement<'a, Message>
+//             GElement::GSurface(e) => e,
+//         }
+//     }
+// }
+
+impl<'a, Message> From<GElement<'a, Message>> for Element<'a, Message>
 where
     Message: 'static + Clone,
 {
-    fn into(self) -> Element<'a, Message> {
-        match self {
+    fn from(ge: GElement<'a, Message>) -> Element<'a, Message> {
+        match ge {
             GElement::GContainer(l) => l.into(),
 
             GElement::GSurface(e) => e,
@@ -52,24 +83,35 @@ pub trait GraphStore<'a, Message> {
     type E;
     fn init();
     fn get_mut_graph_with<F: FnOnce(&mut Self) -> R, R>(func: F) -> R;
-    fn add_el(&mut self, key: Self::Ix, e_item: Self::E, n_item: Self::N) -> NodeIndex<Self::Ix>
-    where
-        Self::Ix: Clone;
+    // fn add_el(&mut self, key: Self::Ix, e_item: Self::E, n_item: Self::N) -> NodeIndex<Self::Ix>
+    // where
+    //     Self::Ix: Clone;
+
+    fn g_element_to_el(
+        &self,
+        ix: &Self::Ix,
+        current_node: &RefCell<GElement<'a, Message>>,
+    ) -> Element<'a, Message>;
+
+    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<Element<'a, Message>>;
+
     fn view(ix: Self::Ix) -> Element<'a, Message>;
 }
 
-impl<'a, Message, E, Ix> GraphStore<'a, Message> for Graph<Rc<GElement<'a, Message>>, E, Ix>
+impl<'a, Message, E, Ix> GraphStore<'a, Message> for Graph<RefCell<GElement<'a, Message>>, E, Ix>
 where
     Ix: Clone + Hash + Eq + std::fmt::Debug,
-    E: Clone,
+    E: Clone + std::fmt::Debug,
     // N: Clone,
     Self: 'static,
-    Message: 'static + Clone,
+    Message: 'static + Clone + std::fmt::Debug,
 {
     type Ix = Ix;
-    type N = Rc<GElement<'a, Message>>;
+    type N = RefCell<GElement<'a, Message>>;
     type E = E;
     fn init() {
+        console_log::init_with_level(Level::Debug).ok();
+
         G_STORE.with(|g_store_refcell| {
             // g_store_refcell.borrow_mut().set_graph(g);
             g_store_refcell.borrow_mut().set_graph(Self::default());
@@ -86,15 +128,35 @@ where
         })
     }
 
-    fn add_el(&mut self, key: Self::Ix, e_item: Self::E, n_item: Self::N) -> NodeIndex<Self::Ix> {
-        match illicit::get::<NodeIndex<Self::Ix>>() {
-            Ok(p_nix) => {
-                let nix = self.insert_node(key, n_item);
-                self.insert_update_edge(&*p_nix, &nix, e_item);
-                nix
+    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<Element<'a, Message>> {
+        self.edges_iter_use_ix(cix, Outgoing)
+            .map(|eix| {
+                let child_ix = eix.ix_dir(Outgoing);
+                let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
+                self.g_element_to_el(child_ix, a_child)
+            })
+            .collect()
+    }
+
+    fn g_element_to_el(
+        &self,
+        cix: &Self::Ix,
+        current_node: &RefCell<GElement<'a, Message>>,
+    ) -> Element<'a, Message> {
+        let cn = &*current_node.borrow();
+        match cn {
+            GContainer(layer) => {
+                let op_layer = layer.clone();
+
+                op_layer.set_children(self.children_to_elements(cix)).into()
             }
-            Err(_) => self.insert_node(key, n_item),
+            GSurface(el) => {
+                log::info!("el:{:?}", &el);
+                el.clone()
+            }
         }
+
+        // current_node.clone().into_inner().into()
     }
 
     fn view(ix: Self::Ix) -> Element<'a, Message> {
@@ -103,10 +165,13 @@ where
             g_store_refcell
                 .borrow_mut()
                 .get_mut_graph_with(|g: &mut Self| {
-                    let rc_e = g.get_mut_node_weight_use_ix(ix).unwrap();
+                    log::info!("graph==> {:#?}", &g);
+                    let rc_e = g.get_node_weight_use_ix(&ix).unwrap();
+
                     // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
                     // rc_e.clone().into()
-                    Rc::make_mut(rc_e).clone().into()
+                    // Rc::make_mut(rc_e).clone().into()
+                    g.g_element_to_el(&ix, rc_e)
                 })
         })
     }

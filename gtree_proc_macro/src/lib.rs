@@ -13,3 +13,14 @@ pub fn gtree(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         Err(err) => proc_macro::TokenStream::from(err.to_compile_error()),
     }
 }
+
+// #![feature(proc_macro_diagnostic)]
+#[proc_macro]
+pub fn gview(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let item = parse_macro_input!(input as proc_macro2::TokenStream);
+
+    match gtree_macro::gview_macro(item) {
+        Ok(tokens) => tokens.into(),
+        Err(err) => proc_macro::TokenStream::from(err.to_compile_error()),
+    }
+}
