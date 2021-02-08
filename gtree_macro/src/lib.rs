@@ -2,7 +2,7 @@
 
 use proc_macro2::TokenStream;
 // use quote::{quote, ToTokens};
-use proc_quote::{quote, quote_spanned, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
@@ -21,53 +21,9 @@ pub mod kw {
     //     }
     // }
 }
+
 // ────────────────────────────────────────────────────────────────────────────────
 
-// syn::custom_punctuation!(LayerSeparator, |);
-
-// // expr |- expr, |- expr |- expr ,...
-// #[allow(dead_code)]
-// struct LayerSegments {
-//     segments: Punctuated<GLayer, LayerSeparator>,
-// }
-
-// impl Parse for LayerSegments {
-//     fn parse(input: ParseStream) -> syn::Result<Self> {
-//         let mut segments = Punctuated::new();
-//         println!("l1");
-
-//         let first = parse_until(input, LayerSeparator)?;
-//         println!("l2:{}", &input);
-//         println!("l2:{}", &first);
-//         println!("l2:{:#?}", &first);
-//         // let ff = syn::parse2(first)?;
-
-//         segments.push_value(syn::parse2::<GLayer>(first)?);
-//         println!("l2.1");
-
-//         while !input.is_empty() && input.peek(LayerSeparator) {
-//             println!("in l3.0");
-
-//             segments.push_punct(input.parse()?);
-//             println!("l3");
-
-//             let next = parse_until(input, LayerSeparator)?;
-//             segments.push_value(syn::parse2(next)?);
-//             println!("l4");
-//         }
-
-//         Ok(LayerSegments { segments })
-//     }
-// }
-
-// fn parse_until<E: Peek>(input: ParseStream, end: E) -> syn::Result<TokenStream> {
-//     let mut tokens = TokenStream::new();
-//     while !input.is_empty() && !input.peek(end) {
-//         let next: TokenTree = input.parse()?;
-//         tokens.extend(Some(next));
-//     }
-//     Ok(tokens)
-// }
 #[derive(Debug, Clone)]
 enum GTreeElement {
     GL(GTreeLayerStruct),
@@ -108,7 +64,7 @@ pub struct GTreeSurface {
 }
 impl Parse for GTreeSurface {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        println!("GSurface:{}", input);
+        //println!("GSurface:{}", input);
         Ok(GTreeSurface {
             expr: input.parse()?,
         })
@@ -121,7 +77,7 @@ impl ToTokens for GTreeSurface {
         // println!("expr===={:?}", self.expr);
 
         quote_spanned!(
-            expr.span()=> GTreeBuilderElement::El(#expr.into())
+            expr.span()=> GTreeBuilderElement::TreeEl(#expr.into())
         )
         .to_tokens(tokens)
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
@@ -130,43 +86,48 @@ impl ToTokens for GTreeSurface {
 }
 
 // @ GTreeLayerStruct ────────────────────────────────────────────────────────────────────────────────
-type ChildrenType = Punctuated<GTreeElement, Token![,]>;
+type ChildrenType = Option<Punctuated<GTreeElement, Token![,]>>;
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct GTreeLayerStruct {
     layer: kw::Layer,
     id: syn::LitStr,
-    bracket: token::Bracket,
     children: ChildrenType,
 }
+// TODO make id Option,
+/*
+Uuid::new_v4()
+.to_simple()
+.encode_lower(&mut Uuid::encode_buffer())
+.to_string()
+*/
 
 impl Parse for GTreeLayerStruct {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        println!("in GLayer");
         let layer = input.parse::<kw::Layer>()?;
-        println!("1");
 
         let id = input.parse::<syn::LitStr>()?;
-        println!("2");
-        // if input.is_empty() {
-        //     return Ok(GLayer {
-        //         id: layer_id,
-        //         children: Punctuated::new(),
-        //     });
-        // }
 
-        println!("input {:?}", &input);
+        if input.peek(Token![,]) {
+            // if input.is_empty() {
+            return Ok(GTreeLayerStruct {
+                layer,
+                id,
+                children: None,
+            });
+        }
+
+        //println!("input {:?}", &input);
         let content;
-        let bracket = bracketed!(content in input);
-        println!("brace_token=>{:?}", &bracket);
-        let children: ChildrenType = content.parse_terminated(GTreeElement::parse)?;
-        println!("children:=>{:?}", &children);
+        let _bracket = bracketed!(content in input);
+        //println!("brace_token=>{:?}", &bracket);
+        let children: ChildrenType = Some(content.parse_terminated(GTreeElement::parse)?);
+        //println!("children:=>{:?}", &children);
         // println!("children op :=>{}", quote!(  #children));
 
         Ok(GTreeLayerStruct {
             layer,
             id,
-            bracket,
             children,
         })
     }
@@ -177,17 +138,16 @@ impl ToTokens for GTreeLayerStruct {
         let GTreeLayerStruct {
             layer,
             id,
-            bracket,
             children,
         } = self;
         let children_iter = children.iter();
         let g_tree_builder_element_layer_token =
-            quote_spanned! {layer.span()=>GTreeBuilderElement::#layer};
+            quote_spanned! {layer.span()=>GTreeBuilderElement::TreeLayer};
         let id_token = quote_spanned! {id.span()=> String::from(#id)};
-        let children_token = quote_spanned! {children.span()=>#(#children_iter),*};
-        let brace_op_token = quote_spanned! {bracket.span=>vec![#children_token]};
+        let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
+        // let brace_op_token = quote_spanned! {children.span()=>vec![#children_token]};
 
-        quote!(#g_tree_builder_element_layer_token(#id_token,#brace_op_token)).to_tokens(tokens)
+        quote!(#g_tree_builder_element_layer_token(#id_token,#children_token)).to_tokens(tokens)
         // quote!(GTreeBuilderElement::#layer(String::from(#id),vec![#(#children_iter),*])).to_tokens(tokens)
     }
 }
@@ -213,9 +173,6 @@ impl Parse for Gtree {
 
         let root = input.parse::<GTreeLayerStruct>()?;
 
-        println!("alayer");
-
-        println!("gtree end");
         Ok(Gtree { root })
     }
 }
@@ -228,7 +185,6 @@ impl Parse for Gtree {
 
 impl ToTokens for Gtree {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        println!("gtree to tokens");
         let Gtree { root } = self;
 
         // fn pp<A: std::fmt::Debug>(layer: &NodeList<A>) {
@@ -257,25 +213,22 @@ impl ToTokens for Gtree {
                 // ─────────────────────────────────────────────────────────────────
 
                 #[derive(Debug)]
-                enum GTreeBuilderElement<'a>
-
-                {
-                    Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
-                    El(Element<'a, Message>),
+                enum GTreeBuilderElement<'a, Message> {
+                    TreeLayer(String, Vec<GTreeBuilderElement<'a, Message>>),
+                    TreeEl(Element<'a, Message>),
                 }
 
                 // • • • • •
 
 
-                fn handle_root<'a, ToIx, Message>(
+                fn handle_root<'a, Message>(
                     g: &mut GraphType<'a, Message>,
-                    treelayer: &GTreeBuilderElement<'a, ToIx, Message>,
+                    treelayer: &GTreeBuilderElement<'a, Message>,
                 ) where
                     Message: Clone + std::fmt::Debug,
-                    ToIx: ToString + std::fmt::Debug + Clone + std::fmt::Display,
                 {
                     match treelayer {
-                        GTreeBuilderElement::Layer(id, children_list) => {
+                        GTreeBuilderElement::TreeLayer(id, children_list) => {
                             log::info!("{:?}==>{:?}", id.to_string(), children_list);
                             let nix = g.insert_node(
                                 id.to_string(),
@@ -294,21 +247,20 @@ impl ToTokens for Gtree {
                                     .for_each(|child_layer| handle_layer(g, child_layer));
                             });
                         }
-                        GTreeBuilderElement::El(surface) => {
+                        GTreeBuilderElement::TreeEl(surface) => {
                             panic!("not allow this {:?}, first element must layer ", surface)
                         }
                     };
                 }
-                fn handle_layer<'a, ToIx, Message>(
+                fn handle_layer<'a, Message>(
                     g: &mut GraphType<'a, Message>,
-                    treelayer: &GTreeBuilderElement<'a, ToIx, Message>,
+                    treelayer: &GTreeBuilderElement<'a, Message>,
                 ) where
                     Message: Clone + std::fmt::Debug,
-                    ToIx: ToString + std::fmt::Debug + Clone + std::fmt::Display,
                 {
                     let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
                     match treelayer {
-                        GTreeBuilderElement::Layer(id, children_list) => {
+                        GTreeBuilderElement::TreeLayer(id, children_list) => {
                             log::info!("{:?}==>{:?}", id.to_string(), children_list);
                             let nix = g.insert_node(
                                 id.to_string(),
@@ -329,7 +281,7 @@ impl ToTokens for Gtree {
                                     .for_each(|child_layer| handle_layer(g, child_layer));
                             });
                         }
-                        GTreeBuilderElement::El(surface) => {
+                        GTreeBuilderElement::TreeEl(surface) => {
                             let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
                             let nix = g.insert_node(
                                 Uuid::new_v4()
@@ -341,7 +293,6 @@ impl ToTokens for Gtree {
                             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
                             log::info!("{}", &edge);
                             g.insert_update_edge(&*parent_nix, &nix, edge);
-
                         }
                     };
                 }
@@ -369,9 +320,6 @@ impl ToTokens for Gtree {
 
 
 
-                println!(" {:#?}",&children);
-                // pp(&children);
-                log::info!("info==={:#?}",&children);
 
 
             }
@@ -383,11 +331,7 @@ impl ToTokens for Gtree {
 /// @ gtree_macro ────────────────────────────────────────────────────────────────────────────────
 pub fn gtree_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
     let output = syn::parse2::<Gtree>(item)?;
-    // let token = output.to_token_stream();
-    let token = quote_spanned! { output.span()=>#output};
-
-    println!("token: {}", &token);
-    Ok(token)
+    Ok(quote_spanned! { output.span()=>#output})
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -420,9 +364,7 @@ impl ToTokens for Gview {
 /// @ gview_macro ────────────────────────────────────────────────────────────────────────────────
 pub fn gview_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
     let output = syn::parse2::<Gview>(item)?;
-    let token = quote_spanned! { output.span()=>#output};
-    println!("token: {}", &token);
-    Ok(token)
+    Ok(quote_spanned! { output.span()=>#output})
 }
 // @ test ────────────────────────────────────────────────────────────────────────────────
 
@@ -445,7 +387,7 @@ mod tests {
             Layer "b" [
                 Layer "c" [],
                 Layer "d" [],
-                Text::new(format!("in quote..{}", id))
+                Text::new(format!("in quote..{}", "b"))
             ]
         ]
 
