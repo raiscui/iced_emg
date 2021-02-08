@@ -15,3 +15,4 @@ syn = { version = "1", features = ["full" ] }
 
 proc-macro2 = { version = "1.0", features = ["nightly"] }
 quote = "1"
+proc-quote = "0.3.2"
