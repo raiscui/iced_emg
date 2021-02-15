@@ -14,6 +14,7 @@ pub mod kw {
     // use std::fmt::Debug;
 
     syn::custom_keyword!(Layer);
+    syn::custom_keyword!(RealTimeUpdaterFor);
 
     // impl Debug for layer {
     //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -22,36 +23,64 @@ pub mod kw {
     // }
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
+// @ GClosure ────────────────────────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
-enum GTreeElement {
-    GL(GTreeLayerStruct),
-    GS(GTreeSurface),
-    OtherExpr(syn::Expr),
+pub struct GTreeClosure {
+    closure: syn::ExprClosure,
 }
-impl Parse for GTreeElement {
+impl Parse for GTreeClosure {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // use syn::ext::IdentExt;
-
-        // if input.peek(kw::layer) {
-        if input.peek(kw::Layer) {
-            Ok(GTreeElement::GL(input.parse()?))
-        } else if input.peek(Ident::peek_any) {
-            Ok(GTreeElement::GS(input.parse()?))
+        //println!("GSurface:{}", input);
+        let ec = input.parse::<syn::ExprClosure>()?;
+        if ec.inputs.is_empty() {
+            Ok(GTreeClosure { closure: ec })
         } else {
-            Ok(GTreeElement::OtherExpr(input.parse()?))
+            Err(input.error("closure argument must be empty"))
         }
     }
 }
-
-impl ToTokens for GTreeElement {
+impl ToTokens for GTreeClosure {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self {
-            Self::GL(layer_struct) => layer_struct.to_tokens(tokens),
-            Self::GS(surface) => surface.to_tokens(tokens),
-            Self::OtherExpr(expr) => expr.to_tokens(tokens),
-        }
+        let GTreeClosure { closure } = self;
+
+        quote_spanned!(
+            closure.span()=> GTreeBuilderElement::TreeCl(#closure)
+        )
+        .to_tokens(tokens)
+    }
+}
+// @ GUpdater ────────────────────────────────────────────────────────────────────────────────
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub struct GRealTimeUpdaterFor {
+    kws: kw::RealTimeUpdaterFor,
+    closure: syn::ExprClosure,
+}
+impl Parse for GRealTimeUpdaterFor {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        //println!("GSurface:{}", input);
+        input.parse::<kw::RealTimeUpdaterFor>()?;
+        Ok(GRealTimeUpdaterFor {
+            kws: input.parse()?,
+            closure: input.parse()?,
+        })
+    }
+}
+impl ToTokens for GRealTimeUpdaterFor {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let GRealTimeUpdaterFor { kws, closure } = self;
+
+        let closure_token = quote_spanned!(
+            closure.span()=> Rc::new(#closure)
+        );
+        let kw_token = quote_spanned! {kws.span()=><#kws>::new(#closure_token)};
+
+        kw_token.to_tokens(tokens)
+        // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
+        // quote!(GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
     }
 }
 
@@ -61,32 +90,91 @@ impl ToTokens for GTreeElement {
 #[derive(Debug, Clone)]
 pub struct GTreeSurface {
     expr: syn::Expr,
+    children: ChildrenType,
 }
 impl Parse for GTreeSurface {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         //println!("GSurface:{}", input);
-        Ok(GTreeSurface {
-            expr: input.parse()?,
-        })
+        let expr = input.parse::<syn::Expr>()?;
+        if input.peek(token::FatArrow) {
+            input.parse::<token::FatArrow>()?; //=>
+                                               // []
+            if input.peek(token::Bracket) {
+                println!("=>[] find");
+                let content;
+                let _bracket = bracketed!(content in input);
+                let children: ChildrenType =
+                    Some(content.parse_terminated(GTreeMacroElement::parse)?);
+                Ok(GTreeSurface { expr, children })
+            } else {
+                Err(input.error("还没有完成 直接 单一 无[] 的后缀"))
+            }
+        } else {
+            Ok(GTreeSurface {
+                expr,
+                children: None,
+            })
+        }
     }
 }
 impl ToTokens for GTreeSurface {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         // self.expr.to_tokens(tokens)
-        let GTreeSurface { expr } = self;
+        let GTreeSurface { expr, children } = self;
         // println!("expr===={:?}", self.expr);
 
-        quote_spanned!(
-            expr.span()=> GTreeBuilderElement::TreeEl(#expr.into())
-        )
+        let children_iter = children.iter();
+        let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
+
+        // TreeWhoWithUpdater
+        quote_spanned! (expr.span() => GtreeBuilderElement::TreeWhoWithUpdater(#expr,#children_token))
         .to_tokens(tokens)
-        // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
-        // quote!(GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
+    }
+}
+
+// @ GTreeElement ────────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+enum GTreeMacroElement {
+    GL(GTreeLayerStruct),
+    GS(GTreeSurface),
+    RT(GRealTimeUpdaterFor),
+    GC(GTreeClosure),
+    OtherExpr(syn::Expr),
+}
+impl Parse for GTreeMacroElement {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        // use syn::ext::IdentExt;
+
+        if input.peek(kw::Layer) {
+            Ok(GTreeMacroElement::GL(input.parse()?))
+        } else if input.peek(kw::RealTimeUpdaterFor) {
+            Ok(GTreeMacroElement::RT(input.parse()?))
+        } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
+            Ok(GTreeMacroElement::GC(input.parse()?))
+        } else if input.peek(Ident::peek_any) {
+            Ok(GTreeMacroElement::GS(input.parse()?))
+        } else {
+            panic!("can't know what is");
+            // Ok(GTreeMacroElement::OtherExpr(input.parse()?))
+        }
+    }
+}
+
+impl ToTokens for GTreeMacroElement {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::GL(layer_struct) => layer_struct.to_tokens(tokens),
+            Self::GS(surface) => surface.to_tokens(tokens),
+            Self::RT(realtime_update_in) => realtime_update_in.to_tokens(tokens),
+            Self::GC(closure) => closure.to_tokens(tokens),
+            Self::OtherExpr(expr) => expr.to_tokens(tokens),
+        }
     }
 }
 
 // @ GTreeLayerStruct ────────────────────────────────────────────────────────────────────────────────
-type ChildrenType = Option<Punctuated<GTreeElement, Token![,]>>;
+type ChildrenType = Option<Punctuated<GTreeMacroElement, Token![,]>>;
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct GTreeLayerStruct {
@@ -121,7 +209,7 @@ impl Parse for GTreeLayerStruct {
         let content;
         let _bracket = bracketed!(content in input);
         //println!("brace_token=>{:?}", &bracket);
-        let children: ChildrenType = Some(content.parse_terminated(GTreeElement::parse)?);
+        let children: ChildrenType = Some(content.parse_terminated(GTreeMacroElement::parse)?);
         //println!("children:=>{:?}", &children);
         // println!("children op :=>{}", quote!(  #children));
 
@@ -196,12 +284,12 @@ impl ToTokens for Gtree {
         //     };
         // }
         let token = quote_spanned! {root.span()=> {
-            {
+
                 use std::{cell::RefCell, rc::Rc};
                 use gtree::log::Level;
                 use gtree::log;
                 use gtree::illicit;
-                use emg_bind::{Uuid,runtime::Text,runtime::Element,GElement, Graph, GraphStore, Layer,E,N,GraphType};
+                use emg_bind::{Uuid,runtime::Text,runtime::Element,runtime::Widget,GElement, Graph, GraphStore, Layer,E,N,GraphType};
                 use GElement::{GContainer, GSurface};
 
 
@@ -216,6 +304,8 @@ impl ToTokens for Gtree {
                 enum GTreeBuilderElement<'a, Message> {
                     TreeLayer(String, Vec<GTreeBuilderElement<'a, Message>>),
                     TreeEl(Element<'a, Message>),
+                    TreeWhoWithUpdater<Use>(Box<dyn UpdateUse + Widget<Message> + Into<Element<'a, Message>>,Vec<RealTimeUpdater<Use>>),
+                    TreeCl(Fn)
                 }
 
                 // • • • • •
@@ -322,7 +412,7 @@ impl ToTokens for Gtree {
 
 
 
-            }
+
         }};
         token.to_tokens(tokens)
     }
@@ -354,9 +444,22 @@ impl ToTokens for Gview {
         // self.expr.to_tokens(tokens)
         let Gview { root_ix } = self;
         quote!({
-            use emg_bind::{GraphType};
+            use emg_bind::GraphType;
             GraphType::<Message>::view( #root_ix .to_string() )
 
+            // G_STORE.with(|g_store_refcell| {
+            //     // g_store_refcell.borrow_mut().set_graph(g);
+            //     g_store_refcell
+            //         .borrow_mut()
+            //         .get_mut_graph_with(|g: &mut GraphType| {
+            //             log::info!("graph==> {:#?}", &g);
+
+            //             // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
+            //             // rc_e.clone().into()
+            //             // Rc::make_mut(rc_e).clone().into()
+            //             g.g_element_to_el(&cix)
+            //         })
+            // })
         })
         .to_tokens(tokens)
     }
@@ -387,7 +490,9 @@ mod tests {
             Layer "b" [
                 Layer "c" [],
                 Layer "d" [],
-                Text::new(format!("in quote..{}", "b"))
+                Text::new(format!("in quote..{}", "b")) => [
+                    RealTimeUpdater ||{99}
+                ]
             ]
         ]
 

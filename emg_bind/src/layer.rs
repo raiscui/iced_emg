@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use overloadf::*;
 
 use crate::runtime::{
@@ -80,18 +82,21 @@ impl<'a, Message> Layer<'a, Message> {
         self
     }
 
-    pub fn push_update<T>(mut self, attr: T) -> Self
-    where
-        T: UpdateEl<Message, Self>,
-    {
-        attr.update_el(&mut self);
-        self
-    }
+    // pub fn update_use<T>(mut self, updater: T) -> Self
+    // where
+    //     T: crate::RTUpdateFor<Self>,
+    // {
+    //     updater.update_for(&mut self);
+    //     self
+    // }
 }
 
-pub trait UpdateEl<Message, ElSubType> {
-    fn update_el(self, el: &mut ElSubType);
-}
+// impl<'a, Message> crate::UpdateUse for Layer<'a, Message> {
+//     fn update_use(mut self, updater: Rc<dyn crate::RTUpdateFor<Self>>) -> Self {
+//         updater.update_for(&mut self);
+//         self
+//     }
+// }
 
 #[inline]
 fn layer<'a, B>(
@@ -157,4 +162,3 @@ where
         Element::new(layer)
     }
 }
-

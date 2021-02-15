@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-08 15:59:44
+ * @LastEditTime: 2021-02-09 19:24:59
  * @LastEditors: Rais
  * @Description:
  */
@@ -87,10 +87,10 @@ pub trait GraphStore<'a, Message> {
     // where
     //     Self::Ix: Clone;
 
-    fn g_element_to_el(
+    fn gelement_to_el(
         &self,
-        ix: &Self::Ix,
-        current_node: &RefCell<GElement<'a, Message>>,
+        cix: &Self::Ix,
+        // current_node: &RefCell<GElement<'a, Message>>,
     ) -> Element<'a, Message>;
 
     fn children_to_elements(&self, cix: &Self::Ix) -> Vec<Element<'a, Message>>;
@@ -132,17 +132,18 @@ where
         self.edges_iter_use_ix(cix, Outgoing)
             .map(|eix| {
                 let child_ix = eix.ix_dir(Outgoing);
-                let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
-                self.g_element_to_el(child_ix, a_child)
+                // let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
+                self.gelement_to_el(child_ix)
             })
             .collect()
     }
 
-    fn g_element_to_el(
+    fn gelement_to_el(
         &self,
-        cix: &Self::Ix,
-        current_node: &RefCell<GElement<'a, Message>>,
+        cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
     ) -> Element<'a, Message> {
+        let current_node = self.get_node_weight_use_ix(cix).unwrap();
+
         let cn = &*current_node.borrow();
         match cn {
             GContainer(layer) => {
@@ -151,7 +152,7 @@ where
                 op_layer.set_children(self.children_to_elements(cix)).into()
             }
             GSurface(el) => {
-                log::info!("el:{:?}", &el);
+                // log::info!("el:{:?}", &el);
                 el.clone()
             }
         }
@@ -159,19 +160,18 @@ where
         // current_node.clone().into_inner().into()
     }
 
-    fn view(ix: Self::Ix) -> Element<'a, Message> {
+    fn view(cix: Self::Ix) -> Element<'a, Message> {
         G_STORE.with(|g_store_refcell| {
             // g_store_refcell.borrow_mut().set_graph(g);
             g_store_refcell
                 .borrow_mut()
                 .get_mut_graph_with(|g: &mut Self| {
                     log::info!("graph==> {:#?}", &g);
-                    let rc_e = g.get_node_weight_use_ix(&ix).unwrap();
 
                     // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
                     // rc_e.clone().into()
                     // Rc::make_mut(rc_e).clone().into()
-                    g.g_element_to_el(&ix, rc_e)
+                    g.gelement_to_el(&cix)
                 })
         })
     }
