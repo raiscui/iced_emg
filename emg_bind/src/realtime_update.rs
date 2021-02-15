@@ -1,11 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-02-13 12:17:37
+ * @LastEditTime: 2021-02-16 01:19:19
  * @LastEditors: Rais
  * @Description:
  */
 use std::{cell::RefCell, rc::Rc};
+
+use crate::UpdateUse;
 pub struct RealTimeUpdater<Use>(Rc<dyn Fn() -> Use>);
 impl<Use> RealTimeUpdater<Use> {
     pub fn new(f: impl Fn() -> Use + 'static) -> Self {
@@ -15,10 +17,10 @@ impl<Use> RealTimeUpdater<Use> {
     //     RealTimeUpdater(f)
     // }
 }
-pub struct RealTimeUpdaterFor<In>(Rc<dyn Fn(&mut In)>);
+pub struct RealTimeUpdaterFor<Who>(Rc<dyn Fn(&mut Who)>);
 
-impl<In> RealTimeUpdaterFor<In> {
-    pub fn new(f: impl Fn(&mut In) + 'static) -> Self {
+impl<Who> RealTimeUpdaterFor<Who> {
+    pub fn new(f: impl Fn(&mut Who) + 'static) -> Self {
         RealTimeUpdaterFor(Rc::new(f))
     }
     // pub fn new(f: Rc<dyn Fn(&mut In)>) -> Self {
@@ -26,20 +28,20 @@ impl<In> RealTimeUpdaterFor<In> {
     // }
 }
 
-pub trait RTUpdateFor<In> {
-    fn update_for(&self, widget_like: &mut In);
+pub trait RTUpdateFor<Who> {
+    fn update_for(&self, widget_like: &mut Who);
 }
 
-impl<In> RTUpdateFor<In> for RealTimeUpdaterFor<In> {
-    fn update_for(&self, widget_like: &mut In) {
+impl<Who> RTUpdateFor<Who> for RealTimeUpdaterFor<Who> {
+    fn update_for(&self, widget_like: &mut Who) {
         (self.0)(widget_like);
     }
 }
-impl<In, Use> RTUpdateFor<In> for RealTimeUpdater<Use>
+impl<Who, Use> RTUpdateFor<Who> for RealTimeUpdater<Use>
 where
-    Use: RTUpdateFor<In>,
+    Use: RTUpdateFor<Who>,
 {
-    fn update_for(&self, widget_like: &mut In) {
+    fn update_for(&self, widget_like: &mut Who) {
         (self.0)().update_for(widget_like);
     }
 }

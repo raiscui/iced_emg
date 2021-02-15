@@ -1,4 +1,5 @@
 #![feature(unboxed_closures, fn_traits, thread_local)]
+#![feature(specialization)]
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use iced as runtime;

@@ -305,6 +305,7 @@ impl ToTokens for Gtree {
                     TreeLayer(String, Vec<GTreeBuilderElement<'a, Message>>),
                     TreeEl(Element<'a, Message>),
                     TreeWhoWithUpdater<Use>(Box<dyn UpdateUse + Widget<Message> + Into<Element<'a, Message>>,Vec<RealTimeUpdater<Use>>),
+                    TreeUpdater<Use>(Box<dyn RealTimeUpdater >),
                     TreeCl(Fn)
                 }
 

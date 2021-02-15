@@ -5,14 +5,14 @@ use crate::{RTUpdateFor, RealTimeUpdater};
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-13 12:20:17
+ * @LastEditTime: 2021-02-16 01:23:29
  * @LastEditors: Rais
  * @Description:
  */
 
 pub trait UpdateUse {
     type T;
-    fn update_use(self, updater: &impl RTUpdateFor<Self::T>) -> Self::T;
+    fn update_use(self, updater: &dyn RTUpdateFor<Self::T>) -> Self::T;
 }
 
 // impl<T> crate::UpdateUse for T {
@@ -24,7 +24,7 @@ pub trait UpdateUse {
 // }
 impl<S> crate::UpdateUse for S {
     type T = S;
-    fn update_use(mut self, updater: &impl RTUpdateFor<Self::T>) -> Self::T {
+    default fn update_use(mut self, updater: &dyn RTUpdateFor<Self::T>) -> Self::T {
         updater.update_for(&mut self);
         self
     }
