@@ -7,14 +7,13 @@ use quote::{quote, quote_spanned, ToTokens};
 use syn::parse::{Parse, ParseStream};
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
 use syn::{Ident, Token};
-
 // ────────────────────────────────────────────────────────────────────────────────
 // use proc_macro::Diagnostic;
 pub mod kw {
     // use std::fmt::Debug;
 
     syn::custom_keyword!(Layer);
-    syn::custom_keyword!(RealTimeUpdaterFor);
+    syn::custom_keyword!(RealTimeUpdater);
 
     // impl Debug for layer {
     //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -55,28 +54,30 @@ impl ToTokens for GTreeClosure {
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct GRealTimeUpdaterFor {
-    kws: kw::RealTimeUpdaterFor,
+pub struct GRealTimeUpdater {
+    kws: kw::RealTimeUpdater,
     closure: syn::ExprClosure,
 }
-impl Parse for GRealTimeUpdaterFor {
+impl Parse for GRealTimeUpdater {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        //println!("GSurface:{}", input);
-        input.parse::<kw::RealTimeUpdaterFor>()?;
-        Ok(GRealTimeUpdaterFor {
+        println!("parsing GRealTimeUpdater");
+        // println!("{:?}", &input);
+
+        // input.parse::<kw::RealTimeUpdater>()?;
+        Ok(GRealTimeUpdater {
             kws: input.parse()?,
             closure: input.parse()?,
         })
     }
 }
-impl ToTokens for GRealTimeUpdaterFor {
+impl ToTokens for GRealTimeUpdater {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GRealTimeUpdaterFor { kws, closure } = self;
+        let GRealTimeUpdater { kws, closure } = self;
 
         let closure_token = quote_spanned!(
             closure.span()=> Rc::new(#closure)
         );
-        let kw_token = quote_spanned! {kws.span()=><#kws>::new(#closure_token)};
+        let kw_token = quote_spanned! {kws.span()=>GTreeBuilderElement::Updater(Rc::new(<#kws>::new(#closure_token))) };
 
         kw_token.to_tokens(tokens)
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
@@ -127,8 +128,8 @@ impl ToTokens for GTreeSurface {
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
 
         // TreeWhoWithUpdater
-        quote_spanned! (expr.span() => GtreeBuilderElement::TreeWhoWithUpdater(#expr,#children_token))
-        .to_tokens(tokens)
+        quote_spanned! (expr.span() => GtreeBuilderElement::WhoWithUpdater(#expr,#children_token))
+            .to_tokens(tokens)
     }
 }
 
@@ -138,7 +139,7 @@ impl ToTokens for GTreeSurface {
 enum GTreeMacroElement {
     GL(GTreeLayerStruct),
     GS(GTreeSurface),
-    RT(GRealTimeUpdaterFor),
+    RT(GRealTimeUpdater),
     GC(GTreeClosure),
     OtherExpr(syn::Expr),
 }
@@ -148,7 +149,8 @@ impl Parse for GTreeMacroElement {
 
         if input.peek(kw::Layer) {
             Ok(GTreeMacroElement::GL(input.parse()?))
-        } else if input.peek(kw::RealTimeUpdaterFor) {
+        } else if input.peek(kw::RealTimeUpdater) {
+            println!("peek RealTimeUpdater");
             Ok(GTreeMacroElement::RT(input.parse()?))
         } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
             Ok(GTreeMacroElement::GC(input.parse()?))
@@ -290,7 +292,7 @@ impl ToTokens for Gtree {
                 use gtree::log;
                 use gtree::illicit;
                 use emg_bind::{Uuid,runtime::Text,runtime::Element,runtime::Widget,GElement, Graph, GraphStore, Layer,E,N,GraphType};
-                use GElement::{GContainer, GSurface};
+                use GElement::*;
 
 
                 // type N<'a, Message> = RefCell<GElement<'a, Message>>;
@@ -300,13 +302,41 @@ impl ToTokens for Gtree {
 
                 // ─────────────────────────────────────────────────────────────────
 
-                #[derive(Debug)]
                 enum GTreeBuilderElement<'a, Message> {
-                    TreeLayer(String, Vec<GTreeBuilderElement<'a, Message>>),
-                    TreeEl(Element<'a, Message>),
-                    TreeWhoWithUpdater<Use>(Box<dyn UpdateUse + Widget<Message> + Into<Element<'a, Message>>,Vec<RealTimeUpdater<Use>>),
-                    TreeUpdater<Use>(Box<dyn RealTimeUpdater >),
-                    TreeCl(Fn)
+                    Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
+                    El(Element<'a, Message>),
+                    WhoWithUpdater(GElement<'a, Message>, Vec<GTreeBuilderElement<'a, Message>>),
+                    Updater(Rc<dyn RTUpdateFor<GElement<'a, Message>>>),
+                    Cl(Box<dyn Fn()>),
+                }
+
+                impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
+                    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        match self {
+                            GTreeBuilderElement::Layer(s, children_list) => f
+                                .debug_tuple("GTreeBuilderElement::Layer")
+                                .field(s)
+                                .field(children_list)
+                                .finish(),
+                            GTreeBuilderElement::El(el) => {
+                                f.debug_tuple("GTreeBuilderElement::El").field(el).finish()
+                            }
+                            GTreeBuilderElement::WhoWithUpdater(_, updaters) => {
+                                let who = "dyn UpdateUse<GElement<'a, Message>>";
+                                f.debug_tuple("GTreeBuilderElement::WhoWithUpdater")
+                                    .field(&who)
+                                    .field(updaters)
+                                    .finish()
+                            }
+                            GTreeBuilderElement::Updater(_) => {
+                                let updater = "Rc<dyn RTUpdateFor<GElement<'a, Message>>>";
+                                f.debug_tuple("GTreeBuilderElement::Updater")
+                                    .field(&updater)
+                                    .finish()
+                            }
+                            GTreeBuilderElement::Cl(_) => f.debug_tuple("GTreeBuilderElement::Cl").finish(),
+                        }
+                    }
                 }
 
                 // • • • • •
@@ -314,12 +344,12 @@ impl ToTokens for Gtree {
 
                 fn handle_root<'a, Message>(
                     g: &mut GraphType<'a, Message>,
-                    treelayer: &GTreeBuilderElement<'a, Message>,
+                    tree_layer: &GTreeBuilderElement<'a, Message>,
                 ) where
                     Message: Clone + std::fmt::Debug,
                 {
-                    match treelayer {
-                        GTreeBuilderElement::TreeLayer(id, children_list) => {
+                    match tree_layer {
+                        GTreeBuilderElement::Layer(id, children_list) => {
                             log::info!("{:?}==>{:?}", id.to_string(), children_list);
                             let nix = g.insert_node(
                                 id.to_string(),
@@ -338,20 +368,23 @@ impl ToTokens for Gtree {
                                     .for_each(|child_layer| handle_layer(g, child_layer));
                             });
                         }
-                        GTreeBuilderElement::TreeEl(surface) => {
+                        GTreeBuilderElement::El(surface) => {
                             panic!("not allow this {:?}, first element must layer ", surface)
                         }
+                        GTreeBuilderElement::WhoWithUpdater(_, _) => {}
+                        GTreeBuilderElement::Updater(_) => {}
+                        GTreeBuilderElement::Cl(_) => {}
                     };
                 }
                 fn handle_layer<'a, Message>(
                     g: &mut GraphType<'a, Message>,
-                    treelayer: &GTreeBuilderElement<'a, Message>,
+                    tree_layer: &GTreeBuilderElement<'a, Message>,
                 ) where
                     Message: Clone + std::fmt::Debug,
                 {
                     let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
-                    match treelayer {
-                        GTreeBuilderElement::TreeLayer(id, children_list) => {
+                    match tree_layer {
+                        GTreeBuilderElement::Layer(id, children_list) => {
                             log::info!("{:?}==>{:?}", id.to_string(), children_list);
                             let nix = g.insert_node(
                                 id.to_string(),
@@ -372,7 +405,7 @@ impl ToTokens for Gtree {
                                     .for_each(|child_layer| handle_layer(g, child_layer));
                             });
                         }
-                        GTreeBuilderElement::TreeEl(surface) => {
+                        GTreeBuilderElement::El(surface) => {
                             let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
                             let nix = g.insert_node(
                                 Uuid::new_v4()
@@ -385,6 +418,9 @@ impl ToTokens for Gtree {
                             log::info!("{}", &edge);
                             g.insert_update_edge(&*parent_nix, &nix, edge);
                         }
+                        GTreeBuilderElement::WhoWithUpdater(gel, _) => {}
+                        GTreeBuilderElement::Updater(_) => {}
+                        GTreeBuilderElement::Cl(_) => {}
                     };
                 }
 
@@ -491,7 +527,7 @@ mod tests {
             Layer "b" [
                 Layer "c" [],
                 Layer "d" [],
-                Text::new(format!("in quote..{}", "b")) => [
+                GText(Text::new(format!("in quote..{}", "b"))) => [
                     RealTimeUpdater ||{99}
                 ]
             ]

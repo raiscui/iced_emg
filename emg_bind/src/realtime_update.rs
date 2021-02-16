@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-02-16 11:01:27
+ * @LastEditTime: 2021-02-16 20:42:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -46,32 +46,32 @@ where
     }
 }
 
-pub trait Updater {
-    type Who;
-    fn update_it(&self, widget_like: &mut Self::Who);
-    // where
-    //     Self: RTUpdateFor<Self::Who>;
-}
+// pub trait Updater {
+//     type Who;
+//     fn update_it(&self, widget_like: &mut Self::Who);
+//     // where
+//     //     Self: RTUpdateFor<Self::Who>;
+// }
 
-impl<Who> Updater for RealTimeUpdaterFor<Who> {
-    type Who = Who;
-    fn update_it(&self, widget_like: &mut Who) {
-        // widget_like.update_use(self)
-        (self.0)(widget_like);
-    }
-}
-impl<Who> Updater for Box<dyn RTUpdateFor<Who>> {
-    type Who = Who;
-    fn update_it(&self, widget_like: &mut Who) {
-        self.update_for(widget_like)
-    }
-}
-impl<Who> Updater for Rc<dyn RTUpdateFor<Who>> {
-    type Who = Who;
-    fn update_it(&self, widget_like: &mut Who) {
-        self.update_for(widget_like)
-    }
-}
+// impl<Who> Updater for RealTimeUpdaterFor<Who> {
+//     type Who = Who;
+//     fn update_it(&self, widget_like: &mut Who) {
+//         // widget_like.update_use(self)
+//         (self.0)(widget_like);
+//     }
+// }
+// impl<Who> Updater for Box<dyn RTUpdateFor<Who>> {
+//     type Who = Who;
+//     fn update_it(&self, widget_like: &mut Who) {
+//         self.update_for(widget_like)
+//     }
+// }
+// impl<Who> Updater for Rc<dyn RTUpdateFor<Who>> {
+//     type Who = Who;
+//     fn update_it(&self, widget_like: &mut Who) {
+//         self.update_for(widget_like)
+//     }
+// }
 
 #[cfg(test)]
 mod updater_test {

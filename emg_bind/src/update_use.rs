@@ -5,38 +5,44 @@ use crate::{RTUpdateFor, RealTimeUpdater};
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-16 11:15:56
+ * @LastEditTime: 2021-02-16 21:11:42
  * @LastEditors: Rais
  * @Description:
  */
 
-pub trait UpdateUseB {
-    fn update_use2(self, updater: &dyn RTUpdateFor<Self>) -> Self;
-}
-impl<T> UpdateUseB for T {
-    default fn update_use2(mut self, updater: &dyn RTUpdateFor<Self>) -> Self {
-        updater.update_for(&mut self);
-        self
-    }
-}
+// pub trait UpdateUse {
+//     type Who;
+//     fn update_use(&mut self, updater: &dyn Updater<Who = Self::Who>);
+// }
 
-pub trait UpdateUse {
-    type Who;
-    fn update_use(self, updater: &dyn RTUpdateFor<Self::Who>) -> Self::Who;
-}
-
-// impl<T> crate::UpdateUse for T {
-//     // type U = Rc<dyn crate::RTUpdateFor<T>>;
-//     fn update_use(mut self, updater: Rc<dyn crate::RTUpdateFor<T>>) -> T {
-//         updater.update_for(&mut self);
-//         self
+// // impl<T> crate::UpdateUse for T {
+// //     // type U = Rc<dyn crate::RTUpdateFor<T>>;
+// //     fn update_use(mut self, updater: Rc<dyn crate::RTUpdateFor<T>>) -> T {
+// //         updater.update_for(&mut self);
+// //         self
+// //     }
+// // }
+// impl<S> UpdateUse for S {
+//     type Who = S;
+//     default fn update_use(&mut self, updater: &dyn Updater<Who = S>) {
+//         updater.update_it(self);
+//         // self
 //     }
 // }
-impl<S> crate::UpdateUse for S {
-    type Who = S;
-    default fn update_use(mut self, updater: &dyn RTUpdateFor<Self::Who>) -> Self::Who {
-        updater.update_for(&mut self);
-        self
+
+pub trait UpdateUse<Who> {
+    fn update_use(&mut self, updater: &dyn RTUpdateFor<Who>);
+}
+
+// struct SaveTest {
+//     ss: Vec<Rc<dyn UpdateUse<i32>>>,
+// }
+
+impl<Who> UpdateUse<Who> for Who {
+    // type Who = S;
+    default fn update_use(&mut self, updater: &dyn RTUpdateFor<Who>) {
+        updater.update_for(self);
+        // self
     }
 }
 
@@ -75,22 +81,21 @@ mod updater_test1 {
         a.update_for(&mut f);
         a.update_for(&mut f);
         b.update_for(&mut f);
-        f = f.update_use(&a);
-        f = f.update_use(&b);
+        let rca = Rc::new(a) as Rc<dyn crate::RTUpdateFor<String>>;
+        let rcb = Rc::new(b) as Rc<dyn crate::RTUpdateFor<String>>;
+        f.update_use(rca.as_ref());
+        f.update_use(rca.as_ref());
+        f.update_use(rcb.as_ref());
 
-        let mut n = 0;
+        // let mut n = 0;
 
-        n = n.update_use(&f);
-        f = f.update_use(&n);
+        // n.update_use(&f);
+        // f.update_use(&n);
 
-        let cc = [
-            Rc::new(n) as Rc<dyn UpdateUse<Who = _>>,
-            Rc::new(f) as Rc<dyn UpdateUse<Who = _>>,
-        ];
-        let xxx: i16 = 2;
+        // let xxx: i16 = 2;
 
         log::info!("{}", &f);
-        log::info!("{}", &n);
-        assert_eq!("xx,99,99,string..,99,string..,29", f);
+        // log::info!("{}", &n);
+        // assert_eq!("xx,99,99,string..,99,string..,29", f);
     }
 }
