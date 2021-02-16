@@ -5,14 +5,24 @@ use crate::{RTUpdateFor, RealTimeUpdater};
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-16 01:23:29
+ * @LastEditTime: 2021-02-16 11:15:56
  * @LastEditors: Rais
  * @Description:
  */
 
+pub trait UpdateUseB {
+    fn update_use2(self, updater: &dyn RTUpdateFor<Self>) -> Self;
+}
+impl<T> UpdateUseB for T {
+    default fn update_use2(mut self, updater: &dyn RTUpdateFor<Self>) -> Self {
+        updater.update_for(&mut self);
+        self
+    }
+}
+
 pub trait UpdateUse {
-    type T;
-    fn update_use(self, updater: &dyn RTUpdateFor<Self::T>) -> Self::T;
+    type Who;
+    fn update_use(self, updater: &dyn RTUpdateFor<Self::Who>) -> Self::Who;
 }
 
 // impl<T> crate::UpdateUse for T {
@@ -23,8 +33,8 @@ pub trait UpdateUse {
 //     }
 // }
 impl<S> crate::UpdateUse for S {
-    type T = S;
-    default fn update_use(mut self, updater: &dyn RTUpdateFor<Self::T>) -> Self::T {
+    type Who = S;
+    default fn update_use(mut self, updater: &dyn RTUpdateFor<Self::Who>) -> Self::Who {
         updater.update_for(&mut self);
         self
     }
@@ -72,6 +82,11 @@ mod updater_test1 {
 
         n = n.update_use(&f);
         f = f.update_use(&n);
+
+        let cc = [
+            Rc::new(n) as Rc<dyn UpdateUse<Who = _>>,
+            Rc::new(f) as Rc<dyn UpdateUse<Who = _>>,
+        ];
         let xxx: i16 = 2;
 
         log::info!("{}", &f);
