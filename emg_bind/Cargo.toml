@@ -17,6 +17,9 @@ overloadf ={ path="../../overloadf"}
 illicit="1.1.2"
 log = "0.4"
 
+enum_dispatch = "0.3.5"
+
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 iced_web = { version = "0.3", path = "../../iced/web" }
 uuid = { version = "0.8", features = [ "v4","wasm-bindgen"] }

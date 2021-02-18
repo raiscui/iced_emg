@@ -5,7 +5,7 @@ use crate::{RTUpdateFor, RealTimeUpdater};
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-17 15:18:57
+ * @LastEditTime: 2021-02-18 15:57:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -34,9 +34,9 @@ pub trait UpdateUse<Who> {
     fn update_use(&mut self, updater: &dyn RTUpdateFor<Who>);
 }
 
-// struct SaveTest {
-//     ss: Vec<Rc<dyn UpdateUse<i32>>>,
-// }
+struct SaveTest {
+    ss: Vec<Rc<dyn UpdateUse<i32>>>,
+}
 
 impl<Who> UpdateUse<Who> for Who {
     // type Who = S;
