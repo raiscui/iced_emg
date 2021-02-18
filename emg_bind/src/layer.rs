@@ -15,7 +15,7 @@ use crate::{
     },
     GElement,
     GElement::*,
-    RTUpdateFor,
+    RtUpdateFor,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -89,7 +89,7 @@ impl<'a, Message> Layer<'a, Message> {
 
     // pub fn update_use<T>(mut self, updater: T) -> Self
     // where
-    //     T: crate::RTUpdateFor<Self>,
+    //     T: crate::RtUpdateFor<Self>,
     // {
     //     updater.update_for(&mut self);
     //     self
@@ -97,7 +97,7 @@ impl<'a, Message> Layer<'a, Message> {
 }
 
 // impl<'a, Message> crate::UpdateUse for Layer<'a, Message> {
-//     fn update_use(mut self, updater: Rc<dyn crate::RTUpdateFor<Self>>) -> Self {
+//     fn update_use(mut self, updater: Rc<dyn crate::RtUpdateFor<Self>>) -> Self {
 //         updater.update_for(&mut self);
 //         self
 //     }
@@ -168,19 +168,22 @@ where
     }
 }
 
-impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for Layer<'a, Message> {
+impl<'a, Message> RtUpdateFor<GElement<'a, Message>> for Layer<'a, Message>
+where
+    Message: 'static + Clone,
+{
     fn update_for(&self, el: &mut GElement<'a, Message>) {
         match el {
-            GContainer(layer) => {
+            GContainer(l) => {
                 log::debug!("layer update use i32");
-                layer.push(self.into());
+                l.ref_push(self.clone());
             }
             GSurface(_el) => {
                 log::debug!("element update layer");
             }
             GText(text) => {
                 log::info!("==========Text update use i32");
-                text.content(format!("i32:{}", self));
+                // text.content(format!("i32:{}", self));
             }
             GUpdater(_) => {
                 log::debug!("Updater update use i32");

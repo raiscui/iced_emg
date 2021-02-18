@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
-use crate::{RTUpdateFor, RealTimeUpdater};
+use crate::{RealTimeUpdater, RtUpdateFor};
 
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-18 17:48:22
+ * @LastEditTime: 2021-02-18 18:45:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,8 +16,8 @@ use crate::{RTUpdateFor, RealTimeUpdater};
 // }
 
 // // impl<T> crate::UpdateUse for T {
-// //     // type U = Rc<dyn crate::RTUpdateFor<T>>;
-// //     fn update_use(mut self, updater: Rc<dyn crate::RTUpdateFor<T>>) -> T {
+// //     // type U = Rc<dyn crate::RtUpdateFor<T>>;
+// //     fn update_use(mut self, updater: Rc<dyn crate::RtUpdateFor<T>>) -> T {
 // //         updater.update_for(&mut self);
 // //         self
 // //     }
@@ -31,7 +31,7 @@ use crate::{RTUpdateFor, RealTimeUpdater};
 // }
 
 pub trait UpdateUse<Who> {
-    fn update_use(&mut self, updater: &dyn RTUpdateFor<Who>);
+    fn update_use(&mut self, updater: &dyn RtUpdateFor<Who>);
 }
 
 #[cfg(test)]
@@ -41,7 +41,7 @@ struct SaveTest {
 
 impl<Who> UpdateUse<Who> for Who {
     // type Who = S;
-    default fn update_use(&mut self, updater: &dyn RTUpdateFor<Who>) {
+    default fn update_use(&mut self, updater: &dyn RtUpdateFor<Who>) {
         updater.update_for(self);
         // self
     }
@@ -51,21 +51,21 @@ impl<Who> UpdateUse<Who> for Who {
 mod updater_test1 {
     use wasm_bindgen_test::*;
 
-    use crate::{RTUpdateFor, RealTimeUpdater, RealTimeUpdaterFor};
+    use crate::{RealTimeUpdater, RealTimeUpdaterFor, RtUpdateFor};
 
     use super::*;
 
-    // impl RTUpdateFor<String> for i32 {
+    // impl RtUpdateFor<String> for i32 {
     //     fn update_for(&self, el: &mut String) {
     //         *el = format!("{},{}", el, self);
     //     }
     // }
-    impl RTUpdateFor<String> for String {
+    impl RtUpdateFor<String> for String {
         fn update_for(&self, el: &mut String) {
             *el = format!("{},{}", el, self);
         }
     }
-    impl RTUpdateFor<i32> for String {
+    impl RtUpdateFor<i32> for String {
         fn update_for(&self, el: &mut i32) {
             *el = self.len() as i32
         }
@@ -82,8 +82,8 @@ mod updater_test1 {
         a.update_for(&mut f);
         a.update_for(&mut f);
         b.update_for(&mut f);
-        let rca = Rc::new(a) as Rc<dyn crate::RTUpdateFor<String>>;
-        let rcb = Rc::new(b) as Rc<dyn crate::RTUpdateFor<String>>;
+        let rca = Rc::new(a) as Rc<dyn crate::RtUpdateFor<String>>;
+        let rcb = Rc::new(b) as Rc<dyn crate::RtUpdateFor<String>>;
         f.update_use(rca.as_ref());
         f.update_use(rca.as_ref());
         f.update_use(rcb.as_ref());

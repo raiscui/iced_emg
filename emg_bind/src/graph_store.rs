@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-17 18:08:43
+ * @LastEditTime: 2021-02-18 19:31:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
 
-use crate::{runtime::Element, runtime::Text, Layer, RTUpdateFor, UpdateUse};
+use crate::{runtime::Element, runtime::Text, Layer, RtUpdateFor, UpdateUse};
 
 use anymap::any::CloneAny;
 use std::{
@@ -48,7 +48,7 @@ pub enum GElement<'a, Message> {
     GContainer(Layer<'a, Message>),
     GSurface(Element<'a, Message>),
     GText(Text),
-    GUpdater(Rc<dyn RTUpdateFor<GElement<'a, Message>>>),
+    GUpdater(Rc<dyn RtUpdateFor<GElement<'a, Message>>>),
 }
 
 impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
@@ -58,18 +58,21 @@ impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
             GSurface(el) => f.debug_tuple("GElement::Surface").field(el).finish(),
             GText(t) => f.debug_tuple("GElement::GText").field(t).finish(),
             GUpdater(_) => f
-                .debug_tuple("GElement::GUpdater(Rc<dyn RTUpdateFor<GElement<'a, Message>>>)")
+                .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement<'a, Message>>>)")
                 .finish(),
         }
     }
 }
-impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for GElement<'a, Message> {
+impl<'a, Message> RtUpdateFor<GElement<'a, Message>> for GElement<'a, Message>
+where
+    Message: 'static + Clone,
+{
     fn update_for(&self, el: &mut GElement<'a, Message>) {
         match el {
-            GContainer(layer) => {
+            GContainer(l) => {
                 log::debug!("layer update use i32");
                 if !matches!(self, GUpdater(_)) {
-                    layer.push(self.into());
+                    l.ref_push(self.clone());
                 }
             }
             GSurface(_el) => {
@@ -77,7 +80,7 @@ impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for GElement<'a, Message> {
             }
             GText(text) => {
                 log::info!("==========Text update use i32");
-                text.content(format!("i32:{}", self));
+                // text.content(format!("i32:{}", self));
             }
             GUpdater(_) => {
                 log::debug!("Updater update use i32");
@@ -86,7 +89,7 @@ impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for GElement<'a, Message> {
     }
 }
 
-impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for i32 {
+impl<'a, Message> RtUpdateFor<GElement<'a, Message>> for i32 {
     fn update_for(&self, el: &mut GElement<'a, Message>) {
         match el {
             GContainer(_layer) => {
