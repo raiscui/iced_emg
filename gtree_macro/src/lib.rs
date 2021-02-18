@@ -45,7 +45,7 @@ impl ToTokens for GTreeClosure {
         let GTreeClosure { closure } = self;
 
         quote_spanned!(
-            closure.span()=> GTreeBuilderElement::TreeCl(#closure)
+            closure.span()=> GTreeBuilderElement::Cl(#closure)
         )
         .to_tokens(tokens)
     }
@@ -75,9 +75,9 @@ impl ToTokens for GRealTimeUpdater {
         let GRealTimeUpdater { kws, closure } = self;
 
         let closure_token = quote_spanned!(
-            closure.span()=> Rc::new(#closure)
+            closure.span()=> #closure
         );
-        let kw_token = quote_spanned! {kws.span()=>GTreeBuilderElement::Updater(Rc::new(<#kws>::new(#closure_token))) };
+        let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::Updater(Rc::new(#kws::new(#closure_token))) );
 
         kw_token.to_tokens(tokens)
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
@@ -128,7 +128,7 @@ impl ToTokens for GTreeSurface {
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
 
         // TreeWhoWithUpdater
-        quote_spanned! (expr.span() => GtreeBuilderElement::WhoWithUpdater(#expr,#children_token))
+        quote_spanned! (expr.span() => GTreeBuilderElement::WhoWithUpdater(#expr,#children_token))
             .to_tokens(tokens)
     }
 }
@@ -232,7 +232,7 @@ impl ToTokens for GTreeLayerStruct {
         } = self;
         let children_iter = children.iter();
         let g_tree_builder_element_layer_token =
-            quote_spanned! {layer.span()=>GTreeBuilderElement::TreeLayer};
+            quote_spanned! {layer.span()=>GTreeBuilderElement::Layer};
         let id_token = quote_spanned! {id.span()=> String::from(#id)};
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
         // let brace_op_token = quote_spanned! {children.span()=>vec![#children_token]};
@@ -291,7 +291,7 @@ impl ToTokens for Gtree {
                 use gtree::log::Level;
                 use gtree::log;
                 use gtree::illicit;
-                use emg_bind::{Uuid,runtime::Text,runtime::Element,runtime::Widget,GElement, Graph, GraphStore, Layer,E,N,GraphType};
+                use emg_bind::{Uuid,runtime::Text,runtime::Element,runtime::Widget,GElement, Graph, GraphStore, Layer,E,N,GraphType,RTUpdateFor, RealTimeUpdater, UpdateUse};
                 use GElement::*;
 
 
@@ -338,10 +338,6 @@ impl ToTokens for Gtree {
                         }
                     }
                 }
-
-                // • • • • •
-
-
                 fn handle_root<'a, Message>(
                     g: &mut GraphType<'a, Message>,
                     tree_layer: &GTreeBuilderElement<'a, Message>,
@@ -350,7 +346,7 @@ impl ToTokens for Gtree {
                 {
                     match tree_layer {
                         GTreeBuilderElement::Layer(id, children_list) => {
-                            log::info!("{:?}==>{:?}", id.to_string(), children_list);
+                            log::debug!("{:?}==>{:?}", id.to_string(), children_list);
                             let nix = g.insert_node(
                                 id.to_string(),
                                 RefCell::new(GContainer(
@@ -362,18 +358,15 @@ impl ToTokens for Gtree {
                                     *illicit::expect::<emg_bind::NodeIndex<String>>(),
                                     nix.clone()
                                 );
-                                log::info!("{:?}", *illicit::expect::<emg_bind::NodeIndex<String>>());
+                                log::debug!("{:?}", *illicit::expect::<emg_bind::NodeIndex<String>>());
                                 children_list
                                     .iter()
                                     .for_each(|child_layer| handle_layer(g, child_layer));
                             });
                         }
-                        GTreeBuilderElement::El(surface) => {
-                            panic!("not allow this {:?}, first element must layer ", surface)
+                        _ => {
+                            panic!("not allow this , first element must layer ")
                         }
-                        GTreeBuilderElement::WhoWithUpdater(_, _) => {}
-                        GTreeBuilderElement::Updater(_) => {}
-                        GTreeBuilderElement::Cl(_) => {}
                     };
                 }
                 fn handle_layer<'a, Message>(
@@ -385,7 +378,7 @@ impl ToTokens for Gtree {
                     let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
                     match tree_layer {
                         GTreeBuilderElement::Layer(id, children_list) => {
-                            log::info!("{:?}==>{:?}", id.to_string(), children_list);
+                            log::debug!("{:?}==>{:?}", id.to_string(), children_list);
                             let nix = g.insert_node(
                                 id.to_string(),
                                 RefCell::new(GContainer(
@@ -393,7 +386,7 @@ impl ToTokens for Gtree {
                                 )),
                             );
                             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                            log::info!("{}", &edge);
+                            log::debug!("{}", &edge);
                             g.insert_update_edge(&*parent_nix, &nix, edge);
                             illicit::Layer::new().offer(nix.clone()).enter(|| {
                                 assert_eq!(
@@ -407,20 +400,61 @@ impl ToTokens for Gtree {
                         }
                         GTreeBuilderElement::El(surface) => {
                             let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
-                            let nix = g.insert_node(
-                                Uuid::new_v4()
-                                    .to_simple()
-                                    .encode_lower(&mut Uuid::encode_buffer())
-                                    .to_string(),
-                                RefCell::new(GSurface(surface.clone())),
-                            );
+                            let mut id = Uuid::new_v4()
+                                .to_simple()
+                                .encode_lower(&mut Uuid::encode_buffer())
+                                .to_string();
+
+                            id.push_str("-Element");
+
+                            let nix = g.insert_node(id, RefCell::new(GSurface(surface.clone())));
                             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                            log::info!("{}", &edge);
-                            g.insert_update_edge(&*parent_nix, &nix, edge);
+                            log::debug!("{}", &edge);
+                            g.insert_update_edge(parent_nix.deref(), &nix, edge);
                         }
-                        GTreeBuilderElement::WhoWithUpdater(gel, _) => {}
-                        GTreeBuilderElement::Updater(_) => {}
-                        GTreeBuilderElement::Cl(_) => {}
+                        GTreeBuilderElement::WhoWithUpdater(gel, updaters) => {
+                            let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
+                            let mut id = Uuid::new_v4()
+                                .to_simple()
+                                .encode_lower(&mut Uuid::encode_buffer())
+                                .to_string();
+
+                            id.push_str("-GElement");
+
+                            let nix = g.insert_node(id, RefCell::new(gel.clone()));
+                            let edge = format!("{} -> {}", parent_nix.index(), nix.index());
+                            log::debug!("{}", &edge);
+
+                            g.insert_update_edge(parent_nix.deref(), &nix, edge);
+
+                            illicit::Layer::new().offer(nix.clone()).enter(|| {
+                                assert_eq!(
+                                    *illicit::expect::<emg_bind::NodeIndex<String>>(),
+                                    nix.clone()
+                                );
+                                updaters
+                                    .iter()
+                                    .for_each(|child_layer| handle_layer(g, child_layer));
+                            });
+                        }
+                        GTreeBuilderElement::Updater(u) => {
+                            let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
+                            let mut id = Uuid::new_v4()
+                                .to_simple()
+                                .encode_lower(&mut Uuid::encode_buffer())
+                                .to_string();
+
+                            id.push_str("-GUpdater");
+
+                            let nix = g.insert_node(id, RefCell::new(GUpdater(Rc::clone(u))));
+                            let edge = format!("{} -> {}", parent_nix.index(), nix.index());
+                            log::debug!("{}", &edge);
+
+                            g.insert_update_edge(parent_nix.deref(), &nix, edge);
+                        }
+                        GTreeBuilderElement::Cl(dyn_fn) => {
+                            dyn_fn();
+                        }
                     };
                 }
 
@@ -434,12 +468,7 @@ impl ToTokens for Gtree {
 
                 GraphType::<Message>::init();
                 GraphType::<Message>::get_mut_graph_with(|g| {
-                    // g.insert_node(
-                    //     1,
-                    //     Rc::new(GContainer(Layer::new().push(
-                    //         Layer::new().push(Text::new("in quote..")),
-                    //     ))),
-                    // );
+
                     handle_root(g,&children);
                     log::info!("{:#?}",g);
                 });

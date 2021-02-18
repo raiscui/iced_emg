@@ -2,15 +2,20 @@ use std::rc::Rc;
 
 use overloadf::*;
 
-use crate::runtime::{
-    css,
-    dodrio::{
-        self,
-        builder::ElementBuilder,
-        bumpalo::{self, Bump},
-        Attribute, Listener, Node,
+use crate::{
+    runtime::{
+        css,
+        dodrio::{
+            self,
+            builder::ElementBuilder,
+            bumpalo::{self, Bump},
+            Attribute, Listener, Node,
+        },
+        Bus, Css, Element, Length, Widget,
     },
-    Bus, Css, Element, Length, Widget,
+    GElement,
+    GElement::*,
+    RTUpdateFor,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -160,5 +165,26 @@ where
 {
     fn from(layer: Layer<'a, Message>) -> Element<'a, Message> {
         Element::new(layer)
+    }
+}
+
+impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for Layer<'a, Message> {
+    fn update_for(&self, el: &mut GElement<'a, Message>) {
+        match el {
+            GContainer(layer) => {
+                log::debug!("layer update use i32");
+                layer.push(self.into());
+            }
+            GSurface(_el) => {
+                log::debug!("element update layer");
+            }
+            GText(text) => {
+                log::info!("==========Text update use i32");
+                text.content(format!("i32:{}", self));
+            }
+            GUpdater(_) => {
+                log::debug!("Updater update use i32");
+            }
+        }
     }
 }

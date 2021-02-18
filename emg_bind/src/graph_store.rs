@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-16 22:49:00
+ * @LastEditTime: 2021-02-17 18:08:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,10 +9,15 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
 
-use crate::{runtime::Element, runtime::Text, Layer, RTUpdateFor};
+use crate::{runtime::Element, runtime::Text, Layer, RTUpdateFor, UpdateUse};
 
 use anymap::any::CloneAny;
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    cell::RefCell,
+    ops::DerefMut,
+    rc::Rc,
+};
 use std::{hash::Hash, ops::Deref};
 
 use log::Level;
@@ -49,12 +54,34 @@ pub enum GElement<'a, Message> {
 impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GElement::GContainer(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
-            GElement::GSurface(el) => f.debug_tuple("GElement::Surface").field(el).finish(),
-            GElement::GText(t) => f.debug_tuple("GElement::GText").field(t).finish(),
-            GElement::GUpdater(_) => f
+            GContainer(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
+            GSurface(el) => f.debug_tuple("GElement::Surface").field(el).finish(),
+            GText(t) => f.debug_tuple("GElement::GText").field(t).finish(),
+            GUpdater(_) => f
                 .debug_tuple("GElement::GUpdater(Rc<dyn RTUpdateFor<GElement<'a, Message>>>)")
                 .finish(),
+        }
+    }
+}
+impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for GElement<'a, Message> {
+    fn update_for(&self, el: &mut GElement<'a, Message>) {
+        match el {
+            GContainer(layer) => {
+                log::debug!("layer update use i32");
+                if !matches!(self, GUpdater(_)) {
+                    layer.push(self.into());
+                }
+            }
+            GSurface(_el) => {
+                log::debug!("element update use i32");
+            }
+            GText(text) => {
+                log::info!("==========Text update use i32");
+                text.content(format!("i32:{}", self));
+            }
+            GUpdater(_) => {
+                log::debug!("Updater update use i32");
+            }
         }
     }
 }
@@ -68,8 +95,9 @@ impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for i32 {
             GSurface(_el) => {
                 log::debug!("element update use i32");
             }
-            GText(_) => {
-                log::debug!("Text update use i32");
+            GText(text) => {
+                log::info!("==========Text update use i32");
+                text.content(format!("i32:{}", self));
             }
             GUpdater(_) => {
                 log::debug!("Updater update use i32");
@@ -179,7 +207,44 @@ where
     ) -> Element<'a, Message> {
         let current_node = self.get_node_weight_use_ix(cix).unwrap();
 
-        current_node.borrow().clone().into()
+        let mut cn = current_node.borrow_mut();
+
+        match cn.deref_mut() {
+            GContainer(layer) => {
+                let op_layer = layer.clone();
+
+                op_layer.set_children(self.children_to_elements(cix)).into()
+            }
+            GSurface(el) => {
+                // log::info!("el:{:?}", &el);
+                el.clone()
+            }
+            GText(_) => {
+                log::debug!("===> GText");
+
+                for eix in self.edges_iter_use_ix(cix, Outgoing) {
+                    log::debug!("===> in GText edges");
+
+                    let child_ix = eix.ix_dir(Outgoing);
+                    let child_node = self.get_node_weight_use_ix(child_ix).unwrap();
+                    match child_node.borrow().deref() {
+                        GContainer(_) => {}
+                        GSurface(_) => {}
+                        GText(_) => {}
+                        GUpdater(updater) => {
+                            log::debug!("===> GText will update use updater");
+                            cn.deref_mut().update_use(updater.deref());
+                            // updater.deref().update_for(cn.deref_mut());
+                        }
+                    };
+                }
+
+                Text::new("ffff").into()
+
+                // cn.update_use(self.children_to_elements(cix)).into()
+            }
+            GUpdater(_updater) => Text::new("ffff").into(),
+        }
     }
 
     fn view(cix: Self::Ix) -> Element<'a, Message> {
