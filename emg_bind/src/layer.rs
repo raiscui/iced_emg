@@ -15,7 +15,7 @@ use crate::{
     },
     GElement,
     GElement::*,
-    RtUpdateFor,
+    RtUpdateFor, UpdateUse,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -168,6 +168,24 @@ where
     }
 }
 
+/// NOTE: example for UpdateUse<Who> not Self
+impl<'a, Message> UpdateUse<GElement<'a, Message>> for Layer<'a, Message>
+where
+    Message: 'static + Clone,
+{
+    // type Who = S;
+    default fn update_use(&mut self, updater: &dyn RtUpdateFor<GElement<'a, Message>>) {
+        let nl = self.clone();
+        let mut ge = GElement::GContainer(nl);
+
+        updater.update_for(&mut ge);
+
+        if let GElement::GContainer(nge) = ge {
+            *self = nge;
+        }
+    }
+}
+
 impl<'a, Message> RtUpdateFor<GElement<'a, Message>> for Layer<'a, Message>
 where
     Message: 'static + Clone,
@@ -189,5 +207,14 @@ where
                 log::debug!("Updater update use i32");
             }
         }
+    }
+}
+
+impl<'a, Message> RtUpdateFor<Layer<'a, Message>> for Layer<'a, Message>
+where
+    Message: 'static + Clone,
+{
+    fn update_for(&self, l: &mut Layer<'a, Message>) {
+        l.ref_push(self.clone());
     }
 }
