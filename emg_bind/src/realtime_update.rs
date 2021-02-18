@@ -1,13 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-02-18 18:57:27
+ * @LastEditTime: 2021-02-18 21:12:20
  * @LastEditors: Rais
  * @Description:
  */
 use std::{cell::RefCell, rc::Rc};
 
 use crate::UpdateUse;
+#[derive(Clone)]
 pub struct RealTimeUpdater<Use>(Rc<dyn Fn() -> Use>);
 impl<Use> RealTimeUpdater<Use> {
     pub fn new(f: impl Fn() -> Use + 'static) -> Self {
@@ -17,6 +18,7 @@ impl<Use> RealTimeUpdater<Use> {
     //     RealTimeUpdater(f)
     // }
 }
+#[derive(Clone)]
 pub struct RealTimeUpdaterFor<Who>(Rc<dyn Fn(&mut Who)>);
 
 impl<Who> RealTimeUpdaterFor<Who> {

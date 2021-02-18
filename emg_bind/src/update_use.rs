@@ -5,7 +5,7 @@ use crate::{RealTimeUpdater, RtUpdateFor};
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-18 18:45:18
+ * @LastEditTime: 2021-02-18 21:13:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -82,21 +82,22 @@ mod updater_test1 {
         a.update_for(&mut f);
         a.update_for(&mut f);
         b.update_for(&mut f);
-        let rca = Rc::new(a) as Rc<dyn crate::RtUpdateFor<String>>;
+        let rca = Rc::new(a.clone()) as Rc<dyn crate::RtUpdateFor<String>>;
         let rcb = Rc::new(b) as Rc<dyn crate::RtUpdateFor<String>>;
+        f.update_use(&a);
         f.update_use(rca.as_ref());
         f.update_use(rca.as_ref());
         f.update_use(rcb.as_ref());
 
-        // let mut n = 0;
+        let mut n = 0;
 
-        // n.update_use(&f);
-        // f.update_use(&n);
+        n.update_use(&f);
+        f.update_use(&n);
 
         // let xxx: i16 = 2;
 
         log::info!("{}", &f);
         // log::info!("{}", &n);
-        // assert_eq!("xx,99,99,string..,99,string..,29", f);
+        assert_eq!("xx,99,99,string..,99,99,99,string..,35", f);
     }
 }
