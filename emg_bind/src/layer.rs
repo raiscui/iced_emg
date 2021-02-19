@@ -1,4 +1,7 @@
-use std::rc::Rc;
+use std::{
+    convert::{TryFrom, TryInto},
+    rc::Rc,
+};
 
 use overloadf::*;
 
@@ -15,7 +18,7 @@ use crate::{
     },
     GElement,
     GElement::*,
-    RtUpdateFor, UpdateUse,
+    RefreshFor, RefreshUseFor,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -86,19 +89,29 @@ impl<'a, Message> Layer<'a, Message> {
         self.children.push(child.into());
         self
     }
+    pub fn try_ref_push<E>(&mut self, child: E) -> &mut Self
+    where
+        E: TryInto<Element<'a, Message>, Error = ()>,
+    {
+        //TODO type error,  show error if need;
+        child.try_into().ok().map(|e| {
+            self.children.push(e);
+        });
+        self
+    }
 
     // pub fn update_use<T>(mut self, updater: T) -> Self
     // where
     //     T: crate::RtUpdateFor<Self>,
     // {
-    //     updater.update_for(&mut self);
+    //     updater.refresh_for(&mut self);
     //     self
     // }
 }
 
 // impl<'a, Message> crate::UpdateUse for Layer<'a, Message> {
 //     fn update_use(mut self, updater: Rc<dyn crate::RtUpdateFor<Self>>) -> Self {
-//         updater.update_for(&mut self);
+//         updater.refresh_for(&mut self);
 //         self
 //     }
 // }
@@ -168,53 +181,20 @@ where
     }
 }
 
-/// NOTE: example for UpdateUse<Who> not Self
-impl<'a, Message> UpdateUse<GElement<'a, Message>> for Layer<'a, Message>
-where
-    Message: 'static + Clone,
-{
-    // type Who = S;
-    default fn update_use(&mut self, updater: &dyn RtUpdateFor<GElement<'a, Message>>) {
-        let nl = self.clone();
-        let mut ge = GElement::GContainer(nl);
+// /// NOTE: example for UpdateUse<Who> not Self
+// impl<'a, Message> UpdateUse<GElement<'a, Message>> for Layer<'a, Message>
+// where
+//     Message: 'static + Clone,
+// {
+//     // type Who = S;
+//     default fn update_use(&mut self, updater: &dyn RtUpdateFor<GElement<'a, Message>>) {
+//         let nl = self.clone();
+//         let mut ge = GElement::GContainer(nl);
 
-        updater.update_for(&mut ge);
+//         updater.refresh_for(&mut ge);
 
-        if let GElement::GContainer(nge) = ge {
-            *self = nge;
-        }
-    }
-}
-
-impl<'a, Message> RtUpdateFor<GElement<'a, Message>> for Layer<'a, Message>
-where
-    Message: 'static + Clone,
-{
-    fn update_for(&self, el: &mut GElement<'a, Message>) {
-        match el {
-            GContainer(l) => {
-                log::debug!("layer update use i32");
-                l.ref_push(self.clone());
-            }
-            GSurface(_el) => {
-                log::debug!("element update layer");
-            }
-            GText(text) => {
-                log::info!("==========Text update use i32");
-                // text.content(format!("i32:{}", self));
-            }
-            GUpdater(_) => {
-                log::debug!("Updater update use i32");
-            }
-        }
-    }
-}
-
-impl<'a, Message> RtUpdateFor<Layer<'a, Message>> for Layer<'a, Message>
-where
-    Message: 'static + Clone,
-{
-    fn update_for(&self, l: &mut Layer<'a, Message>) {
-        l.ref_push(self.clone());
-    }
-}
+//         if let GElement::GContainer(nge) = ge {
+//             *self = nge;
+//         }
+//     }
+// }

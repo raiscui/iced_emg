@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-18 20:46:50
+ * @LastEditTime: 2021-02-19 17:52:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,12 +9,13 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
 
-use crate::{runtime::Element, runtime::Text, Layer, RtUpdateFor, UpdateUse};
-
+use crate::{runtime::Element, runtime::Text, Layer, RefreshFor, RefreshUseFor};
 use anymap::any::CloneAny;
+use match_any::match_any;
 use std::{
     borrow::{Borrow, BorrowMut},
     cell::RefCell,
+    convert::TryFrom,
     ops::DerefMut,
     rc::Rc,
 };
@@ -45,95 +46,39 @@ thread_local! {
 pub use GElement::*;
 #[derive(Clone)]
 pub enum GElement<'a, Message> {
-    GContainer(Layer<'a, Message>),
-    GSurface(Element<'a, Message>),
-    GText(Text),
-    GUpdater(Rc<dyn RtUpdateFor<GElement<'a, Message>>>),
+    Layer_(Layer<'a, Message>),
+    Text_(Text),
+    Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>>>),
 }
 
 impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GContainer(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
-            GSurface(el) => f.debug_tuple("GElement::Surface").field(el).finish(),
-            GText(t) => f.debug_tuple("GElement::GText").field(t).finish(),
-            GUpdater(_) => f
+            Layer_(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
+            Text_(t) => f.debug_tuple("GElement::Text").field(t).finish(),
+            Refresher_(_) => f
                 .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement<'a, Message>>>)")
                 .finish(),
         }
     }
 }
-impl<'a, Message> RtUpdateFor<GElement<'a, Message>> for GElement<'a, Message>
+
+impl<'a, Message> TryFrom<GElement<'a, Message>> for Element<'a, Message>
 where
     Message: 'static + Clone,
 {
-    fn update_for(&self, el: &mut GElement<'a, Message>) {
-        match el {
-            GContainer(l) => {
-                log::debug!("layer update use i32");
-                if !matches!(self, GUpdater(_)) {
-                    l.ref_push(self.clone());
-                }
-            }
-            GSurface(_el) => {
-                log::debug!("element update use i32");
-            }
-            GText(text) => {
-                log::info!("==========Text update use i32");
-                // text.content(format!("i32:{}", self));
-            }
-            GUpdater(_) => {
-                log::debug!("Updater update use i32");
-            }
-        }
-    }
-}
+    type Error = ();
 
-impl<'a, Message> RtUpdateFor<GElement<'a, Message>> for i32 {
-    fn update_for(&self, el: &mut GElement<'a, Message>) {
-        match el {
-            GContainer(_layer) => {
-                log::debug!("layer update use i32");
-            }
-            GSurface(_el) => {
-                log::debug!("element update use i32");
-            }
-            GText(text) => {
-                log::info!("==========Text update use i32");
-                text.content(format!("i32:{}", self));
-            }
-            GUpdater(_) => {
-                log::debug!("Updater update use i32");
-            }
-        }
-    }
-}
-
-// impl<'a, Message> Into<Element<'a, Message>> for GElement<'a, Message>
-// where
-//     Message: 'static + Clone,
-// {
-//     fn into(self) -> Element<'a, Message> {
-//         match self {
-//             GElement::GContainer(l) => l.into(),
-
-//             GElement::GSurface(e) => e,
-//         }
-//     }
-// }
-
-impl<'a, Message> From<GElement<'a, Message>> for Element<'a, Message>
-where
-    Message: 'static + Clone,
-{
-    fn from(ge: GElement<'a, Message>) -> Element<'a, Message> {
-        match ge {
-            GContainer(l) => l.into(),
-
-            GSurface(e) => e,
-            GText(t) => t.into(),
-            GUpdater(_) => todo!(),
-        }
+    fn try_from(ge: GElement<'a, Message>) -> Result<Self, Self::Error> {
+        // match ge {
+        //     Layer_(l) => Ok(l.into()),
+        //     Text_(t) => Ok(t.into()),
+        //     Refresher_(_) => Err(()),
+        // }
+        match_any! (ge,
+            Layer_(x)|Text_(x) => Ok(x.into()),
+            Refresher_(_)=>Err(())
+        )
     }
 }
 
@@ -213,16 +158,12 @@ where
         let mut cn = current_node.borrow_mut();
 
         match cn.deref_mut() {
-            GContainer(layer) => {
+            Layer_(layer) => {
                 let op_layer = layer.clone();
 
                 op_layer.set_children(self.children_to_elements(cix)).into()
             }
-            GSurface(el) => {
-                // log::info!("el:{:?}", &el);
-                el.clone()
-            }
-            GText(_) => {
+            Text_(_) => {
                 log::debug!("===> GText");
 
                 for eix in self.edges_iter_use_ix(cix, Outgoing) {
@@ -231,13 +172,12 @@ where
                     let child_ix = eix.ix_dir(Outgoing);
                     let child_node = self.get_node_weight_use_ix(child_ix).unwrap();
                     match child_node.borrow().deref() {
-                        GContainer(_) => {}
-                        GSurface(_) => {}
-                        GText(_) => {}
-                        GUpdater(updater) => {
+                        Layer_(_) => {}
+                        Text_(_) => {}
+                        Refresher_(updater) => {
                             log::debug!("===> GText will update use updater");
-                            cn.deref_mut().update_use(updater.deref());
-                            // updater.deref().update_for(cn.deref_mut());
+                            cn.deref_mut().refresh_use(updater.deref());
+                            // updater.deref().refresh_for(cn.deref_mut());
                         }
                     };
                 }
@@ -246,7 +186,7 @@ where
 
                 // cn.update_use(self.children_to_elements(cix)).into()
             }
-            GUpdater(_updater) => Text::new("ffff").into(),
+            Refresher_(_updater) => Text::new("ffff").into(),
         }
     }
 

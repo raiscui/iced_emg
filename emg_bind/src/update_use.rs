@@ -1,11 +1,10 @@
 use std::rc::Rc;
 
-use crate::{RealTimeUpdater, RtUpdateFor};
-
+use crate::{realtime_update, RefreshFor, Refresher};
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-18 21:13:19
+ * @LastEditTime: 2021-02-19 17:16:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,13 +14,6 @@ use crate::{RealTimeUpdater, RtUpdateFor};
 //     fn update_use(&mut self, updater: &dyn Updater<Who = Self::Who>);
 // }
 
-// // impl<T> crate::UpdateUse for T {
-// //     // type U = Rc<dyn crate::RtUpdateFor<T>>;
-// //     fn update_use(mut self, updater: Rc<dyn crate::RtUpdateFor<T>>) -> T {
-// //         updater.update_for(&mut self);
-// //         self
-// //     }
-// // }
 // impl<S> UpdateUse for S {
 //     type Who = S;
 //     default fn update_use(&mut self, updater: &dyn Updater<Who = S>) {
@@ -29,44 +21,69 @@ use crate::{RealTimeUpdater, RtUpdateFor};
 //         // self
 //     }
 // }
+// ────────────────────────────────────────────────────────────────────────────────
 
-pub trait UpdateUse<Who> {
-    fn update_use(&mut self, updater: &dyn RtUpdateFor<Who>);
+pub trait RefreshUseFor<Who> {
+    fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>);
 }
-
-#[cfg(test)]
-struct SaveTest {
-    ss: Vec<Rc<dyn UpdateUse<i32>>>,
-}
-
-impl<Who> UpdateUse<Who> for Who {
-    // type Who = S;
-    default fn update_use(&mut self, updater: &dyn RtUpdateFor<Who>) {
-        updater.update_for(self);
-        // self
+impl<Who> RefreshUseFor<Who> for Who {
+    default fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>) {
+        updater.refresh_for(self);
     }
 }
+// ────────────────────────────────────────────────────────────────────────────────
+
+// pub trait UpdateUse {
+//     fn update_use(&mut self, updater: &dyn RtUpdateFor<Self>)
+//     where
+//         Self: Sized;
+// }
+// impl<Who> UpdateUse for Who {
+//     default fn update_use(&mut self, updater: &dyn RtUpdateFor<Self>) {
+//         updater.refresh_for(self);
+//         // self
+//     }
+// }
+// ────────────────────────────────────────────────────────────────────────────────
+
+// struct SaveTest {
+//     ss: Vec<Rc<dyn UpdateUse>>,
+// }
+// impl RtUpdateFor<i32> for i32 {
+//     fn refresh_for(&self, el: &mut i32) {}
+// }
+
+// struct SaveTest2 {
+//     ss: Rc<dyn UpdateUse>,
+// }
+// impl SaveTest2 {
+//     fn aa(self) {
+//         let a = Box::new(1i32) as Box<dyn RtUpdateFor<i32>>;
+//         let mut b = 1;
+//         let cc = self.ss.update_use(&a);
+//     }
+// }
 
 #[cfg(test)]
 mod updater_test1 {
     use wasm_bindgen_test::*;
 
-    use crate::{RealTimeUpdater, RealTimeUpdaterFor, RtUpdateFor};
+    use crate::{RefreshFor, Refresher, RefresherFor};
 
     use super::*;
 
     // impl RtUpdateFor<String> for i32 {
-    //     fn update_for(&self, el: &mut String) {
+    //     fn refresh_for(&self, el: &mut String) {
     //         *el = format!("{},{}", el, self);
     //     }
     // }
-    impl RtUpdateFor<String> for String {
-        fn update_for(&self, el: &mut String) {
+    impl RefreshFor<String> for String {
+        fn refresh_for(&self, el: &mut String) {
             *el = format!("{},{}", el, self);
         }
     }
-    impl RtUpdateFor<i32> for String {
-        fn update_for(&self, el: &mut i32) {
+    impl RefreshFor<i32> for String {
+        fn refresh_for(&self, el: &mut i32) {
             *el = self.len() as i32
         }
     }
@@ -77,22 +94,22 @@ mod updater_test1 {
         console_log::init_with_level(log::Level::Debug).ok();
 
         let mut f = String::from("xx");
-        let a = RealTimeUpdater::new(|| 99);
-        let b = RealTimeUpdater::new(|| String::from("string.."));
-        a.update_for(&mut f);
-        a.update_for(&mut f);
-        b.update_for(&mut f);
-        let rca = Rc::new(a.clone()) as Rc<dyn crate::RtUpdateFor<String>>;
-        let rcb = Rc::new(b) as Rc<dyn crate::RtUpdateFor<String>>;
-        f.update_use(&a);
-        f.update_use(rca.as_ref());
-        f.update_use(rca.as_ref());
-        f.update_use(rcb.as_ref());
+        let a = Refresher::new(|| 99);
+        let b = Refresher::new(|| String::from("string.."));
+        a.refresh_for(&mut f);
+        a.refresh_for(&mut f);
+        b.refresh_for(&mut f);
+        let rca = Rc::new(a.clone()) as Rc<dyn crate::RefreshFor<String>>;
+        let rcb = Rc::new(b) as Rc<dyn crate::RefreshFor<String>>;
+        f.refresh_use(&a);
+        f.refresh_use(rca.as_ref());
+        f.refresh_use(rca.as_ref());
+        f.refresh_use(rcb.as_ref());
 
         let mut n = 0;
 
-        n.update_use(&f);
-        f.update_use(&n);
+        n.refresh_use(&f);
+        f.refresh_use(&n);
 
         // let xxx: i16 = 2;
 
