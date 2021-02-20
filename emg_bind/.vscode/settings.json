@@ -18,5 +18,8 @@
         "activityBarBadge.background": "#32230e",
         "activityBarBadge.foreground": "#e7e7e7"
     },
-    "peacock.color": "#5c2584"
+    "peacock.color": "#5c2584",
+    "cSpell.words": [
+        "edix"
+    ]
 }

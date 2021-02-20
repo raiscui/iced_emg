@@ -1,24 +1,14 @@
-use std::{
-    convert::{TryFrom, TryInto},
-    rc::Rc,
-};
+use std::convert::TryInto;
 
-use overloadf::*;
-
-use crate::{
-    runtime::{
-        css,
-        dodrio::{
-            self,
-            builder::ElementBuilder,
-            bumpalo::{self, Bump},
-            Attribute, Listener, Node,
-        },
-        Bus, Css, Element, Length, Widget,
+use crate::runtime::{
+    css,
+    dodrio::{
+        self,
+        builder::ElementBuilder,
+        bumpalo::{self, Bump},
+        Attribute, Listener, Node,
     },
-    GElement,
-    GElement::*,
-    RefreshFor, RefreshUseFor,
+    Bus, Css, Element, Length, Widget,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -94,9 +84,9 @@ impl<'a, Message> Layer<'a, Message> {
         E: TryInto<Element<'a, Message>, Error = ()>,
     {
         //TODO type error,  show error if need;
-        child.try_into().ok().map(|e| {
+        if let Ok(e) = child.try_into() {
             self.children.push(e);
-        });
+        }
         self
     }
 
@@ -142,8 +132,6 @@ where
         publish: &Bus<Message>,
         style_sheet: &mut Css<'b>,
     ) -> dodrio::Node<'b> {
-        use crate::runtime::dodrio::builder::*;
-
         let children: Vec<_> = self
             .children
             .iter()

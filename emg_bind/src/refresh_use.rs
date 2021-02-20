@@ -1,10 +1,8 @@
-use std::rc::Rc;
-
-use crate::{refreshers, RefreshFor, Refresher};
+use crate::RefreshFor;
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-19 19:55:11
+ * @LastEditTime: 2021-02-20 09:54:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -66,9 +64,11 @@ impl<Who> RefreshUseFor<Who> for Who {
 
 #[cfg(test)]
 mod updater_test1 {
+    use std::rc::Rc;
+
     use wasm_bindgen_test::*;
 
-    use crate::{RefreshFor, Refresher, RefresherFor};
+    use crate::{RefreshFor, Refresher};
 
     use super::*;
 

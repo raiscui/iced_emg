@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-02-19 16:14:07
+ * @LastEditTime: 2021-02-20 09:48:42
  * @LastEditors: Rais
  * @Description:
  */
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct Refresher<Use>(Rc<dyn Fn() -> Use>);
@@ -76,6 +76,7 @@ where
 // }
 
 #[cfg(test)]
+#[allow(unused_variables)]
 mod updater_test {
     use wasm_bindgen_test::*;
 

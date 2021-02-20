@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-19 19:51:58
+ * @LastEditTime: 2021-02-20 09:51:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,14 +12,13 @@ use emg::Outgoing;
 use crate::{runtime::Element, runtime::Text, Layer, RefreshFor, RefreshUseFor};
 use anymap::any::CloneAny;
 use match_any::match_any;
+use std::hash::Hash;
 use std::{
-    borrow::{Borrow, BorrowMut},
     cell::RefCell,
     convert::{TryFrom, TryInto},
     ops::DerefMut,
     rc::Rc,
 };
-use std::{hash::Hash, ops::Deref};
 
 use log::Level;
 
