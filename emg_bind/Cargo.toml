@@ -19,6 +19,9 @@ log = "0.4"
 
 # downcast-rs = "1.2.0"
 
+strum = "0.20.0"
+strum_macros = "0.20"
+
 match_any = "1.0.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

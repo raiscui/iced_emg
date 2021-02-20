@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-20 09:51:21
+ * @LastEditTime: 2021-02-20 15:44:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,6 +21,9 @@ use std::{
 };
 
 use log::Level;
+use strum_macros::Display;
+
+// ────────────────────────────────────────────────────────────────────────────────
 
 pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
 pub type E = String;
@@ -43,8 +46,9 @@ thread_local! {
 // }
 
 pub use GElement::*;
-#[derive(Clone)]
+#[derive(Clone, Display)]
 pub enum GElement<'a, Message> {
+    Element_(Element<'a, Message>),
     Layer_(Layer<'a, Message>),
     Text_(Text),
     Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>>>),
@@ -57,6 +61,9 @@ impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
             Text_(t) => f.debug_tuple("GElement::Text").field(t).finish(),
             Refresher_(_) => f
                 .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement<'a, Message>>>)")
+                .finish(),
+            Element_(_) => f
+                .debug_tuple("GElement::Element_(Element<'a, Message>)")
                 .finish(),
         }
     }
@@ -75,7 +82,7 @@ where
         //     Refresher_(_) => Err(()),
         // }
         match_any! (ge,
-            Layer_(x)|Text_(x) => Ok(x.into()),
+            Layer_(x)|Text_(x)|Element_(x) => Ok(x.into()),
             Refresher_(_)=>Err(())
         )
     }
@@ -248,5 +255,22 @@ impl GStore {
         Graph<N, E, Ix>: 'static,
     {
         func(self.get_mut_graph::<N, E, Ix>())
+    }
+}
+
+#[cfg(test)]
+mod graph_store_test {
+    use super::*;
+
+    use wasm_bindgen_test::*;
+
+    #[wasm_bindgen_test]
+    fn enum_display() {
+        enum Message {
+            A,
+            B,
+        }
+        let l = GElement::<Message>::Layer_(Layer::new("xx"));
+        log::debug!("{}", l);
     }
 }

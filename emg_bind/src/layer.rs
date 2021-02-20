@@ -1,5 +1,7 @@
 use std::convert::TryInto;
 
+use bumpalo::format;
+
 use crate::runtime::{
     css,
     dodrio::{
@@ -23,19 +25,28 @@ use crate::runtime::dodrio::builder::div;
 #[allow(missing_debug_implementations)]
 #[derive(Clone, Debug)]
 pub struct Layer<'a, Message> {
+    id: String,
     width: Length,
     height: Length,
     children: Vec<Element<'a, Message>>,
 }
+
+impl<'a, Message> Default for Layer<'a, Message> {
+    fn default() -> Self {
+        Self::new("")
+    }
+}
+
 impl<'a, Message> Layer<'a, Message> {
     /// Creates an empty [`Layer`].
-    pub fn new() -> Self {
-        Self::with_children(Vec::new())
+    pub fn new<T: Into<String>>(id: T) -> Self {
+        Self::with_children(id, Vec::new())
     }
 
     /// Creates a [`Layer`] with the given elements.
-    pub fn with_children(children: Vec<Element<'a, Message>>) -> Self {
+    pub fn with_children<T: Into<String>>(id: T, children: Vec<Element<'a, Message>>) -> Self {
         Layer {
+            id: id.into(),
             width: Length::Fill,
             height: Length::Shrink,
             children,
@@ -107,7 +118,8 @@ impl<'a, Message> Layer<'a, Message> {
 // }
 
 #[inline]
-fn layer<'a, B>(
+fn layer<'a, 'b, B>(
+    // tag_name: &'a str,
     bump: B,
 ) -> ElementBuilder<
     'a,
@@ -139,24 +151,31 @@ where
             .collect();
 
         // TODO: Complete styling
-        layer(bump)
-            // .attr(
-            //     "class",
-            //     bumpalo::format!(in bump, "{} {}", spacing_class, padding_class)
-            //         .into_bump_str(),
-            // )
-            .attr(
-                "style",
-                bumpalo::format!(
-                    in bump,
-                    "width: {}; height: {}; display: block; position: absolute",
-                    css::length(self.width),
-                    css::length(self.height)
-                )
-                .into_bump_str(),
+        layer(
+            // bumpalo::format!(in bump,"{}{}",&self.id,"-layer").into_bump_str(),
+            bump,
+        )
+        // .attr(
+        //     "class",
+        //     bumpalo::format!(in bump, "{} {}", spacing_class, padding_class)
+        //         .into_bump_str(),
+        // )
+        .attr(
+            "index",
+            bumpalo::collections::String::from_str_in(self.id.as_str(), bump).into_bump_str(),
+        )
+        .attr(
+            "style",
+            bumpalo::format!(
+                in bump,
+                "width: {}; height: {}; display: block; position: absolute",
+                css::length(self.width),
+                css::length(self.height)
             )
-            .children(children)
-            .finish()
+            .into_bump_str(),
+        )
+        .children(children)
+        .finish()
     }
 }
 
