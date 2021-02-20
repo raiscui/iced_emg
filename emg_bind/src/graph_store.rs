@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-20 17:35:36
+ * @LastEditTime: 2021-02-20 17:38:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -75,6 +75,7 @@ where
 {
     type Error = ();
 
+    #[allow(clippy::useless_conversion)]
     fn try_from(ge: GElement<'a, Message>) -> Result<Self, Self::Error> {
         // match ge {
         //     Layer_(l) => Ok(l.into()),
@@ -265,6 +266,7 @@ mod graph_store_test {
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test]
+    #[allow(dead_code)]
     fn enum_display() {
         enum Message {
             A,
