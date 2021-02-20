@@ -155,7 +155,7 @@ where
             .collect()
     }
 
-    fn gelement_refresh(
+    fn gelement_comb_and_refresh(
         &self,
         cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
     ) -> GElement<'a, Message> {
