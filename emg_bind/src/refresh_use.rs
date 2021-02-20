@@ -1,11 +1,14 @@
-use crate::RefreshFor;
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-20 10:38:41
+ * @LastEditTime: 2021-02-20 17:01:51
  * @LastEditors: Rais
  * @Description:
  */
+
+use crate::RefreshFor;
+
+// ────────────────────────────────────────────────────────────────────────────────
 
 // pub trait UpdateUse {
 //     type Who;
@@ -19,6 +22,7 @@ use crate::RefreshFor;
 //         // self
 //     }
 // }
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub trait RefreshUseFor<Who> {
