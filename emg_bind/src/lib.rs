@@ -10,15 +10,17 @@ pub use iced_web as runtime;
 pub use uuid::Uuid;
 
 mod graph_store;
+mod impl_refresh;
 mod layer;
-mod realtime_update;
-mod update_use;
+mod refresh_use;
+mod refreshers;
 pub use graph_store::*;
 pub use layer::Layer;
-pub use realtime_update::RTUpdateFor;
-pub use realtime_update::RealTimeUpdater;
-pub use realtime_update::RealTimeUpdaterFor;
-pub use update_use::UpdateUse;
+pub use refresh_use::RefreshUseFor;
+pub use refreshers::RefreshFor;
+pub use refreshers::Refresher;
+pub use refreshers::RefresherFor;
+
 #[cfg(test)]
 mod tests {
     #[test]

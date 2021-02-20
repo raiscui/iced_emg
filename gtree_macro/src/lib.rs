@@ -13,7 +13,7 @@ pub mod kw {
     // use std::fmt::Debug;
 
     syn::custom_keyword!(Layer);
-    syn::custom_keyword!(RealTimeUpdater);
+    syn::custom_keyword!(Refresher);
 
     // impl Debug for layer {
     //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -54,25 +54,25 @@ impl ToTokens for GTreeClosure {
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct GRealTimeUpdater {
-    kws: kw::RealTimeUpdater,
+pub struct GRefresher {
+    kws: kw::Refresher,
     closure: syn::ExprClosure,
 }
-impl Parse for GRealTimeUpdater {
+impl Parse for GRefresher {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        println!("parsing GRealTimeUpdater");
+        // println!("parsing GRefresher");
         // println!("{:?}", &input);
 
-        // input.parse::<kw::RealTimeUpdater>()?;
-        Ok(GRealTimeUpdater {
+        // input.parse::<kw::Refresher>()?;
+        Ok(GRefresher {
             kws: input.parse()?,
             closure: input.parse()?,
         })
     }
 }
-impl ToTokens for GRealTimeUpdater {
+impl ToTokens for GRefresher {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GRealTimeUpdater { kws, closure } = self;
+        let GRefresher { kws, closure } = self;
 
         let closure_token = quote_spanned!(
             closure.span()=> #closure
@@ -101,7 +101,7 @@ impl Parse for GTreeSurface {
             input.parse::<token::FatArrow>()?; //=>
                                                // []
             if input.peek(token::Bracket) {
-                println!("=>[] find");
+                // println!("=>[] find");
                 let content;
                 let _bracket = bracketed!(content in input);
                 let children: ChildrenType =
@@ -139,9 +139,9 @@ impl ToTokens for GTreeSurface {
 enum GTreeMacroElement {
     GL(GTreeLayerStruct),
     GS(GTreeSurface),
-    RT(GRealTimeUpdater),
+    RT(GRefresher),
     GC(GTreeClosure),
-    OtherExpr(syn::Expr),
+    // OtherExpr(syn::Expr),
 }
 impl Parse for GTreeMacroElement {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -149,8 +149,8 @@ impl Parse for GTreeMacroElement {
 
         if input.peek(kw::Layer) {
             Ok(GTreeMacroElement::GL(input.parse()?))
-        } else if input.peek(kw::RealTimeUpdater) {
-            println!("peek RealTimeUpdater");
+        } else if input.peek(kw::Refresher) {
+            // println!("peek Refresher");
             Ok(GTreeMacroElement::RT(input.parse()?))
         } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
             Ok(GTreeMacroElement::GC(input.parse()?))
@@ -170,7 +170,7 @@ impl ToTokens for GTreeMacroElement {
             Self::GS(surface) => surface.to_tokens(tokens),
             Self::RT(realtime_update_in) => realtime_update_in.to_tokens(tokens),
             Self::GC(closure) => closure.to_tokens(tokens),
-            Self::OtherExpr(expr) => expr.to_tokens(tokens),
+            // Self::OtherExpr(expr) => expr.to_tokens(tokens),
         }
     }
 }
@@ -287,195 +287,182 @@ impl ToTokens for Gtree {
         // }
         let token = quote_spanned! {root.span()=> {
 
-                use std::{cell::RefCell, rc::Rc};
-                use gtree::log::Level;
-                use gtree::log;
-                use gtree::illicit;
-                use emg_bind::{Uuid,runtime::Text,runtime::Element,runtime::Widget,GElement, Graph, GraphStore, Layer,E,N,GraphType,RTUpdateFor, RealTimeUpdater, UpdateUse};
-                use GElement::*;
+
+            use std::ops::Deref;
+            use emg_bind::{
+                runtime::Element, runtime::Text, GElement, GraphStore, GraphType, Layer, RefreshFor,
+                Refresher, Uuid,
+            };
+            use gtree::illicit;
+            use gtree::log;
+            use gtree::log::Level;
+            use std::{cell::RefCell, rc::Rc};
+            use GElement::*;
 
 
-                // type N<'a, Message> = RefCell<GElement<'a, Message>>;
-                // type E = String;
-                // type GraphType<'a, Message> = Graph<N<'a, Message>, E>;
 
 
-                // ─────────────────────────────────────────────────────────────────
-
-                enum GTreeBuilderElement<'a, Message> {
-                    Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
-                    El(Element<'a, Message>),
-                    WhoWithUpdater(GElement<'a, Message>, Vec<GTreeBuilderElement<'a, Message>>),
-                    Updater(Rc<dyn RTUpdateFor<GElement<'a, Message>>>),
-                    Cl(Box<dyn Fn()>),
-                }
-
-                impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
-                    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        match self {
-                            GTreeBuilderElement::Layer(s, children_list) => f
-                                .debug_tuple("GTreeBuilderElement::Layer")
-                                .field(s)
-                                .field(children_list)
-                                .finish(),
-                            GTreeBuilderElement::El(el) => {
-                                f.debug_tuple("GTreeBuilderElement::El").field(el).finish()
-                            }
-                            GTreeBuilderElement::WhoWithUpdater(_, updaters) => {
-                                let who = "dyn UpdateUse<GElement<'a, Message>>";
-                                f.debug_tuple("GTreeBuilderElement::WhoWithUpdater")
-                                    .field(&who)
-                                    .field(updaters)
-                                    .finish()
-                            }
-                            GTreeBuilderElement::Updater(_) => {
-                                let updater = "Rc<dyn RTUpdateFor<GElement<'a, Message>>>";
-                                f.debug_tuple("GTreeBuilderElement::Updater")
-                                    .field(&updater)
-                                    .finish()
-                            }
-                            GTreeBuilderElement::Cl(_) => f.debug_tuple("GTreeBuilderElement::Cl").finish(),
+            #[allow(dead_code)]
+            enum GTreeBuilderElement<'a, Message> {
+                Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
+                El(Element<'a, Message>),
+                WhoWithUpdater(GElement<'a, Message>, Vec<GTreeBuilderElement<'a, Message>>),
+                Updater(Rc<dyn RefreshFor<GElement<'a, Message>>>),
+                Cl(Box<dyn Fn()>),
+            }
+            impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    match self {
+                        GTreeBuilderElement::Layer(s, children_list) => f
+                            .debug_tuple("GTreeBuilderElement::Layer")
+                            .field(s)
+                            .field(children_list)
+                            .finish(),
+                        GTreeBuilderElement::El(el) => {
+                            f.debug_tuple("GTreeBuilderElement::El").field(el).finish()
                         }
+                        GTreeBuilderElement::WhoWithUpdater(_, updaters) => {
+                            let who = "dyn RefreshUseFor<GElement<'a, Message>>";
+                            f.debug_tuple("GTreeBuilderElement::WhoWithUpdater")
+                                .field(&who)
+                                .field(updaters)
+                                .finish()
+                        }
+                        GTreeBuilderElement::Updater(_) => {
+                            let updater = "Rc<dyn RefreshFor<GElement<'a, Message>>>";
+                            f.debug_tuple("GTreeBuilderElement::Updater")
+                                .field(&updater)
+                                .finish()
+                        }
+                        GTreeBuilderElement::Cl(_) => f.debug_tuple("GTreeBuilderElement::Cl").finish(),
                     }
                 }
-                fn handle_root<'a, Message>(
-                    g: &mut GraphType<'a, Message>,
-                    tree_layer: &GTreeBuilderElement<'a, Message>,
-                ) where
-                    Message: Clone + std::fmt::Debug,
-                {
-                    match tree_layer {
-                        GTreeBuilderElement::Layer(id, children_list) => {
-                            log::debug!("{:?}==>{:?}", id.to_string(), children_list);
-                            let nix = g.insert_node(
-                                id.to_string(),
-                                RefCell::new(GContainer(
-                                    Layer::new().push(Text::new(format!("in quote..{}", id.to_string()))),
-                                )),
+            }
+            fn handle_root<'a, Message>(
+                g: &mut GraphType<'a, Message>,
+                tree_layer: &GTreeBuilderElement<'a, Message>,
+            ) where
+                Message: Clone + std::fmt::Debug,
+            {
+                match tree_layer {
+                    GTreeBuilderElement::Layer(id, children_list) => {
+                        log::debug!("{:?}==>{:?}", id.to_string(), children_list);
+                        let nix = g.insert_node(
+                            id.to_string(),
+                            RefCell::new(Layer_(
+                                Layer::new(id),
+                            )),
+                        );
+                        illicit::Layer::new().offer(nix.clone()).enter(|| {
+                            assert_eq!(
+                                *illicit::expect::<emg_bind::NodeIndex<String>>(),
+                                nix.clone()
                             );
-                            illicit::Layer::new().offer(nix.clone()).enter(|| {
-                                assert_eq!(
-                                    *illicit::expect::<emg_bind::NodeIndex<String>>(),
-                                    nix.clone()
-                                );
-                                log::debug!("{:?}", *illicit::expect::<emg_bind::NodeIndex<String>>());
-                                children_list
-                                    .iter()
-                                    .for_each(|child_layer| handle_layer(g, child_layer));
-                            });
-                        }
-                        _ => {
-                            panic!("not allow this , first element must layer ")
-                        }
-                    };
-                }
-                fn handle_layer<'a, Message>(
-                    g: &mut GraphType<'a, Message>,
-                    tree_layer: &GTreeBuilderElement<'a, Message>,
-                ) where
-                    Message: Clone + std::fmt::Debug,
-                {
-                    let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
-                    match tree_layer {
-                        GTreeBuilderElement::Layer(id, children_list) => {
-                            log::debug!("{:?}==>{:?}", id.to_string(), children_list);
-                            let nix = g.insert_node(
-                                id.to_string(),
-                                RefCell::new(GContainer(
-                                    Layer::new().push(Text::new(format!("in quote..{}", id.to_string()))),
-                                )),
+                            log::debug!("{:?}", *illicit::expect::<emg_bind::NodeIndex<String>>());
+                            children_list
+                                .iter()
+                                .for_each(|child_layer| handle_layer(g, child_layer));
+                        });
+                    }
+                    _ => {
+                        panic!("not allow this , first element must layer ")
+                    }
+                };
+            }
+
+            fn handle_layer<'a, Message>(
+                g: &mut GraphType<'a, Message>,
+                tree_layer: &GTreeBuilderElement<'a, Message>,
+            ) where
+                Message: Clone + std::fmt::Debug,
+            {
+                let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
+                match tree_layer {
+                    GTreeBuilderElement::Layer(id, children_list) => {
+                        log::debug!("{:?}==>{:?}", id.to_string(), children_list);
+                        let nix = g.insert_node(
+                            id.to_string(),
+                            RefCell::new(Layer_(
+                                Layer::new(id),
+                            )),
+                        );
+                        let edge = format!("{} -> {}", parent_nix.index(), nix.index());
+                        log::debug!("{}", &edge);
+                        g.insert_update_edge(parent_nix.deref(), &nix, edge);
+                        illicit::Layer::new().offer(nix.clone()).enter(|| {
+                            assert_eq!(
+                                *illicit::expect::<emg_bind::NodeIndex<String>>(),
+                                nix.clone()
                             );
-                            let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                            log::debug!("{}", &edge);
-                            g.insert_update_edge(&*parent_nix, &nix, edge);
-                            illicit::Layer::new().offer(nix.clone()).enter(|| {
-                                assert_eq!(
-                                    *illicit::expect::<emg_bind::NodeIndex<String>>(),
-                                    nix.clone()
-                                );
-                                children_list
-                                    .iter()
-                                    .for_each(|child_layer| handle_layer(g, child_layer));
-                            });
-                        }
-                        GTreeBuilderElement::El(surface) => {
-                            let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
-                            let mut id = Uuid::new_v4()
-                                .to_simple()
-                                .encode_lower(&mut Uuid::encode_buffer())
-                                .to_string();
-
-                            id.push_str("-Element");
-
-                            let nix = g.insert_node(id, RefCell::new(GSurface(surface.clone())));
-                            let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                            log::debug!("{}", &edge);
-                            g.insert_update_edge(parent_nix.deref(), &nix, edge);
-                        }
-                        GTreeBuilderElement::WhoWithUpdater(gel, updaters) => {
-                            let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
-                            let mut id = Uuid::new_v4()
-                                .to_simple()
-                                .encode_lower(&mut Uuid::encode_buffer())
-                                .to_string();
-
-                            id.push_str("-GElement");
-
-                            let nix = g.insert_node(id, RefCell::new(gel.clone()));
-                            let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                            log::debug!("{}", &edge);
-
-                            g.insert_update_edge(parent_nix.deref(), &nix, edge);
-
-                            illicit::Layer::new().offer(nix.clone()).enter(|| {
-                                assert_eq!(
-                                    *illicit::expect::<emg_bind::NodeIndex<String>>(),
-                                    nix.clone()
-                                );
-                                updaters
-                                    .iter()
-                                    .for_each(|child_layer| handle_layer(g, child_layer));
-                            });
-                        }
-                        GTreeBuilderElement::Updater(u) => {
-                            let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
-                            let mut id = Uuid::new_v4()
-                                .to_simple()
-                                .encode_lower(&mut Uuid::encode_buffer())
-                                .to_string();
-
-                            id.push_str("-GUpdater");
-
-                            let nix = g.insert_node(id, RefCell::new(GUpdater(Rc::clone(u))));
-                            let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                            log::debug!("{}", &edge);
-
-                            g.insert_update_edge(parent_nix.deref(), &nix, edge);
-                        }
-                        GTreeBuilderElement::Cl(dyn_fn) => {
-                            dyn_fn();
-                        }
-                    };
-                }
-
-                // • • • • •
-
-                gtree::console_log::init_with_level(Level::Debug).ok();
-
-
-                let children = #root;
-
-
-                GraphType::<Message>::init();
-                GraphType::<Message>::get_mut_graph_with(|g| {
-
-                    handle_root(g,&children);
-                    log::info!("{:#?}",g);
-                });
+                            children_list
+                                .iter()
+                                .for_each(|child_layer| handle_layer(g, child_layer));
+                        });
+                    }
+                    GTreeBuilderElement::El(element) => {
+                        let mut id = Uuid::new_v4()
+                            .to_simple()
+                            .encode_lower(&mut Uuid::encode_buffer())
+                            .to_string();
+                        id.push_str("-Element");
+                        let nix = g.insert_node(id, RefCell::new(Element_(element.clone())));
+                        let edge = format!("{} -> {}", parent_nix.index(), nix.index());
+                        log::debug!("{}", &edge);
+                        g.insert_update_edge(parent_nix.deref(), &nix, edge);
+                    }
+                    GTreeBuilderElement::WhoWithUpdater(gel, updaters) => {
+                        let mut id = Uuid::new_v4()
+                            .to_simple()
+                            .encode_lower(&mut Uuid::encode_buffer())
+                            .to_string();
+                        id.push_str(format!("-{}", gel).as_ref());
+                        let nix = g.insert_node(id, RefCell::new(gel.clone()));
+                        let edge = format!("{} -> {}", parent_nix.index(), nix.index());
+                        log::debug!("{}", &edge);
+                        g.insert_update_edge(parent_nix.deref(), &nix, edge);
+                        illicit::Layer::new().offer(nix.clone()).enter(|| {
+                            assert_eq!(
+                                *illicit::expect::<emg_bind::NodeIndex<String>>(),
+                                nix.clone()
+                            );
+                            updaters
+                                .iter()
+                                .for_each(|child_layer| handle_layer(g, child_layer));
+                        });
+                    }
+                    GTreeBuilderElement::Updater(u) => {
+                        let mut id = Uuid::new_v4()
+                            .to_simple()
+                            .encode_lower(&mut Uuid::encode_buffer())
+                            .to_string();
+                        id.push_str("-Refresher");
+                        let nix = g.insert_node(id, RefCell::new(Refresher_(Rc::clone(u))));
+                        let edge = format!("{} -> {}", parent_nix.index(), nix.index());
+                        log::debug!("{}", &edge);
+                        g.insert_update_edge(parent_nix.deref(), &nix, edge);
+                    }
+                    GTreeBuilderElement::Cl(dyn_fn) => {
+                        dyn_fn();
+                    }
+                };
+            }
 
 
 
+            gtree::console_log::init_with_level(Level::Debug).ok();
 
+
+
+            let children = #root;
+
+
+
+            GraphType::<Message>::init();
+            GraphType::<Message>::get_mut_graph_with(|g| {
+
+                handle_root(g,&children);
+                log::info!("{:#?}",g);
+            });
 
 
 
@@ -511,7 +498,8 @@ impl ToTokens for Gview {
         let Gview { root_ix } = self;
         quote!({
             use emg_bind::GraphType;
-            GraphType::<Message>::view( #root_ix .to_string() )
+            use emg_bind::GraphStore;
+            GraphType::<Message>::view( #root_ix.to_string() )
 
             // G_STORE.with(|g_store_refcell| {
             //     // g_store_refcell.borrow_mut().set_graph(g);
@@ -555,9 +543,10 @@ mod tests {
         Layer "a" [
             Layer "b" [
                 Layer "c" [],
-                Layer "d" [],
-                GText(Text::new(format!("in quote..{}", "b"))) => [
-                    RealTimeUpdater ||{99}
+                Layer "d" [Refresher ||{Text_(Text::new(format!("ee up")))}],
+                Text_(Text::new(format!("in quote..{}", "b"))) => [
+                    Refresher ||{99},
+                    Refresher ||{33}
                 ]
             ]
         ]

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-17 18:08:43
+ * @LastEditTime: 2021-02-20 15:44:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,18 +9,21 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
 
-use crate::{runtime::Element, runtime::Text, Layer, RTUpdateFor, UpdateUse};
-
+use crate::{runtime::Element, runtime::Text, Layer, RefreshFor, RefreshUseFor};
 use anymap::any::CloneAny;
+use match_any::match_any;
+use std::hash::Hash;
 use std::{
-    borrow::{Borrow, BorrowMut},
     cell::RefCell,
+    convert::{TryFrom, TryInto},
     ops::DerefMut,
     rc::Rc,
 };
-use std::{hash::Hash, ops::Deref};
 
 use log::Level;
+use strum_macros::Display;
+
+// ────────────────────────────────────────────────────────────────────────────────
 
 pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
 pub type E = String;
@@ -43,94 +46,45 @@ thread_local! {
 // }
 
 pub use GElement::*;
-#[derive(Clone)]
+#[derive(Clone, Display)]
 pub enum GElement<'a, Message> {
-    GContainer(Layer<'a, Message>),
-    GSurface(Element<'a, Message>),
-    GText(Text),
-    GUpdater(Rc<dyn RTUpdateFor<GElement<'a, Message>>>),
+    Element_(Element<'a, Message>),
+    Layer_(Layer<'a, Message>),
+    Text_(Text),
+    Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>>>),
 }
 
 impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GContainer(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
-            GSurface(el) => f.debug_tuple("GElement::Surface").field(el).finish(),
-            GText(t) => f.debug_tuple("GElement::GText").field(t).finish(),
-            GUpdater(_) => f
-                .debug_tuple("GElement::GUpdater(Rc<dyn RTUpdateFor<GElement<'a, Message>>>)")
+            Layer_(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
+            Text_(t) => f.debug_tuple("GElement::Text").field(t).finish(),
+            Refresher_(_) => f
+                .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement<'a, Message>>>)")
+                .finish(),
+            Element_(_) => f
+                .debug_tuple("GElement::Element_(Element<'a, Message>)")
                 .finish(),
         }
     }
 }
-impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for GElement<'a, Message> {
-    fn update_for(&self, el: &mut GElement<'a, Message>) {
-        match el {
-            GContainer(layer) => {
-                log::debug!("layer update use i32");
-                if !matches!(self, GUpdater(_)) {
-                    layer.push(self.into());
-                }
-            }
-            GSurface(_el) => {
-                log::debug!("element update use i32");
-            }
-            GText(text) => {
-                log::info!("==========Text update use i32");
-                text.content(format!("i32:{}", self));
-            }
-            GUpdater(_) => {
-                log::debug!("Updater update use i32");
-            }
-        }
-    }
-}
 
-impl<'a, Message> RTUpdateFor<GElement<'a, Message>> for i32 {
-    fn update_for(&self, el: &mut GElement<'a, Message>) {
-        match el {
-            GContainer(_layer) => {
-                log::debug!("layer update use i32");
-            }
-            GSurface(_el) => {
-                log::debug!("element update use i32");
-            }
-            GText(text) => {
-                log::info!("==========Text update use i32");
-                text.content(format!("i32:{}", self));
-            }
-            GUpdater(_) => {
-                log::debug!("Updater update use i32");
-            }
-        }
-    }
-}
-
-// impl<'a, Message> Into<Element<'a, Message>> for GElement<'a, Message>
-// where
-//     Message: 'static + Clone,
-// {
-//     fn into(self) -> Element<'a, Message> {
-//         match self {
-//             GElement::GContainer(l) => l.into(),
-
-//             GElement::GSurface(e) => e,
-//         }
-//     }
-// }
-
-impl<'a, Message> From<GElement<'a, Message>> for Element<'a, Message>
+impl<'a, Message> TryFrom<GElement<'a, Message>> for Element<'a, Message>
 where
     Message: 'static + Clone,
 {
-    fn from(ge: GElement<'a, Message>) -> Element<'a, Message> {
-        match ge {
-            GContainer(l) => l.into(),
+    type Error = ();
 
-            GSurface(e) => e,
-            GText(t) => t.into(),
-            GUpdater(_) => todo!(),
-        }
+    fn try_from(ge: GElement<'a, Message>) -> Result<Self, Self::Error> {
+        // match ge {
+        //     Layer_(l) => Ok(l.into()),
+        //     Text_(t) => Ok(t.into()),
+        //     Refresher_(_) => Err(()),
+        // }
+        match_any! (ge,
+            Layer_(x)|Text_(x)|Element_(x) => Ok(x.into()),
+            Refresher_(_)=>Err(())
+        )
     }
 }
 
@@ -150,13 +104,13 @@ pub trait GraphStore<'a, Message> {
     // where
     //     Self::Ix: Clone;
 
-    fn gelement_to_el(
+    fn gelement_refresh(
         &self,
         cix: &Self::Ix,
         // current_node: &RefCell<GElement<'a, Message>>,
-    ) -> Element<'a, Message>;
+    ) -> GElement<'a, Message>;
 
-    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<Element<'a, Message>>;
+    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>>;
 
     fn view(ix: Self::Ix) -> Element<'a, Message>;
 }
@@ -191,60 +145,32 @@ where
         })
     }
 
-    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<Element<'a, Message>> {
+    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>> {
         self.edges_iter_use_ix(cix, Outgoing)
             .map(|eix| {
-                let child_ix = eix.ix_dir(Outgoing);
+                let this_child_ix = eix.ix_dir(Outgoing);
                 // let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
-                self.gelement_to_el(child_ix)
+                self.gelement_refresh(this_child_ix)
             })
             .collect()
     }
 
-    fn gelement_to_el(
+    fn gelement_refresh(
         &self,
         cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
-    ) -> Element<'a, Message> {
-        let current_node = self.get_node_weight_use_ix(cix).unwrap();
+    ) -> GElement<'a, Message> {
+        let current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
 
-        let mut cn = current_node.borrow_mut();
+        let children_s = self.children_to_elements(cix);
 
-        match cn.deref_mut() {
-            GContainer(layer) => {
-                let op_layer = layer.clone();
-
-                op_layer.set_children(self.children_to_elements(cix)).into()
-            }
-            GSurface(el) => {
-                // log::info!("el:{:?}", &el);
-                el.clone()
-            }
-            GText(_) => {
-                log::debug!("===> GText");
-
-                for eix in self.edges_iter_use_ix(cix, Outgoing) {
-                    log::debug!("===> in GText edges");
-
-                    let child_ix = eix.ix_dir(Outgoing);
-                    let child_node = self.get_node_weight_use_ix(child_ix).unwrap();
-                    match child_node.borrow().deref() {
-                        GContainer(_) => {}
-                        GSurface(_) => {}
-                        GText(_) => {}
-                        GUpdater(updater) => {
-                            log::debug!("===> GText will update use updater");
-                            cn.deref_mut().update_use(updater.deref());
-                            // updater.deref().update_for(cn.deref_mut());
-                        }
-                    };
-                }
-
-                Text::new("ffff").into()
-
-                // cn.update_use(self.children_to_elements(cix)).into()
-            }
-            GUpdater(_updater) => Text::new("ffff").into(),
+        for child in children_s {
+            current_node_clone
+                .borrow_mut()
+                .deref_mut()
+                .refresh_use(&child)
         }
+
+        current_node_clone.into_inner()
     }
 
     fn view(cix: Self::Ix) -> Element<'a, Message> {
@@ -258,7 +184,7 @@ where
                     // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
                     // rc_e.clone().into()
                     // Rc::make_mut(rc_e).clone().into()
-                    g.gelement_to_el(&cix)
+                    g.gelement_refresh(&cix).try_into().unwrap()
                 })
         })
     }
@@ -329,5 +255,22 @@ impl GStore {
         Graph<N, E, Ix>: 'static,
     {
         func(self.get_mut_graph::<N, E, Ix>())
+    }
+}
+
+#[cfg(test)]
+mod graph_store_test {
+    use super::*;
+
+    use wasm_bindgen_test::*;
+
+    #[wasm_bindgen_test]
+    fn enum_display() {
+        enum Message {
+            A,
+            B,
+        }
+        let l = GElement::<Message>::Layer_(Layer::new("xx"));
+        log::debug!("{}", l);
     }
 }
