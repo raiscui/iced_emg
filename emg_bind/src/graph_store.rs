@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-20 15:44:02
+ * @LastEditTime: 2021-02-20 17:35:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -104,7 +104,7 @@ pub trait GraphStore<'a, Message> {
     // where
     //     Self::Ix: Clone;
 
-    fn gelement_refresh(
+    fn gelement_comb_and_refresh(
         &self,
         cix: &Self::Ix,
         // current_node: &RefCell<GElement<'a, Message>>,
@@ -150,7 +150,7 @@ where
             .map(|eix| {
                 let this_child_ix = eix.ix_dir(Outgoing);
                 // let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
-                self.gelement_refresh(this_child_ix)
+                self.gelement_comb_and_refresh(this_child_ix)
             })
             .collect()
     }
@@ -184,7 +184,7 @@ where
                     // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
                     // rc_e.clone().into()
                     // Rc::make_mut(rc_e).clone().into()
-                    g.gelement_refresh(&cix).try_into().unwrap()
+                    g.gelement_comb_and_refresh(&cix).try_into().unwrap()
                 })
         })
     }
