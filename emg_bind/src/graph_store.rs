@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-19 17:52:51
+ * @LastEditTime: 2021-02-19 19:51:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,7 @@ use match_any::match_any;
 use std::{
     borrow::{Borrow, BorrowMut},
     cell::RefCell,
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     ops::DerefMut,
     rc::Rc,
 };
@@ -98,13 +98,13 @@ pub trait GraphStore<'a, Message> {
     // where
     //     Self::Ix: Clone;
 
-    fn gelement_to_el(
+    fn gelement_refresh(
         &self,
         cix: &Self::Ix,
         // current_node: &RefCell<GElement<'a, Message>>,
-    ) -> Element<'a, Message>;
+    ) -> GElement<'a, Message>;
 
-    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<Element<'a, Message>>;
+    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>>;
 
     fn view(ix: Self::Ix) -> Element<'a, Message>;
 }
@@ -139,55 +139,32 @@ where
         })
     }
 
-    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<Element<'a, Message>> {
+    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>> {
         self.edges_iter_use_ix(cix, Outgoing)
             .map(|eix| {
-                let child_ix = eix.ix_dir(Outgoing);
+                let this_child_ix = eix.ix_dir(Outgoing);
                 // let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
-                self.gelement_to_el(child_ix)
+                self.gelement_refresh(this_child_ix)
             })
             .collect()
     }
 
-    fn gelement_to_el(
+    fn gelement_refresh(
         &self,
         cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
-    ) -> Element<'a, Message> {
-        let current_node = self.get_node_weight_use_ix(cix).unwrap();
+    ) -> GElement<'a, Message> {
+        let current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
 
-        let mut cn = current_node.borrow_mut();
+        let children_s = self.children_to_elements(cix);
 
-        match cn.deref_mut() {
-            Layer_(layer) => {
-                let op_layer = layer.clone();
-
-                op_layer.set_children(self.children_to_elements(cix)).into()
-            }
-            Text_(_) => {
-                log::debug!("===> GText");
-
-                for eix in self.edges_iter_use_ix(cix, Outgoing) {
-                    log::debug!("===> in GText edges");
-
-                    let child_ix = eix.ix_dir(Outgoing);
-                    let child_node = self.get_node_weight_use_ix(child_ix).unwrap();
-                    match child_node.borrow().deref() {
-                        Layer_(_) => {}
-                        Text_(_) => {}
-                        Refresher_(updater) => {
-                            log::debug!("===> GText will update use updater");
-                            cn.deref_mut().refresh_use(updater.deref());
-                            // updater.deref().refresh_for(cn.deref_mut());
-                        }
-                    };
-                }
-
-                Text::new("ffff").into()
-
-                // cn.update_use(self.children_to_elements(cix)).into()
-            }
-            Refresher_(_updater) => Text::new("ffff").into(),
+        for child in children_s {
+            current_node_clone
+                .borrow_mut()
+                .deref_mut()
+                .refresh_use(&child)
         }
+
+        current_node_clone.into_inner()
     }
 
     fn view(cix: Self::Ix) -> Element<'a, Message> {
@@ -201,7 +178,7 @@ where
                     // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
                     // rc_e.clone().into()
                     // Rc::make_mut(rc_e).clone().into()
-                    g.gelement_to_el(&cix)
+                    g.gelement_refresh(&cix).try_into().unwrap()
                 })
         })
     }
