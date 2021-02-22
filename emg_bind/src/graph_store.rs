@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-20 17:38:33
+ * @LastEditTime: 2021-02-22 09:03:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -128,7 +128,7 @@ where
     type N = RefCell<GElement<'a, Message>>;
     type E = E;
     fn init() {
-        console_log::init_with_level(Level::Debug).ok();
+        // console_log::init_with_level(Level::Debug).ok();
 
         G_STORE.with(|g_store_refcell| {
             // g_store_refcell.borrow_mut().set_graph(g);
