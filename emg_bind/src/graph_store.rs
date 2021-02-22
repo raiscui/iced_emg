@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-20 15:44:02
+ * @LastEditTime: 2021-02-22 09:03:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -75,6 +75,7 @@ where
 {
     type Error = ();
 
+    #[allow(clippy::useless_conversion)]
     fn try_from(ge: GElement<'a, Message>) -> Result<Self, Self::Error> {
         // match ge {
         //     Layer_(l) => Ok(l.into()),
@@ -104,7 +105,7 @@ pub trait GraphStore<'a, Message> {
     // where
     //     Self::Ix: Clone;
 
-    fn gelement_refresh(
+    fn gelement_comb_and_refresh(
         &self,
         cix: &Self::Ix,
         // current_node: &RefCell<GElement<'a, Message>>,
@@ -127,7 +128,7 @@ where
     type N = RefCell<GElement<'a, Message>>;
     type E = E;
     fn init() {
-        console_log::init_with_level(Level::Debug).ok();
+        // console_log::init_with_level(Level::Debug).ok();
 
         G_STORE.with(|g_store_refcell| {
             // g_store_refcell.borrow_mut().set_graph(g);
@@ -150,7 +151,7 @@ where
             .map(|eix| {
                 let this_child_ix = eix.ix_dir(Outgoing);
                 // let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
-                self.gelement_refresh(this_child_ix)
+                self.gelement_comb_and_refresh(this_child_ix)
             })
             .collect()
     }
@@ -184,7 +185,7 @@ where
                     // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
                     // rc_e.clone().into()
                     // Rc::make_mut(rc_e).clone().into()
-                    g.gelement_refresh(&cix).try_into().unwrap()
+                    g.gelement_comb_and_refresh(&cix).try_into().unwrap()
                 })
         })
     }
@@ -265,6 +266,7 @@ mod graph_store_test {
     use wasm_bindgen_test::*;
 
     #[wasm_bindgen_test]
+    #[allow(dead_code)]
     fn enum_display() {
         enum Message {
             A,

@@ -449,7 +449,7 @@ impl ToTokens for Gtree {
 
 
 
-            gtree::console_log::init_with_level(Level::Debug).ok();
+            // gtree::console_log::init_with_level(Level::Debug).ok();
 
 
 
