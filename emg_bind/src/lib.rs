@@ -1,6 +1,6 @@
 #![feature(unboxed_closures, fn_traits, thread_local)]
-// #![feature(min_specialization)]
-#![feature(specialization)]
+#![feature(min_specialization)]
+// #![feature(specialization)]
 #![feature(negative_impls)]
 #![feature(auto_traits)]
 
