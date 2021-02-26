@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-02-26 15:24:23
+ * @LastEditTime: 2021-02-26 16:21:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -56,7 +56,7 @@ pub fn handle_root<'a, Message>(
     match tree_layer {
         GTreeBuilderElement::Layer(id, children_list) => {
             log::debug!("{:?}==>{:?}", &id, &children_list);
-            let nix = g.insert_node(id.to_string(), RefCell::new(Layer_(Layer::new(id))));
+            let nix = g.insert_node(id.clone(), RefCell::new(Layer_(Layer::new(id))));
             illicit::Layer::new().offer(nix.clone()).enter(|| {
                 assert_eq!(*illicit::expect::<NodeIndex<String>>(), nix.clone());
                 log::debug!("{:?}", *illicit::expect::<NodeIndex<String>>());
@@ -80,7 +80,7 @@ pub fn handle_layer<'a, Message>(
     match tree_layer {
         GTreeBuilderElement::Layer(id, children_list) => {
             log::debug!("{:?}==>{:?}", &id, &children_list);
-            let nix = g.insert_node(id.to_string(), RefCell::new(Layer_(Layer::new(id))));
+            let nix = g.insert_node(id.clone(), RefCell::new(Layer_(Layer::new(id))));
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
