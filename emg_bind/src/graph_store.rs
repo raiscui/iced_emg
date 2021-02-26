@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-22 09:03:19
+ * @LastEditTime: 2021-02-26 15:23:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
 
-use crate::{runtime::Element, runtime::Text, Layer, RefreshFor, RefreshUseFor};
+use crate::{runtime::Element, runtime::Text, GStateStore, Layer, RefreshFor, RefreshUseFor};
 use anymap::any::CloneAny;
 use match_any::match_any;
 use std::hash::Hash;
@@ -20,7 +20,7 @@ use std::{
     rc::Rc,
 };
 
-use log::Level;
+// use lazy_static::lazy_static;
 use strum_macros::Display;
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -34,6 +34,19 @@ thread_local! {
          GStore::default()
     );
 }
+thread_local! {
+    pub static G_STATE_STORE: RefCell<GStateStore> = RefCell::new(
+        GStateStore::default()
+    );
+}
+thread_local! {
+    pub static ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
+}
+use anchors::singlethread::Engine;
+// pub static ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
+// lazy_static! {
+//     pub static ref ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
+// }
 
 // impl<'a, T, Message> From<T> for Element<'a, Message>
 // where
@@ -46,6 +59,7 @@ thread_local! {
 // }
 
 pub use GElement::*;
+
 #[derive(Clone, Display)]
 pub enum GElement<'a, Message> {
     Element_(Element<'a, Message>),
@@ -87,12 +101,6 @@ where
             Refresher_(_)=>Err(())
         )
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct GStore {
-    pub anymap: anymap::Map<dyn CloneAny>,
-    // pub graph: Graph<N, E, Ix>,
 }
 
 pub trait GraphStore<'a, Message> {
@@ -189,6 +197,11 @@ where
                 })
         })
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct GStore {
+    pub anymap: anymap::Map<dyn CloneAny>,
 }
 
 impl Default for GStore {

@@ -17,13 +17,19 @@ functionate ={ path="../../functionate"}
 overloadf ={ path="../../overloadf"}
 illicit="1.1.2"
 log = "0.4"
-
+lazy_static = "1.4.0"
 # downcast-rs = "1.2.0"
 
 strum = "0.20.0"
 strum_macros = "0.20"
 
 match_any = "1.0.1"
+
+anchors={path="../../anchors"}
+
+topo = { version = "0.13.2", features = ["wasm-bindgen"] }
+
+slotmap="1.0.2"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 iced_web = { version = "0.3", path = "../../iced/web" }

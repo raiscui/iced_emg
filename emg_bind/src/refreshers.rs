@@ -1,17 +1,28 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-02-20 09:48:42
+ * @LastEditTime: 2021-02-25 20:02:12
  * @LastEditors: Rais
  * @Description:
  */
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 #[derive(Clone)]
 pub struct Refresher<Use>(Rc<dyn Fn() -> Use>);
+
+fn ccc<F: Fn()>(f: F) {
+    f();
+}
+
 impl<Use> Refresher<Use> {
-    pub fn new(f: impl Fn() -> Use + 'static) -> Self {
+    pub fn new<F: Fn() -> Use + 'static>(f: F) -> Self {
         Refresher(Rc::new(f))
+    }
+    // pub fn new(f: impl Fn() -> Use + 'static) -> Self {
+    //     Refresher(Rc::new(f))
+    // }
+    pub fn get(&self) -> Rc<dyn Fn() -> Use> {
+        Rc::clone(&self.0)
     }
     // pub fn new(f: Rc<dyn Fn() -> Use>) -> Self {
     //     Refresher(f)
@@ -24,60 +35,62 @@ impl<Who> RefresherFor<Who> {
     pub fn new(f: impl Fn(&mut Who) + 'static) -> Self {
         RefresherFor(Rc::new(f))
     }
+    pub fn get(&self) -> Rc<dyn Fn(&mut Who)> {
+        Rc::clone(&self.0)
+    }
     // pub fn new(f: Rc<dyn Fn(&mut In)>) -> Self {
     //     RefresherFor(f)
     // }
 }
+// ────────────────────────────────────────────────────────────────────────────────
 
 // refresh
 pub trait RefreshFor<Who> {
-    fn refresh_for(&self, widget_like: &mut Who);
+    fn refresh_for(&self, who: &mut Who);
 }
+// ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who> RefreshFor<Who> for RefresherFor<Who> {
-    fn refresh_for(&self, widget_like: &mut Who) {
-        (self.0)(widget_like);
-    }
-}
-impl<Who, Use> RefreshFor<Who> for Refresher<Use>
-where
-    Use: RefreshFor<Who>,
-{
-    fn refresh_for(&self, widget_like: &mut Who) {
-        (self.0)().refresh_for(widget_like);
-    }
-}
+// ────────────────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────────────────
 
 // pub trait Updater {
 //     type Who;
-//     fn update_it(&self, widget_like: &mut Self::Who);
+//     fn update_it(&self, who: &mut Self::Who);
 //     // where
 //     //     Self: RtUpdateFor<Self::Who>;
 // }
 
 // impl<Who> Updater for RefresherFor<Who> {
 //     type Who = Who;
-//     fn update_it(&self, widget_like: &mut Who) {
-//         // widget_like.update_use(self)
-//         (self.0)(widget_like);
+//     fn update_it(&self, who: &mut Who) {
+//         // who.update_use(self)
+//         (self.0)(who);
 //     }
 // }
 // impl<Who> Updater for Box<dyn RtUpdateFor<Who>> {
 //     type Who = Who;
-//     fn update_it(&self, widget_like: &mut Who) {
-//         self.refresh_for(widget_like)
+//     fn update_it(&self, who: &mut Who) {
+//         self.refresh_for(who)
 //     }
 // }
 // impl<Who> Updater for Rc<dyn RtUpdateFor<Who>> {
 //     type Who = Who;
-//     fn update_it(&self, widget_like: &mut Who) {
-//         self.refresh_for(widget_like)
+//     fn update_it(&self, who: &mut Who) {
+//         self.refresh_for(who)
 //     }
 // }
 
 #[cfg(test)]
 #[allow(unused_variables)]
 mod updater_test {
+    use std::cell::RefCell;
+
+    use crate::AnchorWithUpdater;
+    use crate::RefreshFor;
+    use crate::RefreshUseFor;
     use wasm_bindgen_test::*;
 
     use super::*;
@@ -90,14 +103,47 @@ mod updater_test {
 
     #[wasm_bindgen_test]
 
-    fn updater() {
-        let a = RefresherFor(Rc::new(|xx: &mut String| xx.push_str("ddd")));
+    fn test_anchor() {
+        console_log::init_with_level(log::Level::Debug).ok();
 
-        // let f: Vec<Rc<dyn Updater>> = vec![Rc::new(a)];
+        use anchors::{singlethread::Engine, Anchor, AnchorExt, Var};
+
+        crate::ENGINE.with(|_e| {
+            log::info!("============= get engine");
+        });
+        let mut s = String::from("sss");
+        let n = 99i32;
+
+        let mut ff = AnchorWithUpdater::new(Var::new(String::from("hello")));
+        let ff2 = AnchorWithUpdater::new(Var::new(2i32));
+        ff.refresh_use(&ff2);
+        ff2.refresh_for(&mut ff);
+        log::info!("==== test_anchor: {}", &ff.get());
+        // ─────────────────────────────────────────────────────────────────
+
+        s.refresh_use(&ff2);
+        ff2.refresh_for(&mut s);
+        log::info!("==== test_anchor: {}", &s);
+        assert_eq!("sss,2,2", &s);
+        // ─────────────────────────────────────────────────────────────────
+
+        ff.refresh_use(&n);
+        n.refresh_for(&mut ff);
+        log::info!("==== test_anchor: {}", &ff.get());
+        assert_eq!("hello,2,2,99,99", &ff.get());
+        // ─────────────────────────────────────────────────────────────────
+
+        let (a, a_updater) = Var::new(4i32);
+
+        ff.refresh_use(&a);
+        a.refresh_for(&mut ff);
+        log::info!("==== test_anchor: {}", &ff.get());
+
+        assert_eq!("hello,2,2,99,99,4,4", &ff.get());
     }
     #[wasm_bindgen_test]
 
-    fn realtime_update_in() {
+    fn test_refresher_for() {
         console_log::init_with_level(log::Level::Debug).ok();
 
         let mut f = String::from("ccc");

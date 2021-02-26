@@ -1,7 +1,9 @@
+// #![feature(specialization)]
+
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-20 17:01:51
+ * @LastEditTime: 2021-02-25 17:30:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,11 +30,12 @@ use crate::RefreshFor;
 pub trait RefreshUseFor<Who> {
     fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>);
 }
-impl<Who> RefreshUseFor<Who> for Who {
-    default fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>) {
-        updater.refresh_for(self);
-    }
-}
+// ────────────────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────────────────
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 // pub trait UpdateUse {

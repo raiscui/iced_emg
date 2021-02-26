@@ -13,5 +13,19 @@
     "cSpell.words": [
         "elems",
         "glayer"
-    ]
+    ],
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/.classpath": true,
+        "**/.factorypath": true,
+        "**/.project": true,
+        "**/.settings": true,
+        "**/*.meta": true,
+        "emg_bind": true
+    },
+    "explorerExclude.backup": null
 }
