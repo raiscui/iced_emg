@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-02-26 16:21:23
+ * @LastEditTime: 2021-02-26 16:55:50
  * @LastEditors: Rais
  * @Description:
  */
 use std::ops::Deref;
 
 use crate::{runtime::Element, GElement, GraphType, Layer, NodeIndex, RefreshFor, Uuid};
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 use GElement::*;
 #[allow(dead_code)]
 pub enum GTreeBuilderElement<'a, Message> {
@@ -56,7 +56,7 @@ pub fn handle_root<'a, Message>(
     match tree_layer {
         GTreeBuilderElement::Layer(id, children_list) => {
             log::debug!("{:?}==>{:?}", &id, &children_list);
-            let nix = g.insert_node(id.clone(), RefCell::new(Layer_(Layer::new(id))));
+            let nix = g.insert_node(id.clone(), Layer_(Layer::new(id)));
             illicit::Layer::new().offer(nix.clone()).enter(|| {
                 assert_eq!(*illicit::expect::<NodeIndex<String>>(), nix.clone());
                 log::debug!("{:?}", *illicit::expect::<NodeIndex<String>>());
@@ -80,7 +80,7 @@ pub fn handle_layer<'a, Message>(
     match tree_layer {
         GTreeBuilderElement::Layer(id, children_list) => {
             log::debug!("{:?}==>{:?}", &id, &children_list);
-            let nix = g.insert_node(id.clone(), RefCell::new(Layer_(Layer::new(id))));
+            let nix = g.insert_node(id.clone(), Layer_(Layer::new(id)));
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
@@ -97,7 +97,7 @@ pub fn handle_layer<'a, Message>(
                 .encode_lower(&mut Uuid::encode_buffer())
                 .to_string();
             id.push_str("-Element");
-            let nix = g.insert_node(id, RefCell::new(Element_(element)));
+            let nix = g.insert_node(id, Element_(element));
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
@@ -107,8 +107,8 @@ pub fn handle_layer<'a, Message>(
                 .to_simple()
                 .encode_lower(&mut Uuid::encode_buffer())
                 .to_string();
-            id.push_str(format!("-{}", gel).as_ref());
-            let nix = g.insert_node(id, RefCell::new(gel));
+            id.push_str(format!("-{}", &gel).as_ref());
+            let nix = g.insert_node(id, gel);
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
@@ -127,9 +127,7 @@ pub fn handle_layer<'a, Message>(
             id.push_str("-Refresher");
             let nix = g.insert_node(
                 id,
-                RefCell::new(Refresher_(
-                    Rc::<dyn RefreshFor<GElement<'a, Message>>>::from(u),
-                )),
+                Refresher_(Rc::<dyn RefreshFor<GElement<'a, Message>>>::from(u)),
             );
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);

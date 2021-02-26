@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-26 15:23:37
+ * @LastEditTime: 2021-02-26 16:55:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,7 +16,6 @@ use std::hash::Hash;
 use std::{
     cell::RefCell,
     convert::{TryFrom, TryInto},
-    ops::DerefMut,
     rc::Rc,
 };
 
@@ -25,7 +24,8 @@ use strum_macros::Display;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
+pub type N<'a, Message> = GElement<'a, Message>;
+// pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
 pub type E = String;
 pub type GraphType<'a, Message> = Graph<N<'a, Message>, E>;
 
@@ -102,6 +102,7 @@ where
         )
     }
 }
+// ────────────────────────────────────────────────────────────────────────────────
 
 pub trait GraphStore<'a, Message> {
     type N;
@@ -124,7 +125,7 @@ pub trait GraphStore<'a, Message> {
     fn view(ix: Self::Ix) -> Element<'a, Message>;
 }
 
-impl<'a, Message, E, Ix> GraphStore<'a, Message> for Graph<RefCell<GElement<'a, Message>>, E, Ix>
+impl<'a, Message, E, Ix> GraphStore<'a, Message> for Graph<N<'a, Message>, E, Ix>
 where
     Ix: Clone + Hash + Eq + std::fmt::Debug,
     E: Clone + std::fmt::Debug,
@@ -133,7 +134,7 @@ where
     Message: 'static + Clone + std::fmt::Debug,
 {
     type Ix = Ix;
-    type N = RefCell<GElement<'a, Message>>;
+    type N = N<'a, Message>;
     type E = E;
     fn init() {
         // console_log::init_with_level(Level::Debug).ok();
@@ -168,33 +169,26 @@ where
         &self,
         cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
     ) -> GElement<'a, Message> {
-        let current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
+        let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
 
         let children_s = self.children_to_elements(cix);
 
         for child in children_s {
-            current_node_clone
-                .borrow_mut()
-                .deref_mut()
-                .refresh_use(&child)
+            current_node_clone.refresh_use(&child)
         }
 
-        current_node_clone.into_inner()
+        current_node_clone
     }
 
     fn view(cix: Self::Ix) -> Element<'a, Message> {
         G_STORE.with(|g_store_refcell| {
             // g_store_refcell.borrow_mut().set_graph(g);
             g_store_refcell
-                .borrow_mut()
-                .get_mut_graph_with(|g: &mut Self| {
-                    log::info!("graph==> {:#?}", &g);
-
-                    // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
-                    // rc_e.clone().into()
-                    // Rc::make_mut(rc_e).clone().into()
-                    g.gelement_comb_and_refresh(&cix).try_into().unwrap()
-                })
+                .borrow()
+                .get_graph::<Self::N, Self::E, Self::Ix>()
+                .gelement_comb_and_refresh(&cix)
+                .try_into()
+                .unwrap()
         })
     }
 }
@@ -234,7 +228,7 @@ impl GStore {
         self.anymap.insert(g);
         self
     }
-    fn get_graph<N, E, Ix>(&mut self) -> &Graph<N, E, Ix>
+    fn get_graph<N, E, Ix>(&self) -> &Graph<N, E, Ix>
     where
         N: Clone,
         E: Clone,

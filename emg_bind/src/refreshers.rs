@@ -1,19 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-02-25 20:02:12
+ * @LastEditTime: 2021-02-26 16:55:10
  * @LastEditors: Rais
  * @Description:
  */
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct Refresher<Use>(Rc<dyn Fn() -> Use>);
-
-fn ccc<F: Fn()>(f: F) {
-    f();
-}
-
 impl<Use> Refresher<Use> {
     pub fn new<F: Fn() -> Use + 'static>(f: F) -> Self {
         Refresher(Rc::new(f))
@@ -86,7 +81,6 @@ pub trait RefreshFor<Who> {
 #[cfg(test)]
 #[allow(unused_variables)]
 mod updater_test {
-    use std::cell::RefCell;
 
     use crate::AnchorWithUpdater;
     use crate::RefreshFor;
@@ -106,6 +100,7 @@ mod updater_test {
     fn test_anchor() {
         console_log::init_with_level(log::Level::Debug).ok();
 
+        #[allow(unused)]
         use anchors::{singlethread::Engine, Anchor, AnchorExt, Var};
 
         crate::ENGINE.with(|_e| {

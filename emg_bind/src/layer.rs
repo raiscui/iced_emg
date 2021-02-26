@@ -1,7 +1,5 @@
 use std::convert::TryInto;
 
-use bumpalo::format;
-
 use crate::runtime::{
     css,
     dodrio::{
