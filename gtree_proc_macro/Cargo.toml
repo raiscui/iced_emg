@@ -10,9 +10,9 @@ publish = false
 proc-macro = true
 
 [dependencies]
-gtree_macro = { path = "../gtree_macro" }
 syn = { version = "1", features = ["full" ] }
+gtree_macro = { path = "../gtree_macro" }
 
 proc-macro2 = { version = "1.0", features = ["nightly"] }
 quote = "1"
-proc-quote = "0.3.2"
+proc-quote = "0.4.0"

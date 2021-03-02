@@ -1,11 +1,26 @@
 // #![feature(proc_macro_diagnostic)]
 
-use proc_macro2::TokenStream;
+use std::collections::HashSet as Set;
+
+use trace_var::trace_var;
+
+use proc_macro2::{Span, TokenStream};
 // use quote::{quote, ToTokens};
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
-use syn::parse::{Parse, ParseStream};
-use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
+use syn::{
+    bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token, Field, FieldsNamed,
+    ItemStruct, Lifetime, LifetimeDef,
+};
+use syn::{
+    fold::{self, Fold},
+    parse_quote,
+};
+use syn::{
+    parse::{Parse, ParseStream},
+    DeriveInput,
+};
+
 use syn::{Ident, Token};
 // ────────────────────────────────────────────────────────────────────────────────
 // use proc_macro::Diagnostic;
@@ -245,48 +260,27 @@ impl ToTokens for GTreeLayerStruct {
 // @ Gtree ────────────────────────────────────────────────────────────────────────────────
 #[derive(Debug)]
 pub struct Gtree {
-    // g_type: Option<syn::Ident>,
+    // emg_graph: Ident,
     root: GTreeLayerStruct,
 }
 
 impl Parse for Gtree {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // let _: LayerSegments = input.parse()?;
-        // let _: GLayer = input.parse()?;
-        // let g_type = input.parse::<syn::Ident>().ok();
-        // println!(
-        //     "g_type------: {}",
-        //     quote!(
-        //        & #g_type
-        //     )
-        // );
+        // let emg_graph: Ident = input.parse()?;
+        // let _ = input.parse::<Token![=>]>()?;
 
         let root = input.parse::<GTreeLayerStruct>()?;
 
+        // Ok(Gtree { emg_graph, root })
         Ok(Gtree { root })
     }
 }
-
-// #[derive(Debug)]
-// enum NodeList<'a, A> {
-//     // Nil,
-//     LayerCons(A, &'a [NodeList<'a, A>]),
-// }
 
 impl ToTokens for Gtree {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let Gtree { root } = self;
 
-        // fn pp<A: std::fmt::Debug>(layer: &NodeList<A>) {
-        //     match layer {
-        //         NodeList::LayerCons(id, list) => {
-        //             println!("{:?}==>{:?}", id, list);
-        //             list.iter().for_each(|l| pp(l));
-        //         }
-        //     };
-        // }
         let token = quote_spanned! {root.span()=> {
-
 
             #[allow(unused)]
             use emg_bind::CloneState;
@@ -300,10 +294,7 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use GElement::*;
 
-
             let root = #root;
-
-
 
             GraphType::<Message>::init();
             GraphType::<Message>::get_mut_graph_with(|g| {
@@ -311,8 +302,6 @@ impl ToTokens for Gtree {
                 handle_root(g,root);
                 log::info!("{:#?}",g);
             });
-
-
 
         }};
         token.to_tokens(tokens)
@@ -322,7 +311,87 @@ impl ToTokens for Gtree {
 /// @ gtree_macro ────────────────────────────────────────────────────────────────────────────────
 pub fn gtree_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
     let output = syn::parse2::<Gtree>(item)?;
-    Ok(quote_spanned! { output.span()=>#output})
+    Ok(quote! (#output))
+}
+
+#[derive(Debug, Clone)]
+struct EmgArgs {
+    vars: Set<Ident>,
+    first_life_time: Option<Lifetime>,
+}
+impl EmgArgs {
+    fn has_init_var(&self) -> bool {
+        self.vars.contains(&Ident::new("init", Span::call_site()))
+    }
+}
+impl Parse for EmgArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let vars = Punctuated::<Ident, Token![,]>::parse_terminated(input)?;
+        Ok(EmgArgs {
+            vars: vars.into_iter().collect(),
+            first_life_time: None,
+        })
+    }
+}
+impl Fold for EmgArgs {
+    // fn fold_field(&mut self, field: Field) -> Field {
+    //     // let o: Field = parse_quote! {#i};
+    //     println!("===Field: {:#?}", &field);
+    //     fold::fold_field(self, field)
+    // }
+    fn fold_fields_named(&mut self, i: FieldsNamed) -> FieldsNamed {
+        let FieldsNamed {
+            brace_token: _,
+            named,
+        } = &i;
+        let field = named.iter();
+        // println!("---->{}", quote! {#named});
+        let lifetime = self.first_life_time.as_ref().unwrap();
+
+        parse_quote!({#(#field),* ,emg_graph:emg_bind::GraphType<#lifetime,Message>})
+        // fold::fold_fields_named(self, i)
+    }
+}
+
+/// @ emg_macro ────────────────────────────────────────────────────────────────────────────────
+pub fn emg_macro(args: TokenStream, input: TokenStream) -> Result<TokenStream, syn::Error> {
+    let args = syn::parse2::<EmgArgs>(args)?;
+    println!("has_init_var? {:?}", args.has_init_var());
+
+    let input = syn::parse2::<ItemStruct>(input)?;
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    let o = emg_handle(args, input);
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    Ok(quote!(
+
+        #o
+
+    ))
+}
+
+fn emg_handle(mut args: EmgArgs, input: ItemStruct) -> ItemStruct {
+    let mut need_add_lifetime = false;
+    if args.first_life_time.is_none() {
+        let first_lifetime = input.generics.lifetimes().next();
+        need_add_lifetime = first_lifetime.is_none();
+
+        args.first_life_time = first_lifetime
+            .map(|l_def| &l_def.lifetime)
+            .cloned()
+            .or(Some(Lifetime::new("'a", Span::call_site())));
+    };
+    println!("=====first_life_time:{:?}", &args.first_life_time);
+    let mut o = args.fold_item_struct(input);
+    if need_add_lifetime {
+        o.generics
+            .params
+            .push(syn::GenericParam::Lifetime(LifetimeDef::new(
+                args.first_life_time.unwrap(),
+            )))
+    }
+    o
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -420,19 +489,78 @@ mod tests {
         token_test(input);
         println!();
     }
-    // #[test]
-    // fn test3() {
-    //     fn token_test(input: &str) {
-    //         match syn::parse_str::<layer>(input) {
-    //             Ok(ok) => println!("Gview===>{}", ok.to_token_stream()),
-    //             Err(error) => println!("...{:?}", error),
-    //         }
-    //     }
-    //     println!();
-    //     // type GraphType = Vec<i32>;
-    //     let input = r#" layer("f") "#;
+    #[test]
+    fn emg_life() {
+        let input: ItemStruct = syn::parse_quote!(
+            struct AA<'f: 'b + 'c, 'b, 'c> {
+                bb: String,
+                cc: String,
+            }
+        );
+        println!("====input:{:#?}", &input);
 
-    //     token_test(input);
-    //     println!();
-    // }
+        let mut args: EmgArgs = EmgArgs {
+            vars: Set::new(),
+            first_life_time: None,
+        };
+        println!("has_init_var? {:?}", args.has_init_var());
+        // ─────────────────────────────────────────────────────────────────
+        let o = emg_handle(args, input);
+
+        // ─────────────────────────────────────────────────────────────────
+
+        println!("=======================");
+        // println!("o: {:#?}", &o);
+        println!("=======================");
+        println!("{}", quote! {#o});
+    }
+    #[test]
+    fn emg_def_life() {
+        let input: ItemStruct = syn::parse_quote!(
+            struct AA<'f: 'b + 'c, 'b, 'c> {
+                bb: String,
+                cc: String,
+            }
+        );
+        println!("====input:{:#?}", &input);
+
+        let mut args: EmgArgs = EmgArgs {
+            vars: Set::new(),
+            first_life_time: None,
+        };
+        println!("has_init_var? {:?}", args.has_init_var());
+        // ─────────────────────────────────────────────────────────────────
+        let o = emg_handle(args, input);
+
+        // ─────────────────────────────────────────────────────────────────
+
+        println!("=======================");
+        // println!("o: {:#?}", &o);
+        println!("=======================");
+        println!("{}", quote! {#o});
+    }
+    #[test]
+    fn emg_no_life() {
+        let input: ItemStruct = syn::parse_quote!(
+            struct AA {
+                bb: String,
+                cc: String,
+            }
+        );
+        println!("====input:{:#?}", &input);
+
+        let mut args: EmgArgs = EmgArgs {
+            vars: Set::new(),
+            first_life_time: None,
+        };
+        println!("has_init_var? {:?}", args.has_init_var());
+        // ─────────────────────────────────────────────────────────────────
+        let o = emg_handle(args, input);
+        // ─────────────────────────────────────────────────────────────────
+
+        println!("=======================");
+        // println!("o: {:#?}", &o);
+        println!("=======================");
+        println!("{}", quote! {#o});
+    }
 }

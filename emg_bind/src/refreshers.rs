@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-02-26 16:55:10
+ * @LastEditTime: 2021-03-02 16:13:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -82,9 +82,9 @@ pub trait RefreshFor<Who> {
 #[allow(unused_variables)]
 mod updater_test {
 
-    use crate::AnchorWithUpdater;
     use crate::RefreshFor;
     use crate::RefreshUseFor;
+    use lazy_static::__Deref;
     use wasm_bindgen_test::*;
 
     use super::*;
@@ -100,20 +100,22 @@ mod updater_test {
     fn test_anchor() {
         console_log::init_with_level(log::Level::Debug).ok();
 
+        use anchors::expert::{Anchor, AnchorExt, Var};
         #[allow(unused)]
-        use anchors::{singlethread::Engine, Anchor, AnchorExt, Var};
+        use anchors::singlethread::Engine;
 
         crate::ENGINE.with(|_e| {
             log::info!("============= get engine");
         });
         let mut s = String::from("sss");
+
         let n = 99i32;
 
-        let mut ff = AnchorWithUpdater::new(Var::new(String::from("hello")));
-        let ff2 = AnchorWithUpdater::new(Var::new(2i32));
+        let mut ff = Var::new(String::from("hello"));
+        let ff2 = Var::new(2i32);
         ff.refresh_use(&ff2);
         ff2.refresh_for(&mut ff);
-        log::info!("==== test_anchor: {}", &ff.get());
+        log::info!("==== test_anchor: {}", ff.get().deref());
         // ─────────────────────────────────────────────────────────────────
 
         s.refresh_use(&ff2);
@@ -124,17 +126,17 @@ mod updater_test {
 
         ff.refresh_use(&n);
         n.refresh_for(&mut ff);
-        log::info!("==== test_anchor: {}", &ff.get());
-        assert_eq!("hello,2,2,99,99", &ff.get());
+        log::info!("==== test_anchor: {}", ff.get().deref());
+        assert_eq!("hello,2,2,99,99", ff.get().deref());
         // ─────────────────────────────────────────────────────────────────
 
-        let (a, a_updater) = Var::new(4i32);
+        let a = Var::new(4i32);
 
         ff.refresh_use(&a);
         a.refresh_for(&mut ff);
-        log::info!("==== test_anchor: {}", &ff.get());
+        log::info!("==== test_anchor: {}", ff.get().deref());
 
-        assert_eq!("hello,2,2,99,99,4,4", &ff.get());
+        assert_eq!("hello,2,2,99,99,4,4", ff.get().deref());
     }
     #[wasm_bindgen_test]
 

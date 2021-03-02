@@ -1,17 +1,19 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-02-25 17:36:14
+ * @LastEditTime: 2021-03-02 09:37:01
  * @LastEditors: Rais
  * @Description:
  */
-use std::ops::Deref;
-
-use anchors::{singlethread::Engine, Anchor};
-
-use crate::{
-    AnchorWithUpdater, GElement, GElement::*, RefreshFor, RefreshUseFor, Refresher, RefresherFor,
+use anchors::expert::Anchor;
+use anchors::expert::Var;
+use anchors::singlethread::Engine;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    ops::{Deref, DerefMut},
 };
+
+use crate::{GElement, GElement::*, RefreshFor, RefreshUseFor, Refresher, RefresherFor};
 // ────────────────────────────────────────────────────────────────────────────────
 // @ impl RefreshUseFor────────────────────────────────────────────────────────────────────────────────
 
@@ -34,48 +36,50 @@ impl<Who> RefreshUseFor<Who> for Who {
 // }
 
 // @ impl RefreshFor────────────────────────────────────────────────────────────────────────────────
-
 pub auto trait GeneralRefreshFor {}
-impl<Who> !GeneralRefreshFor for AnchorWithUpdater<Who> {}
-impl<Use, E> GeneralRefreshFor for Anchor<Use, E> where E: anchors::Engine + ?Sized {}
+impl<Who> !GeneralRefreshFor for Var<Who, Engine> {}
+impl<Use, E> GeneralRefreshFor for Anchor<Use, E> where E: anchors::expert::Engine + ?Sized {}
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who, Use> RefreshFor<AnchorWithUpdater<Who>> for Use
+impl<Who: 'static, Use> RefreshFor<Var<Who, Engine>> for Use
 where
     Use: GeneralRefreshFor + RefreshFor<Who> + std::clone::Clone,
     Who: std::clone::Clone,
 {
-    fn refresh_for(&self, who: &mut AnchorWithUpdater<Who>) {
-        log::debug!("==========refresh_for anchor");
-        let mut w = who.get();
+    fn refresh_for(&self, who: &mut Var<Who, Engine>) {
+        log::debug!("==========refresh_for Var");
+        let mut w = who.get().deref().clone();
+        // let mut w = (*who.get()).clone();
         self.refresh_for(&mut w);
         who.set(w);
+
         // who.refresh_use(self);
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who, Use> RefreshFor<Who> for AnchorWithUpdater<Use>
+impl<Who, Use> RefreshFor<Who> for Var<Use, Engine>
 where
     Who: GeneralRefreshFor,
     Use: RefreshFor<Who> + Clone + 'static,
 {
     fn refresh_for(&self, who: &mut Who) {
         // self.get().refresh_for(who);
-        who.refresh_use(&self.get());
+        who.refresh_use(self.get().deref());
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who, Use> RefreshFor<AnchorWithUpdater<Who>> for AnchorWithUpdater<Use>
+impl<Who: 'static, Use: 'static> RefreshFor<Var<Who, Engine>> for Var<Use, Engine>
 where
     Use: RefreshFor<Who> + std::clone::Clone,
     Who: std::clone::Clone,
 {
-    fn refresh_for(&self, who: &mut AnchorWithUpdater<Who>) {
+    fn refresh_for(&self, who: &mut Var<Who, Engine>) {
         let v = self.get();
-        let mut w = who.get();
-        w.refresh_use(&v);
+        let mut w = who.get().deref().clone();
+        // let mut w = (*who.get()).clone();
+        w.refresh_use(v.deref());
 
         who.set(w);
         // who.refresh_use(self);
@@ -88,6 +92,7 @@ impl<Who> RefreshFor<Who> for RefresherFor<Who> {
         self.get()(who);
     }
 }
+
 impl<Who, Use> RefreshFor<Who> for Refresher<Use>
 where
     Use: RefreshFor<Who>,

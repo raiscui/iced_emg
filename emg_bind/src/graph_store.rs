@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-26 16:55:33
+ * @LastEditTime: 2021-02-27 18:50:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -169,10 +169,13 @@ where
         &self,
         cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
     ) -> GElement<'a, Message> {
+        // buildingTime original GElement
         let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
 
         let children_s = self.children_to_elements(cix);
 
+        // The const / dyn child node performs the change
+        // TODO: cache.    use edge type?
         for child in children_s {
             current_node_clone.refresh_use(&child)
         }

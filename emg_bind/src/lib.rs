@@ -12,7 +12,6 @@ pub use iced_web as runtime;
 #[cfg(target_arch = "wasm32")]
 pub use uuid::Uuid;
 
-mod anchor;
 mod g_tree_builder_element;
 mod graph_store;
 mod impl_refresh;
@@ -22,7 +21,6 @@ mod refreshers;
 mod state_store;
 mod topo_store;
 
-pub use anchor::*;
 pub use g_tree_builder_element::*;
 pub use graph_store::*;
 pub use layer::Layer;
@@ -33,6 +31,7 @@ pub use refreshers::RefresherFor;
 pub use state_store::GStateStore;
 pub use topo_store::use_state;
 pub use topo_store::CloneState;
+pub use topo_store::StateAccess;
 
 #[cfg(test)]
 mod tests {
