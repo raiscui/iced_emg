@@ -1,24 +1,27 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-03-02 16:13:37
+ * @LastEditTime: 2021-03-03 19:32:40
  * @LastEditors: Rais
  * @Description:
  */
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
-#[derive(Clone)]
-pub struct Refresher<Use>(Rc<dyn Fn() -> Use>);
-impl<Use> Refresher<Use> {
-    pub fn new<F: Fn() -> Use + 'static>(f: F) -> Self {
+// #[derive(Clone)]
+pub struct Refresher<'a, Use>(Rc<dyn Fn() -> Use + 'a>);
+impl<'a, Use> Refresher<'a, Use> {
+    pub fn new<F: Fn() -> Use + 'a>(f: F) -> Self {
         Refresher(Rc::new(f))
     }
     // pub fn new(f: impl Fn() -> Use + 'static) -> Self {
     //     Refresher(Rc::new(f))
     // }
-    pub fn get(&self) -> Rc<dyn Fn() -> Use> {
-        Rc::clone(&self.0)
+    pub fn get(&self) -> Use {
+        (&self.0)()
     }
+    // pub fn get(&self) -> Rc<dyn Fn() -> Use + 'a> {
+    //     Rc::clone(&self.0)
+    // }
     // pub fn new(f: Rc<dyn Fn() -> Use>) -> Self {
     //     Refresher(f)
     // }
@@ -158,7 +161,7 @@ mod updater_test {
         console_log::init_with_level(log::Level::Debug).ok();
 
         let mut f = String::from("xx");
-        let a = Refresher(Rc::new(|| 99));
+        let a = Refresher::new(|| 99);
         a.refresh_for(&mut f);
         a.refresh_for(&mut f);
         log::info!("{}", &f);

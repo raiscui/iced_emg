@@ -116,7 +116,7 @@ impl<'a, Message> Layer<'a, Message> {
 // }
 
 #[inline]
-fn layer<'a, 'b, B>(
+fn layer<'a, B>(
     // tag_name: &'a str,
     bump: B,
 ) -> ElementBuilder<

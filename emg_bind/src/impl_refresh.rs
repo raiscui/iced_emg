@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-02 09:37:01
+ * @LastEditTime: 2021-03-03 16:29:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -93,13 +93,13 @@ impl<Who> RefreshFor<Who> for RefresherFor<Who> {
     }
 }
 
-impl<Who, Use> RefreshFor<Who> for Refresher<Use>
+impl<'a, Who, Use> RefreshFor<Who> for Refresher<'a, Use>
 where
     Use: RefreshFor<Who>,
 {
     fn refresh_for(&self, who: &mut Who) {
         // self.get()().refresh_for(who);
-        who.refresh_use(&self.get()());
+        who.refresh_use(&self.get());
     }
 }
 

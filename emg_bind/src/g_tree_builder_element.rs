@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-02-26 16:55:50
+ * @LastEditTime: 2021-03-03 19:28:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,8 +15,13 @@ pub enum GTreeBuilderElement<'a, Message> {
     Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
     El(Element<'a, Message>),
     WhoWithUpdater(GElement<'a, Message>, Vec<GTreeBuilderElement<'a, Message>>),
-    Updater(Box<dyn RefreshFor<GElement<'a, Message>>>),
-    Cl(Box<dyn Fn()>),
+    Updater(Box<dyn RefreshFor<GElement<'a, Message>> + 'a>),
+    Cl(Box<dyn Fn() + 'a>),
+}
+impl<Message> Default for GTreeBuilderElement<'_, Message> {
+    fn default() -> Self {
+        GTreeBuilderElement::Cl(Box::new(|| {}))
+    }
 }
 
 impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
@@ -127,7 +132,8 @@ pub fn handle_layer<'a, Message>(
             id.push_str("-Refresher");
             let nix = g.insert_node(
                 id,
-                Refresher_(Rc::<dyn RefreshFor<GElement<'a, Message>>>::from(u)),
+                Refresher_(Rc::<dyn RefreshFor<GElement<'a, Message>> + 'a>::from(u)),
+                // Refresher_(u),
             );
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);

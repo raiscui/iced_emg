@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-27 18:50:00
+ * @LastEditTime: 2021-03-03 17:05:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -65,7 +65,7 @@ pub enum GElement<'a, Message> {
     Element_(Element<'a, Message>),
     Layer_(Layer<'a, Message>),
     Text_(Text),
-    Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>>>),
+    Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
 }
 
 impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
