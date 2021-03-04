@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-03-03 17:05:40
+ * @LastEditTime: 2021-03-04 18:17:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -104,15 +104,10 @@ where
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub trait GraphStore<'a, Message> {
+pub trait GraphView<'a, Message> {
     type N;
     type Ix;
     type E;
-    fn init();
-    fn get_mut_graph_with<F: FnOnce(&mut Self) -> R, R>(func: F) -> R;
-    // fn add_el(&mut self, key: Self::Ix, e_item: Self::E, n_item: Self::N) -> NodeIndex<Self::Ix>
-    // where
-    //     Self::Ix: Clone;
 
     fn gelement_comb_and_refresh(
         &self,
@@ -122,38 +117,19 @@ pub trait GraphStore<'a, Message> {
 
     fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>>;
 
-    fn view(ix: Self::Ix) -> Element<'a, Message>;
+    fn view(&self, ix: Self::Ix) -> Element<'_, Message>;
+    // fn global_view(ix: Self::Ix) -> Element<'a, Message>;
 }
 
-impl<'a, Message, E, Ix> GraphStore<'a, Message> for Graph<N<'a, Message>, E, Ix>
+impl<'a, Message, E, Ix> GraphView<'a, Message> for Graph<N<'a, Message>, E, Ix>
 where
     Ix: Clone + Hash + Eq + std::fmt::Debug,
     E: Clone + std::fmt::Debug,
-    // N: Clone,
-    Self: 'static,
     Message: 'static + Clone + std::fmt::Debug,
 {
     type Ix = Ix;
     type N = N<'a, Message>;
     type E = E;
-    fn init() {
-        // console_log::init_with_level(Level::Debug).ok();
-
-        G_STORE.with(|g_store_refcell| {
-            // g_store_refcell.borrow_mut().set_graph(g);
-            g_store_refcell.borrow_mut().set_graph(Self::default());
-        });
-    }
-
-    fn get_mut_graph_with<F, R>(func: F) -> R
-    where
-        F: FnOnce(&mut Self) -> R,
-    {
-        G_STORE.with(|g_store_refcell| {
-            // g_store_refcell.borrow_mut().set_graph(g);
-            g_store_refcell.borrow_mut().get_mut_graph_with(func)
-        })
-    }
 
     fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>> {
         self.edges_iter_use_ix(cix, Outgoing)
@@ -183,13 +159,109 @@ where
         current_node_clone
     }
 
-    fn view(cix: Self::Ix) -> Element<'a, Message> {
+    fn view(&self, cix: Self::Ix) -> Element<'_, Message> {
+        self.gelement_comb_and_refresh(&cix).try_into().unwrap()
+    }
+
+    // fn global_view(cix: Self::Ix) -> Element<'a, Message> {
+    //     G_STORE.with(|g_store_refcell| {
+    //         // g_store_refcell.borrow_mut().set_graph(g);
+    //         g_store_refcell
+    //             .borrow()
+    //             .get_graph::<Self::N, Self::E, Self::Ix>()
+    //             .gelement_comb_and_refresh(&cix)
+    //             .try_into()
+    //             .unwrap()
+    //     })
+    // }
+}
+pub trait GraphStore<'a, Message> {
+    type N;
+    type Ix;
+    type E;
+    fn global_init();
+    fn global_get_mut_graph_with<F: FnOnce(&mut Self) -> R, R>(func: F) -> R;
+    // fn add_el(&mut self, key: Self::Ix, e_item: Self::E, n_item: Self::N) -> NodeIndex<Self::Ix>
+    // where
+    //     Self::Ix: Clone;
+
+    fn global_gelement_comb_and_refresh(
+        &self,
+        cix: &Self::Ix,
+        // current_node: &RefCell<GElement<'a, Message>>,
+    ) -> GElement<'a, Message>;
+
+    fn global_children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>>;
+
+    // fn view(&self, ix: Self::Ix) -> Element<'_, Message>;
+    fn global_view(ix: Self::Ix) -> Element<'a, Message>;
+}
+
+impl<'a, Message, E, Ix> GraphStore<'a, Message> for Graph<N<'a, Message>, E, Ix>
+where
+    Ix: Clone + Hash + Eq + std::fmt::Debug,
+    E: Clone + std::fmt::Debug,
+    // N: Clone,
+    Self: 'static,
+    Message: 'static + Clone + std::fmt::Debug,
+{
+    type Ix = Ix;
+    type N = N<'a, Message>;
+    type E = E;
+    fn global_init() {
+        // console_log::init_with_level(Level::Debug).ok();
+
+        G_STORE.with(|g_store_refcell| {
+            // g_store_refcell.borrow_mut().set_graph(g);
+            g_store_refcell.borrow_mut().set_graph(Self::default());
+        });
+    }
+
+    fn global_get_mut_graph_with<F, R>(func: F) -> R
+    where
+        F: FnOnce(&mut Self) -> R,
+    {
+        G_STORE.with(|g_store_refcell| {
+            // g_store_refcell.borrow_mut().set_graph(g);
+            g_store_refcell.borrow_mut().get_mut_graph_with(func)
+        })
+    }
+
+    fn global_children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>> {
+        self.edges_iter_use_ix(cix, Outgoing)
+            .map(|eix| {
+                let this_child_ix = eix.ix_dir(Outgoing);
+                // let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
+                self.global_gelement_comb_and_refresh(this_child_ix)
+            })
+            .collect()
+    }
+
+    fn global_gelement_comb_and_refresh(
+        &self,
+        cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
+    ) -> GElement<'a, Message> {
+        // buildingTime original GElement
+        let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
+
+        let children_s = self.global_children_to_elements(cix);
+
+        // The const / dyn child node performs the change
+        // TODO: cache.    use edge type?
+        for child in children_s {
+            current_node_clone.refresh_use(&child)
+        }
+
+        current_node_clone
+    }
+
+    fn global_view(cix: Self::Ix) -> Element<'a, Message> {
         G_STORE.with(|g_store_refcell| {
             // g_store_refcell.borrow_mut().set_graph(g);
             g_store_refcell
                 .borrow()
                 .get_graph::<Self::N, Self::E, Self::Ix>()
-                .gelement_comb_and_refresh(&cix)
+                .global_gelement_comb_and_refresh(&cix)
                 .try_into()
                 .unwrap()
         })

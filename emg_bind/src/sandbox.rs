@@ -1,11 +1,13 @@
+use std::{cell::RefCell, rc::Rc};
+
 use iced::{Color, Element, Error, Settings};
 
-use crate::{Application, Command, GTreeBuilderElement, Subscription};
+use crate::{Application, Command, GTreeBuilderElement, GraphType, Subscription};
 
 /*
  * @Author: Rais
  * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2021-03-04 13:17:20
+ * @LastEditTime: 2021-03-04 18:24:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -34,7 +36,7 @@ pub trait Sandbox {
     /// Returns the widgets to display in the [`Sandbox`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view(&mut self) -> Element<'_, Self::Message>;
+    fn view<'a>(&mut self, g: &'a GraphType<'_, Self::Message>) -> Element<'a, Self::Message>;
 
     /// Returns the background color of the [`Sandbox`].
     ///
@@ -56,7 +58,7 @@ pub trait Sandbox {
         1.0
     }
 
-    fn tree_build(&self) -> GTreeBuilderElement<'_, Self::Message>;
+    fn tree_build<'a>(s: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
 
     /// Runs the [`Sandbox`].
     ///
@@ -100,10 +102,10 @@ where
         Subscription::none()
     }
 
-    fn view(&mut self) -> Element<'_, T::Message> {
-        T::view(self)
+    fn view<'a>(&mut self, g: &'a GraphType<'_, T::Message>) -> Element<'a, T::Message> {
+        T::view(self, g)
     }
-    fn tree_build(&self) -> GTreeBuilderElement<'_, T::Message> {
-        T::tree_build(self)
+    fn tree_build<'a>(s: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, T::Message> {
+        T::tree_build(s)
     }
 }

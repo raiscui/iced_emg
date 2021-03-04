@@ -2,7 +2,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-03-04 15:52:13
+ * @LastEditTime: 2021-03-04 18:21:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -63,7 +63,7 @@ pub trait Application {
     /// Returns the widgets to display in the [`Application`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view(&mut self) -> Element<'_, Self::Message>;
+    fn view<'a>(&mut self, g: &'a GraphType<'_, Self::Message>) -> Element<'a, Self::Message>;
 
     /// Returns the event [`Subscription`] for the current state of the
     /// application.
@@ -77,7 +77,7 @@ pub trait Application {
         Subscription::none()
     }
 
-    fn tree_build(&self) -> GTreeBuilderElement<'_, Self::Message>;
+    fn tree_build<'a>(s: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
 
     /// Runs the [`Application`].
     fn run(flags: Self::Flags)
@@ -106,25 +106,22 @@ pub trait Application {
 
         let application = Rc::new(RefCell::new(app));
 
-        use crate::graph_store::GraphStore;
+        // use crate::graph_store::GraphStore;
 
-        let app_for_treebuild = application.clone();
-        let ref_app_for_treebuild = app_for_treebuild.borrow();
-
-        let root = ref_app_for_treebuild.tree_build();
-        let mut g = GraphType::<'_, Self::Message>::default();
-        crate::handle_root(&mut g, root);
-        let rcg = Rc::new(RefCell::new(g));
-        // let cowg = Cow::<'static, GraphType<'_, Self::Message>>::Owned(g);
+        let root = Rc::new(Self::tree_build(Rc::clone(&application)));
+        let mut g = GraphType::<Self::Message>::default();
+        crate::handle_root(&mut g, Rc::clone(&root));
+        let rc_g = Rc::new(RefCell::new(g));
         // GraphType::<Self::Message>::init();
         // GraphType::<Self::Message>::get_mut_graph_with(|g| {
         //     crate::handle_root(g, root);
         // });
+        // ────────────────────────────────────────────────────────────────────────────────
 
         let instance = Instance {
             application: application.clone(),
             bus: Bus::new(sender),
-            g: Rc::clone(&rcg),
+            g: Rc::clone(&rc_g),
         };
 
         let vdom = dodrio::Vdom::new(&body, instance);
@@ -163,7 +160,7 @@ struct Instance<'a, A: Application> {
     g: Rc<RefCell<GraphType<'a, A::Message>>>,
 }
 
-impl<'a, 'b, A> dodrio::Render<'a> for Instance<'b, A>
+impl<'a, A> dodrio::Render<'a> for Instance<'_, A>
 where
     A: Application,
 {
@@ -171,7 +168,8 @@ where
         use dodrio::builder::*;
 
         let mut ui = self.application.borrow_mut();
-        let element = ui.view();
+        let cc = self.g.borrow();
+        let element = ui.view(&*cc);
         let mut css = Css::new();
 
         let node = element.node(context.bump, &self.bus, &mut css);
