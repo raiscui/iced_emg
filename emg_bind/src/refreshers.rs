@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-03-03 19:32:40
+ * @LastEditTime: 2021-03-04 19:44:29
  * @LastEditors: Rais
  * @Description:
  */
-use std::{cell::RefCell, rc::Rc};
+use std::{borrow::Borrow, cell::RefCell, rc::Rc};
 
 // #[derive(Clone)]
 pub struct Refresher<'a, Use>(Rc<dyn Fn() -> Use + 'a>);
@@ -17,7 +17,8 @@ impl<'a, Use> Refresher<'a, Use> {
     //     Refresher(Rc::new(f))
     // }
     pub fn get(&self) -> Use {
-        (&self.0)()
+        (self.0)()
+        // Rc::clone(&self.0)()
     }
     // pub fn get(&self) -> Rc<dyn Fn() -> Use + 'a> {
     //     Rc::clone(&self.0)

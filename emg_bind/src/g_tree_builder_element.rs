@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-03-04 16:02:06
+ * @LastEditTime: 2021-03-04 18:32:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -66,7 +66,7 @@ pub fn handle_root<'a, Message>(
                 assert_eq!(*illicit::expect::<NodeIndex<String>>(), nix.clone());
                 log::debug!("{:?}", *illicit::expect::<NodeIndex<String>>());
                 children_list
-                    .into_iter()
+                    .iter()
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });
         }
@@ -92,7 +92,7 @@ pub fn handle_layer<'a, Message>(
             illicit::Layer::new().offer(nix.clone()).enter(|| {
                 assert_eq!(*illicit::expect::<NodeIndex<String>>(), nix.clone());
                 children_list
-                    .into_iter()
+                    .iter()
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });
         }
@@ -120,7 +120,7 @@ pub fn handle_layer<'a, Message>(
             illicit::Layer::new().offer(nix.clone()).enter(|| {
                 assert_eq!(*illicit::expect::<NodeIndex<String>>(), nix.clone());
                 updaters
-                    .into_iter()
+                    .iter()
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });
         }

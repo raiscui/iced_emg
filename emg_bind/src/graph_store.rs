@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-03-04 18:17:10
+ * @LastEditTime: 2021-03-04 18:27:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -117,7 +117,7 @@ pub trait GraphView<'a, Message> {
 
     fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>>;
 
-    fn view(&self, ix: Self::Ix) -> Element<'_, Message>;
+    fn view(&self, ix: Self::Ix) -> Element<'a, Message>;
     // fn global_view(ix: Self::Ix) -> Element<'a, Message>;
 }
 
@@ -159,7 +159,7 @@ where
         current_node_clone
     }
 
-    fn view(&self, cix: Self::Ix) -> Element<'_, Message> {
+    fn view(&self, cix: Self::Ix) -> Element<'a, Message> {
         self.gelement_comb_and_refresh(&cix).try_into().unwrap()
     }
 

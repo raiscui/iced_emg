@@ -2,14 +2,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-03-04 18:21:56
+ * @LastEditTime: 2021-03-04 19:43:30
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::{GTreeBuilderElement, GraphType};
 
-use std::{borrow::Cow, cell::RefCell, fmt, rc::Rc};
+use std::{cell::RefCell, fmt, rc::Rc};
 
 pub use iced_web::{futures, Command};
 
@@ -106,12 +106,13 @@ pub trait Application {
 
         let application = Rc::new(RefCell::new(app));
 
-        // use crate::graph_store::GraphStore;
+        // ─────────────────────────────────────────────────────────────────
 
-        let root = Rc::new(Self::tree_build(Rc::clone(&application)));
-        let mut g = GraphType::<Self::Message>::default();
-        crate::handle_root(&mut g, Rc::clone(&root));
-        let rc_g = Rc::new(RefCell::new(g));
+        let mut emg_graph = GraphType::<Self::Message>::default();
+        let root = Self::tree_build(Rc::clone(&application));
+        crate::handle_root(&mut emg_graph, Rc::new(root));
+        let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
+        // let emg_graph_rc = (emg_graph);
         // GraphType::<Self::Message>::init();
         // GraphType::<Self::Message>::get_mut_graph_with(|g| {
         //     crate::handle_root(g, root);
@@ -121,7 +122,7 @@ pub trait Application {
         let instance = Instance {
             application: application.clone(),
             bus: Bus::new(sender),
-            g: Rc::clone(&rc_g),
+            g: Rc::clone(&emg_graph_rc_refcell),
         };
 
         let vdom = dodrio::Vdom::new(&body, instance);
@@ -168,8 +169,8 @@ where
         use dodrio::builder::*;
 
         let mut ui = self.application.borrow_mut();
-        let cc = self.g.borrow();
-        let element = ui.view(&*cc);
+        let emg_graph_ref = self.g.borrow();
+        let element = ui.view(&*emg_graph_ref);
         let mut css = Css::new();
 
         let node = element.node(context.bump, &self.bus, &mut css);
