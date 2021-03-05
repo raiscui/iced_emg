@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-03-04 19:44:29
+ * @LastEditTime: 2021-03-05 12:44:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -41,6 +41,20 @@ impl<Who> RefresherFor<Who> {
     //     RefresherFor(f)
     // }
 }
+// #[derive(Clone)]
+// pub struct RefresherForSelf<SelfEl, Use>(Rc<dyn Fn(&mut SelfEl) -> Use>);
+
+// impl<SelfEl, Use> RefresherForSelf<SelfEl, Use> {
+//     pub fn new(f: impl Fn(&mut SelfEl) -> Use + 'static) -> Self {
+//         RefresherForSelf(Rc::new(f))
+//     }
+//     pub fn get(&self, el: &mut SelfEl) -> Use {
+//         (self.0)(el)
+//     }
+//     // pub fn new(f: Rc<dyn Fn(&mut In)>) -> Self {
+//     //     RefresherFor(f)
+//     // }
+// }
 // ────────────────────────────────────────────────────────────────────────────────
 
 // refresh

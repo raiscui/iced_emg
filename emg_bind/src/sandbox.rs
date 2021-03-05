@@ -7,7 +7,7 @@ use crate::{Application, Command, GTreeBuilderElement, GraphType, Subscription};
 /*
  * @Author: Rais
  * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2021-03-04 18:24:10
+ * @LastEditTime: 2021-03-05 10:17:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -36,7 +36,7 @@ pub trait Sandbox {
     /// Returns the widgets to display in the [`Sandbox`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view<'a>(&mut self, g: &'a GraphType<'_, Self::Message>) -> Element<'a, Self::Message>;
+    fn view<'a>(&self, g: &'a GraphType<'_, Self::Message>) -> Element<'a, Self::Message>;
 
     /// Returns the background color of the [`Sandbox`].
     ///
@@ -102,7 +102,7 @@ where
         Subscription::none()
     }
 
-    fn view<'a>(&mut self, g: &'a GraphType<'_, T::Message>) -> Element<'a, T::Message> {
+    fn view<'a>(&self, g: &'a GraphType<'_, T::Message>) -> Element<'a, T::Message> {
         T::view(self, g)
     }
     fn tree_build<'a>(s: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, T::Message> {

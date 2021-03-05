@@ -2,7 +2,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-03-04 19:43:30
+ * @LastEditTime: 2021-03-05 10:20:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -63,7 +63,7 @@ pub trait Application {
     /// Returns the widgets to display in the [`Application`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view<'a>(&mut self, g: &'a GraphType<'_, Self::Message>) -> Element<'a, Self::Message>;
+    fn view<'a>(&self, g: &'a GraphType<'_, Self::Message>) -> Element<'a, Self::Message>;
 
     /// Returns the event [`Subscription`] for the current state of the
     /// application.
@@ -168,7 +168,7 @@ where
     fn render(&self, context: &mut dodrio::RenderContext<'a>) -> dodrio::Node<'a> {
         use dodrio::builder::*;
 
-        let mut ui = self.application.borrow_mut();
+        let ui = self.application.borrow();
         let emg_graph_ref = self.g.borrow();
         let element = ui.view(&*emg_graph_ref);
         let mut css = Css::new();

@@ -87,6 +87,11 @@ where
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
+// impl<Who> RefreshFor<Who> for RefresherForSelf<Who> {
+//     fn refresh_for(&self, who: &mut Who) {
+//         self.get()(who);
+//     }
+// }
 impl<Who> RefreshFor<Who> for RefresherFor<Who> {
     fn refresh_for(&self, who: &mut Who) {
         self.get()(who);
