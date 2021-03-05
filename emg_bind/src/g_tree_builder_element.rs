@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-02-26 16:55:50
+ * @LastEditTime: 2021-03-04 18:32:49
  * @LastEditors: Rais
  * @Description:
  */
-use std::ops::Deref;
+use std::{borrow::Borrow, ops::Deref};
 
 use crate::{runtime::Element, GElement, GraphType, Layer, NodeIndex, RefreshFor, Uuid};
 use std::rc::Rc;
@@ -15,8 +15,13 @@ pub enum GTreeBuilderElement<'a, Message> {
     Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
     El(Element<'a, Message>),
     WhoWithUpdater(GElement<'a, Message>, Vec<GTreeBuilderElement<'a, Message>>),
-    Updater(Box<dyn RefreshFor<GElement<'a, Message>>>),
-    Cl(Box<dyn Fn()>),
+    Updater(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
+    Cl(Box<dyn Fn() + 'a>),
+}
+impl<Message> Default for GTreeBuilderElement<'_, Message> {
+    fn default() -> Self {
+        GTreeBuilderElement::Cl(Box::new(|| {}))
+    }
 }
 
 impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
@@ -49,11 +54,11 @@ impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
 }
 pub fn handle_root<'a, Message>(
     g: &mut GraphType<'a, Message>,
-    tree_layer: GTreeBuilderElement<'a, Message>,
+    tree_layer: Rc<GTreeBuilderElement<'a, Message>>,
 ) where
     Message: Clone + std::fmt::Debug,
 {
-    match tree_layer {
+    match tree_layer.borrow() {
         GTreeBuilderElement::Layer(id, children_list) => {
             log::debug!("{:?}==>{:?}", &id, &children_list);
             let nix = g.insert_node(id.clone(), Layer_(Layer::new(id)));
@@ -61,7 +66,7 @@ pub fn handle_root<'a, Message>(
                 assert_eq!(*illicit::expect::<NodeIndex<String>>(), nix.clone());
                 log::debug!("{:?}", *illicit::expect::<NodeIndex<String>>());
                 children_list
-                    .into_iter()
+                    .iter()
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });
         }
@@ -72,12 +77,12 @@ pub fn handle_root<'a, Message>(
 }
 pub fn handle_layer<'a, Message>(
     g: &mut GraphType<'a, Message>,
-    tree_layer: GTreeBuilderElement<'a, Message>,
+    tree_layer: &'_ GTreeBuilderElement<'a, Message>,
 ) where
     Message: Clone + std::fmt::Debug,
 {
     let parent_nix = illicit::expect::<NodeIndex<String>>();
-    match tree_layer {
+    match tree_layer.borrow() {
         GTreeBuilderElement::Layer(id, children_list) => {
             log::debug!("{:?}==>{:?}", &id, &children_list);
             let nix = g.insert_node(id.clone(), Layer_(Layer::new(id)));
@@ -87,7 +92,7 @@ pub fn handle_layer<'a, Message>(
             illicit::Layer::new().offer(nix.clone()).enter(|| {
                 assert_eq!(*illicit::expect::<NodeIndex<String>>(), nix.clone());
                 children_list
-                    .into_iter()
+                    .iter()
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });
         }
@@ -97,7 +102,7 @@ pub fn handle_layer<'a, Message>(
                 .encode_lower(&mut Uuid::encode_buffer())
                 .to_string();
             id.push_str("-Element");
-            let nix = g.insert_node(id, Element_(element));
+            let nix = g.insert_node(id, Element_(element.clone()));
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
@@ -108,14 +113,14 @@ pub fn handle_layer<'a, Message>(
                 .encode_lower(&mut Uuid::encode_buffer())
                 .to_string();
             id.push_str(format!("-{}", &gel).as_ref());
-            let nix = g.insert_node(id, gel);
+            let nix = g.insert_node(id, gel.clone());
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
             illicit::Layer::new().offer(nix.clone()).enter(|| {
                 assert_eq!(*illicit::expect::<NodeIndex<String>>(), nix.clone());
                 updaters
-                    .into_iter()
+                    .iter()
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });
         }
@@ -127,7 +132,8 @@ pub fn handle_layer<'a, Message>(
             id.push_str("-Refresher");
             let nix = g.insert_node(
                 id,
-                Refresher_(Rc::<dyn RefreshFor<GElement<'a, Message>>>::from(u)),
+                // Refresher_(Rc::<dyn RefreshFor<GElement<'a, Message>> + 'a>::from(u)),
+                Refresher_(u.clone()),
             );
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);

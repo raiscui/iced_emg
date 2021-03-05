@@ -31,6 +31,10 @@ topo = { version = "0.13.2", features = ["wasm-bindgen"] }
 
 slotmap="1.0.2"
 
+# for app
+wasm-bindgen-futures = "0.4"
+
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 iced_web = { version = "0.3", path = "../../iced/web" }
 uuid = { version = "0.8", features = [ "v4","wasm-bindgen"] }
@@ -38,3 +42,23 @@ console_log = { version = "0.2", features = ["color"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
+
+
+#for app
+[dependencies.iced_futures]
+version = "0.2"
+path = "../../iced/futures"
+
+# for app
+[dependencies.web-sys]
+version = "0.3.27"
+features = [
+    "console",
+    "Document",
+    "HtmlElement",
+    "HtmlInputElement",
+    "Event",
+    "EventTarget",
+    "InputEvent",
+    "KeyboardEvent",
+]
