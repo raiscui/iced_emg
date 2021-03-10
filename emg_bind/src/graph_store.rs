@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-03-04 18:27:51
+ * @LastEditTime: 2021-03-09 10:27:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,18 +9,12 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
 
-use crate::{runtime::Element, runtime::Text, GStateStore, Layer, RefreshFor, RefreshUseFor};
+use crate::{runtime::Element, GElement, GStateStore, RefreshUseFor};
 use anymap::any::CloneAny;
-use match_any::match_any;
 use std::hash::Hash;
-use std::{
-    cell::RefCell,
-    convert::{TryFrom, TryInto},
-    rc::Rc,
-};
+use std::{cell::RefCell, convert::TryInto};
 
 // use lazy_static::lazy_static;
-use strum_macros::Display;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -39,10 +33,10 @@ thread_local! {
         GStateStore::default()
     );
 }
+use anchors::singlethread::Engine;
 thread_local! {
     pub static ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
 }
-use anchors::singlethread::Engine;
 // pub static ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
 // lazy_static! {
 //     pub static ref ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
@@ -58,50 +52,6 @@ use anchors::singlethread::Engine;
 //     }
 // }
 
-pub use GElement::*;
-
-#[derive(Clone, Display)]
-pub enum GElement<'a, Message> {
-    Element_(Element<'a, Message>),
-    Layer_(Layer<'a, Message>),
-    Text_(Text),
-    Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
-}
-
-impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Layer_(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
-            Text_(t) => f.debug_tuple("GElement::Text").field(t).finish(),
-            Refresher_(_) => f
-                .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement<'a, Message>>>)")
-                .finish(),
-            Element_(_) => f
-                .debug_tuple("GElement::Element_(Element<'a, Message>)")
-                .finish(),
-        }
-    }
-}
-
-impl<'a, Message> TryFrom<GElement<'a, Message>> for Element<'a, Message>
-where
-    Message: 'static + Clone,
-{
-    type Error = ();
-
-    #[allow(clippy::useless_conversion)]
-    fn try_from(ge: GElement<'a, Message>) -> Result<Self, Self::Error> {
-        // match ge {
-        //     Layer_(l) => Ok(l.into()),
-        //     Text_(t) => Ok(t.into()),
-        //     Refresher_(_) => Err(()),
-        // }
-        match_any! (ge,
-            Layer_(x)|Text_(x)|Element_(x) => Ok(x.into()),
-            Refresher_(_)=>Err(())
-        )
-    }
-}
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub trait GraphView<'a, Message> {
@@ -275,13 +225,14 @@ pub struct GStore {
 
 impl Default for GStore {
     fn default() -> Self {
-        GStore {
+        Self {
             anymap: anymap::Map::new(),
         }
     }
 }
 
 impl GStore {
+    #[must_use]
     pub fn new_with_graph<N, E, Ix>(g: Graph<N, E, Ix>) -> Self
     where
         N: Clone,
@@ -289,7 +240,7 @@ impl GStore {
         Ix: std::cmp::Eq + Clone + std::hash::Hash,
         Graph<N, E, Ix>: 'static,
     {
-        let mut gs = GStore::default();
+        let mut gs = Self::default();
         gs.set_graph(g);
         gs
     }
@@ -344,6 +295,7 @@ impl GStore {
 #[cfg(test)]
 mod graph_store_test {
     use super::*;
+    use crate::Layer;
 
     use wasm_bindgen_test::*;
 

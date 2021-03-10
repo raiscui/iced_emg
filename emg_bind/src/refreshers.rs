@@ -1,45 +1,35 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-03-05 12:44:07
+ * @LastEditTime: 2021-03-09 16:32:34
  * @LastEditors: Rais
  * @Description:
  */
-use std::{borrow::Borrow, cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
-// #[derive(Clone)]
+#[derive(Clone)]
 pub struct Refresher<'a, Use>(Rc<dyn Fn() -> Use + 'a>);
 impl<'a, Use> Refresher<'a, Use> {
     pub fn new<F: Fn() -> Use + 'a>(f: F) -> Self {
         Refresher(Rc::new(f))
     }
-    // pub fn new(f: impl Fn() -> Use + 'static) -> Self {
-    //     Refresher(Rc::new(f))
-    // }
+    #[must_use]
     pub fn get(&self) -> Use {
         (self.0)()
         // Rc::clone(&self.0)()
     }
-    // pub fn get(&self) -> Rc<dyn Fn() -> Use + 'a> {
-    //     Rc::clone(&self.0)
-    // }
-    // pub fn new(f: Rc<dyn Fn() -> Use>) -> Self {
-    //     Refresher(f)
-    // }
 }
 #[derive(Clone)]
-pub struct RefresherFor<Who>(Rc<dyn Fn(&mut Who)>);
+pub struct RefresherFor<'a, Who>(Rc<dyn Fn(&mut Who) + 'a>);
 
-impl<Who> RefresherFor<Who> {
-    pub fn new(f: impl Fn(&mut Who) + 'static) -> Self {
+impl<'a, Who> RefresherFor<'a, Who> {
+    pub fn new<F: Fn(&mut Who) + 'a>(f: F) -> Self {
         RefresherFor(Rc::new(f))
     }
-    pub fn get(&self) -> Rc<dyn Fn(&mut Who)> {
+    #[must_use]
+    pub fn get(&self) -> Rc<dyn Fn(&mut Who) + 'a> {
         Rc::clone(&self.0)
     }
-    // pub fn new(f: Rc<dyn Fn(&mut In)>) -> Self {
-    //     RefresherFor(f)
-    // }
 }
 // #[derive(Clone)]
 // pub struct RefresherForSelf<SelfEl, Use>(Rc<dyn Fn(&mut SelfEl) -> Use>);
@@ -118,9 +108,8 @@ mod updater_test {
     fn test_anchor() {
         console_log::init_with_level(log::Level::Debug).ok();
 
-        use anchors::expert::{Anchor, AnchorExt, Var};
         #[allow(unused)]
-        use anchors::singlethread::Engine;
+        use anchors::singlethread::*;
 
         crate::ENGINE.with(|_e| {
             log::info!("============= get engine");

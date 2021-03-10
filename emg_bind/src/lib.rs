@@ -1,9 +1,16 @@
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![warn(clippy::nursery)]
+// #![warn(clippy::cargo)]
+#![deny(unsafe_code)]
 #![feature(unboxed_closures, fn_traits, thread_local)]
 #![feature(min_specialization)]
 // #![feature(specialization)]
 #![feature(negative_impls)]
 #![feature(auto_traits)]
-#![feature(generic_associated_types)]
+// bumpalo
+// #![feature(allocator_api)]
+// #![feature(generic_associated_types)]
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use iced as runtime;
@@ -14,10 +21,13 @@ pub use iced_web as runtime;
 pub use uuid::Uuid;
 
 mod application;
+mod button;
+mod g_element;
 mod g_tree_builder_element;
 mod graph_store;
 mod impl_refresh;
 mod layer;
+mod node_builder;
 mod refresh_use;
 mod refreshers;
 mod sandbox;
@@ -25,9 +35,13 @@ mod state_store;
 mod topo_store;
 
 pub use application::{Application, Command, Element, Subscription};
+pub use button::Button;
+pub use g_element::*;
 pub use g_tree_builder_element::*;
 pub use graph_store::*;
+pub use impl_refresh::GeneralRefreshFor;
 pub use layer::Layer;
+pub use node_builder::*;
 pub use refresh_use::RefreshUseFor;
 pub use refreshers::RefreshFor;
 pub use refreshers::Refresher;

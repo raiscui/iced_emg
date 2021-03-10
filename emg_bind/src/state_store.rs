@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 09:57:45
- * @LastEditTime: 2021-02-26 14:50:20
+ * @LastEditTime: 2021-03-09 10:33:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,6 +13,7 @@ use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
 
 use crate::topo_store::StorageKey;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
 pub struct GStateStore {
     pub anymap: anymap::Map<dyn CloneAny>,
@@ -21,7 +22,7 @@ pub struct GStateStore {
 }
 impl Default for GStateStore {
     fn default() -> Self {
-        GStateStore {
+        Self {
             anymap: anymap::Map::new(),
             id_to_key_map: HashMap::new(),
             primary_slotmap: DenseSlotMap::new(),
@@ -38,6 +39,7 @@ impl GStateStore {
             (_, _) => false,
         }
     }
+    #[must_use]
     pub fn get_secondarymap<T: 'static + Clone>(&self) -> Option<&SecondaryMap<DefaultKey, T>> {
         self.anymap.get::<SecondaryMap<DefaultKey, T>>()
     }
@@ -80,6 +82,7 @@ impl GStateStore {
         }
     }
 
+    #[must_use]
     pub fn get_state_with_id<T: 'static + Clone>(&self, current_id: &StorageKey) -> Option<&T> {
         match (
             self.id_to_key_map.get(current_id),
@@ -106,10 +109,9 @@ impl GStateStore {
 
         if key.is_null() {
             None
-        } else if let Some(existing_secondary_map) = self.get_mut_secondarymap::<T>() {
-            existing_secondary_map.remove(key)
         } else {
-            None
+            self.get_mut_secondarymap::<T>()
+                .and_then(|existing_secondary_map| existing_secondary_map.remove(key))
         }
     }
 }

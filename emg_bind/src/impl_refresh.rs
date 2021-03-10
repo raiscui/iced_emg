@@ -1,25 +1,26 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-04 19:30:12
+ * @LastEditTime: 2021-03-09 10:28:03
  * @LastEditors: Rais
  * @Description:
  */
 use anchors::expert::Anchor;
 use anchors::expert::Var;
 use anchors::singlethread::Engine;
-use std::{
-    borrow::{Borrow, BorrowMut},
-    ops::{Deref, DerefMut},
-};
+use std::ops::Deref;
 
-use crate::{GElement, GElement::*, RefreshFor, RefreshUseFor, Refresher, RefresherFor};
+use crate::{
+    GElement,
+    GElement::{Element_, Layer_, Refresher_, Text_},
+    RefreshFor, RefreshUseFor, Refresher, RefresherFor,
+};
 // ────────────────────────────────────────────────────────────────────────────────
 // @ impl RefreshUseFor────────────────────────────────────────────────────────────────────────────────
 
-impl<Who> RefreshUseFor<Who> for Who {
+impl<Who> RefreshUseFor<Self> for Who {
     #[inline]
-    default fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>) {
+    default fn refresh_use(&mut self, updater: &dyn RefreshFor<Self>) {
         updater.refresh_for(self);
     }
 }
@@ -92,7 +93,7 @@ where
 //         self.get()(who);
 //     }
 // }
-impl<Who> RefreshFor<Who> for RefresherFor<Who> {
+impl<'a, Who> RefreshFor<Who> for RefresherFor<'a, Who> {
     fn refresh_for(&self, who: &mut Who) {
         self.get()(who);
     }
@@ -124,7 +125,7 @@ where
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-
+impl<'a, Message> GeneralRefreshFor for GElement<'a, Message> {}
 impl<'a, Message> RefreshFor<GElement<'a, Message>> for GElement<'a, Message>
 where
     Message: 'static + Clone,
@@ -143,10 +144,10 @@ where
                 l.try_ref_push(any_not_refresher.clone());
             }
             // refresher 不与任何不是 refresher 的 el 产生刷新动作
-            (Refresher_(_), _any_not_refresher) => {
+            (Refresher_(_), any_not_refresher) => {
                 panic!(
                     "refresh for ( Refresher_ ) use ( {} ) is not supported",
-                    _any_not_refresher
+                    any_not_refresher
                 )
             }
             (not_layer_or_refresher, b) => {

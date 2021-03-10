@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-24 19:38:42
- * @LastEditTime: 2021-02-26 10:08:26
+ * @LastEditTime: 2021-03-09 10:34:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,8 +21,8 @@ impl<T> std::fmt::Debug for StateAccess<T> {
 
 impl<T> Copy for StateAccess<T> {}
 impl<T> Clone for StateAccess<T> {
-    fn clone(&self) -> StateAccess<T> {
-        StateAccess::<T> {
+    fn clone(&self) -> Self {
+        Self {
             id: self.id,
             _phantom_data: PhantomData::<T>,
         }
@@ -33,8 +33,9 @@ impl<T> StateAccess<T>
 where
     T: 'static + Clone,
 {
-    pub fn new(id: TopoKey) -> StateAccess<T> {
-        StateAccess {
+    #[must_use]
+    pub fn new(id: TopoKey) -> Self {
+        Self {
             id,
             _phantom_data: PhantomData,
         }
@@ -45,6 +46,7 @@ where
         set_state_with_topo_id(value, self.id);
     }
 
+    #[must_use]
     pub fn state_exists(self) -> bool {
         state_exists_for_topo_id::<T>(self.id)
     }
@@ -100,7 +102,7 @@ pub fn state_exists_for_topo_id<T: 'static + Clone>(id: TopoKey) -> bool {
     })
 }
 
-/// Sets the state of type T keyed to the given TopoId
+/// Sets the state of type T keyed to the given `TopoId`
 pub fn set_state_with_topo_id<T: 'static + Clone>(data: T, current_id: TopoKey) {
     G_STATE_STORE.with(|g_state_store_refcell| {
         g_state_store_refcell

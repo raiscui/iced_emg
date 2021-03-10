@@ -3,6 +3,12 @@ name = "emg_bind"
 version = "0.1.0"
 authors = ["崔路明 <cuiluming@chaoway.net>"]
 edition = "2018"
+description = "element motion graph iced bind"
+repository = "https://github.com"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+keywords = ["web","iced"]
+categories = ["web"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,6 +24,7 @@ overloadf ={ path="../../overloadf"}
 illicit="1.1.2"
 log = "0.4"
 lazy_static = "1.4.0"
+dyn-clone = "1.0.4"
 # downcast-rs = "1.2.0"
 
 strum = "0.20.0"
@@ -35,6 +42,15 @@ slotmap="1.0.2"
 wasm-bindgen-futures = "0.4"
 
 
+iced_style={path="../../iced/style"}
+
+# [patch.crates-io]
+# dodrio={path="../../dodrio"}
+
+# [dependencies.bumpalo]
+# version = "3.4.0"
+# features = ["allocator_api"] 
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 iced_web = { version = "0.3", path = "../../iced/web" }
 uuid = { version = "0.8", features = [ "v4","wasm-bindgen"] }
@@ -42,6 +58,8 @@ console_log = { version = "0.2", features = ["color"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
+
+
 
 
 #for app

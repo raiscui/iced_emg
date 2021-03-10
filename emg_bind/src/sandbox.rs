@@ -1,16 +1,15 @@
+/*
+ * @Author: Rais
+ * @Date: 2021-03-04 12:16:31
+ * @LastEditTime: 2021-03-09 10:33:20
+ * @LastEditors: Rais
+ * @Description:
+ */
 use std::{cell::RefCell, rc::Rc};
 
 use iced::{Color, Element, Error, Settings};
 
 use crate::{Application, Command, GTreeBuilderElement, GraphType, Subscription};
-
-/*
- * @Author: Rais
- * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2021-03-05 10:17:21
- * @LastEditors: Rais
- * @Description:
- */
 
 pub trait Sandbox {
     /// The type of __messages__ your [`Sandbox`] will produce.
@@ -58,7 +57,7 @@ pub trait Sandbox {
         1.0
     }
 
-    fn tree_build<'a>(s: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
+    fn tree_build<'a>(this: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
 
     /// Runs the [`Sandbox`].
     ///
@@ -66,6 +65,9 @@ pub trait Sandbox {
     /// and __will NOT return__.
     ///
     /// It should probably be that last thing you call in your `main` function.
+    /// # Errors
+    ///
+    /// error never returned at Web
     fn run(settings: Settings<()>) -> Result<(), Error>
     where
         Self: 'static + Sized,
@@ -76,6 +78,7 @@ pub trait Sandbox {
         Ok(())
     }
 }
+#[allow(clippy::use_self)]
 impl<T> Application for T
 where
     T: Sandbox,
@@ -105,7 +108,7 @@ where
     fn view<'a>(&self, g: &'a GraphType<'_, T::Message>) -> Element<'a, T::Message> {
         T::view(self, g)
     }
-    fn tree_build<'a>(s: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, T::Message> {
-        T::tree_build(s)
+    fn tree_build<'a>(this: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, T::Message> {
+        T::tree_build(this)
     }
 }

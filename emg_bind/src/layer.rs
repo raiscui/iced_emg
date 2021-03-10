@@ -51,6 +51,7 @@ impl<'a, Message> Layer<'a, Message> {
         }
     }
 
+    #[must_use]
     pub fn set_children(mut self, children: Vec<Element<'a, Message>>) -> Self {
         self.children = children;
         self
@@ -63,13 +64,15 @@ impl<'a, Message> Layer<'a, Message> {
     /// elements consistent.
 
     /// Sets the width of the [`Layer`].
-    pub fn width(mut self, width: Length) -> Self {
+    #[must_use]
+    pub const fn width(mut self, width: Length) -> Self {
         self.width = width;
         self
     }
 
     /// Sets the height of the [`Layer`].
-    pub fn height(mut self, height: Length) -> Self {
+    #[must_use]
+    pub const fn height(mut self, height: Length) -> Self {
         self.height = height;
         self
     }

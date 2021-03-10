@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-03-04 18:32:49
+ * @LastEditTime: 2021-03-09 10:05:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,13 +9,13 @@ use std::{borrow::Borrow, ops::Deref};
 
 use crate::{runtime::Element, GElement, GraphType, Layer, NodeIndex, RefreshFor, Uuid};
 use std::rc::Rc;
-use GElement::*;
+use GElement::{Element_, Layer_, Refresher_};
 #[allow(dead_code)]
 pub enum GTreeBuilderElement<'a, Message> {
     Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
     El(Element<'a, Message>),
-    WhoWithUpdater(GElement<'a, Message>, Vec<GTreeBuilderElement<'a, Message>>),
-    Updater(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
+    GElementTree(GElement<'a, Message>, Vec<GTreeBuilderElement<'a, Message>>),
+    RefreshUse(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
     Cl(Box<dyn Fn() + 'a>),
 }
 impl<Message> Default for GTreeBuilderElement<'_, Message> {
@@ -35,14 +35,14 @@ impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
             GTreeBuilderElement::El(el) => {
                 f.debug_tuple("GTreeBuilderElement::El").field(el).finish()
             }
-            GTreeBuilderElement::WhoWithUpdater(_, updaters) => {
+            GTreeBuilderElement::GElementTree(_, updaters) => {
                 let who = "GElement<'a, Message> (dyn RefreshUseFor<GElement<'a, Message>>)";
                 f.debug_tuple("GTreeBuilderElement::WhoWithUpdater")
                     .field(&who)
                     .field(updaters)
                     .finish()
             }
-            GTreeBuilderElement::Updater(_) => {
+            GTreeBuilderElement::RefreshUse(_) => {
                 let updater = "Box<dyn RefreshFor<GElement<'a, Message>>>";
                 f.debug_tuple("GTreeBuilderElement::Updater")
                     .field(&updater)
@@ -52,9 +52,12 @@ impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
         }
     }
 }
+/// # Panics
+///
+/// Will panic if `tree_layer` is not `GTreeBuilderElement::Layer`
 pub fn handle_root<'a, Message>(
     g: &mut GraphType<'a, Message>,
-    tree_layer: Rc<GTreeBuilderElement<'a, Message>>,
+    tree_layer: &GTreeBuilderElement<'a, Message>,
 ) where
     Message: Clone + std::fmt::Debug,
 {
@@ -97,21 +100,21 @@ pub fn handle_layer<'a, Message>(
             });
         }
         GTreeBuilderElement::El(element) => {
-            let mut id = Uuid::new_v4()
+            let mut id = (*Uuid::new_v4()
                 .to_simple()
-                .encode_lower(&mut Uuid::encode_buffer())
-                .to_string();
+                .encode_lower(&mut Uuid::encode_buffer()))
+            .to_string();
             id.push_str("-Element");
             let nix = g.insert_node(id, Element_(element.clone()));
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
         }
-        GTreeBuilderElement::WhoWithUpdater(gel, updaters) => {
-            let mut id = Uuid::new_v4()
+        GTreeBuilderElement::GElementTree(gel, updaters) => {
+            let mut id = (*Uuid::new_v4()
                 .to_simple()
-                .encode_lower(&mut Uuid::encode_buffer())
-                .to_string();
+                .encode_lower(&mut Uuid::encode_buffer()))
+            .to_string();
             id.push_str(format!("-{}", &gel).as_ref());
             let nix = g.insert_node(id, gel.clone());
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
@@ -124,11 +127,11 @@ pub fn handle_layer<'a, Message>(
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });
         }
-        GTreeBuilderElement::Updater(u) => {
-            let mut id = Uuid::new_v4()
+        GTreeBuilderElement::RefreshUse(u) => {
+            let mut id = (*Uuid::new_v4()
                 .to_simple()
-                .encode_lower(&mut Uuid::encode_buffer())
-                .to_string();
+                .encode_lower(&mut Uuid::encode_buffer()))
+            .to_string();
             id.push_str("-Refresher");
             let nix = g.insert_node(
                 id,

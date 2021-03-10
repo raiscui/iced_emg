@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-03-03 16:35:16
+ * @LastEditTime: 2021-03-10 13:22:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -26,7 +26,7 @@ use crate::RefreshFor;
 // }
 
 // ────────────────────────────────────────────────────────────────────────────────
-
+#[allow(clippy::module_name_repetitions)]
 pub trait RefreshUseFor<Who> {
     fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>);
 }
@@ -106,11 +106,11 @@ mod updater_test1 {
         a.refresh_for(&mut f);
         a.refresh_for(&mut f);
         b.refresh_for(&mut f);
-        // let rca = Rc::new(a.clone()) as Rc<dyn crate::RefreshFor<String>>;
-        let rcb = Rc::new(b) as Rc<dyn crate::RefreshFor<String>>;
+        let rca = Rc::new(a.clone());
+        let rcb = Rc::new(b);
         f.refresh_use(&a);
-        // f.refresh_use(rca.as_ref());
-        // f.refresh_use(rca.as_ref());
+        f.refresh_use(rca.as_ref());
+        f.refresh_use(rca.as_ref());
         f.refresh_use(rcb.as_ref());
 
         let mut n = 0;
@@ -122,6 +122,6 @@ mod updater_test1 {
 
         log::info!("{}", &f);
         // log::info!("{}", &n);
-        // assert_eq!("xx,99,99,string..,99,99,99,string..,35", f);
+        assert_eq!("xx,99,99,string..,99,99,99,string..,35", f);
     }
 }

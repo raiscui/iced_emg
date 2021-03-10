@@ -2,7 +2,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-03-05 10:20:18
+ * @LastEditTime: 2021-03-09 09:54:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -77,7 +77,7 @@ pub trait Application {
         Subscription::none()
     }
 
-    fn tree_build<'a>(s: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
+    fn tree_build<'a>(this: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
 
     /// Runs the [`Application`].
     fn run(flags: Self::Flags)
@@ -110,7 +110,7 @@ pub trait Application {
 
         let mut emg_graph = GraphType::<Self::Message>::default();
         let root = Self::tree_build(Rc::clone(&application));
-        crate::handle_root(&mut emg_graph, Rc::new(root));
+        crate::handle_root(&mut emg_graph, &root);
         let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
         // let emg_graph_rc = (emg_graph);
         // GraphType::<Self::Message>::init();
@@ -166,7 +166,7 @@ where
     A: Application,
 {
     fn render(&self, context: &mut dodrio::RenderContext<'a>) -> dodrio::Node<'a> {
-        use dodrio::builder::*;
+        use dodrio::builder::div;
 
         let ui = self.application.borrow();
         let emg_graph_ref = self.g.borrow();
