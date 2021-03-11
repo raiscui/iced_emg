@@ -8,18 +8,12 @@ use proc_macro2::{Span, TokenStream};
 // use quote::{quote, ToTokens};
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
+use syn::parse::{Parse, ParseStream};
 use syn::{
-    bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token, Field, FieldsNamed,
+    bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token, FieldsNamed,
     ItemStruct, Lifetime, LifetimeDef,
 };
-use syn::{
-    fold::{self, Fold},
-    parse_quote,
-};
-use syn::{
-    parse::{Parse, ParseStream},
-    DeriveInput,
-};
+use syn::{fold::Fold, parse_quote};
 
 use syn::{Ident, Token};
 // ────────────────────────────────────────────────────────────────────────────────
@@ -153,7 +147,7 @@ impl ToTokens for GTreeSurface {
 #[derive(Debug, Clone)]
 enum GTreeMacroElement {
     GL(GTreeLayerStruct),
-    GS(GTreeSurface),
+    GS(Box<GTreeSurface>),
     RT(GRefresher),
     GC(GTreeClosure),
     // OtherExpr(syn::Expr),
@@ -384,7 +378,7 @@ fn emg_handle(mut args: EmgArgs, input: ItemStruct) -> ItemStruct {
         args.first_life_time = first_lifetime
             .map(|l_def| &l_def.lifetime)
             .cloned()
-            .or(Some(Lifetime::new("'a", Span::call_site())));
+            .or_else(|| Some(Lifetime::new("'a", Span::call_site())));
     };
     println!("=====first_life_time:{:?}", &args.first_life_time);
     let mut o = args.fold_item_struct(input);
@@ -468,6 +462,7 @@ mod tests {
                 Text_(Text::new(format!("in quote..{}", "b"))) => [
                     Refresher ||{99},
                     Refresher ||{33}
+                    on:event "click" => |root,vdom,event|{let x=1;}
                 ]
             ]
         ]
@@ -503,7 +498,7 @@ mod tests {
         );
         println!("====input:{:#?}", &input);
 
-        let mut args: EmgArgs = EmgArgs {
+        let args: EmgArgs = EmgArgs {
             vars: Set::new(),
             first_life_time: None,
         };
@@ -528,7 +523,7 @@ mod tests {
         );
         println!("====input:{:#?}", &input);
 
-        let mut args: EmgArgs = EmgArgs {
+        let args: EmgArgs = EmgArgs {
             vars: Set::new(),
             first_life_time: None,
         };
@@ -553,7 +548,7 @@ mod tests {
         );
         println!("====input:{:#?}", &input);
 
-        let mut args: EmgArgs = EmgArgs {
+        let args: EmgArgs = EmgArgs {
             vars: Set::new(),
             first_life_time: None,
         };

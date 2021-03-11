@@ -4,13 +4,10 @@
 
 pub use iced_style::button::{Style, StyleSheet};
 
-use crate::{
-    runtime::{
-        css,
-        dodrio::{self, bumpalo},
-        Background, Bus, Css, Element, Length, Widget,
-    },
-    NodeBuilder,
+use crate::runtime::{
+    css,
+    dodrio::{self, bumpalo},
+    Background, Bus, Css, Element, Length, Widget,
 };
 
 /// A generic widget that produces a message when pressed.
@@ -117,7 +114,9 @@ impl State {
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
+use crate::NodeBuilder;
 use iced_web::dodrio::{builder::ElementBuilder, Attribute, Listener, Node};
+
 impl<'a, Message> NodeBuilder<Message> for Button<'a, Message>
 where
     Message: 'static + Clone,

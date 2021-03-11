@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-03-09 10:27:32
+ * @LastEditTime: 2021-03-11 14:29:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -81,6 +81,38 @@ where
     type N = N<'a, Message>;
     type E = E;
 
+    fn gelement_comb_and_refresh(
+        &self,
+        cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
+    ) -> GElement<'a, Message> {
+        // buildingTime original GElement
+        let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
+
+        let mut children_s = self.children_to_elements(cix);
+
+        let event_callbacks = children_s
+            .drain_filter(|gel| gel.is_event_call_back_())
+            .collect::<Vec<_>>();
+
+        // The const / dyn child node performs the change
+        // TODO: cache.    use edge type?
+        for child in children_s {
+            current_node_clone.refresh_use(&child)
+        }
+
+        // event_callback handle -----------------------
+        if !event_callbacks.is_empty() {
+            if let Ok(node_builder_widget) =
+                current_node_clone.try_convert_inside_to_node_builder_widget_()
+            {
+                for event_callback in event_callbacks {
+                    node_builder_widget.refresh_use(&event_callback)
+                }
+            }
+        };
+        current_node_clone
+    }
+
     fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>> {
         self.edges_iter_use_ix(cix, Outgoing)
             .map(|eix| {
@@ -89,24 +121,6 @@ where
                 self.gelement_comb_and_refresh(this_child_ix)
             })
             .collect()
-    }
-
-    fn gelement_comb_and_refresh(
-        &self,
-        cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
-    ) -> GElement<'a, Message> {
-        // buildingTime original GElement
-        let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
-
-        let children_s = self.children_to_elements(cix);
-
-        // The const / dyn child node performs the change
-        // TODO: cache.    use edge type?
-        for child in children_s {
-            current_node_clone.refresh_use(&child)
-        }
-
-        current_node_clone
     }
 
     fn view(&self, cix: Self::Ix) -> Element<'a, Message> {

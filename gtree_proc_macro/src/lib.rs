@@ -1,5 +1,5 @@
-// #![feature(proc_macro_diagnostic)]
-use proc_macro;
+#![feature(proc_macro_diagnostic)]
+
 // use proc_macro_error::*;
 // use quote::quote;
 use proc_quote::quote;

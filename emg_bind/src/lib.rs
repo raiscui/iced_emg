@@ -8,6 +8,7 @@
 // #![feature(specialization)]
 #![feature(negative_impls)]
 #![feature(auto_traits)]
+#![feature(drain_filter)]
 // bumpalo
 // #![feature(allocator_api)]
 // #![feature(generic_associated_types)]
