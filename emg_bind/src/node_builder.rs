@@ -7,10 +7,12 @@ use iced_web::{
     Bus, Css, Widget,
 };
 
+use crate::GElement;
+
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-03-11 15:44:01
+ * @LastEditTime: 2021-03-11 16:32:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -112,6 +114,25 @@ impl<'a, Message> NodeBuilderWidget<'a, Message> {
     }
 }
 
+impl<'a, Message> TryFrom<GElement<'a, Message>> for NodeBuilderWidget<'a, Message>
+where
+    Message: 'static + Clone,
+{
+    type Error = GElement<'a, Message>;
+
+    fn try_from(gel: GElement<'a, Message>) -> Result<Self, Self::Error> {
+        use match_any::match_any;
+        use GElement::Layer_;
+        match_any! (gel,
+            Layer_( x)=> {
+                Ok(NodeBuilderWidget::new(Rc::new(x)))
+            },
+            _=>Err(gel)
+        )
+    }
+}
+
+// TODO move to utilities
 fn take<T>(vec: &mut Vec<T>, index: usize) -> Option<T> {
     // fn take<T>(mut vec: iced_web::dodrio::bumpalo::collections::Vec<T>, index: usize) -> Option<T> {
     if index < vec.len() {

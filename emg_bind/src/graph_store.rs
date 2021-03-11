@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-03-11 14:29:20
+ * @LastEditTime: 2021-03-11 16:27:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,10 +9,10 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
 
-use crate::{runtime::Element, GElement, GStateStore, RefreshUseFor};
+use crate::{runtime::Element, GElement, GStateStore, NodeBuilderWidget, RefreshUseFor};
 use anymap::any::CloneAny;
-use std::hash::Hash;
 use std::{cell::RefCell, convert::TryInto};
+use std::{convert::TryFrom, hash::Hash};
 
 // use lazy_static::lazy_static;
 
@@ -101,16 +101,27 @@ where
         }
 
         // event_callback handle -----------------------
-        if !event_callbacks.is_empty() {
-            if let Ok(node_builder_widget) =
-                current_node_clone.try_convert_inside_to_node_builder_widget_()
-            {
-                for event_callback in event_callbacks {
-                    node_builder_widget.refresh_use(&event_callback)
+        if event_callbacks.is_empty() {
+            current_node_clone
+        } else {
+            match NodeBuilderWidget::<Message>::try_from(current_node_clone) {
+                Ok(mut node_builder_widget) => {
+                    for event_callback in event_callbacks {
+                        node_builder_widget.refresh_use(&event_callback)
+                    }
+                    GElement::Element_(node_builder_widget.into())
                 }
+                Err(old_gel) => old_gel,
             }
-        };
-        current_node_clone
+
+            // if let Ok(node_builder_widget) =
+            //     current_node_clone.try_convert_inside_to_node_builder_widget_()
+            // {
+            //     for event_callback in event_callbacks {
+            //         node_builder_widget.refresh_use(&event_callback)
+            //     }
+            // }
+        }
     }
 
     fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>> {

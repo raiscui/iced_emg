@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-11 15:42:56
+ * @LastEditTime: 2021-03-11 16:31:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,8 +12,8 @@ use std::ops::Deref;
 
 use crate::{
     GElement,
-    GElement::{EventCallBack_, Layer_, NodeBuilderWidget_, Refresher_, Text_},
-    RefreshFor, RefreshUseFor, Refresher, RefresherFor,
+    GElement::{EventCallBack_, Layer_, Refresher_, Text_},
+    NodeBuilderWidget, RefreshFor, RefreshUseFor, Refresher, RefresherFor,
 };
 // ────────────────────────────────────────────────────────────────────────────────
 // @ impl RefreshUseFor────────────────────────────────────────────────────────────────────────────────
@@ -132,12 +132,6 @@ where
 {
     fn refresh_for(&self, el: &mut GElement<'a, Message>) {
         match (el, self) {
-            // @ Clear type match
-            (NodeBuilderWidget_(node_builder_widget), EventCallBack_(event_callback)) => {
-                node_builder_widget.add_event_callback(event_callback.clone());
-            }
-            // ─────────────────────────────────────────────────────────────────
-
             // @ Single explicit match
             (_gel, _g_event_callback @ EventCallBack_(_)) => {
                 // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
@@ -193,6 +187,38 @@ impl<'a, Message> RefreshFor<GElement<'a, Message>> for i32 {
 
             other => {
                 log::debug!("====> {} refreshing use i32", other);
+            }
+        }
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+impl<'a, Message> RefreshFor<NodeBuilderWidget<'a, Message>> for GElement<'a, Message>
+where
+    Message: 'static + Clone,
+{
+    fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<'a, Message>) {
+        match (self) {
+            // @ Clear type match
+            EventCallBack_(event_callback) => {
+                node_builder_widget.add_event_callback(event_callback.clone());
+            }
+            // ─────────────────────────────────────────────────────────────────
+
+            // @ Single explicit match
+
+            //其他任何 el 刷新, 包括 el=refresher
+            // TODO impl refresher for NodeBuilderWidget(most edit event_callbacks list )
+            // (gel, Refresher_(refresher)) => {
+            //     gel.refresh_use(refresher.deref());
+            // }
+
+            // @ any not match ─────────────────────────────────────────────────────────────────
+            any => {
+                panic!(
+                    "refresh for ( {} ) use ( {} ) - that is not supported",
+                    "not_node_builder_widget", any
+                )
             }
         }
     }
