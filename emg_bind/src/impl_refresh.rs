@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-11 16:31:43
+ * @LastEditTime: 2021-03-11 16:34:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -198,7 +198,7 @@ where
     Message: 'static + Clone,
 {
     fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<'a, Message>) {
-        match (self) {
+        match self {
             // @ Clear type match
             EventCallBack_(event_callback) => {
                 node_builder_widget.add_event_callback(event_callback.clone());
