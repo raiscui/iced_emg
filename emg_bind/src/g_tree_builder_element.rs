@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-03-12 14:31:26
+ * @LastEditTime: 2021-03-13 13:52:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,46 +15,50 @@ use GElement::{Element_, Layer_, Refresher_};
 #[allow(dead_code)]
 pub enum GTreeBuilderElement<'a, Message> {
     Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
-    El(Element<'a, Message>),
-    GElementTree(GElement<'a, Message>, Vec<GTreeBuilderElement<'a, Message>>),
-    RefreshUse(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
-    Cl(Box<dyn Fn() + 'a>),
-    EventCallBack(EventCallbackType),
-}
-impl<Message> Default for GTreeBuilderElement<'_, Message> {
-    fn default() -> Self {
-        GTreeBuilderElement::Cl(Box::new(|| {}))
-    }
+    El(String, Element<'a, Message>),
+    GElementTree(
+        String,
+        GElement<'a, Message>,
+        Vec<GTreeBuilderElement<'a, Message>>,
+    ),
+    RefreshUse(String, Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
+    Cl(String, Box<dyn Fn() + 'a>),
+    EventCallBack(String, EventCallbackType),
 }
 
-impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
+impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GTreeBuilderElement::Layer(s, children_list) => f
+            GTreeBuilderElement::Layer(id, children_list) => f
                 .debug_tuple("GTreeBuilderElement::Layer")
-                .field(s)
+                .field(id)
                 .field(children_list)
                 .finish(),
-            GTreeBuilderElement::El(el) => {
-                f.debug_tuple("GTreeBuilderElement::El").field(el).finish()
-            }
-            GTreeBuilderElement::GElementTree(_, updaters) => {
-                let who = "GElement<'a, Message> (dyn RefreshUseFor<GElement<'a, Message>>)";
-                f.debug_tuple("GTreeBuilderElement::WhoWithUpdater")
-                    .field(&who)
-                    .field(updaters)
-                    .finish()
-            }
-            GTreeBuilderElement::RefreshUse(_) => {
+            GTreeBuilderElement::El(id, el) => f
+                .debug_tuple("GTreeBuilderElement::El")
+                .field(id)
+                .field(el)
+                .finish(),
+            GTreeBuilderElement::GElementTree(id, gel, updaters) => f
+                .debug_tuple("GTreeBuilderElement::WhoWithUpdater")
+                .field(id)
+                .field(gel)
+                .field(updaters)
+                .finish(),
+            GTreeBuilderElement::RefreshUse(id, _) => {
                 let updater = "Box<dyn RefreshFor<GElement<'a, Message>>>";
                 f.debug_tuple("GTreeBuilderElement::Updater")
+                    .field(id)
                     .field(&updater)
                     .finish()
             }
-            GTreeBuilderElement::Cl(_) => f.debug_tuple("GTreeBuilderElement::Cl").finish(),
-            GTreeBuilderElement::EventCallBack(_) => {
+            GTreeBuilderElement::Cl(id, _) => {
+                f.debug_tuple("GTreeBuilderElement::Cl").field(id).finish()
+            }
+            GTreeBuilderElement::EventCallBack(id, _) => {
                 let v = "Box<dyn EventCallbackClone>";
                 f.debug_tuple("GTreeBuilderElement::EventCallBack")
+                    .field(id)
                     .field(&v)
                     .finish()
             }
@@ -108,16 +112,14 @@ pub fn handle_layer<'a, Message>(
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });
         }
-        GTreeBuilderElement::El(element) => {
-            let id = make_id("Element");
-            let nix = g.insert_node(id, Element_(element.clone()));
+        GTreeBuilderElement::El(id, element) => {
+            let nix = g.insert_node(id.to_string(), Element_(element.clone()));
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
         }
-        GTreeBuilderElement::GElementTree(gel, refreshers) => {
-            let id = make_id(format!("{}", &gel).as_str());
-            let nix = g.insert_node(id, gel.clone());
+        GTreeBuilderElement::GElementTree(id, gel, refreshers) => {
+            let nix = g.insert_node(id.to_string(), gel.clone());
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
@@ -128,10 +130,9 @@ pub fn handle_layer<'a, Message>(
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });
         }
-        GTreeBuilderElement::RefreshUse(u) => {
-            let id = make_id("Refresher");
+        GTreeBuilderElement::RefreshUse(id, u) => {
             let nix = g.insert_node(
-                id,
+                id.to_string(),
                 // Refresher_(Rc::<dyn RefreshFor<GElement<'a, Message>> + 'a>::from(u)),
                 Refresher_(u.clone()),
             );
@@ -139,14 +140,13 @@ pub fn handle_layer<'a, Message>(
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
         }
-        GTreeBuilderElement::Cl(dyn_fn) => {
+        GTreeBuilderElement::Cl(id, dyn_fn) => {
             dyn_fn();
         }
         // TODO make RC remove most clones
-        GTreeBuilderElement::EventCallBack(callback) => {
-            let id = make_id("EventCallBack");
+        GTreeBuilderElement::EventCallBack(id, callback) => {
             // TODO: make all into() style?
-            let nix = g.insert_node(id, callback.clone().into());
+            let nix = g.insert_node(id.to_string(), callback.clone().into());
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
@@ -154,7 +154,8 @@ pub fn handle_layer<'a, Message>(
     };
 }
 
-fn make_id(name: &str) -> String {
+#[must_use]
+pub fn make_id(name: &str) -> String {
     let mut id = (*Uuid::new_v4()
         .to_simple()
         .encode_lower(&mut Uuid::encode_buffer()))

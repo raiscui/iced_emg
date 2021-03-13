@@ -1,6 +1,6 @@
 use std::collections::HashSet as Set;
 
-use trace_var::trace_var;
+// use trace_var::trace_var;
 
 use proc_macro2::{Span, TokenStream};
 // use quote::{quote, ToTokens};
@@ -14,6 +14,7 @@ use syn::{
 use syn::{fold::Fold, parse_quote};
 
 use syn::{Ident, Token};
+use uuid::Uuid;
 // ────────────────────────────────────────────────────────────────────────────────
 // use proc_macro::Diagnostic;
 pub mod kw {
@@ -34,15 +35,18 @@ pub mod kw {
 // @ GClosure ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GTreeClosure {
+    id: ID,
     closure: syn::ExprClosure,
 }
 impl Parse for GTreeClosure {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let id = input.parse::<ID>()?;
+
         let ec = input.parse::<syn::ExprClosure>()?;
         if ec.inputs.is_empty() {
-            Ok(GTreeClosure { closure: ec })
+            Ok(GTreeClosure { id, closure: ec })
         } else {
             Err(input.error("closure argument must be empty"))
         }
@@ -50,10 +54,11 @@ impl Parse for GTreeClosure {
 }
 impl ToTokens for GTreeClosure {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GTreeClosure { closure } = self;
+        let GTreeClosure { id, closure } = self;
+        let id_token = id.get("Cl");
 
         quote_spanned!(
-            closure.span()=> GTreeBuilderElement::Cl(#closure)
+            closure.span()=> GTreeBuilderElement::Cl(#id_token,#closure)
         )
         .to_tokens(tokens)
     }
@@ -61,13 +66,16 @@ impl ToTokens for GTreeClosure {
 // @ G_On_Event ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GOnEvent {
+    id: ID,
     event_name: syn::LitStr,
     closure: syn::ExprClosure,
 }
 impl Parse for GOnEvent {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let id = input.parse::<ID>()?;
+
         println!("0");
         input.parse::<kw::On>()?;
         println!("1");
@@ -81,6 +89,7 @@ impl Parse for GOnEvent {
         input.parse::<token::FatArrow>()?;
 
         Ok(GOnEvent {
+            id,
             event_name,
             closure: input.parse()?,
         })
@@ -89,11 +98,13 @@ impl Parse for GOnEvent {
 impl ToTokens for GOnEvent {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let GOnEvent {
+            id,
             event_name,
             closure,
         } = self;
+        let id_token = id.get("EventCallBack");
 
-        let token = quote! (GTreeBuilderElement::EventCallBack((String::from(#event_name),Box::new(#closure))) );
+        let token = quote! (GTreeBuilderElement::EventCallBack(#id_token,(String::from(#event_name),Box::new(#closure))) );
 
         token.to_tokens(tokens)
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
@@ -103,8 +114,9 @@ impl ToTokens for GOnEvent {
 // @ GRefresher ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GRefresher {
+    id: ID,
     kws: kw::Refresher,
     closure: syn::ExprClosure,
 }
@@ -115,6 +127,7 @@ impl Parse for GRefresher {
 
         // input.parse::<kw::Refresher>()?;
         Ok(GRefresher {
+            id: input.parse()?,
             kws: input.parse()?,
             closure: input.parse()?,
         })
@@ -122,12 +135,14 @@ impl Parse for GRefresher {
 }
 impl ToTokens for GRefresher {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GRefresher { kws, closure } = self;
+        let GRefresher { id, kws, closure } = self;
 
         let closure_token = quote_spanned!(
             closure.span()=> #closure
         );
-        let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::RefreshUse(Rc::new(#kws::new(#closure_token))) );
+        let id_token = id.get("Refresh");
+
+        let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::RefreshUse(#id_token,Rc::new(#kws::new(#closure_token))) );
 
         kw_token.to_tokens(tokens)
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
@@ -138,13 +153,16 @@ impl ToTokens for GRefresher {
 // @ GSurface ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GTreeSurface {
+    id: ID,
     expr: syn::Expr,
     children: ChildrenType,
 }
 impl Parse for GTreeSurface {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let id = input.parse::<ID>()?;
+
         //println!("GSurface:{}", input);
         let expr = input.parse::<syn::Expr>()?;
         if input.peek(token::FatArrow) {
@@ -156,12 +174,13 @@ impl Parse for GTreeSurface {
                 let _bracket = bracketed!(content in input);
                 let children: ChildrenType =
                     Some(content.parse_terminated(GTreeMacroElement::parse)?);
-                Ok(GTreeSurface { expr, children })
+                Ok(GTreeSurface { id, expr, children })
             } else {
                 Err(input.error("还没有完成 直接 单一 无[] 的后缀"))
             }
         } else {
             Ok(GTreeSurface {
+                id,
                 expr,
                 children: None,
             })
@@ -171,21 +190,61 @@ impl Parse for GTreeSurface {
 impl ToTokens for GTreeSurface {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         // self.expr.to_tokens(tokens)
-        let GTreeSurface { expr, children } = self;
+        let GTreeSurface { id, expr, children } = self;
         // println!("expr===={:?}", self.expr);
 
         let children_iter = children.iter();
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
+        let id_token = id.get("GElement");
 
         // Tree GElementTree
-        quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#expr,#children_token))
+        quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,#expr,#children_token))
             .to_tokens(tokens)
+    }
+}
+
+fn make_id(name: &str) -> String {
+    let mut id = (*Uuid::new_v4()
+        .to_simple()
+        .encode_lower(&mut Uuid::encode_buffer()))
+    .to_string();
+    id.push_str(("-".to_owned() + name).as_str());
+    id
+}
+
+//@ ID ──────────────────────────────
+#[derive(Debug)]
+struct ID(Option<Ident>);
+
+impl ID {
+    pub fn get(&self, def_name: &str) -> TokenStream {
+        if let Some(id) = &self.0 {
+            let id_string = id.to_string();
+            quote!(String::from(#id_string))
+        } else {
+            let id = make_id(def_name);
+            quote!(String::from(#id))
+        }
+    }
+}
+impl Parse for ID {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let opt_id = {
+            if input.peek(Token![@]) && input.peek2(Ident::peek_any) {
+                input.parse::<Token![@]>()?;
+                let id = input.parse::<Ident>()?;
+                Some(id)
+            } else {
+                None
+            }
+        };
+        Ok(ID(opt_id))
     }
 }
 
 // @ GTreeElement ────────────────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum GTreeMacroElement {
     GL(GTreeLayerStruct),
     GS(Box<GTreeSurface>),
@@ -197,22 +256,24 @@ enum GTreeMacroElement {
 impl Parse for GTreeMacroElement {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         // use syn::ext::IdentExt;
+        let fork = input.fork();
+        fork.parse::<ID>()?;
 
-        if input.peek(kw::Layer) {
+        if fork.peek(kw::Layer) {
             //@layer
             Ok(GTreeMacroElement::GL(input.parse()?))
-        } else if input.peek(kw::Refresher) {
+        } else if fork.peek(kw::Refresher) {
             // @refresher
             Ok(GTreeMacroElement::RT(input.parse()?))
-        } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
+        } else if fork.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
             // @closure
             Ok(GTreeMacroElement::GC(input.parse()?))
-        } else if input.peek(kw::On) && (input.peek3(kw::Event)) {
+        } else if fork.peek(kw::On) && (input.peek3(kw::Event)) {
             //@ On:Event
             Ok(GTreeMacroElement::OnEvent(input.parse()?))
         }
         //  must on bottom ─────────────────────────────────────────────────────────────────
-        else if input.peek(Ident::peek_any) {
+        else if fork.peek(Ident::peek_any) {
             // @surface  expr, GElement
             Ok(GTreeMacroElement::GS(input.parse()?))
         } else {
@@ -235,10 +296,10 @@ impl ToTokens for GTreeMacroElement {
 // @ GTreeLayerStruct ────────────────────────────────────────────────────────────────────────────────
 type ChildrenType = Option<Punctuated<GTreeMacroElement, Token![,]>>;
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GTreeLayerStruct {
     layer: kw::Layer,
-    id: syn::LitStr,
+    id: ID,
     children: ChildrenType,
 }
 // TODO make id Option,
@@ -251,9 +312,9 @@ Uuid::new_v4()
 
 impl Parse for GTreeLayerStruct {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let layer = input.parse::<kw::Layer>()?;
+        let id = input.parse::<ID>()?;
 
-        let id = input.parse::<syn::LitStr>()?;
+        let layer = input.parse::<kw::Layer>()?;
 
         if input.peek(Token![,]) {
             // if input.is_empty() {
@@ -290,7 +351,8 @@ impl ToTokens for GTreeLayerStruct {
         let children_iter = children.iter();
         let g_tree_builder_element_layer_token =
             quote_spanned! {layer.span()=>GTreeBuilderElement::Layer};
-        let id_token = quote_spanned! {id.span()=> String::from(#id)};
+
+        let id_token = id.get("Layer");
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
         // let brace_op_token = quote_spanned! {children.span()=>vec![#children_token]};
 
@@ -493,6 +555,39 @@ mod tests {
 
     use super::*;
     #[test]
+    fn test_id() {
+        fn token_test(input: &str) {
+            match syn::parse_str::<Gtree>(input) {
+                Ok(ok) => println!("===>{}", ok.to_token_stream()),
+                Err(error) => println!("...{:?}", error),
+            }
+        }
+        println!();
+        // type GraphType = Vec<i32>;
+        let input = r#" 
+        @a Layer [
+            @b Layer [
+                @c Layer [],
+                @d Layer [Refresher ||{Text_(Text::new(format!("ee up")))}],
+                    Text_(Text::new(format!("in quote..{}", "b"))) => [
+                        Refresher ||{99},
+                        Refresher ||{33},
+                        On:Event "click" => |_root,_vdom,_event|{let x=9987665;log::info!("in gtree {}",x);}
+                ],
+                @e Layer [
+                    Button_(Button::new(Text::new(format!("button in quote..{}", "e")))) => [
+                        On:Event "click" => |_root,_vdom,_event|{let x=888888;log::info!("in gtree {}",x);}
+                    ]
+                ],
+            ]
+        ]
+
+        "#;
+
+        token_test(input);
+        println!();
+    }
+    #[test]
     fn test1() {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
@@ -592,7 +687,7 @@ mod tests {
         println!("{}", quote! {#o});
     }
     #[test]
-    fn emg_no_life() {
+    fn emg_no_lifetime() {
         let input: ItemStruct = syn::parse_quote!(
             struct AA {
                 bb: String,
