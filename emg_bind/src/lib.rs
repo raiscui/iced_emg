@@ -8,6 +8,7 @@
 // #![feature(specialization)]
 #![feature(negative_impls)]
 #![feature(auto_traits)]
+#![feature(drain_filter)]
 // bumpalo
 // #![feature(allocator_api)]
 // #![feature(generic_associated_types)]
@@ -51,6 +52,7 @@ pub use state_store::GStateStore;
 pub use topo_store::use_state;
 pub use topo_store::CloneState;
 pub use topo_store::StateAccess;
+
 #[cfg(test)]
 mod tests {
     #[test]
