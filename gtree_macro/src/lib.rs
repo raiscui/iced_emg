@@ -1,12 +1,10 @@
-// #![feature(proc_macro_diagnostic)]
-
 use std::collections::HashSet as Set;
 
 use trace_var::trace_var;
 
 use proc_macro2::{Span, TokenStream};
 // use quote::{quote, ToTokens};
-use quote::{quote, quote_spanned, ToTokens};
+use proc_quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::{
@@ -23,6 +21,8 @@ pub mod kw {
 
     syn::custom_keyword!(Layer);
     syn::custom_keyword!(Refresher);
+    syn::custom_keyword!(On);
+    syn::custom_keyword!(Event);
 
     // impl Debug for layer {
     //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -40,7 +40,6 @@ pub struct GTreeClosure {
 }
 impl Parse for GTreeClosure {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        //println!("GSurface:{}", input);
         let ec = input.parse::<syn::ExprClosure>()?;
         if ec.inputs.is_empty() {
             Ok(GTreeClosure { closure: ec })
@@ -57,6 +56,48 @@ impl ToTokens for GTreeClosure {
             closure.span()=> GTreeBuilderElement::Cl(#closure)
         )
         .to_tokens(tokens)
+    }
+}
+// @ G_On_Event ────────────────────────────────────────────────────────────────────────────────
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub struct GOnEvent {
+    event_name: syn::LitStr,
+    closure: syn::ExprClosure,
+}
+impl Parse for GOnEvent {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        println!("0");
+        input.parse::<kw::On>()?;
+        println!("1");
+        input.parse::<Token![:]>()?;
+        println!("2");
+
+        input.parse::<kw::Event>()?;
+        println!("3");
+        let event_name = input.parse()?;
+
+        input.parse::<token::FatArrow>()?;
+
+        Ok(GOnEvent {
+            event_name,
+            closure: input.parse()?,
+        })
+    }
+}
+impl ToTokens for GOnEvent {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let GOnEvent {
+            event_name,
+            closure,
+        } = self;
+
+        let token = quote! (GTreeBuilderElement::EventCallBack((String::from(#event_name),Box::new(#closure))) );
+
+        token.to_tokens(tokens)
+        // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
+        // quote!(GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
     }
 }
 // @ GRefresher ────────────────────────────────────────────────────────────────────────────────
@@ -150,20 +191,29 @@ enum GTreeMacroElement {
     GS(Box<GTreeSurface>),
     RT(GRefresher),
     GC(GTreeClosure),
-    // OtherExpr(syn::Expr),
+    OnEvent(GOnEvent), // OtherExpr(syn::Expr),
 }
+
 impl Parse for GTreeMacroElement {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         // use syn::ext::IdentExt;
 
         if input.peek(kw::Layer) {
+            //@layer
             Ok(GTreeMacroElement::GL(input.parse()?))
         } else if input.peek(kw::Refresher) {
-            // println!("peek Refresher");
+            // @refresher
             Ok(GTreeMacroElement::RT(input.parse()?))
         } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
+            // @closure
             Ok(GTreeMacroElement::GC(input.parse()?))
-        } else if input.peek(Ident::peek_any) {
+        } else if input.peek(kw::On) && (input.peek3(kw::Event)) {
+            //@ On:Event
+            Ok(GTreeMacroElement::OnEvent(input.parse()?))
+        }
+        //  must on bottom ─────────────────────────────────────────────────────────────────
+        else if input.peek(Ident::peek_any) {
+            // @surface  expr, GElement
             Ok(GTreeMacroElement::GS(input.parse()?))
         } else {
             panic!("can't know what is");
@@ -174,13 +224,11 @@ impl Parse for GTreeMacroElement {
 
 impl ToTokens for GTreeMacroElement {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self {
-            Self::GL(layer_struct) => layer_struct.to_tokens(tokens),
-            Self::GS(surface) => surface.to_tokens(tokens),
-            Self::RT(realtime_update_in) => realtime_update_in.to_tokens(tokens),
-            Self::GC(closure) => closure.to_tokens(tokens),
-            // Self::OtherExpr(expr) => expr.to_tokens(tokens),
-        }
+        use match_any::match_any;
+
+        match_any!( self ,
+            Self::GL(x)|Self::GS(x)|Self::RT(x)|Self::GC(x)|Self::OnEvent(x) => x.to_tokens(tokens)
+        )
     }
 }
 
@@ -283,7 +331,7 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use emg_bind::{
                  runtime::Element, runtime::Text, GElement, GTreeBuilderElement,
-                GraphView, GraphType, Refresher,
+                 Refresher,
             };
             #[allow(unused)]
             use gtree::log;
@@ -292,7 +340,7 @@ impl ToTokens for Gtree {
 
             #[allow(unused)]
             use anchors::singlethread::*;
-            crate::ENGINE.with(|_e| {
+            emg_bind::ENGINE.with(|_e| {
                 log::info!("============= engine initd");
             });
 
@@ -461,9 +509,14 @@ mod tests {
                 Layer "d" [Refresher ||{Text_(Text::new(format!("ee up")))}],
                 Text_(Text::new(format!("in quote..{}", "b"))) => [
                     Refresher ||{99},
-                    Refresher ||{33}
-                    on:event "click" => |root,vdom,event|{let x=1;}
-                ]
+                    Refresher ||{33},
+                    On:Event "click" => |_root,_vdom,_event|{let x=9987665;log::info!("in gtree {}",x);}
+                ],
+                Layer "e" [
+                    Button_(Button::new(Text::new(format!("button in quote..{}", "e")))) => [
+                        On:Event "click" => |_root,_vdom,_event|{let x=888888;log::info!("in gtree {}",x);}
+                    ]
+                ],
             ]
         ]
 

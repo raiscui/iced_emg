@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-11 16:34:28
+ * @LastEditTime: 2021-03-12 14:14:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -136,7 +136,7 @@ where
             (_gel, _g_event_callback @ EventCallBack_(_)) => {
                 // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
                 // .refresh_use(g_event_callback)
-                panic!("should never directly use event_callback for GElement,need try_convert_into_gelement_node_builder_widget_() first")
+                panic!("should never directly use event_callback for GElement")
             }
 
             //其他任何 el 刷新, 包括 el=refresher
@@ -198,9 +198,12 @@ where
     Message: 'static + Clone,
 {
     fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<'a, Message>) {
+        log::debug!("node_builder_widget refresh use GElement (event_callback)");
+
         match self {
             // @ Clear type match
             EventCallBack_(event_callback) => {
+                log::debug!("node_builder_widget.add_event_callback(event_callback.clone()) ");
                 node_builder_widget.add_event_callback(event_callback.clone());
             }
             // ─────────────────────────────────────────────────────────────────

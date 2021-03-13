@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-03-11 16:27:28
+ * @LastEditTime: 2021-03-12 15:04:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -97,6 +97,7 @@ where
         // The const / dyn child node performs the change
         // TODO: cache.    use edge type?
         for child in children_s {
+            //  TODO use COW
             current_node_clone.refresh_use(&child)
         }
 
@@ -104,14 +105,23 @@ where
         if event_callbacks.is_empty() {
             current_node_clone
         } else {
+            log::debug!("event_callback is not empty");
             match NodeBuilderWidget::<Message>::try_from(current_node_clone) {
                 Ok(mut node_builder_widget) => {
+                    log::debug!("NodeBuilderWidget::<Message>::try_from  OK");
+
                     for event_callback in event_callbacks {
                         node_builder_widget.refresh_use(&event_callback)
                     }
                     GElement::Element_(node_builder_widget.into())
                 }
-                Err(old_gel) => old_gel,
+                Err(old_gel) => {
+                    log::error!(
+                        "NodeBuilderWidget::<Message>::try_from  error use: {}",
+                        old_gel
+                    );
+                    old_gel
+                }
             }
 
             // if let Ok(node_builder_widget) =

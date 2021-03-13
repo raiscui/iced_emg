@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-03-11 16:34:37
+ * @LastEditTime: 2021-03-12 12:48:26
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::{
     runtime::{Element, Text},
-    EventCallbackType, Layer, RefreshFor,
+    Button, EventCallbackType, Layer, RefreshFor,
 };
 use std::{convert::TryFrom, rc::Rc};
 use strum_macros::Display;
@@ -20,8 +20,10 @@ pub enum GElement<'a, Message> {
     Element_(Element<'a, Message>),
     Layer_(Layer<'a, Message>),
     Text_(Text),
+    Button_(Button<'a, Message>),
     Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
     EventCallBack_(EventCallbackType),
+    // IntoE(Rc<dyn Into<Element<'a, Message>>>),
 }
 
 impl<'a, Message> From<EventCallbackType> for GElement<'a, Message> {
@@ -92,6 +94,9 @@ impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
                 .debug_tuple("GElement::EventCallBack_")
                 .field(&"Box<dyn EventCallbackClone>")
                 .finish(),
+            Button_(_) => {
+                write!(f, "GElement::Button_")
+            }
         }
     }
 }
@@ -108,7 +113,7 @@ where
 
         match_any! (ge,
             Element_(x)=>Ok(x),
-            Layer_(x)|Text_(x) => Ok(x.into()),
+            Layer_(x)|Text_(x)|Button_(x) => Ok(x.into()),
             Refresher_(_)|EventCallBack_(_)=>Err(())
         )
     }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-03-11 14:38:11
+ * @LastEditTime: 2021-03-12 14:31:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -115,7 +115,7 @@ pub fn handle_layer<'a, Message>(
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
         }
-        GTreeBuilderElement::GElementTree(gel, updaters) => {
+        GTreeBuilderElement::GElementTree(gel, refreshers) => {
             let id = make_id(format!("{}", &gel).as_str());
             let nix = g.insert_node(id, gel.clone());
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
@@ -123,7 +123,7 @@ pub fn handle_layer<'a, Message>(
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
             illicit::Layer::new().offer(nix.clone()).enter(|| {
                 assert_eq!(*illicit::expect::<NodeIndex<String>>(), nix.clone());
-                updaters
+                refreshers
                     .iter()
                     .for_each(|child_layer| handle_layer(g, child_layer));
             });

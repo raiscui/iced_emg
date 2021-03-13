@@ -12,7 +12,7 @@ use crate::GElement;
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-03-11 16:32:26
+ * @LastEditTime: 2021-03-12 15:46:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -76,6 +76,7 @@ pub type EventCallbackType = (EventNameString, Box<dyn EventCallbackClone>);
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
 pub struct NodeBuilderWidget<'a, Message> {
+    //TODO : instead use GElement
     widget: Rc<dyn NodeBuilder<Message> + 'a>,
     event_callbacks: Vec<EventCallbackType>,
 }
@@ -109,7 +110,7 @@ impl<'a, Message> NodeBuilderWidget<'a, Message> {
 
     /// Get a reference to the node builder widget's event callbacks.
     #[must_use]
-    pub fn event_callbacks(&self) -> &Vec<(String, Box<dyn EventCallbackClone>)> {
+    pub fn event_callbacks(&self) -> &Vec<EventCallbackType> {
         &self.event_callbacks
     }
 }
@@ -122,9 +123,9 @@ where
 
     fn try_from(gel: GElement<'a, Message>) -> Result<Self, Self::Error> {
         use match_any::match_any;
-        use GElement::Layer_;
+        use GElement::{Button_, Layer_};
         match_any! (gel,
-            Layer_( x)=> {
+            Layer_( x) |Button_(x)=> {
                 Ok(NodeBuilderWidget::new(Rc::new(x)))
             },
             _=>Err(gel)
@@ -163,6 +164,7 @@ where
         while let Some((event, callback)) = take(&mut event_callbacks, 0) {
             // let aa = collections::String::from_str_in(event.as_str(), bump);
             // element_builder = element_builder.on(aa.into_bump_str(), callback);
+            log::debug!("element_builder.on(bump.alloc(event), callback)");
             element_builder = element_builder.on(bump.alloc(event), callback);
         }
 
