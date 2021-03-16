@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-03-12 15:04:32
+ * @LastEditTime: 2021-03-13 19:02:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
 
-use crate::{runtime::Element, GElement, GStateStore, NodeBuilderWidget, RefreshUseFor};
+use crate::{runtime::Element, GElement, NodeBuilderWidget, RefreshUseFor};
 use anymap::any::CloneAny;
 use std::{cell::RefCell, convert::TryInto};
 use std::{convert::TryFrom, hash::Hash};
@@ -28,11 +28,7 @@ thread_local! {
          GStore::default()
     );
 }
-thread_local! {
-    pub static G_STATE_STORE: RefCell<GStateStore> = RefCell::new(
-        GStateStore::default()
-    );
-}
+
 use anchors::singlethread::Engine;
 thread_local! {
     pub static ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
@@ -91,7 +87,7 @@ where
         let mut children_s = self.children_to_elements(cix);
 
         let event_callbacks = children_s
-            .drain_filter(|gel| gel.is_event_call_back_())
+            .drain_filter(|gel| gel.is_event_())
             .collect::<Vec<_>>();
 
         // The const / dyn child node performs the change

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-12 14:14:48
+ * @LastEditTime: 2021-03-13 16:31:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,7 +12,7 @@ use std::ops::Deref;
 
 use crate::{
     GElement,
-    GElement::{EventCallBack_, Layer_, Refresher_, Text_},
+    GElement::{Event_, Layer_, Refresher_, Text_},
     NodeBuilderWidget, RefreshFor, RefreshUseFor, Refresher, RefresherFor,
 };
 // ────────────────────────────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ where
     fn refresh_for(&self, el: &mut GElement<'a, Message>) {
         match (el, self) {
             // @ Single explicit match
-            (_gel, _g_event_callback @ EventCallBack_(_)) => {
+            (_gel, _g_event_callback @ Event_(_)) => {
                 // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
                 // .refresh_use(g_event_callback)
                 panic!("should never directly use event_callback for GElement")
@@ -202,7 +202,7 @@ where
 
         match self {
             // @ Clear type match
-            EventCallBack_(event_callback) => {
+            Event_(event_callback) => {
                 log::debug!("node_builder_widget.add_event_callback(event_callback.clone()) ");
                 node_builder_widget.add_event_callback(event_callback.clone());
             }

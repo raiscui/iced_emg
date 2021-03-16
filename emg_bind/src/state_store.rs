@@ -1,18 +1,22 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 09:57:45
- * @LastEditTime: 2021-03-09 10:33:39
+ * @LastEditTime: 2021-03-15 18:10:34
  * @LastEditors: Rais
  * @Description:
  */
 
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 use anymap::any::CloneAny;
 use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
 
 use crate::topo_store::StorageKey;
-
+thread_local! {
+    pub static G_STATE_STORE: RefCell<GStateStore> = RefCell::new(
+        GStateStore::default()
+    );
+}
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
 pub struct GStateStore {

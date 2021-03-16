@@ -34,6 +34,7 @@ mod refreshers;
 mod sandbox;
 mod state_store;
 mod topo_store;
+// mod use_state;
 
 pub use application::{Application, Command, Element, Subscription};
 pub use button::Button;
@@ -49,9 +50,13 @@ pub use refreshers::Refresher;
 pub use refreshers::RefresherFor;
 pub use sandbox::Sandbox;
 pub use state_store::GStateStore;
+pub use state_store::G_STATE_STORE;
 pub use topo_store::use_state;
 pub use topo_store::CloneState;
 pub use topo_store::StateAccess;
+// pub use use_state::use_state;
+// pub use use_state::CloneState;
+// pub use use_state::StateAccess;
 
 #[cfg(test)]
 mod tests {

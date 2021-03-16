@@ -1,17 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-03-13 13:52:51
+ * @LastEditTime: 2021-03-15 18:11:33
  * @LastEditors: Rais
  * @Description:
  */
 use std::{borrow::Borrow, ops::Deref};
 
-use crate::{
-    runtime::Element, EventCallbackType, GElement, GraphType, Layer, NodeIndex, RefreshFor, Uuid,
-};
+use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex, RefreshFor, Uuid};
 use std::rc::Rc;
-use GElement::{Element_, Layer_, Refresher_};
+use GElement::Layer_;
 #[allow(dead_code)]
 pub enum GTreeBuilderElement<'a, Message> {
     Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
@@ -23,10 +21,12 @@ pub enum GTreeBuilderElement<'a, Message> {
     ),
     RefreshUse(String, Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
     Cl(String, Box<dyn Fn() + 'a>),
-    EventCallBack(String, EventCallbackType),
+    Event(String, EventNode<Message>),
 }
 
-impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
+impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
+    for GTreeBuilderElement<'a, Message>
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             GTreeBuilderElement::Layer(id, children_list) => f
@@ -55,13 +55,11 @@ impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GTreeBuilderElement<'a, M
             GTreeBuilderElement::Cl(id, _) => {
                 f.debug_tuple("GTreeBuilderElement::Cl").field(id).finish()
             }
-            GTreeBuilderElement::EventCallBack(id, _) => {
-                let v = "Box<dyn EventCallbackClone>";
-                f.debug_tuple("GTreeBuilderElement::EventCallBack")
-                    .field(id)
-                    .field(&v)
-                    .finish()
-            }
+            GTreeBuilderElement::Event(id, e) => f
+                .debug_tuple("GTreeBuilderElement::Event")
+                .field(id)
+                .field(&e)
+                .finish(),
         }
     }
 }
@@ -101,7 +99,7 @@ pub fn handle_layer<'a, Message>(
     match tree_layer.borrow() {
         GTreeBuilderElement::Layer(id, children_list) => {
             log::debug!("{:?}==>{:?}", &id, &children_list);
-            let nix = g.insert_node(id.clone(), Layer_(Layer::new(id)));
+            let nix = g.insert_node(id.clone(), Layer::new(id).into());
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
@@ -113,7 +111,7 @@ pub fn handle_layer<'a, Message>(
             });
         }
         GTreeBuilderElement::El(id, element) => {
-            let nix = g.insert_node(id.to_string(), Element_(element.clone()));
+            let nix = g.insert_node(id.to_string(), element.clone().into());
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
@@ -134,17 +132,17 @@ pub fn handle_layer<'a, Message>(
             let nix = g.insert_node(
                 id.to_string(),
                 // Refresher_(Rc::<dyn RefreshFor<GElement<'a, Message>> + 'a>::from(u)),
-                Refresher_(u.clone()),
+                u.clone().into(),
             );
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());
             log::debug!("{}", &edge);
             g.insert_update_edge(parent_nix.deref(), &nix, edge);
         }
-        GTreeBuilderElement::Cl(id, dyn_fn) => {
+        GTreeBuilderElement::Cl(_id, dyn_fn) => {
             dyn_fn();
         }
         // TODO make RC remove most clones
-        GTreeBuilderElement::EventCallBack(id, callback) => {
+        GTreeBuilderElement::Event(id, callback) => {
             // TODO: make all into() style?
             let nix = g.insert_node(id.to_string(), callback.clone().into());
             let edge = format!("{} -> {}", parent_nix.index(), nix.index());

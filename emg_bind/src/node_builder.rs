@@ -1,18 +1,21 @@
 // use dyn_clone::DynClone;
+use from_variants::FromVariants;
 use std::{convert::TryFrom, rc::Rc};
 
+use crate::GElement;
+use emg::im::Vector;
 use iced::Element;
 use iced_web::{
-    dodrio::{builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak},
+    dodrio::{
+        self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
+    },
     Bus, Css, Widget,
 };
-
-use crate::GElement;
 
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-03-12 15:46:55
+ * @LastEditTime: 2021-03-13 16:24:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -39,20 +42,40 @@ where
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub trait EventCallbackClone: Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) {
-    fn clone_box(&self) -> Box<dyn EventCallbackClone>;
+pub trait EventCbClone: Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) {
+    fn clone_box(&self) -> Box<dyn EventCbClone>;
 }
 
-impl<T> EventCallbackClone for T
+impl<T> EventCbClone for T
 where
     T: 'static + Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) + Clone,
 {
-    fn clone_box(&self) -> Box<dyn EventCallbackClone> {
+    fn clone_box(&self) -> Box<dyn EventCbClone> {
         Box::new(self.clone())
     }
 }
 
-impl Clone for Box<dyn EventCallbackClone> {
+impl Clone for Box<dyn EventCbClone> {
+    fn clone(&self) -> Self {
+        (**self).clone_box()
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+pub trait EventMessageCbClone<Message>: Fn() -> Message {
+    fn clone_box(&self) -> Box<dyn EventMessageCbClone<Message>>;
+}
+
+impl<Message, T> EventMessageCbClone<Message> for T
+where
+    T: 'static + Fn() -> Message + Clone,
+{
+    fn clone_box(&self) -> Box<dyn EventMessageCbClone<Message>> {
+        Box::new(self.clone())
+    }
+}
+
+impl<Message> Clone for Box<dyn EventMessageCbClone<Message>> {
     fn clone(&self) -> Self {
         (**self).clone_box()
     }
@@ -72,45 +95,97 @@ impl Clone for Box<dyn EventCallbackClone> {
 //     }
 // }
 type EventNameString = String;
-pub type EventCallbackType = (EventNameString, Box<dyn EventCallbackClone>);
+
+#[derive(Clone)]
+pub struct EventCallback(EventNameString, Box<dyn EventCbClone>);
+
+impl EventCallback {
+    #[must_use]
+    pub fn new(name: EventNameString, cb: Box<dyn EventCbClone>) -> Self {
+        Self(name, cb)
+    }
+}
+
+#[derive(Clone)]
+pub struct EventMessage<Message>(EventNameString, Box<dyn EventMessageCbClone<Message>>);
+impl<Message> EventMessage<Message> {
+    #[must_use]
+    pub fn new(name: EventNameString, message: Box<dyn EventMessageCbClone<Message>>) -> Self {
+        Self(name, message)
+    }
+}
+#[derive(Clone, FromVariants)]
+pub enum EventNode<Message> {
+    Cb(EventCallback),
+    CbMessage(EventMessage<Message>),
+}
+
+// impl<Message> From<(EventNameString, Box<dyn EventCbClone>)> for EventNode<Message> {
+//     fn from(v: (EventNameString, Box<dyn EventCbClone>)) -> Self {
+//         Self::Cb(EventCallback(v.0, v.1))
+//     }
+// }
+
+// impl<Message> From<(EventNameString, Box<dyn EventMessageCbClone<Message>>)>
+//     for EventNode<Message>
+// {
+//     fn from(v: (EventNameString, Box<dyn EventMessageCbClone<Message>>)) -> Self {
+//         Self::CbMessage(EventMessage(v.0, v.1))
+//     }
+// }
+
+impl<Message> std::fmt::Debug for EventNode<Message>
+where
+    Message: std::clone::Clone + std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EventNode::Cb(EventCallback(k, _)) => {
+                let v = (k, "Box<dyn EventCbClone>");
+                f.debug_tuple("EventNode<Message>").field(&v).finish()
+            }
+            EventNode::CbMessage(EventMessage(k, _)) => {
+                let v = (k, "Box<dyn EventMessageCbClone>");
+                f.debug_tuple("EventNode<Message>").field(&v).finish()
+            }
+        }
+    }
+}
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
 pub struct NodeBuilderWidget<'a, Message> {
     //TODO : instead use GElement
     widget: Rc<dyn NodeBuilder<Message> + 'a>,
-    event_callbacks: Vec<EventCallbackType>,
+    event_callbacks: Vector<EventNode<Message>>,
 }
 
-impl<'a, Message> std::fmt::Debug for NodeBuilderWidget<'a, Message> {
+impl<'a, Message> std::fmt::Debug for NodeBuilderWidget<'a, Message>
+where
+    Message: std::clone::Clone + std::fmt::Debug,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NodeBuilderWidget")
             .field("widget", &String::from("Rc<dyn NodeBuilder<Message> + 'a>"))
-            .field(
-                "event_callbacks",
-                &self
-                    .event_callbacks()
-                    .iter()
-                    .map(|&(ref k, ref _v)| (k, "Box<dyn EventCallbackClone>"))
-                    .collect::<Vec<_>>(),
-            )
+            .field("event_callbacks", &self.event_callbacks())
             .finish()
     }
 }
 
-impl<'a, Message> NodeBuilderWidget<'a, Message> {
+impl<'a, Message: std::clone::Clone> NodeBuilderWidget<'a, Message> {
     pub fn new(widget: Rc<dyn NodeBuilder<Message> + 'a>) -> Self {
         Self {
             widget,
-            event_callbacks: Vec::new(),
+            event_callbacks: Vector::new(),
         }
     }
-    pub fn add_event_callback(&mut self, event_callback: EventCallbackType) {
-        self.event_callbacks.push(event_callback);
+    pub fn add_event_callback(&mut self, event_callback: EventNode<Message>) {
+        self.event_callbacks.push_back(event_callback);
     }
 
-    /// Get a reference to the node builder widget's event callbacks.
+    /// Get a reference to the node builder widgets event callbacks.
     #[must_use]
-    pub fn event_callbacks(&self) -> &Vec<EventCallbackType> {
+    pub fn event_callbacks(&self) -> &Vector<EventNode<Message>> {
         &self.event_callbacks
     }
 }
@@ -134,14 +209,14 @@ where
 }
 
 // TODO move to utilities
-fn take<T>(vec: &mut Vec<T>, index: usize) -> Option<T> {
-    // fn take<T>(mut vec: iced_web::dodrio::bumpalo::collections::Vec<T>, index: usize) -> Option<T> {
-    if index < vec.len() {
-        Some(vec.swap_remove(index))
-    } else {
-        None
-    }
-}
+// fn take<T>(vec: &mut Vec<T>, index: usize) -> Option<T> {
+//     // fn take<T>(mut vec: iced_web::dodrio::bumpalo::collections::Vec<T>, index: usize) -> Option<T> {
+//     if index < vec.len() {
+//         Some(vec.swap_remove(index))
+//     } else {
+//         None
+//     }
+// }
 
 impl<'a, Message> Widget<Message> for NodeBuilderWidget<'a, Message>
 where
@@ -159,13 +234,37 @@ where
         // let mut v =
         //     bumpalo::collections::Vec::from_iter_in(self.event_callbacks.iter().cloned(), bump);
 
-        let mut event_callbacks = self.event_callbacks.clone();
+        let mut event_nodes = self.event_callbacks.clone();
 
-        while let Some((event, callback)) = take(&mut event_callbacks, 0) {
+        while let Some(event_node) = event_nodes.pop_front() {
             // let aa = collections::String::from_str_in(event.as_str(), bump);
             // element_builder = element_builder.on(aa.into_bump_str(), callback);
-            log::debug!("element_builder.on(bump.alloc(event), callback)");
-            element_builder = element_builder.on(bump.alloc(event), callback);
+
+            match event_node {
+                EventNode::Cb(EventCallback(event, callback)) => {
+                    let event_bump_string = {
+                        use dodrio::bumpalo::collections::String;
+                        String::from_str_in(event.as_str(), bump).into_bump_str()
+                    };
+                    element_builder = element_builder.on(event_bump_string, callback);
+                }
+                EventNode::CbMessage(EventMessage(event, msg)) => {
+                    let event_bump_string = {
+                        use dodrio::bumpalo::collections::String;
+                        String::from_str_in(event.as_str(), bump).into_bump_str()
+                    };
+                    let event_bus = bus.clone();
+
+                    element_builder = element_builder.on(
+                        event_bump_string,
+                        move |_root: &mut dyn RootRender,
+                              _vdom: VdomWeak,
+                              _event: web_sys::Event| {
+                            event_bus.publish(msg());
+                        },
+                    );
+                }
+            }
         }
 
         element_builder.finish()
@@ -183,6 +282,7 @@ where
 #[cfg(test)]
 #[allow(unused)]
 mod node_builder_test {
+    use emg::im::vector;
     use iced::Text;
     use wasm_bindgen_test::*;
 
@@ -218,9 +318,10 @@ mod node_builder_test {
 
         let b = NodeBuilderWidget::<'_, Message> {
             widget: Rc::new(Button::new(Text::new("a"))),
-            event_callbacks: vec![
-                (String::from("xxx"), Box::new(a)),
-                (String::from("ff"), Box::new(a2)),
+            event_callbacks: vector![
+                EventCallback(String::from("xxx"), Box::new((a))).into(),
+                EventNode::Cb(EventCallback(String::from("ff"), Box::new((a2)))),
+                EventMessage(String::from("x"), Box::new(|| Message::A)).into(),
             ],
         };
     }

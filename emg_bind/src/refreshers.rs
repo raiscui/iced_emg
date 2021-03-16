@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-03-12 18:11:12
+ * @LastEditTime: 2021-03-15 16:20:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -120,7 +120,9 @@ mod updater_test {
 
         let mut ff = Var::new(String::from("hello"));
         let ff2 = Var::new(2i32);
+        let ffw = ff2.watch();
         ff.refresh_use(&ff2);
+        ff.refresh_use(&ffw);
         ff2.refresh_for(&mut ff);
         log::info!("==== test_anchor: {}", ff.get().deref());
         // ─────────────────────────────────────────────────────────────────
@@ -133,17 +135,17 @@ mod updater_test {
 
         ff.refresh_use(&n);
         n.refresh_for(&mut ff);
-        log::info!("==== test_anchor: {}", ff.get().deref());
-        assert_eq!("hello,2,2,99,99", ff.get().deref());
+        log::info!("==== test_anchor 2: {}", ff.get().deref());
+        assert_eq!("hello,2,2,2,99,99", ff.get().deref());
         // ─────────────────────────────────────────────────────────────────
 
         let a = Var::new(4i32);
 
         ff.refresh_use(&a);
         a.refresh_for(&mut ff);
-        log::info!("==== test_anchor: {}", ff.get().deref());
+        log::info!("==== test_anchor 3: {}", ff.get().deref());
 
-        assert_eq!("hello,2,2,99,99,4,4", ff.get().deref());
+        assert_eq!("hello,2,2,2,99,99,4,4", ff.get().deref());
     }
     #[wasm_bindgen_test]
 

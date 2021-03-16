@@ -1,35 +1,29 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-03-13 13:46:40
+ * @LastEditTime: 2021-03-13 19:00:03
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::{
     runtime::{Element, Text},
-    Button, EventCallbackType, Layer, RefreshFor,
+    Button, EventNode, Layer, RefreshFor,
 };
 use std::{convert::TryFrom, rc::Rc};
 use strum_macros::Display;
 
+use from_variants::FromVariants;
 pub use GElement::*;
-
-#[derive(Clone, Display)]
+#[derive(Clone, Display, FromVariants)]
 pub enum GElement<'a, Message> {
     Element_(Element<'a, Message>),
     Layer_(Layer<'a, Message>),
     Text_(Text),
     Button_(Button<'a, Message>),
     Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
-    EventCallBack_(EventCallbackType),
+    Event_(EventNode<Message>),
     // IntoE(Rc<dyn Into<Element<'a, Message>>>),
-}
-
-impl<'a, Message> From<EventCallbackType> for GElement<'a, Message> {
-    fn from(v: EventCallbackType) -> Self {
-        Self::EventCallBack_(v)
-    }
 }
 
 // fn replace_with<X, F: Fn(X) -> X>(x: &mut X, convert: F)
@@ -53,8 +47,8 @@ impl<'a, Message> From<EventCallbackType> for GElement<'a, Message> {
 impl<'a, Message: std::clone::Clone + 'static> GElement<'a, Message> {
     /// Returns `true` if the `g_element` is [`EventCallBack_`].
     #[must_use]
-    pub fn is_event_call_back_(&self) -> bool {
-        matches!(self, Self::EventCallBack_(..))
+    pub fn is_event_(&self) -> bool {
+        matches!(self, Self::Event_(..))
     }
 
     // fn convert_inside_to_node_builder_widget_(self) -> Result<Self, ()> {
@@ -79,7 +73,7 @@ impl<'a, Message: std::clone::Clone + 'static> GElement<'a, Message> {
     // }
 }
 
-impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
+impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElement<'a, Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Layer_(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
@@ -90,10 +84,7 @@ impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
             Element_(_) => f
                 .debug_tuple("GElement::Element_(Element<'a, Message>)")
                 .finish(),
-            EventCallBack_(_) => f
-                .debug_tuple("GElement::EventCallBack_")
-                .field(&"Box<dyn EventCallbackClone>")
-                .finish(),
+            Event_(e) => f.debug_tuple("GElement::EventCallBack_").field(&e).finish(),
             Button_(_) => {
                 write!(f, "GElement::Button_")
             }
@@ -114,7 +105,7 @@ where
         match_any! (ge,
             Element_(x)=>Ok(x),
             Layer_(x)|Text_(x)|Button_(x) => Ok(x.into()),
-            Refresher_(_)|EventCallBack_(_)=>Err(())
+            Refresher_(_)|Event_(_)=>Err(())
         )
     }
 }

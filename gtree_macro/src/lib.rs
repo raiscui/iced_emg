@@ -21,7 +21,7 @@ pub mod kw {
     // use std::fmt::Debug;
 
     syn::custom_keyword!(Layer);
-    syn::custom_keyword!(Refresher);
+    syn::custom_keyword!(RefreshUse);
     syn::custom_keyword!(On);
     syn::custom_keyword!(Event);
 
@@ -30,6 +30,49 @@ pub mod kw {
     //         f.write_str(concat!("Keyword [", stringify!(layer), "]"))
     //     }
     // }
+}
+//@ ID ──────────────────────────────
+#[derive(Debug)]
+struct ID(Option<Ident>);
+
+impl ID {
+    pub fn get(&self, def_name: &str) -> TokenStream {
+        if let Some(id) = &self.0 {
+            let id_string = id.to_string();
+            // println!("id:{}", &id_string);
+
+            quote_spanned!(id.span()=>String::from(#id_string))
+        } else {
+            let id = make_id(def_name);
+            // println!("id:{}", &id);
+
+            quote!(String::from(#id))
+        }
+    }
+}
+impl Parse for ID {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let opt_id = {
+            if input.peek(Token![@]) && input.peek2(Ident::peek_any) {
+                input.parse::<Token![@]>()?;
+                let id = input.parse::<Ident>()?;
+                Some(id)
+            } else {
+                None
+            }
+        };
+        Ok(ID(opt_id))
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+fn make_id(name: &str) -> String {
+    let mut id = (*Uuid::new_v4()
+        .to_simple()
+        .encode_lower(&mut Uuid::encode_buffer()))
+    .to_string();
+    id.push_str(("-".to_owned() + name).as_str());
+    id
 }
 
 // @ GClosure ────────────────────────────────────────────────────────────────────────────────
@@ -63,30 +106,24 @@ impl ToTokens for GTreeClosure {
         .to_tokens(tokens)
     }
 }
+
 // @ G_On_Event ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct GOnEvent {
     id: ID,
-    event_name: syn::LitStr,
+    event_name: String,
     closure: syn::ExprClosure,
 }
 impl Parse for GOnEvent {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let id = input.parse::<ID>()?;
 
-        println!("0");
         input.parse::<kw::On>()?;
-        println!("1");
         input.parse::<Token![:]>()?;
-        println!("2");
 
-        input.parse::<kw::Event>()?;
-        println!("3");
-        let event_name = input.parse()?;
-
-        input.parse::<token::FatArrow>()?;
+        let event_name = input.parse::<Ident>()?.to_string();
 
         Ok(GOnEvent {
             id,
@@ -102,47 +139,83 @@ impl ToTokens for GOnEvent {
             event_name,
             closure,
         } = self;
-        let id_token = id.get("EventCallBack");
+        let id_token = id.get(format!("Event-{}", event_name).as_str());
 
-        let token = quote! (GTreeBuilderElement::EventCallBack(#id_token,(String::from(#event_name),Box::new(#closure))) );
-
+        let token = if closure.inputs.is_empty() {
+            quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(String::from(#event_name),Box::new(#closure)).into()) )
+        } else if closure.inputs.len() == 3 {
+            // TODO: 细化 span   use into
+            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new(String::from(#event_name),Box::new(#closure)).into()) )
+        } else {
+            panic!("event callback argument size is must empty or three")
+        };
         token.to_tokens(tokens)
+
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
         // quote!(GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
     }
 }
 // @ GRefresher ────────────────────────────────────────────────────────────────────────────────
-
+#[derive(Debug)]
+pub enum RefresherType {
+    Callback(syn::ExprClosure),
+    Expr(syn::Expr),
+}
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct GRefresher {
     id: ID,
-    kws: kw::Refresher,
-    closure: syn::ExprClosure,
+    kws: kw::RefreshUse,
+    method: RefresherType,
 }
+
 impl Parse for GRefresher {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // println!("parsing GRefresher");
-        // println!("{:?}", &input);
+        let id = input.parse::<ID>()?;
+        let kws = input.parse::<kw::RefreshUse>()?;
 
-        // input.parse::<kw::Refresher>()?;
-        Ok(GRefresher {
-            id: input.parse()?,
-            kws: input.parse()?,
-            closure: input.parse()?,
-        })
+        let fork = input.fork();
+
+        if fork.parse::<syn::ExprClosure>().is_ok() {
+            Ok(GRefresher {
+                id,
+                kws,
+                method: RefresherType::Callback(input.parse()?),
+            })
+        } else {
+            let expr = input.parse::<syn::Expr>()?;
+            Ok(GRefresher {
+                id,
+                kws,
+                method: RefresherType::Expr(expr),
+            })
+        }
     }
 }
+
 impl ToTokens for GRefresher {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GRefresher { id, kws, closure } = self;
+        let GRefresher { id, kws, method } = self;
 
-        let closure_token = quote_spanned!(
-            closure.span()=> #closure
-        );
-        let id_token = id.get("Refresh");
+        let kw_token = match method {
+            RefresherType::Callback(callback) => {
+                let closure_token = quote_spanned!(
+                    callback.span()=> #callback
+                );
+                let id_token = id.get("Refresh");
 
-        let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::RefreshUse(#id_token,Rc::new(#kws::new(#closure_token))) );
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(Refresher::new(#closure_token))) )
+            }
+            RefresherType::Expr(expr) => {
+                let expr_token = quote_spanned!(
+                    expr.span()=> #expr
+                );
+                let id_token = id.get("Refresh");
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(#expr_token)) )
+            }
+        };
+
+        // let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::RefreshUse(#id_token,Rc::new(#kws::new(#closure_token))) );
 
         kw_token.to_tokens(tokens)
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
@@ -198,47 +271,8 @@ impl ToTokens for GTreeSurface {
         let id_token = id.get("GElement");
 
         // Tree GElementTree
-        quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,#expr,#children_token))
+        quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,{#expr}.into(),#children_token))
             .to_tokens(tokens)
-    }
-}
-
-fn make_id(name: &str) -> String {
-    let mut id = (*Uuid::new_v4()
-        .to_simple()
-        .encode_lower(&mut Uuid::encode_buffer()))
-    .to_string();
-    id.push_str(("-".to_owned() + name).as_str());
-    id
-}
-
-//@ ID ──────────────────────────────
-#[derive(Debug)]
-struct ID(Option<Ident>);
-
-impl ID {
-    pub fn get(&self, def_name: &str) -> TokenStream {
-        if let Some(id) = &self.0 {
-            let id_string = id.to_string();
-            quote!(String::from(#id_string))
-        } else {
-            let id = make_id(def_name);
-            quote!(String::from(#id))
-        }
-    }
-}
-impl Parse for ID {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let opt_id = {
-            if input.peek(Token![@]) && input.peek2(Ident::peek_any) {
-                input.parse::<Token![@]>()?;
-                let id = input.parse::<Ident>()?;
-                Some(id)
-            } else {
-                None
-            }
-        };
-        Ok(ID(opt_id))
     }
 }
 
@@ -248,7 +282,7 @@ impl Parse for ID {
 enum GTreeMacroElement {
     GL(GTreeLayerStruct),
     GS(Box<GTreeSurface>),
-    RT(GRefresher),
+    RT(Box<GRefresher>),
     GC(GTreeClosure),
     OnEvent(GOnEvent), // OtherExpr(syn::Expr),
 }
@@ -262,13 +296,13 @@ impl Parse for GTreeMacroElement {
         if fork.peek(kw::Layer) {
             //@layer
             Ok(GTreeMacroElement::GL(input.parse()?))
-        } else if fork.peek(kw::Refresher) {
+        } else if fork.peek(kw::RefreshUse) {
             // @refresher
             Ok(GTreeMacroElement::RT(input.parse()?))
-        } else if fork.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
+        } else if fork.peek(token::Fn) && (fork.peek2(Token![||]) || fork.peek3(Token![||])) {
             // @closure
             Ok(GTreeMacroElement::GC(input.parse()?))
-        } else if fork.peek(kw::On) && (input.peek3(kw::Event)) {
+        } else if fork.peek(kw::On) && (fork.peek2(Token![:])) {
             //@ On:Event
             Ok(GTreeMacroElement::OnEvent(input.parse()?))
         }
@@ -393,18 +427,18 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use emg_bind::{
                  runtime::Element, runtime::Text, GElement, GTreeBuilderElement,
-                 Refresher,
+                 Refresher,EventCallback,EventMessage
             };
             #[allow(unused)]
             use gtree::log;
             #[allow(unused)]
             use GElement::*;
 
-            #[allow(unused)]
-            use anchors::singlethread::*;
-            emg_bind::ENGINE.with(|_e| {
-                log::info!("============= engine initd");
-            });
+            // #[allow(unused)]
+            // use anchors::singlethread::*;
+            // ENGINE.with(|_e| {
+            //     log::info!("============= engine initd");
+            // });
 
 
              #root
@@ -568,49 +602,19 @@ mod tests {
         @a Layer [
             @b Layer [
                 @c Layer [],
-                @d Layer [Refresher ||{Text_(Text::new(format!("ee up")))}],
-                    Text_(Text::new(format!("in quote..{}", "b"))) => [
-                        Refresher ||{99},
-                        Refresher ||{33},
-                        On:Event "click" => |_root,_vdom,_event|{let x=9987665;log::info!("in gtree {}",x);}
+                Layer [RefreshUse ||{GElement::from( Text::new(format!("ee up")))}],
+                Text::new(format!("in quote..{}", "b")) => [
+                    RefreshUse ||{100},
+                    RefreshUse move ||{ss.get_with(|x|*x)},
+                    RefreshUse  move||aw.clone(),
                 ],
                 @e Layer [
-                    Button_(Button::new(Text::new(format!("button in quote..{}", "e")))) => [
-                        On:Event "click" => |_root,_vdom,_event|{let x=888888;log::info!("in gtree {}",x);}
-                    ]
-                ],
-            ]
-        ]
-
-        "#;
-
-        token_test(input);
-        println!();
-    }
-    #[test]
-    fn test1() {
-        fn token_test(input: &str) {
-            match syn::parse_str::<Gtree>(input) {
-                Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
-            }
-        }
-        println!();
-        // type GraphType = Vec<i32>;
-        let input = r#" 
-        Layer "a" [
-            Layer "b" [
-                Layer "c" [],
-                Layer "d" [Refresher ||{Text_(Text::new(format!("ee up")))}],
-                Text_(Text::new(format!("in quote..{}", "b"))) => [
-                    Refresher ||{99},
-                    Refresher ||{33},
-                    On:Event "click" => |_root,_vdom,_event|{let x=9987665;log::info!("in gtree {}",x);}
-                ],
-                Layer "e" [
-                    Button_(Button::new(Text::new(format!("button in quote..{}", "e")))) => [
-                        On:Event "click" => |_root,_vdom,_event|{let x=888888;log::info!("in gtree {}",x);}
-                    ]
+                    Button::new(Text::new(format!("button in quote..{}", "e"))) => [
+                        On:click move |_root,vdom,_event|{ss.set(ss.get_with(|x|x+2));vdom.schedule_render();}
+                    ],
+                    Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+                        On:click move||{ss.set(ss.get_with(|x|x+2));Message::None}
+                        ],
                 ],
             ]
         ]
