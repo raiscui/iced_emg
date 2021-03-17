@@ -1,7 +1,5 @@
 use std::convert::TryInto;
 
-use bumpalo::format;
-
 use crate::runtime::{
     css,
     dodrio::{
@@ -53,6 +51,7 @@ impl<'a, Message> Layer<'a, Message> {
         }
     }
 
+    #[must_use]
     pub fn set_children(mut self, children: Vec<Element<'a, Message>>) -> Self {
         self.children = children;
         self
@@ -65,13 +64,15 @@ impl<'a, Message> Layer<'a, Message> {
     /// elements consistent.
 
     /// Sets the width of the [`Layer`].
-    pub fn width(mut self, width: Length) -> Self {
+    #[must_use]
+    pub const fn width(mut self, width: Length) -> Self {
         self.width = width;
         self
     }
 
     /// Sets the height of the [`Layer`].
-    pub fn height(mut self, height: Length) -> Self {
+    #[must_use]
+    pub const fn height(mut self, height: Length) -> Self {
         self.height = height;
         self
     }
@@ -118,7 +119,7 @@ impl<'a, Message> Layer<'a, Message> {
 // }
 
 #[inline]
-fn layer<'a, 'b, B>(
+fn layer<'a, B>(
     // tag_name: &'a str,
     bump: B,
 ) -> ElementBuilder<
@@ -133,6 +134,62 @@ where
     ElementBuilder::new(bump, "layer")
     // ElementBuilder::new(bump, stringify!(layer))
 }
+
+// ────────────────────────────────────────────────────────────────────────────────
+use crate::NodeBuilder;
+
+impl<'a, Message> NodeBuilder<Message> for Layer<'a, Message>
+where
+    Message: 'static + Clone,
+{
+    fn make_element_builder<'b>(
+        &self,
+        bump: &'b bumpalo::Bump,
+        bus: &Bus<Message>,
+        style_sheet: &mut Css<'b>,
+    ) -> ElementBuilder<
+        'b,
+        bumpalo::collections::Vec<'b, Listener<'b>>,
+        bumpalo::collections::Vec<'b, Attribute<'b>>,
+        bumpalo::collections::Vec<'b, Node<'b>>,
+    > {
+        let children: Vec<_> = self
+            .children
+            .iter()
+            .map(|element| element.node(bump, bus, style_sheet))
+            .collect();
+
+        // TODO: Complete styling
+        layer(
+            // bumpalo::format!(in bump,"{}{}",&self.id,"-layer").into_bump_str(),
+            bump,
+        )
+        // .attr(
+        //     "class",
+        //     bumpalo::format!(in bump, "{} {}", spacing_class, padding_class)
+        //         .into_bump_str(),
+        // )
+        .attr(
+            "index",
+            bumpalo::collections::String::from_str_in(self.id.as_str(), bump).into_bump_str(),
+        )
+        .attr(
+            "style",
+            bumpalo::format!(
+                in bump,
+                "width: {}; height: {}; display: block; position: absolute",
+                css::length(self.width),
+                css::length(self.height)
+            )
+            .into_bump_str(),
+        )
+        .children(bumpalo::collections::Vec::from_iter_in(
+            children.into_iter(),
+            bump,
+        ))
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
 
 impl<'a, Message> Widget<Message> for Layer<'a, Message>
 where

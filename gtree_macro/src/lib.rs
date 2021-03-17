@@ -1,19 +1,28 @@
-// #![feature(proc_macro_diagnostic)]
+use std::collections::HashSet as Set;
 
-use proc_macro2::TokenStream;
-// use quote::{quote, ToTokens};
+// use trace_var::trace_var;
+
+use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
 use syn::parse::{Parse, ParseStream};
-use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
+use syn::{
+    bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token, FieldsNamed,
+    ItemStruct, Lifetime, LifetimeDef,
+};
+use syn::{fold::Fold, parse_quote};
+
 use syn::{Ident, Token};
+use uuid::Uuid;
 // ────────────────────────────────────────────────────────────────────────────────
 // use proc_macro::Diagnostic;
 pub mod kw {
     // use std::fmt::Debug;
 
     syn::custom_keyword!(Layer);
-    syn::custom_keyword!(Refresher);
+    syn::custom_keyword!(RefreshUse);
+    syn::custom_keyword!(On);
+    syn::custom_keyword!(Event);
 
     // impl Debug for layer {
     //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -21,20 +30,65 @@ pub mod kw {
     //     }
     // }
 }
+//@ ID ──────────────────────────────
+#[derive(Debug)]
+struct ID(Option<Ident>);
+
+impl ID {
+    pub fn get(&self, def_name: &str) -> TokenStream {
+        if let Some(id) = &self.0 {
+            let id_string = id.to_string();
+            // println!("id:{}", &id_string);
+
+            quote_spanned!(id.span()=>String::from(#id_string))
+        } else {
+            let id = make_id(def_name);
+            // println!("id:{}", &id);
+
+            quote!(String::from(#id))
+        }
+    }
+}
+impl Parse for ID {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let opt_id = {
+            if input.peek(Token![@]) && input.peek2(Ident::peek_any) {
+                input.parse::<Token![@]>()?;
+                let id = input.parse::<Ident>()?;
+                Some(id)
+            } else {
+                None
+            }
+        };
+        Ok(ID(opt_id))
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+fn make_id(name: &str) -> String {
+    let mut id = (*Uuid::new_v4()
+        .to_simple()
+        .encode_lower(&mut Uuid::encode_buffer()))
+    .to_string();
+    id.push_str(("-".to_owned() + name).as_str());
+    id
+}
 
 // @ GClosure ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GTreeClosure {
+    id: ID,
     closure: syn::ExprClosure,
 }
 impl Parse for GTreeClosure {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        //println!("GSurface:{}", input);
+        let id = input.parse::<ID>()?;
+
         let ec = input.parse::<syn::ExprClosure>()?;
         if ec.inputs.is_empty() {
-            Ok(GTreeClosure { closure: ec })
+            Ok(GTreeClosure { id, closure: ec })
         } else {
             Err(input.error("closure argument must be empty"))
         }
@@ -42,42 +96,124 @@ impl Parse for GTreeClosure {
 }
 impl ToTokens for GTreeClosure {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GTreeClosure { closure } = self;
+        let GTreeClosure { id, closure } = self;
+        let id_token = id.get("Cl");
 
         quote_spanned!(
-            closure.span()=> GTreeBuilderElement::Cl(#closure)
+            closure.span()=> GTreeBuilderElement::Cl(#id_token,#closure)
         )
         .to_tokens(tokens)
     }
 }
-// @ GUpdater ────────────────────────────────────────────────────────────────────────────────
+
+// @ G_On_Event ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct GRefresher {
-    kws: kw::Refresher,
+#[derive(Debug)]
+pub struct GOnEvent {
+    id: ID,
+    event_name: String,
     closure: syn::ExprClosure,
 }
-impl Parse for GRefresher {
+impl Parse for GOnEvent {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // println!("parsing GRefresher");
-        // println!("{:?}", &input);
+        let id = input.parse::<ID>()?;
 
-        // input.parse::<kw::Refresher>()?;
-        Ok(GRefresher {
-            kws: input.parse()?,
+        input.parse::<kw::On>()?;
+        input.parse::<Token![:]>()?;
+
+        let event_name = input.parse::<Ident>()?.to_string();
+
+        Ok(GOnEvent {
+            id,
+            event_name,
             closure: input.parse()?,
         })
     }
 }
+impl ToTokens for GOnEvent {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let GOnEvent {
+            id,
+            event_name,
+            closure,
+        } = self;
+        let id_token = id.get(format!("Event-{}", event_name).as_str());
+
+        let token = if closure.inputs.is_empty() {
+            quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(String::from(#event_name),Box::new(#closure)).into()) )
+        } else if closure.inputs.len() == 3 {
+            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new(String::from(#event_name),Box::new(#closure)).into()) )
+        } else {
+            panic!("event callback argument size is must empty or three")
+        };
+        token.to_tokens(tokens)
+
+        // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
+        // quote!(GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
+    }
+}
+// @ GRefresher ────────────────────────────────────────────────────────────────────────────────
+#[derive(Debug)]
+pub enum RefresherType {
+    Callback(syn::ExprClosure),
+    Expr(syn::Expr),
+}
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct GRefresher {
+    id: ID,
+    kws: kw::RefreshUse,
+    method: RefresherType,
+}
+
+impl Parse for GRefresher {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let id = input.parse::<ID>()?;
+        let kws = input.parse::<kw::RefreshUse>()?;
+
+        let fork = input.fork();
+
+        if fork.parse::<syn::ExprClosure>().is_ok() {
+            Ok(GRefresher {
+                id,
+                kws,
+                method: RefresherType::Callback(input.parse()?),
+            })
+        } else {
+            let expr = input.parse::<syn::Expr>()?;
+            Ok(GRefresher {
+                id,
+                kws,
+                method: RefresherType::Expr(expr),
+            })
+        }
+    }
+}
+
 impl ToTokens for GRefresher {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GRefresher { kws, closure } = self;
+        let GRefresher { id, kws, method } = self;
 
-        let closure_token = quote_spanned!(
-            closure.span()=> #closure
-        );
-        let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::Updater(Rc::new(#kws::new(#closure_token))) );
+        let kw_token = match method {
+            RefresherType::Callback(callback) => {
+                let closure_token = quote_spanned!(
+                    callback.span()=> #callback
+                );
+                let id_token = id.get("Refresh");
+
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(Refresher::new(#closure_token))) )
+            }
+            RefresherType::Expr(expr) => {
+                let expr_token = quote_spanned!(
+                    expr.span()=> #expr
+                );
+                let id_token = id.get("Refresh");
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(#expr_token)) )
+            }
+        };
+
+        // let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::RefreshUse(#id_token,Rc::new(#kws::new(#closure_token))) );
 
         kw_token.to_tokens(tokens)
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
@@ -88,13 +224,16 @@ impl ToTokens for GRefresher {
 // @ GSurface ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GTreeSurface {
+    id: ID,
     expr: syn::Expr,
     children: ChildrenType,
 }
 impl Parse for GTreeSurface {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let id = input.parse::<ID>()?;
+
         //println!("GSurface:{}", input);
         let expr = input.parse::<syn::Expr>()?;
         if input.peek(token::FatArrow) {
@@ -106,12 +245,13 @@ impl Parse for GTreeSurface {
                 let _bracket = bracketed!(content in input);
                 let children: ChildrenType =
                     Some(content.parse_terminated(GTreeMacroElement::parse)?);
-                Ok(GTreeSurface { expr, children })
+                Ok(GTreeSurface { id, expr, children })
             } else {
                 Err(input.error("还没有完成 直接 单一 无[] 的后缀"))
             }
         } else {
             Ok(GTreeSurface {
+                id,
                 expr,
                 children: None,
             })
@@ -121,40 +261,52 @@ impl Parse for GTreeSurface {
 impl ToTokens for GTreeSurface {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         // self.expr.to_tokens(tokens)
-        let GTreeSurface { expr, children } = self;
+        let GTreeSurface { id, expr, children } = self;
         // println!("expr===={:?}", self.expr);
 
         let children_iter = children.iter();
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
+        let id_token = id.get("GElement");
 
-        // TreeWhoWithUpdater
-        quote_spanned! (expr.span() => GTreeBuilderElement::WhoWithUpdater(#expr,#children_token))
+        // Tree GElementTree
+        quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,{#expr}.into(),#children_token))
             .to_tokens(tokens)
     }
 }
 
 // @ GTreeElement ────────────────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum GTreeMacroElement {
     GL(GTreeLayerStruct),
-    GS(GTreeSurface),
-    RT(GRefresher),
+    GS(Box<GTreeSurface>),
+    RT(Box<GRefresher>),
     GC(GTreeClosure),
-    // OtherExpr(syn::Expr),
+    OnEvent(GOnEvent), // OtherExpr(syn::Expr),
 }
+
 impl Parse for GTreeMacroElement {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         // use syn::ext::IdentExt;
+        let fork = input.fork();
+        fork.parse::<ID>()?;
 
-        if input.peek(kw::Layer) {
+        if fork.peek(kw::Layer) {
+            //@layer
             Ok(GTreeMacroElement::GL(input.parse()?))
-        } else if input.peek(kw::Refresher) {
-            // println!("peek Refresher");
+        } else if fork.peek(kw::RefreshUse) {
+            // @refresher
             Ok(GTreeMacroElement::RT(input.parse()?))
-        } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
+        } else if fork.peek(token::Fn) && (fork.peek2(Token![||]) || fork.peek3(Token![||])) {
+            // @closure
             Ok(GTreeMacroElement::GC(input.parse()?))
-        } else if input.peek(Ident::peek_any) {
+        } else if fork.peek(kw::On) && (fork.peek2(Token![:])) {
+            //@ On:Event
+            Ok(GTreeMacroElement::OnEvent(input.parse()?))
+        }
+        //  must on bottom ─────────────────────────────────────────────────────────────────
+        else if fork.peek(Ident::peek_any) {
+            // @surface  expr, GElement
             Ok(GTreeMacroElement::GS(input.parse()?))
         } else {
             panic!("can't know what is");
@@ -165,23 +317,21 @@ impl Parse for GTreeMacroElement {
 
 impl ToTokens for GTreeMacroElement {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self {
-            Self::GL(layer_struct) => layer_struct.to_tokens(tokens),
-            Self::GS(surface) => surface.to_tokens(tokens),
-            Self::RT(realtime_update_in) => realtime_update_in.to_tokens(tokens),
-            Self::GC(closure) => closure.to_tokens(tokens),
-            // Self::OtherExpr(expr) => expr.to_tokens(tokens),
-        }
+        use match_any::match_any;
+
+        match_any!( self ,
+            Self::GL(x)|Self::GS(x)|Self::RT(x)|Self::GC(x)|Self::OnEvent(x) => x.to_tokens(tokens)
+        )
     }
 }
 
 // @ GTreeLayerStruct ────────────────────────────────────────────────────────────────────────────────
 type ChildrenType = Option<Punctuated<GTreeMacroElement, Token![,]>>;
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GTreeLayerStruct {
     layer: kw::Layer,
-    id: syn::LitStr,
+    id: ID,
     children: ChildrenType,
 }
 // TODO make id Option,
@@ -194,9 +344,9 @@ Uuid::new_v4()
 
 impl Parse for GTreeLayerStruct {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let layer = input.parse::<kw::Layer>()?;
+        let id = input.parse::<ID>()?;
 
-        let id = input.parse::<syn::LitStr>()?;
+        let layer = input.parse::<kw::Layer>()?;
 
         if input.peek(Token![,]) {
             // if input.is_empty() {
@@ -233,7 +383,8 @@ impl ToTokens for GTreeLayerStruct {
         let children_iter = children.iter();
         let g_tree_builder_element_layer_token =
             quote_spanned! {layer.span()=>GTreeBuilderElement::Layer};
-        let id_token = quote_spanned! {id.span()=> String::from(#id)};
+
+        let id_token = id.get("Layer");
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
         // let brace_op_token = quote_spanned! {children.span()=>vec![#children_token]};
 
@@ -245,224 +396,50 @@ impl ToTokens for GTreeLayerStruct {
 // @ Gtree ────────────────────────────────────────────────────────────────────────────────
 #[derive(Debug)]
 pub struct Gtree {
-    // g_type: Option<syn::Ident>,
+    // emg_graph: Ident,
     root: GTreeLayerStruct,
 }
 
 impl Parse for Gtree {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // let _: LayerSegments = input.parse()?;
-        // let _: GLayer = input.parse()?;
-        // let g_type = input.parse::<syn::Ident>().ok();
-        // println!(
-        //     "g_type------: {}",
-        //     quote!(
-        //        & #g_type
-        //     )
-        // );
+        // let emg_graph: Ident = input.parse()?;
+        // let _ = input.parse::<Token![=>]>()?;
 
         let root = input.parse::<GTreeLayerStruct>()?;
 
+        // Ok(Gtree { emg_graph, root })
         Ok(Gtree { root })
     }
 }
-
-// #[derive(Debug)]
-// enum NodeList<'a, A> {
-//     // Nil,
-//     LayerCons(A, &'a [NodeList<'a, A>]),
-// }
 
 impl ToTokens for Gtree {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let Gtree { root } = self;
 
-        // fn pp<A: std::fmt::Debug>(layer: &NodeList<A>) {
-        //     match layer {
-        //         NodeList::LayerCons(id, list) => {
-        //             println!("{:?}==>{:?}", id, list);
-        //             list.iter().for_each(|l| pp(l));
-        //         }
-        //     };
-        // }
         let token = quote_spanned! {root.span()=> {
 
-
-            use std::ops::Deref;
+            #[allow(unused)]
+            use std::rc::Rc;
+            #[allow(unused)]
+            use emg_bind::CloneState;
+            #[allow(unused)]
             use emg_bind::{
-                runtime::Element, runtime::Text, GElement, GraphStore, GraphType, Layer, RefreshFor,
-                Refresher, Uuid,
+                 runtime::Element, runtime::Text, GElement, GTreeBuilderElement,
+                 Refresher,EventCallback,EventMessage,use_state
             };
-            use gtree::illicit;
+            #[allow(unused)]
             use gtree::log;
-            use gtree::log::Level;
-            use std::{cell::RefCell, rc::Rc};
+            #[allow(unused)]
             use GElement::*;
 
+            // #[allow(unused)]
+            // use anchors::singlethread::*;
+            // ENGINE.with(|_e| {
+            //     log::info!("============= engine initd");
+            // });
 
 
-
-            #[allow(dead_code)]
-            enum GTreeBuilderElement<'a, Message> {
-                Layer(String, Vec<GTreeBuilderElement<'a, Message>>),
-                El(Element<'a, Message>),
-                WhoWithUpdater(GElement<'a, Message>, Vec<GTreeBuilderElement<'a, Message>>),
-                Updater(Rc<dyn RefreshFor<GElement<'a, Message>>>),
-                Cl(Box<dyn Fn()>),
-            }
-            impl<'a, Message> std::fmt::Debug for GTreeBuilderElement<'a, Message> {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    match self {
-                        GTreeBuilderElement::Layer(s, children_list) => f
-                            .debug_tuple("GTreeBuilderElement::Layer")
-                            .field(s)
-                            .field(children_list)
-                            .finish(),
-                        GTreeBuilderElement::El(el) => {
-                            f.debug_tuple("GTreeBuilderElement::El").field(el).finish()
-                        }
-                        GTreeBuilderElement::WhoWithUpdater(_, updaters) => {
-                            let who = "dyn RefreshUseFor<GElement<'a, Message>>";
-                            f.debug_tuple("GTreeBuilderElement::WhoWithUpdater")
-                                .field(&who)
-                                .field(updaters)
-                                .finish()
-                        }
-                        GTreeBuilderElement::Updater(_) => {
-                            let updater = "Rc<dyn RefreshFor<GElement<'a, Message>>>";
-                            f.debug_tuple("GTreeBuilderElement::Updater")
-                                .field(&updater)
-                                .finish()
-                        }
-                        GTreeBuilderElement::Cl(_) => f.debug_tuple("GTreeBuilderElement::Cl").finish(),
-                    }
-                }
-            }
-            fn handle_root<'a, Message>(
-                g: &mut GraphType<'a, Message>,
-                tree_layer: &GTreeBuilderElement<'a, Message>,
-            ) where
-                Message: Clone + std::fmt::Debug,
-            {
-                match tree_layer {
-                    GTreeBuilderElement::Layer(id, children_list) => {
-                        log::debug!("{:?}==>{:?}", id.to_string(), children_list);
-                        let nix = g.insert_node(
-                            id.to_string(),
-                            RefCell::new(Layer_(
-                                Layer::new(id),
-                            )),
-                        );
-                        illicit::Layer::new().offer(nix.clone()).enter(|| {
-                            assert_eq!(
-                                *illicit::expect::<emg_bind::NodeIndex<String>>(),
-                                nix.clone()
-                            );
-                            log::debug!("{:?}", *illicit::expect::<emg_bind::NodeIndex<String>>());
-                            children_list
-                                .iter()
-                                .for_each(|child_layer| handle_layer(g, child_layer));
-                        });
-                    }
-                    _ => {
-                        panic!("not allow this , first element must layer ")
-                    }
-                };
-            }
-
-            fn handle_layer<'a, Message>(
-                g: &mut GraphType<'a, Message>,
-                tree_layer: &GTreeBuilderElement<'a, Message>,
-            ) where
-                Message: Clone + std::fmt::Debug,
-            {
-                let parent_nix = illicit::expect::<emg_bind::NodeIndex<String>>();
-                match tree_layer {
-                    GTreeBuilderElement::Layer(id, children_list) => {
-                        log::debug!("{:?}==>{:?}", id.to_string(), children_list);
-                        let nix = g.insert_node(
-                            id.to_string(),
-                            RefCell::new(Layer_(
-                                Layer::new(id),
-                            )),
-                        );
-                        let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                        log::debug!("{}", &edge);
-                        g.insert_update_edge(parent_nix.deref(), &nix, edge);
-                        illicit::Layer::new().offer(nix.clone()).enter(|| {
-                            assert_eq!(
-                                *illicit::expect::<emg_bind::NodeIndex<String>>(),
-                                nix.clone()
-                            );
-                            children_list
-                                .iter()
-                                .for_each(|child_layer| handle_layer(g, child_layer));
-                        });
-                    }
-                    GTreeBuilderElement::El(element) => {
-                        let mut id = Uuid::new_v4()
-                            .to_simple()
-                            .encode_lower(&mut Uuid::encode_buffer())
-                            .to_string();
-                        id.push_str("-Element");
-                        let nix = g.insert_node(id, RefCell::new(Element_(element.clone())));
-                        let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                        log::debug!("{}", &edge);
-                        g.insert_update_edge(parent_nix.deref(), &nix, edge);
-                    }
-                    GTreeBuilderElement::WhoWithUpdater(gel, updaters) => {
-                        let mut id = Uuid::new_v4()
-                            .to_simple()
-                            .encode_lower(&mut Uuid::encode_buffer())
-                            .to_string();
-                        id.push_str(format!("-{}", gel).as_ref());
-                        let nix = g.insert_node(id, RefCell::new(gel.clone()));
-                        let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                        log::debug!("{}", &edge);
-                        g.insert_update_edge(parent_nix.deref(), &nix, edge);
-                        illicit::Layer::new().offer(nix.clone()).enter(|| {
-                            assert_eq!(
-                                *illicit::expect::<emg_bind::NodeIndex<String>>(),
-                                nix.clone()
-                            );
-                            updaters
-                                .iter()
-                                .for_each(|child_layer| handle_layer(g, child_layer));
-                        });
-                    }
-                    GTreeBuilderElement::Updater(u) => {
-                        let mut id = Uuid::new_v4()
-                            .to_simple()
-                            .encode_lower(&mut Uuid::encode_buffer())
-                            .to_string();
-                        id.push_str("-Refresher");
-                        let nix = g.insert_node(id, RefCell::new(Refresher_(Rc::clone(u))));
-                        let edge = format!("{} -> {}", parent_nix.index(), nix.index());
-                        log::debug!("{}", &edge);
-                        g.insert_update_edge(parent_nix.deref(), &nix, edge);
-                    }
-                    GTreeBuilderElement::Cl(dyn_fn) => {
-                        dyn_fn();
-                    }
-                };
-            }
-
-
-
-            // gtree::console_log::init_with_level(Level::Debug).ok();
-
-
-
-            let children = #root;
-
-
-
-            GraphType::<Message>::init();
-            GraphType::<Message>::get_mut_graph_with(|g| {
-
-                handle_root(g,&children);
-                log::info!("{:#?}",g);
-            });
+             #root
 
 
 
@@ -474,7 +451,87 @@ impl ToTokens for Gtree {
 /// @ gtree_macro ────────────────────────────────────────────────────────────────────────────────
 pub fn gtree_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
     let output = syn::parse2::<Gtree>(item)?;
-    Ok(quote_spanned! { output.span()=>#output})
+    Ok(quote! (#output))
+}
+
+#[derive(Debug, Clone)]
+struct EmgArgs {
+    vars: Set<Ident>,
+    first_life_time: Option<Lifetime>,
+}
+impl EmgArgs {
+    fn has_init_var(&self) -> bool {
+        self.vars.contains(&Ident::new("init", Span::call_site()))
+    }
+}
+impl Parse for EmgArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let vars = Punctuated::<Ident, Token![,]>::parse_terminated(input)?;
+        Ok(EmgArgs {
+            vars: vars.into_iter().collect(),
+            first_life_time: None,
+        })
+    }
+}
+impl Fold for EmgArgs {
+    // fn fold_field(&mut self, field: Field) -> Field {
+    //     // let o: Field = parse_quote! {#i};
+    //     println!("===Field: {:#?}", &field);
+    //     fold::fold_field(self, field)
+    // }
+    fn fold_fields_named(&mut self, i: FieldsNamed) -> FieldsNamed {
+        let FieldsNamed {
+            brace_token: _,
+            named,
+        } = &i;
+        let field = named.iter();
+        // println!("---->{}", quote! {#named});
+        let lifetime = self.first_life_time.as_ref().unwrap();
+
+        parse_quote!({#(#field),* ,emg_graph:emg_bind::GraphType<#lifetime,Message>})
+        // fold::fold_fields_named(self, i)
+    }
+}
+
+/// @ emg_macro ────────────────────────────────────────────────────────────────────────────────
+pub fn emg_macro(args: TokenStream, input: TokenStream) -> Result<TokenStream, syn::Error> {
+    let args = syn::parse2::<EmgArgs>(args)?;
+    println!("has_init_var? {:?}", args.has_init_var());
+
+    let input = syn::parse2::<ItemStruct>(input)?;
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    let o = emg_handle(args, input);
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    Ok(quote!(
+
+        #o
+
+    ))
+}
+
+fn emg_handle(mut args: EmgArgs, input: ItemStruct) -> ItemStruct {
+    let mut need_add_lifetime = false;
+    if args.first_life_time.is_none() {
+        let first_lifetime = input.generics.lifetimes().next();
+        need_add_lifetime = first_lifetime.is_none();
+
+        args.first_life_time = first_lifetime
+            .map(|l_def| &l_def.lifetime)
+            .cloned()
+            .or_else(|| Some(Lifetime::new("'a", Span::call_site())));
+    };
+    println!("=====first_life_time:{:?}", &args.first_life_time);
+    let mut o = args.fold_item_struct(input);
+    if need_add_lifetime {
+        o.generics
+            .params
+            .push(syn::GenericParam::Lifetime(LifetimeDef::new(
+                args.first_life_time.unwrap(),
+            )))
+    }
+    o
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -530,7 +587,7 @@ mod tests {
 
     use super::*;
     #[test]
-    fn test1() {
+    fn test_id() {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
@@ -540,14 +597,20 @@ mod tests {
         println!();
         // type GraphType = Vec<i32>;
         let input = r#" 
-        Layer "a" [
-            Layer "b" [
-                Layer "c" [],
-                Layer "d" [Refresher ||{Text_(Text::new(format!("ee up")))}],
-                Text_(Text::new(format!("in quote..{}", "b"))) => [
-                    Refresher ||{99},
-                    Refresher ||{33}
-                ]
+        @a Layer [
+            @b Layer [
+                @c Layer [],
+                Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
+                Text::new(format!("in quote..{}", "b")) => [
+                    RefreshUse ||{100},
+                    RefreshUse  a.watch()
+                ],
+                @e Layer [
+                    Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+                        On:click move||{ a.set((*a.get()).clone()+1);
+                        Message::None }
+                    ]
+                ],
             ]
         ]
 
@@ -572,19 +635,78 @@ mod tests {
         token_test(input);
         println!();
     }
-    // #[test]
-    // fn test3() {
-    //     fn token_test(input: &str) {
-    //         match syn::parse_str::<layer>(input) {
-    //             Ok(ok) => println!("Gview===>{}", ok.to_token_stream()),
-    //             Err(error) => println!("...{:?}", error),
-    //         }
-    //     }
-    //     println!();
-    //     // type GraphType = Vec<i32>;
-    //     let input = r#" layer("f") "#;
+    #[test]
+    fn emg_life() {
+        let input: ItemStruct = syn::parse_quote!(
+            struct AA<'f: 'b + 'c, 'b, 'c> {
+                bb: String,
+                cc: String,
+            }
+        );
+        println!("====input:{:#?}", &input);
 
-    //     token_test(input);
-    //     println!();
-    // }
+        let args: EmgArgs = EmgArgs {
+            vars: Set::new(),
+            first_life_time: None,
+        };
+        println!("has_init_var? {:?}", args.has_init_var());
+        // ─────────────────────────────────────────────────────────────────
+        let o = emg_handle(args, input);
+
+        // ─────────────────────────────────────────────────────────────────
+
+        println!("=======================");
+        // println!("o: {:#?}", &o);
+        println!("=======================");
+        println!("{}", quote! {#o});
+    }
+    #[test]
+    fn emg_def_life() {
+        let input: ItemStruct = syn::parse_quote!(
+            struct AA<'f: 'b + 'c, 'b, 'c> {
+                bb: String,
+                cc: String,
+            }
+        );
+        println!("====input:{:#?}", &input);
+
+        let args: EmgArgs = EmgArgs {
+            vars: Set::new(),
+            first_life_time: None,
+        };
+        println!("has_init_var? {:?}", args.has_init_var());
+        // ─────────────────────────────────────────────────────────────────
+        let o = emg_handle(args, input);
+
+        // ─────────────────────────────────────────────────────────────────
+
+        println!("=======================");
+        // println!("o: {:#?}", &o);
+        println!("=======================");
+        println!("{}", quote! {#o});
+    }
+    #[test]
+    fn emg_no_lifetime() {
+        let input: ItemStruct = syn::parse_quote!(
+            struct AA {
+                bb: String,
+                cc: String,
+            }
+        );
+        println!("====input:{:#?}", &input);
+
+        let args: EmgArgs = EmgArgs {
+            vars: Set::new(),
+            first_life_time: None,
+        };
+        println!("has_init_var? {:?}", args.has_init_var());
+        // ─────────────────────────────────────────────────────────────────
+        let o = emg_handle(args, input);
+        // ─────────────────────────────────────────────────────────────────
+
+        println!("=======================");
+        // println!("o: {:#?}", &o);
+        println!("=======================");
+        println!("{}", quote! {#o});
+    }
 }

@@ -6,12 +6,29 @@
         "activityBar.foreground": "#e7e7e7",
         "activityBar.inactiveForeground": "#e7e7e799",
         "activityBarBadge.background": "#1e2916",
-        "activityBarBadge.foreground": "#e7e7e7"
+        "activityBarBadge.foreground": "#e7e7e7",
+        "editorGroup.border": "#7c4359",
+        "panel.border": "#7c4359",
+        "sideBar.border": "#7c4359"
     },
     "peacock.color": "#5b3141",
     "git.ignoreLimitWarning": true,
     "cSpell.words": [
         "elems",
         "glayer"
-    ]
+    ],
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/.classpath": true,
+        "**/.factorypath": true,
+        "**/.project": true,
+        "**/.settings": true,
+        "**/*.meta": true,
+        "emg_bind": true
+    },
+    "explorerExclude.backup": null
 }

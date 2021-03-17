@@ -1,25 +1,20 @@
 {    "rust-analyzer.cargo.target": "wasm32-unknown-unknown",
     "rust-analyzer.checkOnSave.allTargets":false,
-     "rust-analyzer.checkOnSave.overrideCommand": [
-        "cargo",
-        "clippy",
-        "--message-format=json",
-        "--target=wasm32-unknown-unknown"
-    ],
-    "rust-analyzer.checkOnSave.extraArgs": [
-        "--target=wasm32-unknown-unknown"
-    ],
     "workbench.colorCustomizations": {
-        "activityBar.activeBackground": "#7830ac",
-        "activityBar.activeBorder": "#32230e",
-        "activityBar.background": "#7830ac",
-        "activityBar.foreground": "#e7e7e7",
-        "activityBar.inactiveForeground": "#e7e7e799",
-        "activityBarBadge.background": "#32230e",
-        "activityBarBadge.foreground": "#e7e7e7"
+        "activityBar.activeBackground": "#65c89b",
+        "activityBar.activeBorder": "#945bc4",
+        "activityBar.background": "#65c89b",
+        "activityBar.foreground": "#15202b",
+        "activityBar.inactiveForeground": "#15202b99",
+        "activityBarBadge.background": "#945bc4",
+        "activityBarBadge.foreground": "#e7e7e7",
+        "editorGroup.border": "#65c89b",
+        "panel.border": "#65c89b",
+        "sideBar.border": "#65c89b"
     },
-    "peacock.color": "#5c2584",
+    "peacock.color": "#42b883",
     "cSpell.words": [
-        "edix"
+        "edix",
+        "tymethod"
     ]
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-02-22 09:03:19
+ * @LastEditTime: 2021-03-16 15:47:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,31 +9,29 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
 
-use crate::{runtime::Element, runtime::Text, Layer, RefreshFor, RefreshUseFor};
+use crate::{runtime::Element, GElement, NodeBuilderWidget, RefreshUseFor};
 use anymap::any::CloneAny;
-use match_any::match_any;
-use std::hash::Hash;
-use std::{
-    cell::RefCell,
-    convert::{TryFrom, TryInto},
-    ops::DerefMut,
-    rc::Rc,
-};
+use std::{cell::RefCell, convert::TryInto};
+use std::{convert::TryFrom, hash::Hash};
 
-use log::Level;
-use strum_macros::Display;
+// use lazy_static::lazy_static;
 
 // ────────────────────────────────────────────────────────────────────────────────
-
-pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
-pub type E = String;
-pub type GraphType<'a, Message> = Graph<N<'a, Message>, E>;
 
 thread_local! {
     pub static G_STORE: RefCell<GStore> = RefCell::new(
          GStore::default()
     );
 }
+
+// use anchors::singlethread::Engine;
+// thread_local! {
+//     pub static ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
+// }
+// pub static ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
+// lazy_static! {
+//     pub static ref ENGINE: RefCell<Engine> = RefCell::new(Engine::new());
+// }
 
 // impl<'a, T, Message> From<T> for Element<'a, Message>
 // where
@@ -45,78 +43,31 @@ thread_local! {
 //     }
 // }
 
-pub use GElement::*;
-#[derive(Clone, Display)]
-pub enum GElement<'a, Message> {
-    Element_(Element<'a, Message>),
-    Layer_(Layer<'a, Message>),
-    Text_(Text),
-    Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>>>),
-}
-
-impl<'a, Message: std::fmt::Debug> std::fmt::Debug for GElement<'a, Message> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Layer_(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
-            Text_(t) => f.debug_tuple("GElement::Text").field(t).finish(),
-            Refresher_(_) => f
-                .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement<'a, Message>>>)")
-                .finish(),
-            Element_(_) => f
-                .debug_tuple("GElement::Element_(Element<'a, Message>)")
-                .finish(),
-        }
-    }
-}
-
-impl<'a, Message> TryFrom<GElement<'a, Message>> for Element<'a, Message>
-where
-    Message: 'static + Clone,
-{
-    type Error = ();
-
-    #[allow(clippy::useless_conversion)]
-    fn try_from(ge: GElement<'a, Message>) -> Result<Self, Self::Error> {
-        // match ge {
-        //     Layer_(l) => Ok(l.into()),
-        //     Text_(t) => Ok(t.into()),
-        //     Refresher_(_) => Err(()),
-        // }
-        match_any! (ge,
-            Layer_(x)|Text_(x)|Element_(x) => Ok(x.into()),
-            Refresher_(_)=>Err(())
-        )
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct GStore {
-    pub anymap: anymap::Map<dyn CloneAny>,
-    // pub graph: Graph<N, E, Ix>,
-}
+// ────────────────────────────────────────────────────────────────────────────────
 
 pub trait GraphStore<'a, Message> {
     type N;
     type Ix;
     type E;
-    fn init();
-    fn get_mut_graph_with<F: FnOnce(&mut Self) -> R, R>(func: F) -> R;
+    fn global_init();
+    fn global_get_mut_graph_with<F: FnOnce(&mut Self) -> R, R>(func: F) -> R;
     // fn add_el(&mut self, key: Self::Ix, e_item: Self::E, n_item: Self::N) -> NodeIndex<Self::Ix>
     // where
     //     Self::Ix: Clone;
 
-    fn gelement_comb_and_refresh(
+    fn global_gelement_comb_and_refresh(
         &self,
         cix: &Self::Ix,
         // current_node: &RefCell<GElement<'a, Message>>,
     ) -> GElement<'a, Message>;
 
-    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>>;
+    fn global_children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>>;
 
-    fn view(ix: Self::Ix) -> Element<'a, Message>;
+    // fn view(&self, ix: Self::Ix) -> Element<'_, Message>;
+    fn global_view(ix: Self::Ix) -> Element<'a, Message>;
 }
 
-impl<'a, Message, E, Ix> GraphStore<'a, Message> for Graph<RefCell<GElement<'a, Message>>, E, Ix>
+impl<'a, Message, E, Ix> GraphStore<'a, Message> for Graph<N<'a, Message>, E, Ix>
 where
     Ix: Clone + Hash + Eq + std::fmt::Debug,
     E: Clone + std::fmt::Debug,
@@ -125,9 +76,9 @@ where
     Message: 'static + Clone + std::fmt::Debug,
 {
     type Ix = Ix;
-    type N = RefCell<GElement<'a, Message>>;
+    type N = N<'a, Message>;
     type E = E;
-    fn init() {
+    fn global_init() {
         // console_log::init_with_level(Level::Debug).ok();
 
         G_STORE.with(|g_store_refcell| {
@@ -136,7 +87,7 @@ where
         });
     }
 
-    fn get_mut_graph_with<F, R>(func: F) -> R
+    fn global_get_mut_graph_with<F, R>(func: F) -> R
     where
         F: FnOnce(&mut Self) -> R,
     {
@@ -146,60 +97,62 @@ where
         })
     }
 
-    fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>> {
+    fn global_children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>> {
         self.edges_iter_use_ix(cix, Outgoing)
             .map(|eix| {
                 let this_child_ix = eix.ix_dir(Outgoing);
                 // let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
-                self.gelement_comb_and_refresh(this_child_ix)
+                self.global_gelement_comb_and_refresh(this_child_ix)
             })
             .collect()
     }
 
-    fn gelement_comb_and_refresh(
+    fn global_gelement_comb_and_refresh(
         &self,
         cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
     ) -> GElement<'a, Message> {
-        let current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
+        // buildingTime original GElement
+        let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
 
-        let children_s = self.children_to_elements(cix);
+        let children_s = self.global_children_to_elements(cix);
 
+        // The const / dyn child node performs the change
+        // TODO: cache.    use edge type?
         for child in children_s {
-            current_node_clone
-                .borrow_mut()
-                .deref_mut()
-                .refresh_use(&child)
+            current_node_clone.refresh_use(&child)
         }
 
-        current_node_clone.into_inner()
+        current_node_clone
     }
 
-    fn view(cix: Self::Ix) -> Element<'a, Message> {
+    fn global_view(cix: Self::Ix) -> Element<'a, Message> {
         G_STORE.with(|g_store_refcell| {
             // g_store_refcell.borrow_mut().set_graph(g);
             g_store_refcell
-                .borrow_mut()
-                .get_mut_graph_with(|g: &mut Self| {
-                    log::info!("graph==> {:#?}", &g);
-
-                    // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
-                    // rc_e.clone().into()
-                    // Rc::make_mut(rc_e).clone().into()
-                    g.gelement_comb_and_refresh(&cix).try_into().unwrap()
-                })
+                .borrow()
+                .get_graph::<Self::N, Self::E, Self::Ix>()
+                .global_gelement_comb_and_refresh(&cix)
+                .try_into()
+                .unwrap()
         })
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct GStore {
+    pub anymap: anymap::Map<dyn CloneAny>,
+}
+
 impl Default for GStore {
     fn default() -> Self {
-        GStore {
+        Self {
             anymap: anymap::Map::new(),
         }
     }
 }
 
 impl GStore {
+    #[must_use]
     pub fn new_with_graph<N, E, Ix>(g: Graph<N, E, Ix>) -> Self
     where
         N: Clone,
@@ -207,7 +160,7 @@ impl GStore {
         Ix: std::cmp::Eq + Clone + std::hash::Hash,
         Graph<N, E, Ix>: 'static,
     {
-        let mut gs = GStore::default();
+        let mut gs = Self::default();
         gs.set_graph(g);
         gs
     }
@@ -221,7 +174,7 @@ impl GStore {
         self.anymap.insert(g);
         self
     }
-    fn get_graph<N, E, Ix>(&mut self) -> &Graph<N, E, Ix>
+    fn get_graph<N, E, Ix>(&self) -> &Graph<N, E, Ix>
     where
         N: Clone,
         E: Clone,
@@ -262,6 +215,7 @@ impl GStore {
 #[cfg(test)]
 mod graph_store_test {
     use super::*;
+    use crate::Layer;
 
     use wasm_bindgen_test::*;
 

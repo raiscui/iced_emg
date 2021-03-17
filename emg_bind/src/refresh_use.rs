@@ -1,7 +1,9 @@
+// #![feature(specialization)]
+
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-02-20 17:01:51
+ * @LastEditTime: 2021-03-16 15:25:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,15 +26,16 @@ use crate::RefreshFor;
 // }
 
 // ────────────────────────────────────────────────────────────────────────────────
-
+#[allow(clippy::module_name_repetitions)]
 pub trait RefreshUseFor<Who> {
     fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>);
 }
-impl<Who> RefreshUseFor<Who> for Who {
-    default fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>) {
-        updater.refresh_for(self);
-    }
-}
+// ────────────────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────────────────
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 // pub trait UpdateUse {
@@ -103,8 +106,8 @@ mod updater_test1 {
         a.refresh_for(&mut f);
         a.refresh_for(&mut f);
         b.refresh_for(&mut f);
-        let rca = Rc::new(a.clone()) as Rc<dyn crate::RefreshFor<String>>;
-        let rcb = Rc::new(b) as Rc<dyn crate::RefreshFor<String>>;
+        let rca = Rc::new(a.clone());
+        let rcb = Rc::new(b);
         f.refresh_use(&a);
         f.refresh_use(rca.as_ref());
         f.refresh_use(rca.as_ref());

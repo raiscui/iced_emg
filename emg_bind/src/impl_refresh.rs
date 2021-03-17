@@ -1,38 +1,159 @@
-use std::ops::Deref;
-
-use crate::{GElement, GElement::*, RefreshFor, RefreshUseFor};
-
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-02-20 14:54:13
+ * @LastEditTime: 2021-03-17 12:23:37
  * @LastEditors: Rais
  * @Description:
  */
+use std::ops::Deref;
+
+use crate::{
+    use_state::{StateAnchor, StateVar},
+    CloneState, GElement,
+    GElement::{Event_, Layer_, Refresher_, Text_},
+    NodeBuilderWidget, RefreshFor, RefreshUseFor, Refresher, RefresherFor,
+};
+// ────────────────────────────────────────────────────────────────────────────────
+// @ impl RefreshUseFor────────────────────────────────────────────────────────────────────────────────
+
+impl<Who> RefreshUseFor<Self> for Who {
+    #[inline]
+    default fn refresh_use(&mut self, updater: &dyn RefreshFor<Self>) {
+        updater.refresh_for(self);
+    }
+}
+
+// impl<Who> RefreshUseFor<Who> for AnchorWithUpdater<Who>
+// where
+//     Who: std::clone::Clone + GeneralRefreshFor,
+// {
+//     fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>) {
+//         let mut v = self.get();
+//         updater.refresh_for(&mut v);
+//         self.get_setter().set(v);
+//     }
+// }
+
+// @ impl RefreshFor────────────────────────────────────────────────────────────────────────────────
+pub auto trait GeneralRefreshFor {}
+impl<Who> !GeneralRefreshFor for StateVar<Who> {}
+impl<Use> GeneralRefreshFor for StateAnchor<Use> {}
+// ────────────────────────────────────────────────────────────────────────────────
+
+impl<Who: 'static, Use> RefreshFor<StateVar<Who>> for Use
+where
+    Use: GeneralRefreshFor + RefreshFor<Who> + std::clone::Clone,
+    Who: std::clone::Clone,
+{
+    fn refresh_for(&self, who: &mut StateVar<Who>) {
+        log::debug!("==========refresh_for StateVar");
+        let mut w = who.get();
+        w.refresh_use(self);
+        who.set(w);
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+impl<Who, Use> RefreshFor<Who> for StateVar<Use>
+where
+    Who: GeneralRefreshFor,
+    Use: RefreshFor<Who> + Clone + 'static,
+{
+    fn refresh_for(&self, who: &mut Who) {
+        who.refresh_use(&self.get());
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+impl<Who: 'static, Use: 'static> RefreshFor<StateVar<Who>> for StateVar<Use>
+where
+    Use: RefreshFor<Who> + std::clone::Clone,
+    Who: std::clone::Clone,
+{
+    fn refresh_for(&self, who: &mut StateVar<Who>) {
+        let mut w = who.get();
+        w.refresh_use(&self.get());
+
+        who.set(w);
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+// impl<Who> RefreshFor<Who> for RefresherForSelf<Who> {
+//     fn refresh_for(&self, who: &mut Who) {
+//         self.get()(who);
+//     }
+// }
+impl<'a, Who> RefreshFor<Who> for RefresherFor<'a, Who> {
+    fn refresh_for(&self, who: &mut Who) {
+        self.get()(who);
+    }
+}
+
+impl<'a, Who, Use> RefreshFor<Who> for Refresher<'a, Use>
+where
+    Use: RefreshFor<Who>,
+{
+    fn refresh_for(&self, who: &mut Who) {
+        // self.get()().refresh_for(who);
+        who.refresh_use(&self.get());
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+
+impl<Who, Use> RefreshFor<Who> for StateAnchor<Use>
+where
+    Who: GeneralRefreshFor,
+    Use: RefreshFor<Who> + Clone + 'static + std::fmt::Debug,
+{
+    fn refresh_for(&self, who: &mut Who) {
+        let u_s_e = self.get();
+        // log::debug!(" ============ StateAnchor get:{:?}", &u_s_e);
+        who.refresh_use(&u_s_e);
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+impl<'a, Message> GeneralRefreshFor for GElement<'a, Message> {}
 impl<'a, Message> RefreshFor<GElement<'a, Message>> for GElement<'a, Message>
 where
     Message: 'static + Clone,
 {
     fn refresh_for(&self, el: &mut GElement<'a, Message>) {
         match (el, self) {
-            //任何 el 刷新, 包括 el=refresher
-            //refreshing use any impl RefreshFor
-            (el, Refresher_(refresher)) => {
-                log::debug!("{} refresh use refresher", el);
-                el.refresh_use(refresher.deref());
+            // @ Single explicit match
+            (_gel, _g_event_callback @ Event_(_)) => {
+                // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
+                // .refresh_use(g_event_callback)
+                panic!("should never directly use event_callback for GElement")
             }
+
+            //其他任何 el 刷新, 包括 el=refresher
+            //refreshing use any impl RefreshFor
+            (gel, Refresher_(refresher)) => {
+                log::debug!("{} refresh use refresher", gel);
+                gel.refresh_use(refresher.deref());
+            }
+            // TODO: do not many clone event_callback
+
             // layer 包裹 任何除了refresher的el
             (Layer_(l), any_not_refresher) => {
                 log::debug!("layer refresh use {} (do push)", any_not_refresher);
                 l.try_ref_push(any_not_refresher.clone());
             }
             // refresher 不与任何不是 refresher 的 el 产生刷新动作
-            (Refresher_(_), _any_not_refresher) => {
+            (Refresher_(_), any_not_refresher) => {
                 panic!(
                     "refresh for ( Refresher_ ) use ( {} ) is not supported",
-                    _any_not_refresher
+                    any_not_refresher
                 )
             }
+
+            // @ any not match ─────────────────────────────────────────────────────────────────
+
+            // TODO : event_callbacks prosess
+            // TODO : NodeBuilderWidget prosess
             (not_layer_or_refresher, b) => {
                 panic!(
                     "refresh for ( {} ) use ( {} ) - that is not supported",
@@ -43,23 +164,54 @@ where
     }
 }
 
-/// for Refresher<Use> many type
+/// `GElement` refresh use X
+/// for Refresher<GElement> many type
+// this is `GElement` refresh use `i32`
 impl<'a, Message> RefreshFor<GElement<'a, Message>> for i32 {
     fn refresh_for(&self, el: &mut GElement<'a, Message>) {
         match el {
-            Layer_(_layer) => {
-                log::debug!("layer update use i32");
-            }
-
             Text_(text) => {
                 log::info!("==========Text update use i32");
                 text.content(format!("i32:{}", self));
             }
-            Refresher_(_) => {
-                log::debug!("Updater update use i32");
+
+            other => {
+                log::debug!("====> {} refreshing use i32", other);
             }
-            Element_(_) => {
-                log::debug!("Element_ update use i32");
+        }
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+impl<'a, Message> RefreshFor<NodeBuilderWidget<'a, Message>> for GElement<'a, Message>
+where
+    Message: 'static + Clone,
+{
+    fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<'a, Message>) {
+        log::debug!("node_builder_widget refresh use GElement (event_callback)");
+
+        match self {
+            // @ Clear type match
+            Event_(event_callback) => {
+                log::debug!("node_builder_widget.add_event_callback(event_callback.clone()) ");
+                node_builder_widget.add_event_callback(event_callback.clone());
+            }
+            // ─────────────────────────────────────────────────────────────────
+
+            // @ Single explicit match
+
+            //其他任何 el 刷新, 包括 el=refresher
+            // TODO impl refresher for NodeBuilderWidget(most edit event_callbacks list )
+            // (gel, Refresher_(refresher)) => {
+            //     gel.refresh_use(refresher.deref());
+            // }
+
+            // @ any not match ─────────────────────────────────────────────────────────────────
+            any => {
+                panic!(
+                    "refresh for ( {} ) use ( {} ) - that is not supported",
+                    "not_node_builder_widget", any
+                )
             }
         }
     }
