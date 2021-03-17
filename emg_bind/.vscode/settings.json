@@ -1,14 +1,5 @@
 {    "rust-analyzer.cargo.target": "wasm32-unknown-unknown",
     "rust-analyzer.checkOnSave.allTargets":false,
-     "rust-analyzer.checkOnSave.overrideCommand": [
-        "cargo",
-        "clippy",
-        "--message-format=json",
-        "--target=wasm32-unknown-unknown"
-    ],
-    "rust-analyzer.checkOnSave.extraArgs": [
-        "--target=wasm32-unknown-unknown"
-    ],
     "workbench.colorCustomizations": {
         "activityBar.activeBackground": "#65c89b",
         "activityBar.activeBorder": "#945bc4",

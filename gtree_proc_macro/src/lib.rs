@@ -1,8 +1,7 @@
 #![feature(proc_macro_diagnostic)]
-
+extern crate proc_macro;
 // use proc_macro_error::*;
-// use quote::quote;
-use proc_quote::quote;
+// use proc_quote::quote;
 use syn::parse_macro_input;
 
 // #![feature(proc_macro_diagnostic)]
@@ -33,15 +32,15 @@ pub fn emg(
     }
 }
 
-// #![feature(proc_macro_diagnostic)]
-#[proc_macro]
-pub fn gview(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let item = parse_macro_input!(input as gtree_macro::Gview);
+// // #![feature(proc_macro_diagnostic)]
+// #[proc_macro]
+// pub fn gview(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+//     let item = parse_macro_input!(input as gtree_macro::Gview);
 
-    quote!(#item).into()
-}
-#[proc_macro]
-pub fn glayer(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let item = parse_macro_input!(input as gtree_macro::GTreeLayerStruct);
-    quote!(#item).into()
-}
+//     quote!(#item).into()
+// }
+// #[proc_macro]
+// pub fn glayer(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+//     let item = parse_macro_input!(input as gtree_macro::GTreeLayerStruct);
+//     quote!(#item).into()
+// }

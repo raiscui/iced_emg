@@ -3,8 +3,7 @@ use std::collections::HashSet as Set;
 // use trace_var::trace_var;
 
 use proc_macro2::{Span, TokenStream};
-// use quote::{quote, ToTokens};
-use proc_quote::{quote, quote_spanned, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::{
@@ -144,7 +143,6 @@ impl ToTokens for GOnEvent {
         let token = if closure.inputs.is_empty() {
             quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(String::from(#event_name),Box::new(#closure)).into()) )
         } else if closure.inputs.len() == 3 {
-            // TODO: 细化 span   use into
             quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new(String::from(#event_name),Box::new(#closure)).into()) )
         } else {
             panic!("event callback argument size is must empty or three")
@@ -427,7 +425,7 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use emg_bind::{
                  runtime::Element, runtime::Text, GElement, GTreeBuilderElement,
-                 Refresher,EventCallback,EventMessage
+                 Refresher,EventCallback,EventMessage,use_state
             };
             #[allow(unused)]
             use gtree::log;
@@ -602,19 +600,16 @@ mod tests {
         @a Layer [
             @b Layer [
                 @c Layer [],
-                Layer [RefreshUse ||{GElement::from( Text::new(format!("ee up")))}],
+                Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
                 Text::new(format!("in quote..{}", "b")) => [
                     RefreshUse ||{100},
-                    RefreshUse move ||{ss.get_with(|x|*x)},
-                    RefreshUse  move||aw.clone(),
+                    RefreshUse  a.watch()
                 ],
                 @e Layer [
-                    Button::new(Text::new(format!("button in quote..{}", "e"))) => [
-                        On:click move |_root,vdom,_event|{ss.set(ss.get_with(|x|x+2));vdom.schedule_render();}
-                    ],
                     Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                        On:click move||{ss.set(ss.get_with(|x|x+2));Message::None}
-                        ],
+                        On:click move||{ a.set((*a.get()).clone()+1);
+                        Message::None }
+                    ]
                 ],
             ]
         ]

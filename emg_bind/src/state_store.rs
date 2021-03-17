@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 09:57:45
- * @LastEditTime: 2021-03-15 18:10:34
+ * @LastEditTime: 2021-03-16 12:01:57
  * @LastEditors: Rais
  * @Description:
  */
 
 use std::{cell::RefCell, collections::HashMap};
 
-use anymap::any::CloneAny;
+use anymap::any::Any;
 use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
 
 use crate::topo_store::StorageKey;
@@ -18,9 +18,9 @@ thread_local! {
     );
 }
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct GStateStore {
-    pub anymap: anymap::Map<dyn CloneAny>,
+    pub anymap: anymap::Map<dyn Any>,
     pub id_to_key_map: HashMap<StorageKey, DefaultKey>,
     pub primary_slotmap: DenseSlotMap<DefaultKey, StorageKey>,
 }
@@ -35,7 +35,7 @@ impl Default for GStateStore {
 }
 
 impl GStateStore {
-    pub(crate) fn state_exists_with_id<T: 'static + Clone>(&self, id: StorageKey) -> bool {
+    pub(crate) fn state_exists_with_id<T: 'static>(&self, id: StorageKey) -> bool {
         match (self.id_to_key_map.get(&id), self.get_secondarymap::<T>()) {
             (Some(existing_key), Some(existing_secondary_map)) => {
                 existing_secondary_map.contains_key(*existing_key)
@@ -44,24 +44,18 @@ impl GStateStore {
         }
     }
     #[must_use]
-    pub fn get_secondarymap<T: 'static + Clone>(&self) -> Option<&SecondaryMap<DefaultKey, T>> {
+    pub fn get_secondarymap<T: 'static>(&self) -> Option<&SecondaryMap<DefaultKey, T>> {
         self.anymap.get::<SecondaryMap<DefaultKey, T>>()
     }
-    pub fn get_mut_secondarymap<T: 'static + Clone>(
-        &mut self,
-    ) -> Option<&mut SecondaryMap<DefaultKey, T>> {
+    pub fn get_mut_secondarymap<T: 'static>(&mut self) -> Option<&mut SecondaryMap<DefaultKey, T>> {
         self.anymap.get_mut::<SecondaryMap<DefaultKey, T>>()
     }
-    pub fn register_secondarymap<T: 'static + Clone>(&mut self) {
+    pub fn register_secondarymap<T: 'static>(&mut self) {
         let sm: SecondaryMap<DefaultKey, T> = SecondaryMap::new();
         self.anymap.insert(sm);
     }
 
-    pub(crate) fn set_state_with_id<T: 'static + Clone>(
-        &mut self,
-        data: T,
-        current_id: &StorageKey,
-    ) {
+    pub(crate) fn set_state_with_id<T: 'static>(&mut self, data: T, current_id: &StorageKey) {
         //unwrap or default to keep borrow checker happy
         let key = self
             .id_to_key_map
@@ -87,7 +81,7 @@ impl GStateStore {
     }
 
     #[must_use]
-    pub fn get_state_with_id<T: 'static + Clone>(&self, current_id: &StorageKey) -> Option<&T> {
+    pub fn get_state_with_id<T: 'static>(&self, current_id: &StorageKey) -> Option<&T> {
         match (
             self.id_to_key_map.get(current_id),
             self.get_secondarymap::<T>(),
@@ -99,7 +93,7 @@ impl GStateStore {
         }
     }
 
-    pub(crate) fn remove_state_with_id<T: 'static + Clone>(
+    pub(crate) fn remove_state_with_id<T: 'static>(
         &mut self,
         current_id: &StorageKey,
     ) -> Option<T> {

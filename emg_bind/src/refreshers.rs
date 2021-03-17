@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-03-15 16:20:42
+ * @LastEditTime: 2021-03-16 19:37:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -90,9 +90,9 @@ pub trait RefreshFor<Who> {
 #[allow(unused_variables)]
 mod updater_test {
 
+    use crate::CloneState;
     use crate::RefreshFor;
     use crate::RefreshUseFor;
-    use lazy_static::__Deref;
     use wasm_bindgen_test::*;
 
     use super::*;
@@ -111,20 +111,20 @@ mod updater_test {
         #[allow(unused)]
         use anchors::singlethread::*;
 
-        crate::ENGINE.with(|_e| {
-            log::info!("============= get engine");
-        });
+        use crate::use_state;
+
         let mut s = String::from("sss");
 
         let n = 99i32;
 
-        let mut ff = Var::new(String::from("hello"));
-        let ff2 = Var::new(2i32);
+        let mut ff = use_state(String::from("hello"));
+        let ff2 = use_state(2i32);
         let ffw = ff2.watch();
+
         ff.refresh_use(&ff2);
         ff.refresh_use(&ffw);
         ff2.refresh_for(&mut ff);
-        log::info!("==== test_anchor: {}", ff.get().deref());
+        log::info!("==== test_anchor: {}", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
         s.refresh_use(&ff2);
@@ -135,17 +135,17 @@ mod updater_test {
 
         ff.refresh_use(&n);
         n.refresh_for(&mut ff);
-        log::info!("==== test_anchor 2: {}", ff.get().deref());
-        assert_eq!("hello,2,2,2,99,99", ff.get().deref());
+        log::info!("==== test_anchor 2: {}", ff.get());
+        assert_eq!("hello,2,2,2,99,99", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
-        let a = Var::new(4i32);
+        let a = use_state(4i32);
 
         ff.refresh_use(&a);
         a.refresh_for(&mut ff);
-        log::info!("==== test_anchor 3: {}", ff.get().deref());
+        log::info!("==== test_anchor 3: {}", ff.get());
 
-        assert_eq!("hello,2,2,2,99,99,4,4", ff.get().deref());
+        assert_eq!("hello,2,2,2,99,99,4,4", ff.get());
     }
     #[wasm_bindgen_test]
 
