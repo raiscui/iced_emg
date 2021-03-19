@@ -3,10 +3,9 @@ members = [
 "gtree_proc_macro",
 "gtree_macro",
 "gtree",
-# "gtree_tests"
+"emg_layout",
+"emg_bind"
 ]
 exclude = [
-      "emg_bind",
 "tests"
-
 ]
