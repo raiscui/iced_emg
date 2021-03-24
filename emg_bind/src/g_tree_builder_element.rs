@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-03-23 19:22:46
+ * @LastEditTime: 2021-03-24 12:48:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -35,7 +35,7 @@ impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GTreeBuilderElement::Layer(id, edge, children_list) => {
+            GTreeBuilderElement::Layer(id, _, children_list) => {
                 let edge_str = "with-Edge-Vector";
                 f.debug_tuple("GTreeBuilderElement::Layer")
                     .field(id)
@@ -48,7 +48,7 @@ impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
                 .field(id)
                 .field(el)
                 .finish(),
-            GTreeBuilderElement::GElementTree(id, edge, gel, updaters) => {
+            GTreeBuilderElement::GElementTree(id, _, gel, updaters) => {
                 let edge_str = "with-Edge-Vector";
 
                 f.debug_tuple("GTreeBuilderElement::WhoWithUpdater")

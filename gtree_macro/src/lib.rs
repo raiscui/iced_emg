@@ -18,6 +18,7 @@ use uuid::Uuid;
 // use proc_macro::Diagnostic;
 pub mod kw {
     // use std::fmt::Debug;
+    #![warn(clippy::expl_impl_clone_on_copy)]
 
     syn::custom_keyword!(Layer);
     syn::custom_keyword!(RefreshUse);
@@ -60,8 +61,6 @@ fn make_id(name: &str) -> String {
     id
 }
 
-syn::custom_punctuation!(EdgeOpenSeparator, -|);
-syn::custom_punctuation!(EdgeCloseSeparator, |-);
 //@ @Parse ──────────────────────────────
 
 // type OptEdge = Option<Edge>;
@@ -113,7 +112,7 @@ impl Parse for AtList {
                 at_list.push(input.parse::<Edge>()?.into());
             }
         }
-        Ok(AtList(at_list))
+        Ok(Self(at_list))
     }
 }
 
@@ -134,7 +133,7 @@ impl Parse for Edge {
         let content: Punctuated<syn::Expr, Token![,]> =
             content.parse_terminated(syn::Expr::parse)?;
 
-        Ok(Edge {
+        Ok(Self {
             bracket_token,
             content,
         })
@@ -183,7 +182,7 @@ impl Parse for GTreeClosure {
 
         let ec = input.parse::<syn::ExprClosure>()?;
         if ec.inputs.is_empty() {
-            Ok(GTreeClosure { id, closure: ec })
+            Ok(Self { id, closure: ec })
         } else {
             Err(input.error("closure argument must be empty"))
         }
@@ -233,7 +232,7 @@ impl Parse for GOnEvent {
 
         let event_name = input.parse::<Ident>()?.to_string();
 
-        Ok(GOnEvent {
+        Ok(Self {
             id,
             event_name,
             closure: input.parse()?,
@@ -298,14 +297,14 @@ impl Parse for GRefresher {
         let fork = input.fork();
 
         if fork.parse::<syn::ExprClosure>().is_ok() {
-            Ok(GRefresher {
+            Ok(Self {
                 id,
                 kws,
                 method: RefresherType::Callback(input.parse()?),
             })
         } else {
             let expr = input.parse::<syn::Expr>()?;
-            Ok(GRefresher {
+            Ok(Self {
                 id,
                 kws,
                 method: RefresherType::Expr(expr),
@@ -371,6 +370,7 @@ impl AtSetup for GTreeSurface {
 }
 
 impl Parse for GTreeSurface {
+    #[allow(clippy::non_ascii_literal)]
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let edge = None;
         let id = ID::default();
@@ -386,17 +386,17 @@ impl Parse for GTreeSurface {
                 let _bracket = bracketed!(content in input);
                 let children: ChildrenType =
                     Some(content.parse_terminated(GTreeMacroElement::parse)?);
-                Ok(GTreeSurface {
+                Ok(Self {
                     edge,
                     id,
                     expr,
                     children,
                 })
             } else {
-                Err(input.error("还没有完成 直接 单一 无[] 的后缀"))
+                panic!("还没有完成 直接 单一 无[] 的后缀")
             }
         } else {
-            Ok(GTreeSurface {
+            Ok(Self {
                 edge,
                 id,
                 expr,
@@ -449,32 +449,32 @@ impl Parse for GTreeMacroElement {
             //@layer
             let mut parsed: GTreeLayerStruct = input.parse()?;
             parsed.at_setup(at_list);
-            Ok(GTreeMacroElement::GL(parsed))
+            Ok(Self::GL(parsed))
         } else if input.peek(kw::RefreshUse) {
             // @refresher
             let mut parsed: GRefresher = input.parse()?;
             parsed.at_setup(at_list);
-            Ok(GTreeMacroElement::RT(Box::new(parsed)))
+            Ok(Self::RT(Box::new(parsed)))
         } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
             // @closure
             let mut parsed: GTreeClosure = input.parse()?;
             parsed.at_setup(at_list);
-            Ok(GTreeMacroElement::GC(parsed))
+            Ok(Self::GC(parsed))
         } else if input.peek(kw::On) && (input.peek2(Token![:])) {
             //@ On:Event
             let mut parsed: GOnEvent = input.parse()?;
             parsed.at_setup(at_list);
-            Ok(GTreeMacroElement::OnEvent(parsed))
+            Ok(Self::OnEvent(parsed))
         }
         //  must on bottom ─────────────────────────────────────────────────────────────────
         else if input.peek(Ident::peek_any) {
             // @surface  expr, GElement
             let mut parsed: GTreeSurface = input.parse()?;
             parsed.at_setup(at_list);
-            Ok(GTreeMacroElement::GS(Box::new(parsed)))
+            Ok(Self::GS(Box::new(parsed)))
         } else {
             panic!("can't know what is , input current:{}", input);
-            // Ok(GTreeMacroElement::OtherExpr(input.parse()?))
+            // Ok(Self::OtherExpr(input.parse()?))
         }
     }
 }
@@ -531,7 +531,7 @@ impl Parse for GTreeLayerStruct {
         if input.peek(Token![,]) {
             //提前结束 , 没有[]
             // if input.is_empty() {
-            return Ok(GTreeLayerStruct {
+            return Ok(Self {
                 edge,
                 layer,
                 id,
@@ -547,7 +547,7 @@ impl Parse for GTreeLayerStruct {
         //println!("children:=>{:?}", &children);
         // println!("children op :=>{}", quote!(  #children));
 
-        Ok(GTreeLayerStruct {
+        Ok(Self {
             edge,
             layer,
             id,
@@ -615,7 +615,7 @@ impl Parse for Gtree {
             }
         }
         // Ok(Gtree { emg_graph, root })
-        Ok(Gtree { root })
+        Ok(Self { root })
     }
 }
 
@@ -659,7 +659,10 @@ impl ToTokens for Gtree {
     }
 }
 
-/// @ gtree_macro ────────────────────────────────────────────────────────────────────────────────
+// @ gtree_macro ────────────────────────────────────────────────────────────────────────────────
+/// # Errors
+///
+/// Will return `Err` if can parse to Gtree
 pub fn gtree_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
     let output = syn::parse2::<Gtree>(item)?;
     Ok(quote! (#output))
