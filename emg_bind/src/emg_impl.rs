@@ -1,22 +1,23 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-03-16 15:50:40
+ * @LastEditTime: 2021-03-23 17:34:36
  * @LastEditors: Rais
  * @Description:
  */
+use crate::{runtime::Element, GElement, NodeBuilderWidget};
 pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::Outgoing;
-
-use crate::{runtime::Element, GElement, NodeBuilderWidget, RefreshUseFor};
+use emg_layout::EdgeItem;
+use emg_refresh::RefreshUseFor;
 use std::convert::TryInto;
 use std::{convert::TryFrom, hash::Hash};
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub type N<'a, Message> = GElement<'a, Message>;
 // pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
-pub type E = String;
+pub type E = EdgeItem;
 pub type GraphType<'a, Message> = Graph<N<'a, Message>, E>;
 
 pub trait GraphView<'a, Message> {

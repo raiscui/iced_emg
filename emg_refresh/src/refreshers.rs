@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-03-16 19:37:34
+ * @LastEditTime: 2021-03-23 18:22:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -90,7 +90,9 @@ pub trait RefreshFor<Who> {
 #[allow(unused_variables)]
 mod updater_test {
 
-    use crate::CloneState;
+    use std::ops::Deref;
+
+    // use crate::CloneState;
     use crate::RefreshFor;
     use crate::RefreshUseFor;
     use wasm_bindgen_test::*;
@@ -110,8 +112,9 @@ mod updater_test {
 
         #[allow(unused)]
         use anchors::singlethread::*;
+        use emg_state::CloneState;
 
-        use crate::use_state;
+        use emg_state::use_state;
 
         let mut s = String::from("sss");
 
@@ -120,9 +123,10 @@ mod updater_test {
         let mut ff = use_state(String::from("hello"));
         let ff2 = use_state(2i32);
         let ffw = ff2.watch();
-
+        let ffw_vec = vec![Box::new(ffw.clone()), Box::new(ffw.clone())];
         ff.refresh_use(&ff2);
         ff.refresh_use(&ffw);
+        ff.refresh_use(&ffw_vec);
         ff2.refresh_for(&mut ff);
         log::info!("==== test_anchor: {}", ff.get());
         // ─────────────────────────────────────────────────────────────────
@@ -136,7 +140,7 @@ mod updater_test {
         ff.refresh_use(&n);
         n.refresh_for(&mut ff);
         log::info!("==== test_anchor 2: {}", ff.get());
-        assert_eq!("hello,2,2,2,99,99", ff.get());
+        assert_eq!("hello,2,2,2,2,2,99,99", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
         let a = use_state(4i32);
@@ -145,7 +149,7 @@ mod updater_test {
         a.refresh_for(&mut ff);
         log::info!("==== test_anchor 3: {}", ff.get());
 
-        assert_eq!("hello,2,2,2,99,99,4,4", ff.get());
+        assert_eq!("hello,2,2,2,2,2,99,99,4,4", ff.get());
     }
     #[wasm_bindgen_test]
 

@@ -1,11 +1,11 @@
 [workspace]
 members = [
-"gtree_proc_macro",
-"gtree_macro",
-"gtree",
-"emg_layout",
-"emg_bind"
+    "gtree_proc_macro",
+    "gtree_macro",
+    "gtree",
+    "emg_layout",
+    "emg_bind",
+    "emg_refresh",
+    "emg_state",
 ]
-exclude = [
-"tests"
-]
+exclude = ["tests"]

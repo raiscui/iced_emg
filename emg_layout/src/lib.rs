@@ -1,7 +1,17 @@
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![warn(clippy::nursery)]
+// #![feature(negative_impls)]
+// #![feature(auto_traits)]
+
 use derive_more::Display;
+use derive_more::From;
+use emg_refresh::{RefreshFor, RefreshUseFor, RefreshUseNoWarper, RefreshWhoNoWarper};
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector3};
 use nalgebra as na;
-use seed_styles::{pc, px, CssHeight, CssWidth, ExactLength, Percent, Style};
+pub use seed_styles as styles;
+use std::rc::Rc;
+use styles::{pc, px, CssValueTrait, ExactLength, Percent, Style, UpdateStyle};
 
 type Vec3 = Vector3<f64>;
 type Mat4 = Matrix4<f64>;
@@ -39,6 +49,7 @@ impl From<Percent> for GenericSize {
         Self::Percentage(percentage)
     }
 }
+#[derive(Debug, Clone)]
 struct WHSize {
     w: GenericSize,
     h: GenericSize,
@@ -52,6 +63,7 @@ impl Default for WHSize {
     }
 }
 
+#[derive(Debug, Clone)]
 struct Layout {
     size: WHSize,
     origin: GenericSize,
@@ -68,6 +80,7 @@ impl Default for Layout {
     }
 }
 
+#[derive(Debug, Clone)]
 struct LayoutCompiled {
     w_either: Option<GenericSize>,
     origin_x_either: Option<GenericSize>,
@@ -103,6 +116,7 @@ impl Default for Transforms {
         }
     }
 }
+#[derive(Debug, Clone)]
 struct M4Data {
     m4: Transform9,
     m4_def: Transform9,
@@ -125,12 +139,13 @@ impl Default for M4Data {
         }
     }
 }
-#[derive(Default)]
+
+#[derive(Default, Debug, Clone)]
 struct EdgeDataOutput {
     loc_styles: Style,
 }
-#[derive(Default)]
-struct EdgeData {
+#[derive(Default, Debug, Clone)]
+pub struct EdgeData {
     id: String,
     layout: Layout,
     compiled: LayoutCompiled,
@@ -139,20 +154,102 @@ struct EdgeData {
     ed_output: EdgeDataOutput,
     // animations:
 }
+#[derive(From, Clone, Debug)]
+pub enum EdgeItem {
+    EdgeData(EdgeData),
+    String(String),
+    Empty,
+}
+
+impl Default for EdgeItem {
+    fn default() -> Self {
+        Self::Empty
+    }
+}
+pub fn e() -> EdgeData {
+    EdgeData::default()
+}
+
+// TODO lifetime
+#[derive(Clone)]
+struct Css<T>(T)
+where
+    T: CssValueTrait + Clone + 'static;
+
+impl<T: std::clone::Clone + seed_styles::CssValueTrait> From<T> for Css<T> {
+    fn from(v: T) -> Self {
+        Self(v)
+    }
+}
+
+// impl RefreshWhoNoWarper for EdgeData {}
+// TODO lifetime
+impl RefreshFor<EdgeData> for Vec<Box<(dyn RefreshFor<EdgeData> + 'static)>> {
+    fn refresh_for(&self, who: &mut EdgeData) {
+        for i in self {
+            let ii = i.as_ref();
+            who.refresh_use(ii);
+        }
+    }
+}
+impl<Use> RefreshFor<EdgeData> for Css<Use>
+where
+    Use: CssValueTrait + std::clone::Clone,
+{
+    fn refresh_for(&self, who: &mut EdgeData) {
+        let t = self.0.clone();
+        t.update_style(&mut who.ed_output.loc_styles);
+    }
+}
+//TODO lifetime
+pub fn css<Use: CssValueTrait + std::clone::Clone + 'static>(v: Use) -> impl RefreshFor<EdgeData> {
+    Css(v)
+}
+// impl<Use> RefreshFor<EdgeData> for Css<Use>
+// where
+//     Use: CssValueTrait + std::clone::Clone,
+// {
+//     fn refresh_for(&self, who: &mut EdgeData) {
+//         let t = self.0.clone();
+//         t.update_style(&mut who.ed_output.loc_styles);
+//     }
+// }
+impl RefreshFor<EdgeData> for Style {
+    fn refresh_for(&self, who: &mut EdgeData) {
+        who.ed_output.loc_styles = self.clone();
+    }
+}
+impl RefreshFor<EdgeData> for Layout {
+    fn refresh_for(&self, who: &mut EdgeData) {
+        who.layout = self.clone();
+    }
+}
 
 #[cfg(test)]
 mod tests {
-    use seed_styles::CssWidthTrait;
+
+    use seed_styles::CssWidth;
 
     use super::*;
+
     #[test]
     fn it_works() {
+        use seed_styles::CssWidthTrait;
+
         println!("{:?}", Transform9::identity());
         let cc = Transform9::identity();
         let p = px(2);
-        let s = Style::default();
-        println!("{:?}", cc.inverse());
-        println!("{:?}", s.w(px(11)).render());
+        let cc = CssWidth::from(px(2));
+        let mut e = EdgeData::default();
+        e.refresh_use(&Css(cc));
+        println!("{:?}", &e);
+        let mut s = Style::default();
+        s = s.style_child("dddddd");
+        println!("{:?}", &s);
+        println!("{:?}", &s.render());
+        // println!("{:?}", cc.inverse());
+        // println!("{:?}", &mut s.w(px(11)).render());
+        // println!("{:#?}", e());
         // ─────────────────────────────────────────────────────────────────
     }
 }

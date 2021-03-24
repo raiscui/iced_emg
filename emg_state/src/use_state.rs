@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-03-17 13:17:56
+ * @LastEditTime: 2021-03-22 16:25:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -40,6 +40,8 @@ impl GStateStore {
     fn engine_get<O: Clone + 'static>(&mut self, anchor: &Anchor<O>) -> O {
         self.engine.get(anchor)
     }
+
+    #[allow(unused)]
     const fn engine(&self) -> &Engine {
         &self.engine
     }
@@ -110,24 +112,25 @@ impl GStateStore {
         }
     }
 
-    fn remove_state_with_id<T: 'static>(&mut self, current_id: &StorageKey) -> Option<Var<T>> {
-        // /self.unseen_ids.remove(&current_id);
-        //unwrap or default to keep borrow checker happy
-        let key = self
-            .id_to_key_map
-            .get(current_id)
-            .copied()
-            .unwrap_or_default();
+    // fn remove_state_with_id<T: 'static>(&mut self, current_id: &StorageKey) -> Option<Var<T>> {
+    //     // /self.unseen_ids.remove(&current_id);
+    //     //unwrap or default to keep borrow checker happy
+    //     let key = self
+    //         .id_to_key_map
+    //         .get(current_id)
+    //         .copied()
+    //         .unwrap_or_default();
 
-        if key.is_null() {
-            None
-        } else {
-            self.get_mut_secondarymap::<T>()
-                .and_then(|existing_secondary_map| existing_secondary_map.remove(key))
-        }
-    }
+    //     if key.is_null() {
+    //         None
+    //     } else {
+    //         self.get_mut_secondarymap::<T>()
+    //             .and_then(|existing_secondary_map| existing_secondary_map.remove(key))
+    //     }
+    // }
 }
 // ────────────────────────────────────────────────────────────────────────────────
+
 
 pub struct StateVar<T> {
     id: TopoKey,
@@ -249,10 +252,12 @@ impl<T> StateAnchor<T>
 where
     T: 'static + Clone,
 {
+    #[must_use]
     pub fn get(&self) -> T {
         global_engine_get_anchor_val(&self.0)
     }
 
+    #[must_use]
     pub fn anchor(&self) -> &Anchor<T> {
         &self.0
     }
@@ -413,13 +418,13 @@ fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, fu
 //     insert_var_with_topo_id(var, id);
 //     read
 // }
-fn remove_state_with_topo_id<T: 'static>(id: TopoKey) -> Option<Var<T>> {
-    G_STATE_STORE.with(|g_state_store_refcell| {
-        g_state_store_refcell
-            .borrow_mut()
-            .remove_state_with_id::<T>(&StorageKey::TopoKey(id))
-    })
-}
+// fn remove_state_with_topo_id<T: 'static>(id: TopoKey) -> Option<Var<T>> {
+//     G_STATE_STORE.with(|g_state_store_refcell| {
+//         g_state_store_refcell
+//             .borrow_mut()
+//             .remove_state_with_id::<T>(&StorageKey::TopoKey(id))
+//     })
+// }
 
 #[must_use]
 #[topo::nested]

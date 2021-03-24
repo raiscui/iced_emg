@@ -1,0 +1,19 @@
+[package]
+name = "emg_state"
+version = "0.1.0"
+authors = ["崔路明 <cuiluming@chaoway.net>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anchors = { path = "../../anchors" }
+anymap = "0.12.1"
+slotmap = "1.0.2"
+topo = { version = "0.13.2", features = ["wasm-bindgen"] }
+log = "0.4"
+
+
+[dev-dependencies]
+console_log = { version = "0.2", features = ["color"] }
+wasm-bindgen-test = "0.3"

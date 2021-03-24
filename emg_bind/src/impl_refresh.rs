@@ -1,121 +1,20 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-17 12:23:37
+ * @LastEditTime: 2021-03-22 14:04:42
  * @LastEditors: Rais
  * @Description:
  */
-use std::ops::Deref;
-
 use crate::{
-    use_state::{StateAnchor, StateVar},
-    CloneState, GElement,
+    GElement,
     GElement::{Event_, Layer_, Refresher_, Text_},
-    NodeBuilderWidget, RefreshFor, RefreshUseFor, Refresher, RefresherFor,
+    NodeBuilderWidget,
 };
-// ────────────────────────────────────────────────────────────────────────────────
-// @ impl RefreshUseFor────────────────────────────────────────────────────────────────────────────────
-
-impl<Who> RefreshUseFor<Self> for Who {
-    #[inline]
-    default fn refresh_use(&mut self, updater: &dyn RefreshFor<Self>) {
-        updater.refresh_for(self);
-    }
-}
-
-// impl<Who> RefreshUseFor<Who> for AnchorWithUpdater<Who>
-// where
-//     Who: std::clone::Clone + GeneralRefreshFor,
-// {
-//     fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>) {
-//         let mut v = self.get();
-//         updater.refresh_for(&mut v);
-//         self.get_setter().set(v);
-//     }
-// }
-
-// @ impl RefreshFor────────────────────────────────────────────────────────────────────────────────
-pub auto trait GeneralRefreshFor {}
-impl<Who> !GeneralRefreshFor for StateVar<Who> {}
-impl<Use> GeneralRefreshFor for StateAnchor<Use> {}
+use emg_refresh::{RefreshFor, RefreshUseFor, RefreshWhoNoWarper};
+use std::ops::Deref;
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who: 'static, Use> RefreshFor<StateVar<Who>> for Use
-where
-    Use: GeneralRefreshFor + RefreshFor<Who> + std::clone::Clone,
-    Who: std::clone::Clone,
-{
-    fn refresh_for(&self, who: &mut StateVar<Who>) {
-        log::debug!("==========refresh_for StateVar");
-        let mut w = who.get();
-        w.refresh_use(self);
-        who.set(w);
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
-
-impl<Who, Use> RefreshFor<Who> for StateVar<Use>
-where
-    Who: GeneralRefreshFor,
-    Use: RefreshFor<Who> + Clone + 'static,
-{
-    fn refresh_for(&self, who: &mut Who) {
-        who.refresh_use(&self.get());
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
-
-impl<Who: 'static, Use: 'static> RefreshFor<StateVar<Who>> for StateVar<Use>
-where
-    Use: RefreshFor<Who> + std::clone::Clone,
-    Who: std::clone::Clone,
-{
-    fn refresh_for(&self, who: &mut StateVar<Who>) {
-        let mut w = who.get();
-        w.refresh_use(&self.get());
-
-        who.set(w);
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
-
-// impl<Who> RefreshFor<Who> for RefresherForSelf<Who> {
-//     fn refresh_for(&self, who: &mut Who) {
-//         self.get()(who);
-//     }
-// }
-impl<'a, Who> RefreshFor<Who> for RefresherFor<'a, Who> {
-    fn refresh_for(&self, who: &mut Who) {
-        self.get()(who);
-    }
-}
-
-impl<'a, Who, Use> RefreshFor<Who> for Refresher<'a, Use>
-where
-    Use: RefreshFor<Who>,
-{
-    fn refresh_for(&self, who: &mut Who) {
-        // self.get()().refresh_for(who);
-        who.refresh_use(&self.get());
-    }
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-
-impl<Who, Use> RefreshFor<Who> for StateAnchor<Use>
-where
-    Who: GeneralRefreshFor,
-    Use: RefreshFor<Who> + Clone + 'static + std::fmt::Debug,
-{
-    fn refresh_for(&self, who: &mut Who) {
-        let u_s_e = self.get();
-        // log::debug!(" ============ StateAnchor get:{:?}", &u_s_e);
-        who.refresh_use(&u_s_e);
-    }
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-impl<'a, Message> GeneralRefreshFor for GElement<'a, Message> {}
+impl<'a, Message> RefreshWhoNoWarper for GElement<'a, Message> {}
 impl<'a, Message> RefreshFor<GElement<'a, Message>> for GElement<'a, Message>
 where
     Message: 'static + Clone,

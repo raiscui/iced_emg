@@ -1,5 +1,6 @@
 // use dyn_clone::DynClone;
-use from_variants::FromVariants;
+use derive_more::From;
+
 use std::{convert::TryFrom, rc::Rc};
 
 use crate::GElement;
@@ -114,7 +115,7 @@ impl<Message> EventMessage<Message> {
         Self(name, message)
     }
 }
-#[derive(Clone, FromVariants)]
+#[derive(Clone, From)]
 pub enum EventNode<Message> {
     Cb(EventCallback),
     CbMessage(EventMessage<Message>),

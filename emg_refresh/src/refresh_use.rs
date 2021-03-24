@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-03-16 15:25:24
+ * @LastEditTime: 2021-03-23 16:57:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -31,43 +31,15 @@ pub trait RefreshUseFor<Who> {
     fn refresh_use(&mut self, updater: &dyn RefreshFor<Who>);
 }
 // ────────────────────────────────────────────────────────────────────────────────
+// @ impl RefreshUseFor────────────────────────────────────────────────────────────────────────────────
 
+impl<Who> RefreshUseFor<Self> for Who {
+    #[inline]
+    default fn refresh_use(&mut self, updater: &dyn RefreshFor<Self>) {
+        updater.refresh_for(self);
+    }
+}
 // ────────────────────────────────────────────────────────────────────────────────
-
-// ────────────────────────────────────────────────────────────────────────────────
-
-// ────────────────────────────────────────────────────────────────────────────────
-
-// pub trait UpdateUse {
-//     fn update_use(&mut self, updater: &dyn RtUpdateFor<Self>)
-//     where
-//         Self: Sized;
-// }
-// impl<Who> UpdateUse for Who {
-//     default fn update_use(&mut self, updater: &dyn RtUpdateFor<Self>) {
-//         updater.refresh_for(self);
-//         // self
-//     }
-// }
-// ────────────────────────────────────────────────────────────────────────────────
-
-// struct SaveTest {
-//     ss: Vec<Rc<dyn UpdateUse>>,
-// }
-// impl RtUpdateFor<i32> for i32 {
-//     fn refresh_for(&self, el: &mut i32) {}
-// }
-
-// struct SaveTest2 {
-//     ss: Rc<dyn UpdateUse>,
-// }
-// impl SaveTest2 {
-//     fn aa(self) {
-//         let a = Box::new(1i32) as Box<dyn RtUpdateFor<i32>>;
-//         let mut b = 1;
-//         let cc = self.ss.update_use(&a);
-//     }
-// }
 
 #[cfg(test)]
 mod updater_test1 {
@@ -75,7 +47,7 @@ mod updater_test1 {
 
     use wasm_bindgen_test::*;
 
-    use crate::{RefreshFor, Refresher};
+    use crate::{impl_refresh::RefreshUseNoWarper, RefreshFor, RefreshWhoNoWarper, Refresher};
 
     use super::*;
 
@@ -84,6 +56,8 @@ mod updater_test1 {
     //         *el = format!("{},{}", el, self);
     //     }
     // }
+    impl RefreshWhoNoWarper for String {}
+    impl RefreshUseNoWarper for String {}
     impl RefreshFor<String> for String {
         fn refresh_for(&self, el: &mut String) {
             *el = format!("{},{}", el, self);

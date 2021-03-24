@@ -1,16 +1,16 @@
-use std::collections::HashSet as Set;
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![warn(clippy::nursery)]
+
+// use std::collections::HashSet as Set;
 
 // use trace_var::trace_var;
 
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
 use syn::parse::{Parse, ParseStream};
-use syn::{
-    bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token, FieldsNamed,
-    ItemStruct, Lifetime, LifetimeDef,
-};
-use syn::{fold::Fold, parse_quote};
+use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
 
 use syn::{Ident, Token};
 use uuid::Uuid;
@@ -23,6 +23,7 @@ pub mod kw {
     syn::custom_keyword!(RefreshUse);
     syn::custom_keyword!(On);
     syn::custom_keyword!(Event);
+    syn::custom_keyword!(E);
 
     // impl Debug for layer {
     //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -31,7 +32,7 @@ pub mod kw {
     // }
 }
 //@ ID ──────────────────────────────
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ID(Option<Ident>);
 
 impl ID {
@@ -49,21 +50,6 @@ impl ID {
         }
     }
 }
-impl Parse for ID {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let opt_id = {
-            if input.peek(Token![@]) && input.peek2(Ident::peek_any) {
-                input.parse::<Token![@]>()?;
-                let id = input.parse::<Ident>()?;
-                Some(id)
-            } else {
-                None
-            }
-        };
-        Ok(ID(opt_id))
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
 
 fn make_id(name: &str) -> String {
     let mut id = (*Uuid::new_v4()
@@ -74,6 +60,101 @@ fn make_id(name: &str) -> String {
     id
 }
 
+syn::custom_punctuation!(EdgeOpenSeparator, -|);
+syn::custom_punctuation!(EdgeCloseSeparator, |-);
+//@ @Parse ──────────────────────────────
+
+// type OptEdge = Option<Edge>;
+#[derive(Debug)]
+enum At {
+    Id(ID),
+    Edge(Edge),
+}
+
+impl From<Edge> for At {
+    fn from(v: Edge) -> Self {
+        Self::Edge(v)
+    }
+}
+
+impl From<ID> for At {
+    fn from(v: ID) -> Self {
+        Self::Id(v)
+    }
+}
+
+#[derive(Debug)]
+struct AtList(Vec<At>);
+
+// struct Edge(Option<syn::Expr>);
+impl Parse for AtList {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut at_list = vec![];
+        while !input.is_empty() && input.peek(Token![@]) {
+            input.parse::<Token![@]>()?;
+
+            // println!("in at_list parse :{}", &input);
+
+            if input.peek(Token![=]) {
+                if !input.peek2(Ident::peek_any) {
+                    panic!("should not use Rust keyword ")
+                }
+                // println!("is id");
+
+                input.parse::<Token![=]>()?;
+                let id = input.parse::<Ident>()?;
+                at_list.push(ID(Some(id)).into());
+            }
+            if input.peek(kw::E) {
+                // println!("is edge");
+
+                input.parse::<kw::E>()?;
+                input.parse::<Token![=]>()?;
+                at_list.push(input.parse::<Edge>()?.into());
+            }
+        }
+        Ok(AtList(at_list))
+    }
+}
+
+//@ Edge ──────────────────────────────
+
+// type OptEdge = Option<Edge>;
+#[derive(Debug)]
+struct Edge {
+    bracket_token: token::Bracket,
+    content: Punctuated<syn::Expr, Token![,]>,
+}
+// struct Edge(Option<syn::Expr>);
+
+impl Parse for Edge {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let content;
+        let bracket_token = bracketed!(content in input);
+        let content: Punctuated<syn::Expr, Token![,]> =
+            content.parse_terminated(syn::Expr::parse)?;
+
+        Ok(Edge {
+            bracket_token,
+            content,
+        })
+    }
+}
+impl ToTokens for Edge {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Edge {
+            bracket_token,
+            content,
+        } = self;
+        let content_iter = content.iter();
+        quote_spanned!(
+            bracket_token.span=> vec![#(Box::new(#content_iter)),*]
+        )
+        .to_tokens(tokens)
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
 // @ GClosure ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
@@ -82,9 +163,23 @@ pub struct GTreeClosure {
     id: ID,
     closure: syn::ExprClosure,
 }
+impl AtSetup for GTreeClosure {
+    fn at_setup(&mut self, at_list: AtList) {
+        for at in at_list.0 {
+            match at {
+                At::Id(id) => {
+                    self.id = id;
+                }
+                At::Edge(_) => {
+                    panic!("closure can't have any edge")
+                }
+            }
+        }
+    }
+}
 impl Parse for GTreeClosure {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let id = input.parse::<ID>()?;
+        let id = ID::default();
 
         let ec = input.parse::<syn::ExprClosure>()?;
         if ec.inputs.is_empty() {
@@ -115,9 +210,23 @@ pub struct GOnEvent {
     event_name: String,
     closure: syn::ExprClosure,
 }
+impl AtSetup for GOnEvent {
+    fn at_setup(&mut self, at_list: AtList) {
+        for at in at_list.0 {
+            match at {
+                At::Id(id) => {
+                    self.id = id;
+                }
+                At::Edge(_) => {
+                    panic!("On:Event can't have any edge")
+                }
+            }
+        }
+    }
+}
 impl Parse for GOnEvent {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let id = input.parse::<ID>()?;
+        let id = ID::default();
 
         input.parse::<kw::On>()?;
         input.parse::<Token![:]>()?;
@@ -166,10 +275,24 @@ pub struct GRefresher {
     kws: kw::RefreshUse,
     method: RefresherType,
 }
+impl AtSetup for GRefresher {
+    fn at_setup(&mut self, at_list: AtList) {
+        for at in at_list.0 {
+            match at {
+                At::Id(id) => {
+                    self.id = id;
+                }
+                At::Edge(_) => {
+                    panic!("@RefreshUse can't have any edge")
+                }
+            }
+        }
+    }
+}
 
 impl Parse for GRefresher {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let id = input.parse::<ID>()?;
+        let id = ID::default();
         let kws = input.parse::<kw::RefreshUse>()?;
 
         let fork = input.fork();
@@ -226,13 +349,31 @@ impl ToTokens for GRefresher {
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct GTreeSurface {
+    edge: Option<Edge>,
     id: ID,
     expr: syn::Expr,
     children: ChildrenType,
 }
+
+impl AtSetup for GTreeSurface {
+    fn at_setup(&mut self, at_list: AtList) {
+        for at in at_list.0 {
+            match at {
+                At::Id(id) => {
+                    self.id = id;
+                }
+                At::Edge(edge) => {
+                    self.edge = Some(edge);
+                }
+            }
+        }
+    }
+}
+
 impl Parse for GTreeSurface {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let id = input.parse::<ID>()?;
+        let edge = None;
+        let id = ID::default();
 
         //println!("GSurface:{}", input);
         let expr = input.parse::<syn::Expr>()?;
@@ -245,12 +386,18 @@ impl Parse for GTreeSurface {
                 let _bracket = bracketed!(content in input);
                 let children: ChildrenType =
                     Some(content.parse_terminated(GTreeMacroElement::parse)?);
-                Ok(GTreeSurface { id, expr, children })
+                Ok(GTreeSurface {
+                    edge,
+                    id,
+                    expr,
+                    children,
+                })
             } else {
                 Err(input.error("还没有完成 直接 单一 无[] 的后缀"))
             }
         } else {
             Ok(GTreeSurface {
+                edge,
                 id,
                 expr,
                 children: None,
@@ -261,20 +408,26 @@ impl Parse for GTreeSurface {
 impl ToTokens for GTreeSurface {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         // self.expr.to_tokens(tokens)
-        let GTreeSurface { id, expr, children } = self;
+        let GTreeSurface {
+            edge,
+            id,
+            expr,
+            children,
+        } = self;
         // println!("expr===={:?}", self.expr);
+        let edge_token = edge2token(edge);
 
         let children_iter = children.iter();
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
         let id_token = id.get("GElement");
 
         // Tree GElementTree
-        quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,{#expr}.into(),#children_token))
+        quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token))
             .to_tokens(tokens)
     }
 }
 
-// @ GTreeElement ────────────────────────────────────────────────────────────────────────────────
+// @ GTreeMacroElement ────────────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug)]
 enum GTreeMacroElement {
@@ -287,29 +440,40 @@ enum GTreeMacroElement {
 
 impl Parse for GTreeMacroElement {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // use syn::ext::IdentExt;
-        let fork = input.fork();
-        fork.parse::<ID>()?;
+        // println!("at list");
+        let at_list = input.parse::<AtList>()?;
+        // check id second
+        // println!("check kw");
 
-        if fork.peek(kw::Layer) {
+        if input.peek(kw::Layer) {
             //@layer
-            Ok(GTreeMacroElement::GL(input.parse()?))
-        } else if fork.peek(kw::RefreshUse) {
+            let mut parsed: GTreeLayerStruct = input.parse()?;
+            parsed.at_setup(at_list);
+            Ok(GTreeMacroElement::GL(parsed))
+        } else if input.peek(kw::RefreshUse) {
             // @refresher
-            Ok(GTreeMacroElement::RT(input.parse()?))
-        } else if fork.peek(token::Fn) && (fork.peek2(Token![||]) || fork.peek3(Token![||])) {
+            let mut parsed: GRefresher = input.parse()?;
+            parsed.at_setup(at_list);
+            Ok(GTreeMacroElement::RT(Box::new(parsed)))
+        } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
             // @closure
-            Ok(GTreeMacroElement::GC(input.parse()?))
-        } else if fork.peek(kw::On) && (fork.peek2(Token![:])) {
+            let mut parsed: GTreeClosure = input.parse()?;
+            parsed.at_setup(at_list);
+            Ok(GTreeMacroElement::GC(parsed))
+        } else if input.peek(kw::On) && (input.peek2(Token![:])) {
             //@ On:Event
-            Ok(GTreeMacroElement::OnEvent(input.parse()?))
+            let mut parsed: GOnEvent = input.parse()?;
+            parsed.at_setup(at_list);
+            Ok(GTreeMacroElement::OnEvent(parsed))
         }
         //  must on bottom ─────────────────────────────────────────────────────────────────
-        else if fork.peek(Ident::peek_any) {
+        else if input.peek(Ident::peek_any) {
             // @surface  expr, GElement
-            Ok(GTreeMacroElement::GS(input.parse()?))
+            let mut parsed: GTreeSurface = input.parse()?;
+            parsed.at_setup(at_list);
+            Ok(GTreeMacroElement::GS(Box::new(parsed)))
         } else {
-            panic!("can't know what is");
+            panic!("can't know what is , input current:{}", input);
             // Ok(GTreeMacroElement::OtherExpr(input.parse()?))
         }
     }
@@ -324,33 +488,51 @@ impl ToTokens for GTreeMacroElement {
         )
     }
 }
+trait AtSetup {
+    fn at_setup(&mut self, at_list: AtList);
+}
 
 // @ GTreeLayerStruct ────────────────────────────────────────────────────────────────────────────────
 type ChildrenType = Option<Punctuated<GTreeMacroElement, Token![,]>>;
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct GTreeLayerStruct {
+    edge: Option<Edge>,
     layer: kw::Layer,
     id: ID,
     children: ChildrenType,
 }
-// TODO make id Option,
-/*
-Uuid::new_v4()
-.to_simple()
-.encode_lower(&mut Uuid::encode_buffer())
-.to_string()
-*/
+
+impl AtSetup for GTreeLayerStruct {
+    fn at_setup(&mut self, at_list: AtList) {
+        for at in at_list.0 {
+            match at {
+                At::Id(id) => {
+                    self.id = id;
+                }
+                At::Edge(edge) => {
+                    self.edge = Some(edge);
+                }
+            }
+        }
+    }
+}
 
 impl Parse for GTreeLayerStruct {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let id = input.parse::<ID>()?;
+        // println!("at list");
+
+        let edge = None;
+
+        let id = ID::default();
 
         let layer = input.parse::<kw::Layer>()?;
 
         if input.peek(Token![,]) {
+            //提前结束 , 没有[]
             // if input.is_empty() {
             return Ok(GTreeLayerStruct {
+                edge,
                 layer,
                 id,
                 children: None,
@@ -366,6 +548,7 @@ impl Parse for GTreeLayerStruct {
         // println!("children op :=>{}", quote!(  #children));
 
         Ok(GTreeLayerStruct {
+            edge,
             layer,
             id,
             children,
@@ -373,13 +556,26 @@ impl Parse for GTreeLayerStruct {
     }
 }
 
+fn edge2token(edge: &Option<Edge>) -> TokenStream {
+    match edge {
+        Some(e) => {
+            quote!(#e)
+        }
+        None => {
+            quote!(vec![])
+        }
+    }
+}
+
 impl ToTokens for GTreeLayerStruct {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let GTreeLayerStruct {
+            edge,
             layer,
             id,
             children,
         } = self;
+        let edge_token = edge2token(edge);
         let children_iter = children.iter();
         let g_tree_builder_element_layer_token =
             quote_spanned! {layer.span()=>GTreeBuilderElement::Layer};
@@ -388,7 +584,8 @@ impl ToTokens for GTreeLayerStruct {
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
         // let brace_op_token = quote_spanned! {children.span()=>vec![#children_token]};
 
-        quote!(#g_tree_builder_element_layer_token(#id_token,#children_token)).to_tokens(tokens)
+        quote!(#g_tree_builder_element_layer_token(#id_token,#edge_token,#children_token))
+            .to_tokens(tokens)
         // quote!(GTreeBuilderElement::#layer(String::from(#id),vec![#(#children_iter),*])).to_tokens(tokens)
     }
 }
@@ -404,9 +601,19 @@ impl Parse for Gtree {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         // let emg_graph: Ident = input.parse()?;
         // let _ = input.parse::<Token![=>]>()?;
+        let at_list = input.parse::<AtList>()?;
 
-        let root = input.parse::<GTreeLayerStruct>()?;
-
+        let mut root = input.parse::<GTreeLayerStruct>()?;
+        for at in at_list.0 {
+            match at {
+                At::Id(id) => {
+                    root.id = id;
+                }
+                At::Edge(_) => {
+                    panic!("root layer can't have any Edge");
+                }
+            }
+        }
         // Ok(Gtree { emg_graph, root })
         Ok(Gtree { root })
     }
@@ -419,16 +626,20 @@ impl ToTokens for Gtree {
         let token = quote_spanned! {root.span()=> {
 
             #[allow(unused)]
-            use std::rc::Rc;
-            #[allow(unused)]
-            use emg_bind::CloneState;
-            #[allow(unused)]
             use emg_bind::{
-                 runtime::Element, runtime::Text, GElement, GTreeBuilderElement,
-                 Refresher,EventCallback,EventMessage,use_state
+                runtime::Element, runtime::Text, EventCallback, EventMessage, GElement,
+                GTreeBuilderElement,
             };
             #[allow(unused)]
+            use emg_layout::{css, styles::*};
+            #[allow(unused)]
+            use emg_refresh::Refresher;
+            #[allow(unused)]
+            use emg_state::{use_state, CloneState};
+            #[allow(unused)]
             use gtree::log;
+            #[allow(unused)]
+            use std::rc::Rc;
             #[allow(unused)]
             use GElement::*;
 
@@ -454,134 +665,135 @@ pub fn gtree_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
     Ok(quote! (#output))
 }
 
-#[derive(Debug, Clone)]
-struct EmgArgs {
-    vars: Set<Ident>,
-    first_life_time: Option<Lifetime>,
-}
-impl EmgArgs {
-    fn has_init_var(&self) -> bool {
-        self.vars.contains(&Ident::new("init", Span::call_site()))
-    }
-}
-impl Parse for EmgArgs {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let vars = Punctuated::<Ident, Token![,]>::parse_terminated(input)?;
-        Ok(EmgArgs {
-            vars: vars.into_iter().collect(),
-            first_life_time: None,
-        })
-    }
-}
-impl Fold for EmgArgs {
-    // fn fold_field(&mut self, field: Field) -> Field {
-    //     // let o: Field = parse_quote! {#i};
-    //     println!("===Field: {:#?}", &field);
-    //     fold::fold_field(self, field)
-    // }
-    fn fold_fields_named(&mut self, i: FieldsNamed) -> FieldsNamed {
-        let FieldsNamed {
-            brace_token: _,
-            named,
-        } = &i;
-        let field = named.iter();
-        // println!("---->{}", quote! {#named});
-        let lifetime = self.first_life_time.as_ref().unwrap();
+// #[derive(Debug, Clone)]
+// struct EmgArgs {
+//     vars: Set<Ident>,
+//     first_life_time: Option<Lifetime>,
+// }
+// impl EmgArgs {
+//     fn has_init_var(&self) -> bool {
+//         self.vars.contains(&Ident::new("init", Span::call_site()))
+//     }
+// }
+// impl Parse for EmgArgs {
+//
+//     fn parse(input: ParseStream) -> syn::Result<Self> {
+//         let vars = Punctuated::<Ident, Token![,]>::parse_terminated(input)?;
+//         Ok(EmgArgs {
+//             vars: vars.into_iter().collect(),
+//             first_life_time: None,
+//         })
+//     }
+// }
+// impl Fold for EmgArgs {
+//     // fn fold_field(&mut self, field: Field) -> Field {
+//     //     // let o: Field = parse_quote! {#i};
+//     //     println!("===Field: {:#?}", &field);
+//     //     fold::fold_field(self, field)
+//     // }
+//     fn fold_fields_named(&mut self, i: FieldsNamed) -> FieldsNamed {
+//         let FieldsNamed {
+//             brace_token: _,
+//             named,
+//         } = &i;
+//         let field = named.iter();
+//         // println!("---->{}", quote! {#named});
+//         let lifetime = self.first_life_time.as_ref().unwrap();
 
-        parse_quote!({#(#field),* ,emg_graph:emg_bind::GraphType<#lifetime,Message>})
-        // fold::fold_fields_named(self, i)
-    }
-}
+//         parse_quote!({#(#field),* ,emg_graph:emg_bind::GraphType<#lifetime,Message>})
+//         // fold::fold_fields_named(self, i)
+//     }
+// }
 
-/// @ emg_macro ────────────────────────────────────────────────────────────────────────────────
-pub fn emg_macro(args: TokenStream, input: TokenStream) -> Result<TokenStream, syn::Error> {
-    let args = syn::parse2::<EmgArgs>(args)?;
-    println!("has_init_var? {:?}", args.has_init_var());
+// /// @ emg_macro ────────────────────────────────────────────────────────────────────────────────
+// pub fn emg_macro(args: TokenStream, input: TokenStream) -> Result<TokenStream, syn::Error> {
+//     let args = syn::parse2::<EmgArgs>(args)?;
+//     println!("has_init_var? {:?}", args.has_init_var());
 
-    let input = syn::parse2::<ItemStruct>(input)?;
-    // ────────────────────────────────────────────────────────────────────────────────
+//     let input = syn::parse2::<ItemStruct>(input)?;
+//     // ────────────────────────────────────────────────────────────────────────────────
 
-    let o = emg_handle(args, input);
-    // ────────────────────────────────────────────────────────────────────────────────
+//     let o = emg_handle(args, input);
+//     // ────────────────────────────────────────────────────────────────────────────────
 
-    Ok(quote!(
+//     Ok(quote!(
 
-        #o
+//         #o
 
-    ))
-}
+//     ))
+// }
 
-fn emg_handle(mut args: EmgArgs, input: ItemStruct) -> ItemStruct {
-    let mut need_add_lifetime = false;
-    if args.first_life_time.is_none() {
-        let first_lifetime = input.generics.lifetimes().next();
-        need_add_lifetime = first_lifetime.is_none();
+// fn emg_handle(mut args: EmgArgs, input: ItemStruct) -> ItemStruct {
+//     let mut need_add_lifetime = false;
+//     if args.first_life_time.is_none() {
+//         let first_lifetime = input.generics.lifetimes().next();
+//         need_add_lifetime = first_lifetime.is_none();
 
-        args.first_life_time = first_lifetime
-            .map(|l_def| &l_def.lifetime)
-            .cloned()
-            .or_else(|| Some(Lifetime::new("'a", Span::call_site())));
-    };
-    println!("=====first_life_time:{:?}", &args.first_life_time);
-    let mut o = args.fold_item_struct(input);
-    if need_add_lifetime {
-        o.generics
-            .params
-            .push(syn::GenericParam::Lifetime(LifetimeDef::new(
-                args.first_life_time.unwrap(),
-            )))
-    }
-    o
-}
+//         args.first_life_time = first_lifetime
+//             .map(|l_def| &l_def.lifetime)
+//             .cloned()
+//             .or_else(|| Some(Lifetime::new("'a", Span::call_site())));
+//     };
+//     println!("=====first_life_time:{:?}", &args.first_life_time);
+//     let mut o = args.fold_item_struct(input);
+//     if need_add_lifetime {
+//         o.generics
+//             .params
+//             .push(syn::GenericParam::Lifetime(LifetimeDef::new(
+//                 args.first_life_time.unwrap(),
+//             )))
+//     }
+//     o
+// }
 
 // ────────────────────────────────────────────────────────────────────────────────
 // @ Gview ────────────────────────────────────────────────────────────────────────────────
 
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct Gview {
-    root_ix: syn::LitStr,
-}
-impl Parse for Gview {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Gview {
-            root_ix: input.parse()?,
-        })
-    }
-}
-impl ToTokens for Gview {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        // self.expr.to_tokens(tokens)
-        let Gview { root_ix } = self;
-        quote!({
-            use emg_bind::GraphType;
-            use emg_bind::GraphStore;
-            GraphType::<Message>::view( #root_ix.to_string() )
+// #[allow(dead_code)]
+// #[derive(Debug, Clone)]
+// pub struct Gview {
+//     root_ix: syn::LitStr,
+// }
+// impl Parse for Gview {
+//
+//     fn parse(input: ParseStream) -> syn::Result<Self> {
+//         Ok(Gview {
+//             root_ix: input.parse()?,
+//         })
+//     }
+// }
+// impl ToTokens for Gview {
+//     fn to_tokens(&self, tokens: &mut TokenStream) {
+//         // self.expr.to_tokens(tokens)
+//         let Gview { root_ix } = self;
+//         quote!({
+//             use emg_bind::GraphType;
+//             use emg_bind::GraphStore;
+//             GraphType::<Message>::view( #root_ix.to_string() )
 
-            // G_STORE.with(|g_store_refcell| {
-            //     // g_store_refcell.borrow_mut().set_graph(g);
-            //     g_store_refcell
-            //         .borrow_mut()
-            //         .get_mut_graph_with(|g: &mut GraphType| {
-            //             log::info!("graph==> {:#?}", &g);
+//             // G_STORE.with(|g_store_refcell| {
+//             //     // g_store_refcell.borrow_mut().set_graph(g);
+//             //     g_store_refcell
+//             //         .borrow_mut()
+//             //         .get_mut_graph_with(|g: &mut GraphType| {
+//             //             log::info!("graph==> {:#?}", &g);
 
-            //             // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
-            //             // rc_e.clone().into()
-            //             // Rc::make_mut(rc_e).clone().into()
-            //             g.g_element_to_el(&cix)
-            //         })
-            // })
-        })
-        .to_tokens(tokens)
-    }
-}
+//             //             // Rc::make_mut(&mut Rc::clone(rc_e)).clone()
+//             //             // rc_e.clone().into()
+//             //             // Rc::make_mut(rc_e).clone().into()
+//             //             g.g_element_to_el(&cix)
+//             //         })
+//             // })
+//         })
+//         .to_tokens(tokens)
+//     }
+// }
 /// @ gview_macro ────────────────────────────────────────────────────────────────────────────────
-pub fn gview_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
-    let output = syn::parse2::<Gview>(item)?;
-    Ok(quote_spanned! { output.span()=>#output})
-}
+// pub fn gview_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
+//     let output = syn::parse2::<Gview>(item)?;
+//     Ok(quote_spanned! { output.span()=>#output})
+// }
 // @ test ────────────────────────────────────────────────────────────────────────────────
-
 #[cfg(test)]
 mod tests {
 
@@ -594,21 +806,27 @@ mod tests {
                 Err(error) => println!("...{:?}", error),
             }
         }
+
         println!();
-        // type GraphType = Vec<i32>;
         let input = r#" 
-        @a Layer [
-            @b Layer [
-                @c Layer [],
+         @=a Layer [
+            @E=[css(CssWidth::from(px(2)))] @=b 
+            Layer [
+                @=c 
+                Layer [],
+                @=caef 
                 Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
                 Text::new(format!("in quote..{}", "b")) => [
                     RefreshUse ||{100},
-                    RefreshUse  a.watch()
+                    // RefreshUse  a.watch()
                 ],
-                @e Layer [
+                @=e Layer [
                     Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                        On:click move||{ a.set((*a.get()).clone()+1);
-                        Message::None }
+                        On:click move||{ 
+                            // a.set((*a.get()).clone()+1);
+                            log::debug!("click");
+                            Message::None 
+                        }
                     ]
                 ],
             ]
@@ -620,93 +838,93 @@ mod tests {
         println!();
     }
 
-    #[test]
-    fn test2() {
-        fn token_test(input: &str) {
-            match syn::parse_str::<Gview>(input) {
-                Ok(ok) => println!("Gview===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
-            }
-        }
-        println!();
-        // type GraphType = Vec<i32>;
-        let input = r#" "a" "#;
+    // #[test]
+    // fn test2() {
+    //     fn token_test(input: &str) {
+    //         match syn::parse_str::<Gview>(input) {
+    //             Ok(ok) => println!("Gview===>{}", ok.to_token_stream()),
+    //             Err(error) => println!("...{:?}", error),
+    //         }
+    //     }
+    //     println!();
+    //     // type GraphType = Vec<i32>;
+    //     let input = r#" "a" "#;
 
-        token_test(input);
-        println!();
-    }
-    #[test]
-    fn emg_life() {
-        let input: ItemStruct = syn::parse_quote!(
-            struct AA<'f: 'b + 'c, 'b, 'c> {
-                bb: String,
-                cc: String,
-            }
-        );
-        println!("====input:{:#?}", &input);
+    //     token_test(input);
+    //     println!();
+    // }
+    // #[test]
+    // fn emg_life() {
+    //     let input: ItemStruct = syn::parse_quote!(
+    //         struct AA<'f: 'b + 'c, 'b, 'c> {
+    //             bb: String,
+    //             cc: String,
+    //         }
+    //     );
+    //     println!("====input:{:#?}", &input);
 
-        let args: EmgArgs = EmgArgs {
-            vars: Set::new(),
-            first_life_time: None,
-        };
-        println!("has_init_var? {:?}", args.has_init_var());
-        // ─────────────────────────────────────────────────────────────────
-        let o = emg_handle(args, input);
+    //     let args: EmgArgs = EmgArgs {
+    //         vars: Set::new(),
+    //         first_life_time: None,
+    //     };
+    //     println!("has_init_var? {:?}", args.has_init_var());
+    //     // ─────────────────────────────────────────────────────────────────
+    //     let o = emg_handle(args, input);
 
-        // ─────────────────────────────────────────────────────────────────
+    //     // ─────────────────────────────────────────────────────────────────
 
-        println!("=======================");
-        // println!("o: {:#?}", &o);
-        println!("=======================");
-        println!("{}", quote! {#o});
-    }
-    #[test]
-    fn emg_def_life() {
-        let input: ItemStruct = syn::parse_quote!(
-            struct AA<'f: 'b + 'c, 'b, 'c> {
-                bb: String,
-                cc: String,
-            }
-        );
-        println!("====input:{:#?}", &input);
+    //     println!("=======================");
+    //     // println!("o: {:#?}", &o);
+    //     println!("=======================");
+    //     println!("{}", quote! {#o});
+    // }
+    // #[test]
+    // fn emg_def_life() {
+    //     let input: ItemStruct = syn::parse_quote!(
+    //         struct AA<'f: 'b + 'c, 'b, 'c> {
+    //             bb: String,
+    //             cc: String,
+    //         }
+    //     );
+    //     println!("====input:{:#?}", &input);
 
-        let args: EmgArgs = EmgArgs {
-            vars: Set::new(),
-            first_life_time: None,
-        };
-        println!("has_init_var? {:?}", args.has_init_var());
-        // ─────────────────────────────────────────────────────────────────
-        let o = emg_handle(args, input);
+    //     let args: EmgArgs = EmgArgs {
+    //         vars: Set::new(),
+    //         first_life_time: None,
+    //     };
+    //     println!("has_init_var? {:?}", args.has_init_var());
+    //     // ─────────────────────────────────────────────────────────────────
+    //     let o = emg_handle(args, input);
 
-        // ─────────────────────────────────────────────────────────────────
+    //     // ─────────────────────────────────────────────────────────────────
 
-        println!("=======================");
-        // println!("o: {:#?}", &o);
-        println!("=======================");
-        println!("{}", quote! {#o});
-    }
-    #[test]
-    fn emg_no_lifetime() {
-        let input: ItemStruct = syn::parse_quote!(
-            struct AA {
-                bb: String,
-                cc: String,
-            }
-        );
-        println!("====input:{:#?}", &input);
+    //     println!("=======================");
+    //     // println!("o: {:#?}", &o);
+    //     println!("=======================");
+    //     println!("{}", quote! {#o});
+    // }
+    // #[test]
+    // fn emg_no_lifetime() {
+    //     let input: ItemStruct = syn::parse_quote!(
+    //         struct AA {
+    //             bb: String,
+    //             cc: String,
+    //         }
+    //     );
+    //     println!("====input:{:#?}", &input);
 
-        let args: EmgArgs = EmgArgs {
-            vars: Set::new(),
-            first_life_time: None,
-        };
-        println!("has_init_var? {:?}", args.has_init_var());
-        // ─────────────────────────────────────────────────────────────────
-        let o = emg_handle(args, input);
-        // ─────────────────────────────────────────────────────────────────
+    //     let args: EmgArgs = EmgArgs {
+    //         vars: Set::new(),
+    //         first_life_time: None,
+    //     };
+    //     println!("has_init_var? {:?}", args.has_init_var());
+    //     // ─────────────────────────────────────────────────────────────────
+    //     let o = emg_handle(args, input);
+    //     // ─────────────────────────────────────────────────────────────────
 
-        println!("=======================");
-        // println!("o: {:#?}", &o);
-        println!("=======================");
-        println!("{}", quote! {#o});
-    }
+    //     println!("=======================");
+    //     // println!("o: {:#?}", &o);
+    //     println!("=======================");
+    //     println!("{}", quote! {#o});
+    // }
 }

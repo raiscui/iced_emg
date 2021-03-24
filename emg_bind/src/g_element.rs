@@ -1,21 +1,21 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-03-13 19:00:03
+ * @LastEditTime: 2021-03-22 13:40:08
  * @LastEditors: Rais
  * @Description:
  */
-
 use crate::{
     runtime::{Element, Text},
-    Button, EventNode, Layer, RefreshFor,
+    Button, EventNode, Layer,
 };
+use emg_refresh::RefreshFor;
+// extern crate derive_more;
+use derive_more::From;
 use std::{convert::TryFrom, rc::Rc};
 use strum_macros::Display;
-
-use from_variants::FromVariants;
 pub use GElement::*;
-#[derive(Clone, Display, FromVariants)]
+#[derive(Clone, Display, From)]
 pub enum GElement<'a, Message> {
     Element_(Element<'a, Message>),
     Layer_(Layer<'a, Message>),
