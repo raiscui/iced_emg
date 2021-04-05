@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-04-05 14:21:42
+ * @LastEditTime: 2021-04-05 16:07:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -290,6 +290,31 @@ where
 {
     fn get(&self) -> T {
         global_engine_get_anchor_val(&self.0)
+    }
+}
+
+pub use anchors::collections::ord_map::Dict;
+
+impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> StateAnchor<Dict<K, V>> {
+    pub fn filter<F: FnMut(&K, &V) -> bool + 'static>(&self, mut f: F) -> Self {
+        self.0
+            .filter_map(move |k, v| if f(k, v) { Some(v.clone()) } else { None })
+            .into()
+    }
+
+    pub fn map_<F: FnMut(&K, &V) -> T + 'static, T: Clone + PartialEq + 'static>(
+        &self,
+        mut f: F,
+    ) -> StateAnchor<Dict<K, T>> {
+        self.0.filter_map(move |k, v| Some(f(k, v))).into()
+    }
+
+    /// FOOBAR
+    pub fn filter_map<F: FnMut(&K, &V) -> Option<T> + 'static, T: Clone + PartialEq + 'static>(
+        &self,
+        f: F,
+    ) -> StateAnchor<Dict<K, T>> {
+        self.0.filter_map(f).into()
     }
 }
 
