@@ -12,3 +12,13 @@ derive_more = "0.99"
 seed_styles = { path = "../../styles_hooks/seed_styles" }
 emg_refresh = { path = "../emg_refresh" }
 emg_state = { path = "../emg_state" }
+# topo = { version = "0.13.2", features = ["wasm-bindgen"] }
+log = ""
+env_logger = ""
+# tracing = { version = "^0.1" }
+tracing = { version = "^0.1" }
+tracing-subscriber = { version = "0.2.16" }
+# tracing-wasm = "0.2.0"
+indented = "0.1.0"
+# tracing-log = { version = "", features = ["env_logger"] }
+tracing-flame = "0.1.0"

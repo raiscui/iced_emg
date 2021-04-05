@@ -1,15 +1,17 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-03-22 16:25:04
+ * @LastEditTime: 2021-04-05 14:21:42
  * @LastEditors: Rais
  * @Description:
  */
 
-use std::{cell::RefCell, clone::Clone, collections::HashMap, marker::PhantomData};
-
-use anchors::singlethread::{Anchor, Engine, Var};
+use anchors::{
+    expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
+    singlethread::{Anchor, Engine, MultiAnchor, Var},
+};
 use anymap::any::Any;
+use std::{cell::RefCell, clone::Clone, collections::HashMap, marker::PhantomData};
 // use delegate::delegate;
 use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
 
@@ -23,7 +25,7 @@ struct GStateStore {
     anymap: anymap::Map<dyn Any>,
     id_to_key_map: HashMap<StorageKey, DefaultKey>,
     primary_slotmap: DenseSlotMap<DefaultKey, StorageKey>,
-    engine: Engine,
+    engine: RefCell<Engine>,
 }
 impl Default for GStateStore {
     fn default() -> Self {
@@ -31,20 +33,16 @@ impl Default for GStateStore {
             anymap: anymap::Map::new(),
             id_to_key_map: HashMap::new(),
             primary_slotmap: DenseSlotMap::new(),
-            engine: Engine::new(),
+            engine: RefCell::new(Engine::new()),
         }
     }
 }
 
 impl GStateStore {
-    fn engine_get<O: Clone + 'static>(&mut self, anchor: &Anchor<O>) -> O {
-        self.engine.get(anchor)
+    fn engine_get<O: Clone + 'static>(&self, anchor: &Anchor<O>) -> O {
+        self.engine.borrow_mut().get(anchor)
     }
 
-    #[allow(unused)]
-    const fn engine(&self) -> &Engine {
-        &self.engine
-    }
     fn state_exists_with_id<T: 'static>(&self, id: StorageKey) -> bool {
         match (self.id_to_key_map.get(&id), self.get_secondarymap::<T>()) {
             (Some(existing_key), Some(existing_secondary_map)) => {
@@ -131,14 +129,22 @@ impl GStateStore {
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-
+#[derive(PartialEq, Eq)]
 pub struct StateVar<T> {
     id: TopoKey,
     _phantom_data: PhantomData<T>,
 }
-impl<T> std::fmt::Debug for StateVar<T> {
+
+impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({:#?})", self.id)
+        let v = self.get_with(Clone::clone);
+        write!(f, "\u{2726} ({})", &v)
+    }
+}
+impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVar<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = self.get_with(Clone::clone);
+        f.debug_tuple("StateVar").field(&v).finish()
     }
 }
 
@@ -151,14 +157,7 @@ impl<T> Clone for StateVar<T> {
         }
     }
 }
-impl<T> StateVar<T>
-where
-    T: 'static + std::fmt::Debug + Clone,
-{
-    pub fn debug(&self, s: &str) {
-        log::debug!("{:?} StateVar({:?})", s, self.get());
-    }
-}
+
 impl<T> StateVar<T>
 where
     T: 'static,
@@ -195,6 +194,11 @@ where
     pub fn get_var_with<F: Fn(&Var<T>) -> R, R>(&self, func: F) -> R {
         read_var_with_topo_id(self.id, func)
     }
+
+    #[must_use]
+    pub fn watch(&self) -> StateAnchor<T> {
+        self.get_var_with(|v| StateAnchor(v.watch()))
+    }
 }
 
 // impl<T> From<anchors::expert::Anchor<T, anchors::singlethread::Engine>> for StateAnchor<T> {
@@ -216,17 +220,16 @@ where
 //     }
 // }
 
-pub trait CloneState<T>
+pub trait CloneStateVar<T>
 where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
 
     fn try_get(&self) -> Option<T>;
-    fn watch(&self) -> StateAnchor<T>;
 }
 
-impl<T> CloneState<T> for StateVar<T>
+impl<T> CloneStateVar<T> for StateVar<T>
 where
     T: Clone + 'static,
 {
@@ -241,81 +244,311 @@ where
     fn try_get(&self) -> Option<T> {
         clone_state_with_topo_id::<T>(self.id).map(|v| (*v.get()).clone())
     }
-    fn watch(&self) -> StateAnchor<T> {
-        self.get_var_with(|v| StateAnchor(v.watch()))
-    }
 }
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct StateAnchor<T>(Anchor<T>);
 
-impl<T> StateAnchor<T>
-where
-    T: 'static + Clone,
-{
-    #[must_use]
-    pub fn get(&self) -> T {
-        global_engine_get_anchor_val(&self.0)
+impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateAnchor<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = self.get();
+        write!(f, "\u{2693} ({})", &v)
     }
-
-    #[must_use]
-    pub fn anchor(&self) -> &Anchor<T> {
-        &self.0
-    }
-    // ────────────────────────────────────────────────────────────────────────────────
-
-    #[track_caller]
-    pub fn map<
-        Out: 'static + std::cmp::PartialEq + std::clone::Clone,
-        F: 'static + for<'any> FnMut(&'any T) -> Out,
-    >(
-        &self,
-        f: F,
-    ) -> StateAnchor<Out> {
-        self.0.map(f).into()
-    }
-    #[track_caller]
-    pub fn map_mut<
-        Out: 'static + std::cmp::PartialEq + std::clone::Clone,
-        F: 'static + for<'any> FnMut(&'any mut Out, &'any T) -> bool,
-    >(
-        &self,
-        initial: Out,
-        f: F,
-    ) -> StateAnchor<Out> {
-        self.0.map_mut(initial, f).into()
-    }
-
-    #[track_caller]
-    pub fn then<
-        Out: 'static + std::cmp::PartialEq + std::clone::Clone,
-        F: 'static + for<'any> FnMut(&'any T) -> Anchor<Out>,
-    >(
-        &self,
-        f: F,
-    ) -> StateAnchor<Out> {
-        self.0.then(f).into()
-    }
-
-    // delegate! {
-    //     to self.0 {
-    //         #[into]
-    //         pub fn map<
-    //             Out: 'static + std::cmp::PartialEq + std::clone::Clone,
-    //             F: 'static + for<'any> std::ops::FnMut<(&'any T,)> + FnOnce(&T) -> Out,
-    //          >
-    //          ( self, f: F, ) -> StateAnchor<Out>;
-    //     }
-    // }
 }
 
+impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateAnchor<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = self.get();
+        f.debug_tuple("StateAnchor").field(&v).finish()
+    }
+}
 impl<T> From<Anchor<T>> for StateAnchor<T>
 where
-    T: 'static + Clone,
+    T: 'static,
 {
     fn from(anchor: Anchor<T>) -> Self {
         Self(anchor)
     }
 }
+impl<T> From<StateAnchor<T>> for Anchor<T>
+where
+    T: 'static,
+{
+    fn from(sa: StateAnchor<T>) -> Self {
+        sa.0
+    }
+}
+
+pub trait CloneStateAnchor<T>
+where
+    T: Clone + 'static,
+{
+    fn get(&self) -> T;
+}
+impl<T> CloneStateAnchor<T> for StateAnchor<T>
+where
+    T: Clone + 'static,
+{
+    fn get(&self) -> T {
+        global_engine_get_anchor_val(&self.0)
+    }
+}
+
+//TODO remove static
+impl<T> StateAnchor<T>
+where
+    T: 'static,
+{
+    pub fn constant(val: T) -> Self {
+        Self(Anchor::constant(val))
+    }
+    #[must_use]
+    pub const fn anchor(&self) -> &Anchor<T> {
+        &self.0
+    }
+    #[must_use]
+    pub fn get_anchor(&self) -> Anchor<T> {
+        self.0.clone()
+    }
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    #[track_caller]
+    pub fn map<Out, F>(&self, f: F) -> StateAnchor<Out>
+    where
+        Out: 'static,
+        F: 'static,
+        map::Map<(Anchor<T>,), F, Out>: AnchorInner<Engine, Output = Out>,
+    {
+        self.0.map(f).into()
+    }
+    #[track_caller]
+    pub fn map_mut<Out, F>(&self, initial: Out, f: F) -> StateAnchor<Out>
+    where
+        Out: 'static,
+        F: 'static,
+        map_mut::MapMut<(Anchor<T>,), F, Out>: AnchorInner<Engine, Output = Out>,
+    {
+        self.0.map_mut(initial, f).into()
+    }
+
+    #[track_caller]
+    pub fn then<Out, F>(&self, f: F) -> StateAnchor<Out>
+    where
+        F: 'static,
+        Out: 'static,
+        then::Then<(Anchor<T>,), Out, F, Engine>: AnchorInner<Engine, Output = Out>,
+    {
+        self.0.then(f).into()
+    }
+
+    #[track_caller]
+    pub fn refmap<F, Out>(&self, f: F) -> StateAnchor<Out>
+    where
+        Out: 'static,
+        F: 'static,
+        refmap::RefMap<(Anchor<T>,), F>: AnchorInner<Engine, Output = Out>,
+    {
+        self.0.refmap(f).into()
+    }
+    #[track_caller]
+    pub fn cutoff<F, Out>(&self, f: F) -> StateAnchor<Out>
+    where
+        Out: 'static,
+        F: 'static,
+        cutoff::Cutoff<(Anchor<T>,), F>: AnchorInner<Engine, Output = Out>,
+    {
+        self.0.cutoff(f).into()
+    }
+}
+
+pub trait StateMultiAnchor: Sized {
+    type Target;
+
+    fn map<F, Out>(self, f: F) -> StateAnchor<Out>
+    where
+        Out: 'static,
+        F: 'static,
+        map::Map<Self::Target, F, Out>: AnchorInner<Engine, Output = Out>;
+
+    fn map_mut<F, Out>(self, initial: Out, f: F) -> StateAnchor<Out>
+    where
+        Out: 'static,
+        F: 'static,
+        map_mut::MapMut<Self::Target, F, Out>: AnchorInner<Engine, Output = Out>;
+
+    fn then<F, Out>(self, f: F) -> StateAnchor<Out>
+    where
+        F: 'static,
+        Out: 'static,
+        then::Then<Self::Target, Out, F, Engine>: AnchorInner<Engine, Output = Out>;
+
+    fn cutoff<F, Out>(self, _f: F) -> StateAnchor<Out>
+    where
+        Out: 'static,
+        F: 'static,
+        cutoff::Cutoff<Self::Target, F>: AnchorInner<Engine, Output = Out>;
+
+    fn refmap<F, Out>(self, _f: F) -> StateAnchor<Out>
+    where
+        Out: 'static,
+        F: 'static,
+        refmap::RefMap<Self::Target, F>: AnchorInner<Engine, Output = Out>;
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+macro_rules! impl_tuple_ext {
+    ($([$output_type:ident, $num:tt])+) => {
+        impl <$($output_type,)+ > StateAnchor<($($output_type,)+)>
+        where
+            $(
+                $output_type: Clone + PartialEq + 'static,
+            )+
+            // E: Engine,
+        {
+            #[must_use]
+            pub fn split(&self) -> ($(StateAnchor<$output_type>,)+) {
+                ($(
+                    self.0.refmap(|v| &v.$num).into(),
+                )+)
+            }
+        }
+
+        impl<$($output_type,)+ > StateMultiAnchor for ($(&StateAnchor<$output_type>,)+)
+        where
+            $(
+                $output_type: 'static,
+            )+
+            // E: Engine,
+        {
+            type Target = ($(Anchor<$output_type>,)+);
+
+            #[track_caller]
+            fn map<F, Out>(self, f: F) -> StateAnchor<Out>
+            where
+                Out: 'static,
+                F: 'static,
+                map::Map<Self::Target, F, Out>: AnchorInner<Engine, Output=Out>,
+            {
+                ($(&self.$num.0,)+).map(f).into()
+            }
+
+            #[track_caller]
+            fn map_mut<F, Out>(self, initial: Out, f: F) -> StateAnchor<Out>
+            where
+                Out: 'static,
+                F: 'static,
+                map_mut::MapMut<Self::Target, F, Out>: AnchorInner<Engine, Output=Out>,
+            {
+                ($(&self.$num.0,)+).map_mut(initial,f).into()
+            }
+
+            #[track_caller]
+            fn then<F, Out>(self, f: F) -> StateAnchor<Out>
+            where
+                F: 'static,
+                Out: 'static,
+                then::Then<Self::Target, Out, F,Engine>: AnchorInner<Engine, Output=Out>,
+            {
+                ($(&self.$num.0,)+).then(f).into()
+            }
+
+            #[track_caller]
+            fn refmap<F, Out>(self, f: F) -> StateAnchor<Out>
+            where
+                Out: 'static,
+                F: 'static,
+                refmap::RefMap<Self::Target, F>: AnchorInner<Engine, Output = Out>,
+            {
+                ($(&self.$num.0,)+).refmap(f).into()
+            }
+
+            #[track_caller]
+            fn cutoff<F, Out>(self, f: F) -> StateAnchor<Out>
+            where
+                Out: 'static,
+                F: 'static,
+                cutoff::Cutoff<Self::Target, F>: AnchorInner<Engine, Output = Out>,
+            {
+                ($(&self.$num.0,)+).cutoff(f).into()
+            }
+        }
+    }
+}
+
+impl_tuple_ext! {
+    [O0, 0]
+}
+
+impl_tuple_ext! {
+    [O0, 0]
+    [O1, 1]
+}
+
+impl_tuple_ext! {
+    [O0, 0]
+    [O1, 1]
+    [O2, 2]
+}
+
+impl_tuple_ext! {
+    [O0, 0]
+    [O1, 1]
+    [O2, 2]
+    [O3, 3]
+}
+
+impl_tuple_ext! {
+    [O0, 0]
+    [O1, 1]
+    [O2, 2]
+    [O3, 3]
+    [O4, 4]
+}
+
+impl_tuple_ext! {
+    [O0, 0]
+    [O1, 1]
+    [O2, 2]
+    [O3, 3]
+    [O4, 4]
+    [O5, 5]
+}
+
+impl_tuple_ext! {
+    [O0, 0]
+    [O1, 1]
+    [O2, 2]
+    [O3, 3]
+    [O4, 4]
+    [O5, 5]
+    [O6, 6]
+}
+
+impl_tuple_ext! {
+    [O0, 0]
+    [O1, 1]
+    [O2, 2]
+    [O3, 3]
+    [O4, 4]
+    [O5, 5]
+    [O6, 6]
+    [O7, 7]
+}
+
+impl_tuple_ext! {
+    [O0, 0]
+    [O1, 1]
+    [O2, 2]
+    [O3, 3]
+    [O4, 4]
+    [O5, 5]
+    [O6, 6]
+    [O7, 7]
+    [O8, 8]
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
+
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
 struct TopoKey {
     // pub ctx: Option<SlottedKey>,
@@ -329,8 +562,7 @@ enum StorageKey {
 }
 
 fn global_engine_get_anchor_val<O: Clone + 'static>(anchor: &Anchor<O>) -> O {
-    G_STATE_STORE
-        .with(|g_state_store_refcell| g_state_store_refcell.borrow_mut().engine_get(anchor))
+    G_STATE_STORE.with(|g_state_store_refcell| g_state_store_refcell.borrow().engine_get(anchor))
 }
 
 ///
@@ -363,7 +595,7 @@ fn insert_var_with_topo_id<T: 'static>(var: Var<T>, current_id: TopoKey) {
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
 }
 
-fn clone_state_with_topo_id<T: 'static + Clone>(id: TopoKey) -> Option<Var<T>> {
+fn clone_state_with_topo_id<T: 'static>(id: TopoKey) -> Option<Var<T>> {
     G_STATE_STORE.with(|g_state_store_refcell| {
         g_state_store_refcell
             .borrow_mut()
@@ -428,12 +660,18 @@ fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, fu
 
 #[must_use]
 #[topo::nested]
-pub fn use_state<T: 'static>(data: T) -> StateVar<T> {
+#[allow(clippy::if_not_else)]
+pub fn use_state<T>(data: T) -> StateVar<T>
+where
+    T: 'static + std::fmt::Debug,
+{
     let id = topo::CallId::current();
     let id = TopoKey { id };
 
     if !state_exists_for_topo_id::<T>(id) {
         insert_var_with_topo_id::<T>(Var::new(data), id);
+    } else {
+        panic!("this is checker:  already settled state: {:?}", &data);
     }
     StateVar::new(id)
 }
@@ -445,6 +683,7 @@ pub fn use_state<T: 'static>(data: T) -> StateVar<T> {
 #[cfg(test)]
 #[allow(unused_variables)]
 mod state_test {
+    use tracing::debug;
     use wasm_bindgen_test::*;
 
     use super::*;
@@ -467,8 +706,8 @@ mod state_test {
                 cadd.anchor().clone()
             }
         });
-        log::debug!("========================{:?}", caddc.get());
-        log::debug!("========================{:?}", cadd2c.get());
+        debug!("========================{:?}", caddc.get());
+        debug!("========================{:?}", cadd2c.get());
 
         assert_eq!(caddc.get(), 100);
         assert_eq!(cadd2c.get(), 101);

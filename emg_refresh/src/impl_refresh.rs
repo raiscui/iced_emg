@@ -3,15 +3,15 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-23 18:37:48
+ * @LastEditTime: 2021-04-03 15:13:42
  * @LastEditors: Rais
  * @Description:
  */
 use crate::RefreshFor;
 
 use crate::{RefreshUseFor, Refresher, RefresherFor};
-use emg_state::use_state::{StateAnchor, StateVar};
-use emg_state::CloneState;
+use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
+use tracing::debug;
 // ────────────────────────────────────────────────────────────────────────────────
 
 // impl<Who> RefreshUseFor<Who> for AnchorWithUpdater<Who>
@@ -33,7 +33,7 @@ pub auto trait RefreshUseNoWarper {}
 impl<Who> !RefreshWhoNoWarper for StateVar<Who> {}
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Use> !RefreshUseNoWarper for Vec<Use> {}
+// impl<Use> !RefreshUseNoWarper for Vec<Use> {}
 impl<Use> !RefreshUseNoWarper for Box<Use> {}
 impl<Use> !RefreshUseNoWarper for Rc<Use> {}
 impl<Use> !RefreshUseNoWarper for StateVar<Use> {}
@@ -53,9 +53,11 @@ impl<'a, Use> !RefreshUseNoWarper for Refresher<'a, Use> {}
 //         }
 //     }
 // }
+// impl RefreshUseNoWarper for Vec<u8> {}
 impl<Who, Use> RefreshFor<Who> for Vec<Use>
 where
     Who: RefreshWhoNoWarper,
+
     Use: RefreshUseNoWarper + RefreshFor<Who>,
 {
     fn refresh_for(&self, who: &mut Who) {
@@ -80,7 +82,7 @@ where
     Use: RefreshUseNoWarper + RefreshFor<Who>,
 {
     fn refresh_for(&self, who: &mut Who) {
-        who.refresh_use(self);
+        who.refresh_use(self.as_ref());
     }
 }
 
@@ -90,7 +92,7 @@ where
     Use: RefreshUseNoWarper + RefreshFor<Who>,
 {
     fn refresh_for(&self, who: &mut StateVar<Who>) {
-        log::debug!("==========refresh_for StateVar");
+        debug!("==========refresh_for StateVar");
         let mut w = who.get();
         w.refresh_use(self);
         who.set(w);
