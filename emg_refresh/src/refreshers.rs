@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-03-23 18:22:00
+ * @LastEditTime: 2021-04-03 15:06:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -90,8 +90,6 @@ pub trait RefreshFor<Who> {
 #[allow(unused_variables)]
 mod updater_test {
 
-    use std::ops::Deref;
-
     // use crate::CloneState;
     use crate::RefreshFor;
     use crate::RefreshUseFor;
@@ -112,7 +110,7 @@ mod updater_test {
 
         #[allow(unused)]
         use anchors::singlethread::*;
-        use emg_state::CloneState;
+        use emg_state::CloneStateVar;
 
         use emg_state::use_state;
 

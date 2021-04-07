@@ -158,6 +158,7 @@ where
 pub struct NodeBuilderWidget<'a, Message> {
     //TODO : instead use GElement
     widget: Rc<dyn NodeBuilder<Message> + 'a>,
+    //TODO use vecdeque
     event_callbacks: Vector<EventNode<Message>>,
 }
 

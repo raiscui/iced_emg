@@ -1,23 +1,27 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-03-23 17:34:36
+ * @LastEditTime: 2021-04-05 10:46:09
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{runtime::Element, GElement, NodeBuilderWidget};
+pub use emg::EdgeIndex;
 pub use emg::Graph;
 pub use emg::NodeIndex;
-use emg::Outgoing;
-use emg_layout::EdgeItem;
+use emg::{Edge, Outgoing};
+use emg_layout::{EdgeData, EdgeData, EdgeItemNode};
 use emg_refresh::RefreshUseFor;
-use std::convert::TryInto;
-use std::{convert::TryFrom, hash::Hash};
+use emg_state::StateVar;
+use std::{
+    convert::{TryFrom, TryInto},
+    hash::Hash,
+};
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub type N<'a, Message> = GElement<'a, Message>;
 // pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
-pub type E = EdgeItem;
+pub type E = EdgeItemNode;
 pub type GraphType<'a, Message> = Graph<N<'a, Message>, E>;
 
 pub trait GraphView<'a, Message> {
@@ -25,11 +29,15 @@ pub trait GraphView<'a, Message> {
     type Ix;
     type E;
 
-    fn gelement_comb_and_refresh(
+    fn gelement_refresh_and_comb(
         &self,
         cix: &Self::Ix,
+        opt_parent_e: Option<Self::E>,
+        opt_eix: Option<&EdgeIndex<Self::Ix>>,
         // current_node: &RefCell<GElement<'a, Message>>,
-    ) -> GElement<'a, Message>;
+    ) -> GElement<'a, Message>
+    where
+        <Self as GraphView<'a, Message>>::Ix: Clone + Hash + Eq;
 
     fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>>;
 
@@ -37,21 +45,37 @@ pub trait GraphView<'a, Message> {
     // fn global_view(ix: Self::Ix) -> Element<'a, Message>;
 }
 
-impl<'a, Message, E, Ix> GraphView<'a, Message> for Graph<N<'a, Message>, E, Ix>
+impl<'a, Message, Ix> GraphView<'a, Message> for Graph<N<'a, Message>, E, Ix>
 where
     Ix: Clone + Hash + Eq + std::fmt::Debug,
-    E: Clone + std::fmt::Debug,
+    // E: Clone + std::fmt::Debug,
     Message: 'static + Clone + std::fmt::Debug,
 {
     type Ix = Ix;
     type N = N<'a, Message>;
     type E = E;
 
-    fn gelement_comb_and_refresh(
+    fn gelement_refresh_and_comb(
         &self,
-        cix: &Self::Ix, // current_node: &RefCell<GElement<'a, Message>>,
+        cix: &Self::Ix,
+        opt_parent_e: Option<Self::E>,
+        edge_for_cix: &Edge<Self::E, Self::Ix>,
+        // current_node: &RefCell<GElement<'a, Message>>,
     ) -> GElement<'a, Message> {
         // buildingTime original GElement
+        let opt_edge_item = edge_for_cix.
+        if let Some(e) = opt_edge_item {
+            match e {
+                EdgeItemNode::EdgeData(ed) => {
+                    let layout = &mut ed.layout;
+                    //TODO more humanization
+                    let parent_e = opt_parent_e.unwrap();
+                    let pwe
+                }
+                EdgeItemNode::String(_) => {}
+                EdgeItemNode::Empty => {}
+            }
+        }
         let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();
 
         let mut children_s = self.children_to_elements(cix);
@@ -89,29 +113,25 @@ where
                     old_gel
                 }
             }
-
-            // if let Ok(node_builder_widget) =
-            //     current_node_clone.try_convert_inside_to_node_builder_widget_()
-            // {
-            //     for event_callback in event_callbacks {
-            //         node_builder_widget.refresh_use(&event_callback)
-            //     }
-            // }
         }
     }
 
     fn children_to_elements(&self, cix: &Self::Ix) -> Vec<GElement<'a, Message>> {
         self.edges_iter_use_ix(cix, Outgoing)
             .map(|eix| {
-                let this_child_ix = eix.ix_dir(Outgoing);
+                let this_child_ix = eix.ix_by_dir(Outgoing);
                 // let a_child = self.get_node_weight_use_ix(child_ix).unwrap();
-                self.gelement_comb_and_refresh(this_child_ix)
+                self.gelement_refresh_and_comb(this_child_ix, Some(eix))
             })
             .collect()
     }
 
     fn view(&self, cix: Self::Ix) -> Element<'a, Message> {
-        self.gelement_comb_and_refresh(&cix).try_into().unwrap()
+        let root_edge = self.root_edge().as_ref().unwrap();
+        //TODO: get cix get  and edgeitem
+        self.gelement_refresh_and_comb(&cix, None)
+            .try_into()
+            .unwrap()
     }
 
     // fn global_view(cix: Self::Ix) -> Element<'a, Message> {

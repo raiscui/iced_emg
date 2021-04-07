@@ -6,6 +6,7 @@
 #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
+// #![feature(trivial_bounds)]
 
 mod impl_refresh;
 mod refresh_use;

@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 log = "0.4"
 emg_state = { path = "../emg_state" }
+tracing = { version = "^0.1" }
 
 [dev-dependencies]
 console_log = { version = "0.2", features = ["color"] }

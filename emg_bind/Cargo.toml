@@ -43,6 +43,10 @@ iced_style = { path = "../../iced/style" }
 derive_more = "0.99.11"
 delegate = "0.5.1"
 
+
+tracing = { version = "^0.1" }
+
+
 # [patch.crates-io]
 # dodrio={path="../../dodrio"}
 
