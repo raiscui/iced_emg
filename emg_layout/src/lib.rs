@@ -535,7 +535,7 @@ where
 
         let paths = StateAnchor::constant(Dict::unit(EPath::<Ix>::default(), EdgeItemNode::Empty));
 
-        let node: StateAnchor<Dict<EPath<Ix>, EdgeItemNode>> = paths.map_(move |k, v| {
+        let node: StateAnchor<Dict<EPath<Ix>, EdgeItemNode>> = paths.map_(move |_k, _v| {
             EdgeItemNode::EdgeData(EdgeData {
                 calculated: layout_calculated.clone(),
                 styles_string: styles_string.clone(),
@@ -753,7 +753,7 @@ mod tests {
     use emg_refresh::RefreshUseFor;
     use im::vector;
     use seed_styles::CssWidth;
-    use styles::{pc, CssWidthTrait};
+    use styles::pc;
     use tracing::info;
 
     use tracing_flame::FlameLayer;
@@ -787,7 +787,7 @@ mod tests {
         _guard
     }
 
-    fn init() {
+    fn _init() {
         let _el = env_logger::try_init();
 
         let _subscriber = tracing_subscriber::fmt()
@@ -831,7 +831,7 @@ mod tests {
                         .collect()
                 });
 
-            let mut e1 = EmgEdgeItem::new_child(
+            let e1 = EmgEdgeItem::new_child(
                 EdgeIndex::new("root", "e1"),
                 path_root.clone(),
                 size(px(50), px(50)),
@@ -928,9 +928,6 @@ mod tests {
             let _guard = span.enter();
 
             info!("--------------------=====================================");
-            let p = px(11);
-            let s = s();
-            let ff = s.w(p);
             // vec![ CssWidth::from(px(100))].up
             info!("=========================================================");
 
