@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-04-03 17:02:09
+ * @LastEditTime: 2021-04-07 16:14:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ pub use seed_styles as styles;
 use styles::{CssHeight, CssValueTrait, CssWidth, Style, UpdateStyle};
 use tracing::{debug, trace_span};
 
-use crate::{Css, EdgeData, EdgeItem, GenericWH, Layout};
+use crate::{Css, EdgeData, EdgeItemNode, EmgEdgeItem, GenericWH, Layout};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -31,33 +31,38 @@ use crate::{Css, EdgeData, EdgeItem, GenericWH, Layout};
 //         }
 //     }
 // }
-impl RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>> {
+//TODO lifetime
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Vec<Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>>
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+{
     #[track_caller]
-    fn refresh_for(&self, who: &mut EdgeItem) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         for i in self {
-            // let ii = i.as_ref();
             let _g = trace_span!(
                 "-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
             )
             .entered();
+            // let ii = i.as_ref();
             who.refresh_use(i.as_ref());
         }
     }
 }
-impl RefreshFor<EdgeData> for Vec<Box<(dyn RefreshFor<EdgeData> + 'static)>> {
-    #[track_caller]
-    fn refresh_for(&self, who: &mut EdgeData) {
-        panic!("!!!!!!");
-        // for i in self {
-        //     // let ii = i.as_ref();
-        //     who.refresh_use(i.as_ref());
-        // }
-    }
-}
+// impl RefreshFor<EdgeData> for Vec<Box<(dyn RefreshFor<EdgeData> + 'static)>> {
+//     #[track_caller]
+//     fn refresh_for(&self, _who: &mut EdgeData) {
+//         panic!("!!!!!!");
+//         // for i in self {
+//         //     // let ii = i.as_ref();
+//         //     who.refresh_use(i.as_ref());
+//         // }
+//     }
+// }
 #[track_caller]
-fn css_refresh_edgedata<Use>(css: &Css<Use>, ed: &EdgeData)
+fn css_refresh_edgedata<Use, Ix>(css: &Css<Use>, ed: &EmgEdgeItem<Ix>)
 where
     Use: CssValueTrait + std::clone::Clone,
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     let _g = trace_span!("-> css_refresh_edgedata").entered();
 
@@ -100,49 +105,48 @@ where
     }
 }
 
-impl<Use> RefreshFor<EdgeItem> for Css<Use>
+impl<Use, Ix> RefreshFor<EmgEdgeItem<Ix>> for Css<Use>
 where
     Use: CssValueTrait + std::clone::Clone,
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EdgeItem) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let _g = trace_span!("-> RefreshFor<EdgeItem> for Css<Use>").entered();
-
-        let ed = who.as_current_edge_data().unwrap();
-
-        css_refresh_edgedata(self, ed);
-    }
-}
-impl RefreshWhoNoWarper for EdgeItem {}
-impl<Who, Use> RefreshFor<Option<Who>> for Css<Use>
-where
-    Use: CssValueTrait + std::clone::Clone,
-    Css<Use>: RefreshFor<Who>,
-{
-    #[track_caller]
-    fn refresh_for(&self, who: &mut Option<Who>) {
-        let _g = trace_span!("-> RefreshFor<Option<Who>> for Css<Use>").entered();
-
-        who.as_mut().unwrap().refresh_use(self);
-    }
-}
-impl<Use> RefreshFor<EdgeData> for Css<Use>
-where
-    Use: CssValueTrait + std::clone::Clone,
-{
-    #[track_caller]
-    fn refresh_for(&self, who: &mut EdgeData) {
-        debug!("refresh_for : CssValueTrait:{}", &self.0);
 
         css_refresh_edgedata(self, who);
     }
 }
+// impl RefreshWhoNoWarper for EdgeItemNode {}
+// impl<Who, Use> RefreshFor<Option<Who>> for Css<Use>
+// where
+//     Use: CssValueTrait + std::clone::Clone,
+//     Css<Use>: RefreshFor<Who>,
+// {
+//     #[track_caller]
+//     fn refresh_for(&self, who: &mut Option<Who>) {
+//         let _g = trace_span!("-> RefreshFor<Option<Who>> for Css<Use>").entered();
 
-impl RefreshFor<EdgeData> for Style {
-    fn refresh_for(&self, who: &mut EdgeData) {
-        who.other_styles.set(self.clone());
-    }
-}
+//         who.as_mut().unwrap().refresh_use(self);
+//     }
+// }
+// impl<Use> RefreshFor<EdgeData> for Css<Use>
+// where
+//     Use: CssValueTrait + std::clone::Clone,
+// {
+//     #[track_caller]
+//     fn refresh_for(&self, who: &mut EdgeData) {
+//         debug!("refresh_for : CssValueTrait:{}", &self.0);
+
+//         css_refresh_edgedata(self, who);
+//     }
+// }
+
+// impl RefreshFor<EdgeData> for Style {
+//     fn refresh_for(&self, who: &mut EdgeData) {
+//         who.path_styles.set(self.clone());
+//     }
+// }
 // impl RefreshFor<EdgeData> for Style {
 //     fn refresh_for(&self, who: &mut EdgeData) {
 //         who.ed_output
@@ -150,8 +154,8 @@ impl RefreshFor<EdgeData> for Style {
 //             .set_with(|s| s.clone().custom_style(self.clone()));
 //     }
 // }
-impl RefreshFor<EdgeData> for Layout {
-    fn refresh_for(&self, who: &mut EdgeData) {
-        who.layout = self.clone();
-    }
-}
+// impl RefreshFor<EdgeData> for Layout {
+//     fn refresh_for(&self, who: &mut EdgeData) {
+//         who.layout = self.clone();
+//     }
+// }

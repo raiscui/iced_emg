@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-04-05 16:07:11
+ * @LastEditTime: 2021-04-07 09:48:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -430,6 +430,7 @@ macro_rules! impl_tuple_ext {
             // E: Engine,
         {
             #[must_use]
+            #[track_caller]
             pub fn split(&self) -> ($(StateAnchor<$output_type>,)+) {
                 ($(
                     self.0.refmap(|v| &v.$num).into(),
@@ -688,7 +689,7 @@ fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, fu
 #[allow(clippy::if_not_else)]
 pub fn use_state<T>(data: T) -> StateVar<T>
 where
-    T: 'static + std::fmt::Debug,
+    T: 'static,
 {
     let id = topo::CallId::current();
     let id = TopoKey { id };
@@ -696,7 +697,7 @@ where
     if !state_exists_for_topo_id::<T>(id) {
         insert_var_with_topo_id::<T>(Var::new(data), id);
     } else {
-        panic!("this is checker:  already settled state: {:?}", &data);
+        panic!("this is checker:  already settled state");
     }
     StateVar::new(id)
 }

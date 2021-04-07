@@ -10,7 +10,7 @@ pub use emg::EdgeIndex;
 pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::{Edge, Outgoing};
-use emg_layout::{EdgeData, EdgeDataWithParent, EdgeItem};
+use emg_layout::{EdgeData, EdgeData, EdgeItemNode};
 use emg_refresh::RefreshUseFor;
 use emg_state::StateVar;
 use std::{
@@ -21,7 +21,7 @@ use std::{
 
 pub type N<'a, Message> = GElement<'a, Message>;
 // pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
-pub type E = EdgeItem;
+pub type E = EdgeItemNode;
 pub type GraphType<'a, Message> = Graph<N<'a, Message>, E>;
 
 pub trait GraphView<'a, Message> {
@@ -66,14 +66,14 @@ where
         let opt_edge_item = edge_for_cix.
         if let Some(e) = opt_edge_item {
             match e {
-                EdgeItem::EdgeDataWithParent(ed) => {
+                EdgeItemNode::EdgeData(ed) => {
                     let layout = &mut ed.layout;
                     //TODO more humanization
                     let parent_e = opt_parent_e.unwrap();
                     let pwe
                 }
-                EdgeItem::String(_) => {}
-                EdgeItem::Empty => {}
+                EdgeItemNode::String(_) => {}
+                EdgeItemNode::Empty => {}
             }
         }
         let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone();

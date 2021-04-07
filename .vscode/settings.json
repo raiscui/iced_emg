@@ -1,17 +1,17 @@
 {
     "workbench.colorCustomizations": {
-        "activityBar.activeBackground": "#7c4359",
-        "activityBar.activeBorder": "#1e2916",
-        "activityBar.background": "#7c4359",
-        "activityBar.foreground": "#e7e7e7",
-        "activityBar.inactiveForeground": "#e7e7e799",
-        "activityBarBadge.background": "#1e2916",
-        "activityBarBadge.foreground": "#e7e7e7",
-        "editorGroup.border": "#7c4359",
-        "panel.border": "#7c4359",
-        "sideBar.border": "#7c4359"
+        "activityBar.activeBackground": "#c160a6",
+        "activityBar.activeBorder": "#b2c975",
+        "activityBar.background": "#c160a6",
+        "activityBar.foreground": "#15202b",
+        "activityBar.inactiveForeground": "#15202b99",
+        "activityBarBadge.background": "#b2c975",
+        "activityBarBadge.foreground": "#15202b",
+        "editorGroup.border": "#c160a6",
+        "panel.border": "#c160a6",
+        "sideBar.border": "#c160a6"
     },
-    "peacock.color": "#5b3141",
+    "peacock.color": "#ab438e",
     "git.ignoreLimitWarning": true,
     "cSpell.words": [
         "elems",

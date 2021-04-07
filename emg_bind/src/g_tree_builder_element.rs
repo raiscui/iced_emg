@@ -8,7 +8,7 @@
 use std::{borrow::Borrow, ops::Deref};
 
 use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
-use emg_layout::{edge_item_data_with_parent, EdgeData, EdgeDataWithParent, EdgeItem};
+use emg_layout::{edge_item_data_with_parent, EdgeData, EdgeData, EdgeItemNode};
 use emg_refresh::{RefreshFor, RefreshUseFor};
 use emg_state::{topo, use_state, StateVar};
 use std::rc::Rc;
@@ -17,13 +17,13 @@ use tracing::{instrument, trace, trace_span};
 pub enum GTreeBuilderElement<'a, Message> {
     Layer(
         String,
-        Vec<Box<dyn RefreshFor<EdgeItem>>>,
+        Vec<Box<dyn RefreshFor<EdgeItemNode>>>,
         Vec<GTreeBuilderElement<'a, Message>>,
     ),
     El(String, Element<'a, Message>),
     GElementTree(
         String,
-        Vec<Box<dyn RefreshFor<EdgeItem>>>,
+        Vec<Box<dyn RefreshFor<EdgeItemNode>>>,
         GElement<'a, Message>,
         Vec<GTreeBuilderElement<'a, Message>>,
     ),
@@ -82,7 +82,7 @@ impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
 ///
 /// Will panic if `tree_layer` is not `GTreeBuilderElement::Layer`
 
-type IllicitTreeBuildEnv = (NodeIndex<String>, StateVar<Option<EdgeItem>>);
+type IllicitTreeBuildEnv = (NodeIndex<String>, StateVar<Option<EdgeItemNode>>);
 
 #[topo::nested]
 pub fn handle_root<'a, Message>(
@@ -96,7 +96,7 @@ pub fn handle_root<'a, Message>(
             let _span = trace_span!("=> handle_root [layer] ",%id).entered();
             trace!("{:?}==>{:?}", &id, &children_list);
 
-            let e = EdgeItem::new_root(1920, 1080);
+            let e = EdgeItemNode::new_root(1920, 1080);
             e.refresh_use(edge_refreshers);
 
             let nix = g.insert_root(id.clone(), Layer::new(id).into(), e.clone());
