@@ -21,6 +21,7 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 use derive_more::TryInto;
+use emg::node_index;
 use emg::EdgeIndex;
 use emg_refresh::RefreshFor;
 use emg_state::{
@@ -440,7 +441,30 @@ where
     // no self  first try
     pub node: StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>, //TODO with self?  not with self?
 }
-
+impl<
+        Ix: 'static
+            + Clone
+            + Hash
+            + Eq
+            + PartialEq
+            + PartialOrd
+            + Ord
+            + std::default::Default
+            + std::fmt::Display,
+    > std::fmt::Display for EmgEdgeItem<Ix>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let x = format!(
+            "id:{{\n{};\n}}\npaths:{{\n{};\n}}\nlayout:{{\n{};\n}}\nother_styles:{{\n{};\n}}\nnode:{{\n{};\n}}",
+            indented(&self.id),
+            indented(DictDisplay(self.paths.get())),
+            indented(&self.layout),
+            indented(&self.other_styles),
+            indented(DictDisplay(self.node.get()))
+        );
+        write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
+    }
+}
 impl<Ix> EmgEdgeItem<Ix>
 where
     Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display,
@@ -625,30 +649,6 @@ where
             other_styles: other_styles_sv,
             node,
         }
-    }
-}
-
-impl<
-        Ix: 'static
-            + Clone
-            + Hash
-            + Eq
-            + PartialEq
-            + PartialOrd
-            + Ord
-            + std::default::Default
-            + std::fmt::Display,
-    > std::fmt::Display for EmgEdgeItem<Ix>
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x = format!(
-            "id:{{\n{};\n}}\nlayout:{{\n{};\n}}\nother_styles:{{\n{};\n}}\nnode:{{\n{};\n}}",
-            indented(&self.id),
-            indented(&self.layout),
-            indented(&self.other_styles),
-            indented(DictDisplay(self.node.get()))
-        );
-        write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
     }
 }
 
@@ -1169,73 +1169,162 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn change_parent() {
-    //     init();
-    //     let e = EmgEdgeItem::new_root(100, 100);
-    //     let e2 = EmgEdgeItem::new_root(200, 200);
-    //     let ec = EmgEdgeItem::new_child(
-    //         "e1",
-    //         use_state(Some(e.clone())),
-    //         size(px(10), px(10)),
-    //         origin2(pc(0), pc(0)),
-    //         align2(pc(50), pc(50)),
-    //     );
-    //     let ec2 = EmgEdgeItem::new_child(
-    //         "e2",
-    //         use_state(Some(ec.clone())),
-    //         size(px(10), px(10)),
-    //         origin2(pc(0), pc(0)),
-    //         align2(pc(100), pc(000)),
-    //     );
+    #[test]
+    fn change_parent() {
+        let _xx = setup_global_subscriber();
+        {
+            let _g = span!(Level::TRACE, "change_parent").entered();
 
-    //     assert_eq!(
-    //         ec.as_current_edge_data()
-    //             .unwrap()
-    //             .calculated
-    //             .coordinates_trans
-    //             .get(),
-    //         Trans3::new(50.0, 50.0, 0.)
-    //     );
+            let root_e = EmgEdgeItem::new_root("root", 100, 100);
+            let parent_for_e1_sa = use_state(root_e.clone());
+            let paths_e1: StateAnchor<Dict<EPath<&str>, EdgeItemNode>> =
+                parent_for_e1_sa.watch().then(|e| {
+                    (&e.id.watch(), &e.node)
+                        .map(
+                            |id: &EdgeIndex<&str>, x: &Dict<EPath<&str>, EdgeItemNode>| {
+                                let _span = span!(
+                                    Level::TRACE,
+                                    "[ root_e.node change, path_root rebuild ]"
+                                )
+                                .entered();
 
-    //     ec.as_edge_data_with_parent()
-    //         .unwrap()
-    //         .parent
-    //         .set(Some(e2.clone()));
-    //     assert_eq!(
-    //         ec.as_current_edge_data()
-    //             .unwrap()
-    //             .calculated
-    //             .coordinates_trans
-    //             .get(),
-    //         Trans3::new(100.0, 100.0, 0.)
-    //     );
-    //     // ─────────────────────────────────────────────────────────────────
-    //     //local
-    //     assert_eq!(
-    //         ec2.as_current_edge_data()
-    //             .unwrap()
-    //             .calculated
-    //             .coordinates_trans
-    //             .get(),
-    //         Trans3::new(10.0, 00.0, 0.)
-    //     );
+                                x.iter()
+                                    .map(|(k, v)| {
+                                        let mut nk = k.clone();
+                                        nk.0.push_back(*id);
+                                        (nk, v.clone())
+                                    })
+                                    .collect()
+                            },
+                        )
+                        .into()
+                });
 
-    //     ec2.as_edge_data_with_parent()
-    //         .unwrap()
-    //         .parent
-    //         .set(Some(e.clone()));
+            let root_e2 = EmgEdgeItem::new_root("root2", 200, 200);
+            let root_e2_sa = use_state(root_e2.clone());
+            let path_root2: StateAnchor<Dict<EPath<&str>, EdgeItemNode>> =
+                root_e2_sa.watch().then(|e| {
+                    (&e.id.watch(), &e.node)
+                        .map(
+                            |id: &EdgeIndex<&str>, x: &Dict<EPath<&str>, EdgeItemNode>| {
+                                let _span = span!(
+                                    Level::TRACE,
+                                    "[ root_e.node change, path_root rebuild ]"
+                                )
+                                .entered();
 
-    //     // local use root
-    //     assert_eq!(
-    //         ec2.as_current_edge_data()
-    //             .unwrap()
-    //             .calculated
-    //             .coordinates_trans
-    //             .get(),
-    //         Trans3::new(100.0, 0.0, 0.)
-    //     );
-    // }
+                                x.iter()
+                                    .map(|(k, v)| {
+                                        let mut nk = k.clone();
+                                        nk.0.push_back(*id);
+                                        (nk, v.clone())
+                                    })
+                                    .collect()
+                            },
+                        )
+                        .into()
+                });
+
+            let e1 = EmgEdgeItem::new_child(
+                EdgeIndex::new("root", "e1"),
+                paths_e1.clone(),
+                size(px(10), px(10)),
+                origin2(pc(0), pc(0)),
+                align2(pc(50), pc(50)),
+            );
+
+            let parent_for_e2_sa = use_state(e1.clone());
+
+            let paths_e2: StateAnchor<Dict<EPath<&str>, EdgeItemNode>> =
+                parent_for_e2_sa.watch().then(|e| {
+                    (&e.id.watch(), &e.node)
+                        .map(
+                            |id: &EdgeIndex<&str>, path: &Dict<EPath<&str>, EdgeItemNode>| {
+                                let _span = span!(
+                                    Level::TRACE,
+                                    "[ (&e1.id.watch(), &e1.node) change, path_e1 rebuild ]"
+                                )
+                                .entered();
+
+                                path.iter()
+                                    .map(|(k, v)| {
+                                        let mut nk = k.clone();
+                                        nk.0.push_back(*id);
+                                        (nk, v.clone())
+                                    })
+                                    .collect()
+                            },
+                        )
+                        .into()
+                });
+
+            let e2 = EmgEdgeItem::new_child(
+                EdgeIndex::new("e1", "e2"),
+                paths_e2.clone(),
+                size(px(10), px(10)),
+                origin2(pc(0), pc(0)),
+                align2(pc(100), pc(000)),
+            );
+
+            assert_eq!(
+                e1.get_edge_data(&EPath(vector![EdgeIndex::new("root", "root")]))
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Trans3::new(50.0, 50.0, 0.)
+            );
+            // @setup end────────────────────────────────────────────────────────────────────────────────
+            // ────────────────────────────────────────────────────────────────────────────────
+
+            e1.id
+                .set_with(|id| id.clone().use_incoming(node_index("root2")));
+            parent_for_e1_sa.set(root_e2.clone());
+            assert_eq!(
+                e1.get_edge_data(&EPath(vector![EdgeIndex::new("root2", "root2"),]))
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Trans3::new(100.0, 100.0, 0.)
+            );
+            // ─────────────────────────────────────────────────────────────────
+            info!("..=========================================================");
+            trace!("new root_e2:e1 {}", &e1);
+            info!("--------------------------------------------------");
+            trace!("new root_e2:e2 {}", &e2);
+            info!("..=========================================================");
+            //local
+            assert_eq!(e2.id.get(), EdgeIndex::new("e1", "e2"));
+            assert_eq!(
+                e2.get_edge_data(&EPath(vector![
+                    EdgeIndex::new("root2", "root2"),
+                    EdgeIndex::new("root2", "e1")
+                ]))
+                .unwrap()
+                .calculated
+                .coordinates_trans
+                .get(),
+                Trans3::new(10.0, 00.0, 0.)
+            );
+
+            e2.id
+                .set_with(|id| id.clone().use_incoming(node_index("root")));
+            parent_for_e2_sa.set(root_e.clone());
+            // local use root
+            assert_eq!(e2.id.get(), EdgeIndex::new("root", "e2"));
+            assert_eq!(
+                e2.get_edge_data(&EPath(vector![EdgeIndex::new("root", "root"),]))
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Trans3::new(100.0, 0.0, 0.)
+            );
+            trace!("re new root:e2 {}", &e2);
+            info!("..=========================================================");
+        }
+    }
     // #[test]
     // #[should_panic]
     // fn change_child_p_to_none() {
