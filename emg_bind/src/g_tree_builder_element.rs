@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-04-03 17:54:31
+ * @LastEditTime: 2021-04-09 12:15:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -136,6 +136,7 @@ pub fn handle_children<'a, Message>(
             let nix = g.insert_node(id.clone(), Layer::new(id).into());
 
             // edge
+
             let mut e = edge_item_data_with_parent(id.clone(), parent_sv);
             e.refresh_use(edge_refreshers);
 

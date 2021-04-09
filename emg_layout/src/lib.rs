@@ -684,19 +684,19 @@ impl EdgeItemNode {
     }
 }
 
-// #[topo::nested]
-// pub fn edge_item_data_with_parent(
-//     id: impl Into<String>,
-//     parent_edge_item_sv: StateVar<Option<EdgeItemNode>>,
-// ) -> EdgeItemNode {
-//     EdgeItemNode::new_child(
-//         id,
-//         parent_edge_item_sv, //TODO maybe use Rc instead of clone?
-//         size(px(10), px(10)),
-//         origin2(pc(0), pc(0)),
-//         align2(pc(0), pc(0)),
-//     )
-// }
+#[topo::nested]
+pub fn emg_edge_item_default<Ix>(
+    eix: EdgeIndex<Ix>,
+    paths_sa: StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>,
+) -> EmgEdgeItem<Ix> {
+    EmgEdgeItem::new_child(
+        eix,
+        paths_sa.clone(),
+        size(px(16), px(16)),
+        origin2(pc(0), pc(0)),
+        align2(pc(0), pc(0)),
+    )
+}
 
 impl Default for EdgeItemNode {
     fn default() -> Self {
@@ -1201,29 +1201,6 @@ mod tests {
                 });
 
             let root_e2 = EmgEdgeItem::new_root("root2", 200, 200);
-            let root_e2_sa = use_state(root_e2.clone());
-            let path_root2: StateAnchor<Dict<EPath<&str>, EdgeItemNode>> =
-                root_e2_sa.watch().then(|e| {
-                    (&e.id.watch(), &e.node)
-                        .map(
-                            |id: &EdgeIndex<&str>, x: &Dict<EPath<&str>, EdgeItemNode>| {
-                                let _span = span!(
-                                    Level::TRACE,
-                                    "[ root_e.node change, path_root rebuild ]"
-                                )
-                                .entered();
-
-                                x.iter()
-                                    .map(|(k, v)| {
-                                        let mut nk = k.clone();
-                                        nk.0.push_back(*id);
-                                        (nk, v.clone())
-                                    })
-                                    .collect()
-                            },
-                        )
-                        .into()
-                });
 
             let e1 = EmgEdgeItem::new_child(
                 EdgeIndex::new("root", "e1"),

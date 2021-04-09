@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-04-08 10:24:29
+ * @LastEditTime: 2021-04-09 11:25:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -141,6 +141,7 @@ impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
         write!(f, "\u{2726} ({})", &v)
     }
 }
+
 impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVar<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let v = self.get_with(Clone::clone);
@@ -296,12 +297,14 @@ where
 pub use anchors::collections::ord_map::Dict;
 
 impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> StateAnchor<Dict<K, V>> {
+    #[track_caller]
     pub fn filter<F: FnMut(&K, &V) -> bool + 'static>(&self, mut f: F) -> Self {
         self.0
             .filter_map(move |k, v| if f(k, v) { Some(v.clone()) } else { None })
             .into()
     }
 
+    #[track_caller]
     pub fn map_<F: FnMut(&K, &V) -> T + 'static, T: Clone + PartialEq + 'static>(
         &self,
         mut f: F,
@@ -310,6 +313,7 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
     }
 
     /// FOOBAR
+    #[track_caller]
     pub fn filter_map<F: FnMut(&K, &V) -> Option<T> + 'static, T: Clone + PartialEq + 'static>(
         &self,
         f: F,
