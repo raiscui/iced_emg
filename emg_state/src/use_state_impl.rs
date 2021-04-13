@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-04-09 11:25:03
+ * @LastEditTime: 2021-04-13 11:35:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,6 +12,7 @@ use anchors::{
 };
 use anymap::any::Any;
 use std::{cell::RefCell, clone::Clone, collections::HashMap, marker::PhantomData};
+use tracing::trace_span;
 // use delegate::delegate;
 use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
 
@@ -40,7 +41,26 @@ impl Default for GStateStore {
 
 impl GStateStore {
     fn engine_get<O: Clone + 'static>(&self, anchor: &Anchor<O>) -> O {
-        self.engine.borrow_mut().get(anchor)
+        let _g = trace_span!("-> enging_get", "type: {}", &std::any::type_name::<O>()).entered();
+        self.engine.try_borrow_mut().map_or_else(
+            |err| {
+                panic!(
+                    "can't borrow_mut engine err: {} , for anchor type: {}",
+                    &err,
+                    &std::any::type_name::<O>()
+                )
+            },
+            |mut e| {
+                let _gg = trace_span!(
+                    "-> enging_get:engine borrow_muted , now getting.. ",
+                    "type: {}",
+                    &std::any::type_name::<O>()
+                )
+                .entered();
+
+                e.get(anchor)
+            },
+        )
     }
 
     fn state_exists_with_id<T: 'static>(&self, id: StorageKey) -> bool {
@@ -134,17 +154,22 @@ pub struct StateVar<T> {
     id: TopoKey,
     _phantom_data: PhantomData<T>,
 }
-
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
+    default fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = self.get();
+        write!(f, "\u{2726} ({})", &v)
+    }
+}
+impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<StateAnchor<T>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let v = self.get_with(Clone::clone);
+        let v = self.get();
         write!(f, "\u{2726} ({})", &v)
     }
 }
 
 impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVar<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let v = self.get_with(Clone::clone);
+        let v = self.get();
         f.debug_tuple("StateVar").field(&v).finish()
     }
 }
@@ -156,6 +181,19 @@ impl<T> Clone for StateVar<T> {
             id: self.id,
             _phantom_data: PhantomData::<T>,
         }
+    }
+}
+
+impl<T> StateVar<StateAnchor<T>>
+where
+    T: 'static + std::clone::Clone,
+{
+    #[must_use]
+    pub fn get(&self) -> T {
+        get_anchor_val_in_var_with_topo_id::<T>(self.id)
+    }
+    pub fn get_inner_anchor(&self) -> StateAnchor<T> {
+        self.get_with(std::clone::Clone::clone)
     }
 }
 
@@ -172,18 +210,21 @@ where
     }
 
     // stores a value of type T in a backing Store
-    pub fn set(self, value: T) {
+    pub fn set(&self, value: T) {
         set_state_with_topo_id::<T>(value, self.id);
     }
 
     /// `set_with` Fn(&T) -> T
     /// `G_STATE_STORE`  only use once to set, get.
-    pub fn set_with<F: Fn(&T) -> T>(self, func: F) {
+    pub fn set_with<F: Fn(&T) -> T>(&self, func: F) {
         read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func(var.get().as_ref())))
+    }
+    pub fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
+        read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func_once(var.get().as_ref())))
     }
 
     #[must_use]
-    pub fn state_exists(self) -> bool {
+    pub fn state_exists(&self) -> bool {
         state_exists_for_topo_id::<T>(self.id)
     }
 
@@ -328,7 +369,7 @@ where
     T: 'static,
 {
     pub fn constant(val: T) -> Self {
-        Self(Anchor::constant(val))
+        G_STATE_STORE.with(|_g_state_store_refcell| Self(Anchor::constant(val)))
     }
     #[must_use]
     pub const fn anchor(&self) -> &Anchor<T> {
@@ -655,6 +696,17 @@ fn read_state_val_with_topo_id<F: FnOnce(&T) -> R, T: 'static, R>(id: TopoKey, f
 //     insert_var_with_topo_id(item, id);
 //     read
 // }
+
+fn get_anchor_val_in_var_with_topo_id<T: 'static + std::clone::Clone>(id: TopoKey) -> T {
+    G_STATE_STORE.with(|g_state_store_refcell| {
+        let store = g_state_store_refcell.borrow();
+        let var_with_sa = store
+            .get_state_with_id::<StateAnchor<T>>(&StorageKey::TopoKey(id))
+            .expect("You are trying to get a var state that doesn't exist in this context!");
+        store.engine_get((*var_with_sa.get()).clone().anchor())
+    })
+}
+
 fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
     G_STATE_STORE.with(|g_state_store_refcell| {
         func(
@@ -664,14 +716,6 @@ fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, fu
                 .expect("You are trying to get a var state that doesn't exist in this context!"),
         )
     })
-    // G_STATE_STORE.with(|g_state_store_refcell| {
-    //     let var = g_state_store_refcell
-    //         .borrow_mut()
-    //         .get_state_with_id::<T>(&StorageKey::TopoKey(id))
-    //         .expect("You are trying to get a var state that doesn't exist in this context!")
-    //         .clone();
-    //     func(&var)
-    // })
 }
 // fn read_var_with_topo_id_old<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
 //     let var = remove_state_with_topo_id::<T>(id)
@@ -717,6 +761,15 @@ mod state_test {
     use wasm_bindgen_test::*;
 
     use super::*;
+    // #[wasm_bindgen_test]
+    #[test]
+    fn sa_in_sv() {
+        let x = use_state(1);
+        let xw = x.watch();
+        let a = use_state(xw);
+        println!("{}", a);
+        println!("{}", a.get())
+    }
     #[wasm_bindgen_test]
     fn xx() {
         // let engine = Engine::new();
