@@ -1,15 +1,16 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-04-07 17:40:33
+ * @LastEditTime: 2021-04-12 17:23:43
  * @LastEditors: Rais
  * @Description:
  */
 
 use std::{any::Any, panic::Location};
 
-use emg_refresh::{RefreshFor, RefreshUseFor};
+use emg_refresh::{RefreshFor, RefreshUseFor, RefreshWhoNoWarper};
 
+use emg_state::StateVar;
 pub use seed_styles as styles;
 use styles::{CssHeight, CssValueTrait, CssWidth, UpdateStyle};
 use tracing::{debug, trace_span};
@@ -18,36 +19,42 @@ use crate::{Css, EmgEdgeItem, GenericWH};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-// TODO lifetime
-// impl RefreshFor<EdgeData> for Vec<Box<Css<Use>>>
-// where
-//     Use: CssValueTrait + std::clone::Clone,
-// {
-//     #[track_caller]
-//     fn refresh_for(&self, who: &mut EdgeData) {
-//         for i in self {
-//             // let ii = i.as_ref();
-//             who.refresh_use(i.as_ref());
-//         }
-//     }
-// }
 //TODO lifetime
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Vec<Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>>
+impl<Ix> RefreshWhoNoWarper for EmgEdgeItem<Ix> where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default
+{
+}
+
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
-        for i in self {
-            let _g = trace_span!(
-                "-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
-            )
-            .entered();
-            // let ii = i.as_ref();
-            who.refresh_use(i.as_ref());
-        }
+        let _g = trace_span!(
+            "-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
+        )
+        .entered();
+        // let ii = i.as_ref();
+        who.refresh_use(self.as_ref());
     }
 }
+// impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Vec<Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>>
+// where
+//     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+// {
+//     #[track_caller]
+//     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+//         for i in self {
+//             let _g = trace_span!(
+//                 "-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
+//             )
+//             .entered();
+//             // let ii = i.as_ref();
+//             who.refresh_use(i.as_ref());
+//         }
+//     }
+// }
 // impl RefreshFor<EdgeData> for Vec<Box<(dyn RefreshFor<EdgeData> + 'static)>> {
 //     #[track_caller]
 //     fn refresh_for(&self, _who: &mut EdgeData) {

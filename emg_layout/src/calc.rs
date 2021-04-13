@@ -1,14 +1,14 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-04-09 11:36:40
+ * @LastEditTime: 2021-04-13 12:02:59
  * @LastEditors: Rais
 * @Description:
 */
 use crate::{ EdgeData, EdgeItemNode, GenericLoc, GenericSize, GenericWH, Layout, LayoutCalculated, Mat4, Size2, Trans3};
 
 use emg::EdgeIndex;
-use emg_state::{ StateMultiAnchor, StateVar};
+use emg_state::{ StateMultiAnchor,StateAnchor,StateVar};
 use seed_styles as styles;
 use styles::{px, s, CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, };
 use tracing::{ trace,trace_span};
@@ -17,18 +17,16 @@ use tracing::{ trace,trace_span};
     
 #[track_caller]
 pub fn layout_calculating<Ix>(
-    id: StateVar<EdgeIndex<Ix>>,
+    id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
     path_edge_item_node: &EdgeItemNode,
-    layout: Layout<Ix>,
+    layout: &Layout<Ix>,
 ) -> LayoutCalculated 
 where 
     Ix: 'static + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default + std::cmp::Ord + std::fmt::Display 
     
     {
-
-   
         
-    let _span_ = trace_span!( "->[ layout_calculating ]",%id).entered();
+    let _span_ = trace_span!( "->[ layout_calculating ]").entered();
     match path_edge_item_node {
         EdgeItemNode::EdgeData(p_edp) => {
             let EdgeData{
@@ -42,29 +40,38 @@ where
 
             let calculated_size = (p_calc_size_sa, &layout.size.watch()).map(
                 move |p_calc_size: &Size2, wh: &GenericWH| {
+
+                  
+                
                         
                         // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
                     let _enter = trace_span!( 
                         "-> [ calculated_size ] recalculation..(&p_calculated.size, &layout.size.watch()).map ",
-                        %id).entered();
+                        ).entered();
 
                     calculation_size(p_calc_size, wh)
                 },
             );
+
             let calculated_origin = (&calculated_size, &layout.origin.watch()).map(
                 move |calc_size: &Size2, origin: &GenericLoc| {
+
+      
+                    
                     let _enter = trace_span!( 
                         "-> [ calculated_origin ] recalculation..(&calculated_size, &layout.origin.watch()).map ",
-                        %id).entered();
+                        ).entered();
 
                     calculation_origin(calc_size, origin)
                 },
             );
+
             let calculated_align = (p_calc_size_sa, &layout.align.watch()).map(
                 move |p_calc_size: &Size2, align: &GenericLoc| {
+                    
                     let _enter = trace_span!( 
                         "-> [ calculated_align ] recalculation..(&p_calculated.size, &layout.align.watch()).map ",
-                        %id).entered();
+                        ).entered();
 
                     calculation_align(p_calc_size, align)
                 },
@@ -75,7 +82,7 @@ where
                     
                     let _span =trace_span!( 
                         "-> [ coordinates_trans ] recalculation..(&calculated_origin, &calculated_align).map ",
-                        %id);
+                        );
                         
                     let _g = _span.enter();
 

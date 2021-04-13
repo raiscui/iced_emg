@@ -3,7 +3,7 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-04-03 15:13:42
+ * @LastEditTime: 2021-04-12 17:19:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -35,6 +35,7 @@ impl<Who> !RefreshWhoNoWarper for StateVar<Who> {}
 
 // impl<Use> !RefreshUseNoWarper for Vec<Use> {}
 impl<Use> !RefreshUseNoWarper for Box<Use> {}
+impl<Use> !RefreshUseNoWarper for Vec<Box<Use>> {}
 impl<Use> !RefreshUseNoWarper for Rc<Use> {}
 impl<Use> !RefreshUseNoWarper for StateVar<Use> {}
 impl<Use> !RefreshUseNoWarper for StateAnchor<Use> {}
@@ -174,6 +175,33 @@ where
             let u_s_e = sa.get();
             let mut w = who.get();
             w.refresh_use(&u_s_e);
+            who.set(w);
+        }
+    }
+}
+impl<Who> RefreshFor<StateVar<Who>> for Vec<Box<(dyn RefreshFor<Who> + 'static)>>
+where
+    Who: RefreshWhoNoWarper + Clone + 'static,
+{
+    fn refresh_for(&self, who: &mut StateVar<Who>) {
+        for sa in self {
+            let u_s_e = sa.as_ref();
+            let mut w = who.get();
+            w.refresh_use(u_s_e);
+            who.set(w);
+        }
+    }
+}
+impl<Who, Use> RefreshFor<StateVar<Who>> for Vec<Box<Use>>
+where
+    Who: RefreshWhoNoWarper + Clone + 'static,
+    Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static + std::fmt::Debug,
+{
+    fn refresh_for(&self, who: &mut StateVar<Who>) {
+        for sa in self {
+            let u_s_e = sa.as_ref();
+            let mut w = who.get();
+            w.refresh_use(u_s_e);
             who.set(w);
         }
     }

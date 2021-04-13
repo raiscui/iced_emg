@@ -1,8 +1,9 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
-
+#![feature(specialization)]
 pub mod use_state_impl;
+pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::MultiAnchor;
 pub use topo;
 pub use use_state_impl::use_state;
