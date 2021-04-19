@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-04-13 12:02:59
+ * @LastEditTime: 2021-04-19 11:32:49
  * @LastEditors: Rais
 * @Description:
 */
@@ -18,21 +18,20 @@ use tracing::{ trace,trace_span};
 #[track_caller]
 pub fn layout_calculating<Ix>(
     id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
-    path_edge_item_node: &EdgeItemNode,
+    path_edgedata: &EdgeData,
     layout: &Layout<Ix>,
 ) -> LayoutCalculated 
 where 
-    Ix: 'static + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default + std::cmp::Ord + std::fmt::Display 
+    Ix: 'static + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default + std::cmp::Ord 
     
     {
         
     let _span_ = trace_span!( "->[ layout_calculating ]").entered();
-    match path_edge_item_node {
-        EdgeItemNode::EdgeData(p_edp) => {
+    
             let EdgeData{
                 calculated: p_calculated,
                 styles_string: _
-            }=p_edp;
+            }=path_edgedata;
             // ─────────────────────────────────────────────────────────────────
 
             let p_calc_size_sa = &p_calculated.size;
@@ -128,22 +127,6 @@ where
                 // • • • • •
                 loc_styles,
             }
-
-            
-        }
-        EdgeItemNode::String(_)| EdgeItemNode::Empty  => {
-            todo!("\u{52a8}\u{6001} \u{7c7b}\u{578b} impl \u{7ee7}\u{627f} or hide")
-
-        }
-    }
-    
-    // let p_calc_size_sa:StateAnchor<Size2> = p_calculated.then(|p_calc:&LayoutCalculated|p_calc.size.clone().into());
-    
-    
-
-
-   
-
     
 }
 

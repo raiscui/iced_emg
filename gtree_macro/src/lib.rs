@@ -791,11 +791,7 @@ pub fn gtree_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
 //         .to_tokens(tokens)
 //     }
 // }
-/// @ gview_macro ────────────────────────────────────────────────────────────────────────────────
-// pub fn gview_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
-//     let output = syn::parse2::<Gview>(item)?;
-//     Ok(quote_spanned! { output.span()=>#output})
-// }
+
 // @ test ────────────────────────────────────────────────────────────────────────────────
 #[cfg(test)]
 mod tests {

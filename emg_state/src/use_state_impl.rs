@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-04-13 11:35:01
+ * @LastEditTime: 2021-04-19 12:15:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -758,9 +758,10 @@ where
 #[allow(unused_variables)]
 mod state_test {
     use tracing::debug;
-    use wasm_bindgen_test::*;
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
+
     // #[wasm_bindgen_test]
     #[test]
     fn sa_in_sv() {
@@ -770,6 +771,7 @@ mod state_test {
         println!("{}", a);
         println!("{}", a.get())
     }
+    #[allow(clippy::similar_names)]
     #[wasm_bindgen_test]
     fn xx() {
         // let engine = Engine::new();
@@ -779,8 +781,8 @@ mod state_test {
         let b2 = a.watch();
         let cadd = b.map(|x| *x + 1);
         let cadd2 = b.map(|x| *x + 2);
-        let caddc = cadd.clone();
-        let cadd2c = cadd2.clone();
+        let cadd_c = cadd.clone();
+        let cadd2_c = cadd2;
         let c = b.map(|x| format!("{}", x));
         let d = b.then(move |x| {
             if *x > 1 {
@@ -789,11 +791,11 @@ mod state_test {
                 cadd.anchor().clone()
             }
         });
-        debug!("========================{:?}", caddc.get());
-        debug!("========================{:?}", cadd2c.get());
+        debug!("========================{:?}", cadd_c.get());
+        debug!("========================{:?}", cadd2_c.get());
 
-        assert_eq!(caddc.get(), 100);
-        assert_eq!(cadd2c.get(), 101);
+        assert_eq!(cadd_c.get(), 100);
+        assert_eq!(cadd2_c.get(), 101);
 
         let dd = Var::new(99);
         let ddw = dd.watch();

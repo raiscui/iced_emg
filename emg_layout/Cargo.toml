@@ -3,7 +3,7 @@ name = "emg_layout"
 version = "0.1.0"
 authors = ["崔路明 <cuiluming@chaoway.net>"]
 edition = "2018"
-
+resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -24,3 +24,5 @@ indented = "0.1.0"
 # tracing-log = { version = "", features = ["env_logger"] }
 tracing-flame = "0.1.0"
 im = ""
+[profile.dev]
+split-debuginfo = "unpacked"

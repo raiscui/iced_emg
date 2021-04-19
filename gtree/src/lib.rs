@@ -9,6 +9,7 @@ pub use log;
 mod tests {
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let x = 2 + 2;
+        assert_eq!(x, 4);
     }
 }

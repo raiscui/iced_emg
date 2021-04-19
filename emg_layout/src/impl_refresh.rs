@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-04-12 17:23:43
+ * @LastEditTime: 2021-04-19 18:39:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,6 @@ use std::{any::Any, panic::Location};
 
 use emg_refresh::{RefreshFor, RefreshUseFor, RefreshWhoNoWarper};
 
-use emg_state::StateVar;
 pub use seed_styles as styles;
 use styles::{CssHeight, CssValueTrait, CssWidth, UpdateStyle};
 use tracing::{debug, trace_span};
@@ -25,6 +24,9 @@ impl<Ix> RefreshWhoNoWarper for EmgEdgeItem<Ix> where
 {
 }
 
+// impl<T> RefreshUseNoWarper for Css<T> where T: CssValueTrait + Clone + 'static {}
+
+//NOTE: overwrite default impl<Who> RefreshFor<Who> for Box<dyn RefreshFor<Who>>
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
@@ -32,7 +34,7 @@ where
     #[track_caller]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let _g = trace_span!(
-            "-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
+            "!!!!!!!!!!!!!!-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
         )
         .entered();
         // let ii = i.as_ref();

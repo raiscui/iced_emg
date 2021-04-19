@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-04-05 10:46:09
+ * @LastEditTime: 2021-04-10 14:08:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@ pub use emg::EdgeIndex;
 pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::{Edge, Outgoing};
-use emg_layout::{EdgeData, EdgeData, EdgeItemNode};
+use emg_layout::{EdgeData, EdgeData, EmgEdgeItem};
 use emg_refresh::RefreshUseFor;
 use emg_state::StateVar;
 use std::{
@@ -21,8 +21,8 @@ use std::{
 
 pub type N<'a, Message> = GElement<'a, Message>;
 // pub type N<'a, Message> = RefCell<GElement<'a, Message>>;
-pub type E = EdgeItemNode;
-pub type GraphType<'a, Message> = Graph<N<'a, Message>, E>;
+pub type E<Ix> = EmgEdgeItem<Ix>;
+pub type GraphType<'a, Message,Ix=String> = Graph<N<'a, Message>, E<Ix>,Ix>;
 
 pub trait GraphView<'a, Message> {
     type N;
@@ -127,7 +127,7 @@ where
     }
 
     fn view(&self, cix: Self::Ix) -> Element<'a, Message> {
-        let root_edge = self.root_edge().as_ref().unwrap();
+        let root_edge = self.root_edge_item().as_ref().unwrap();
         //TODO: get cix get  and edgeitem
         self.gelement_refresh_and_comb(&cix, None)
             .try_into()

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-04-03 15:06:27
+ * @LastEditTime: 2021-04-19 12:12:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -93,7 +93,7 @@ mod updater_test {
     // use crate::CloneState;
     use crate::RefreshFor;
     use crate::RefreshUseFor;
-    use wasm_bindgen_test::*;
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
 
@@ -103,27 +103,25 @@ mod updater_test {
         }
     }
 
-    #[wasm_bindgen_test]
+    use emg_state::CloneStateVar;
 
+    use emg_state::use_state;
+
+    #[wasm_bindgen_test]
     fn test_anchor() {
         console_log::init_with_level(log::Level::Debug).ok();
 
         #[allow(unused)]
-        use anchors::singlethread::*;
-        use emg_state::CloneStateVar;
-
-        use emg_state::use_state;
-
         let mut s = String::from("sss");
 
-        let n = 99i32;
+        let n = 99_i32;
 
         let mut ff = use_state(String::from("hello"));
-        let ff2 = use_state(2i32);
-        let ffw = ff2.watch();
-        let ffw_vec = vec![Box::new(ffw.clone()), Box::new(ffw.clone())];
+        let ff2 = use_state(2_i32);
+        let ff_w = ff2.watch();
+        let ffw_vec = vec![Box::new(ff_w.clone()), Box::new(ff_w.clone())];
         ff.refresh_use(&ff2);
-        ff.refresh_use(&ffw);
+        ff.refresh_use(&ff_w);
         ff.refresh_use(&ffw_vec);
         ff2.refresh_for(&mut ff);
         log::info!("==== test_anchor: {}", ff.get());
@@ -141,7 +139,7 @@ mod updater_test {
         assert_eq!("hello,2,2,2,2,2,99,99", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
-        let a = use_state(4i32);
+        let a = use_state(4_i32);
 
         ff.refresh_use(&a);
         a.refresh_for(&mut ff);

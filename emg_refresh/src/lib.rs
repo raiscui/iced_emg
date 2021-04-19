@@ -2,8 +2,8 @@
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
 // ────────────────────────────────────────────────────────────────────────────────
-// #![feature(specialization)]
-#![feature(min_specialization)]
+#![feature(specialization)]
+// #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
 // #![feature(trivial_bounds)]
@@ -22,6 +22,7 @@ pub use refreshers::RefresherFor;
 mod tests {
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let x = 2 + 2;
+        assert_eq!(x, 4);
     }
 }

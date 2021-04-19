@@ -1,9 +1,12 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
-#![allow(clippy::used_underscore_binding)]
+#![warn(clippy::non_ascii_literal)]
+#![allow(clippy::used_underscore_binding)]//for display attr
+
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(iter_intersperse)]
+#![feature(min_specialization)]
 
 // // 固定 type  T:xxx
 // #![feature(trivial_bounds)]
@@ -21,7 +24,7 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 use derive_more::TryInto;
-use emg::{edge_index, node_index, Edge, EdgeIndex, NodeIndex};
+use emg::{edge_index, node_index,edge_index_no_source, Edge, EdgeIndex, NodeIndex};
 use emg_refresh::RefreshFor;
 use emg_state::{
     topo, use_state, Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor,
@@ -43,8 +46,7 @@ use styles::{CssHeightTrait, CssTransformTrait, CssWidthTrait};
 // ────────────────────────────────────────────────────────────────────────────────
 
 use indented::indented;
-use tracing::{instrument, trace};
-use tracing::{span, trace_span, Level};
+use tracing::{span, trace_span,error,instrument, trace, Level};
 // ────────────────────────────────────────────────────────────────────────────────
 
 mod calc;
@@ -62,6 +64,7 @@ type Pos3 = Point3<f64>;
 struct Mat4(Matrix4<f64>);
 
 // type Mat4 = Matrix4<f64>;
+
 #[derive(Display, Clone, Debug, From, TryInto, PartialEq, PartialOrd, Eq)]
 #[try_into(owned, ref, ref_mut)]
 #[display(fmt = "{}")]
@@ -437,11 +440,11 @@ where
     Ix: Clone + Hash + Eq + Ord + 'static + Default,
 {
     pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
-    pub paths: StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>, // with parent self
+    pub paths:SaDictPathEiNode<Ix>, // with parent self
     pub layout: Layout<Ix>,
     pub other_styles: StateVar<Style>,
     // no self  first try
-    pub node: StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>, //TODO with self?  not with self?
+    pub node:SaDictPathEiNode<Ix>, //TODO with self?  not with self?
 }
 impl<
         Ix: 'static
@@ -467,6 +470,9 @@ impl<
         write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
     }
 }
+type SaDictPathEiNode<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>;
+
+
 impl<Ix> EmgEdgeItem<Ix>
 where
     Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display,
@@ -480,112 +486,120 @@ where
     }
 
     #[topo::nested]
-    #[instrument(skip(id))]
-    pub fn new_root_in_topo<T: Into<f64> + std::fmt::Debug>(id: impl Into<Ix> + Clone, w: T, h: T) -> Self {
-        // info!(target: "yak_events", "Commencing yak shaving for ");
-        let id:StateVar< StateAnchor<EdgeIndex<Ix>>> =use_state( StateAnchor::constant(edge_index(id.clone().into(), id.clone().into())) );
-
-        let layout = Layout::<Ix> {
-            size: use_state(GenericWH {
-                w: px(w).into(),
-                h: px(h).into(),
-            }),
-            origin: use_state(GenericLoc::default()),
-            align: use_state(GenericLoc::default()),
-            path_styles: use_state(Dict::unit(EPath::<Ix>::default(), s())),
-        };
-        let other_styles_sv = use_state(s());
-
-        // ─────────────────────────────────────────────────────────────────
-
-        // TODO how to use Pre-acquired G_STATE_STORE Optimize performance
-        let calculated_size = layout.size.watch().map(|g_wh: &GenericWH| {
-            // println!("in layout size watch map");
-            let (w, h) = g_wh.get_length_value();
-
-            Size2::new(w, h)
-        });
-        //TODO make dyn
-        let calculated_origin = StateAnchor::constant(Trans3::identity());
-        let calculated_align = StateAnchor::constant(Trans3::identity());
-        let coordinates_trans = StateAnchor::constant(Trans3::identity());
-        let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
-        // ────────────────────────────────────────────────────────────────────────────────
-        let loc_styles = (&calculated_size, &matrix).map(move |size: &Size2, mat4: &Mat4| {
-            let _enter = span!(Level::TRACE,
-                        "-> [root] [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
-                        %id)
-            .entered();
-
-            trace!("size: {}  , matrix: {}", size, CssTransform::from(*mat4));
-
-            // TODO use  key 更新 s(),
-            s().w(px(size.x)).h(px(size.y)).transform(*mat4)
-        });
-        let layout_calculated = LayoutCalculated {
-            size: calculated_size,
-            origin: calculated_origin,
-            align: calculated_align,
-            coordinates_trans,
-            matrix,
-            // • • • • •
-            loc_styles,
-        };
-        // let path_styles_sv = use_state(s());
-
-        let styles_string = (
-            &layout.path_styles.watch(),
-            &layout_calculated.loc_styles,
-            &other_styles_sv.watch(),
-        )
-            .map(
-                move |path_styles: &Dict<EPath<Ix>,Style>, loc_styles: &Style, other_styles: &Style| {
-                    let _enter = span!(Level::TRACE,
-                            "-> [ROOT styles ] recalculation..(&other_styles_watch, &loc_styles).map ",
-                            %id)
-                    .entered();
-
-                    let ps = path_styles.values().fold(String::default(), |acc,v|{
-                         format!("{}{}",acc,v.render())
-                    });
-
-                    format!(
-                        "{}{}{}",
-                        other_styles.render(),
-                        ps,
-                        loc_styles.render()
-                    )
-                },
-            );
-
-        let paths = StateAnchor::constant(Dict::unit(EPath::<Ix>::default(), EdgeItemNode::Empty));
-
-        let node: StateAnchor<Dict<EPath<Ix>, EdgeItemNode>> = paths.map_(move |_k, _v| {
-            EdgeItemNode::EdgeData(EdgeData {
-                calculated: layout_calculated.clone(),
-                styles_string: styles_string.clone(),
-            })
-        });
-
-        Self {
-            id,
-            paths,
-            layout,
-            other_styles: other_styles_sv,
-            node,
-        }
-    }
-
-    #[topo::nested]
-    pub fn new_child(
-        source_node_nix_sa: StateAnchor<NodeIndex<Ix>>,
-        target_node_nix_sa: StateAnchor<NodeIndex<Ix>>,
+    #[instrument(skip(edges))]
+    pub fn new_root_in_topo<T: Into<f64> + std::fmt::Debug>(
+        source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
+        target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         edges: StateAnchor<GraphEdgesDict<Ix>>,
-        root_ei_sa: StateAnchor<Self>,
+         w: T, h: T) -> Self  where Ix:std::fmt::Debug{
+
+        Self::new_child(source_node_nix_sa, target_node_nix_sa, edges,    size(px(w), px(h)), GenericLoc::default(), GenericLoc::default(),)
+        // let id:StateVar< StateAnchor<EdgeIndex<Ix>>> =use_state( StateAnchor::constant(edge_index(id.clone().into(), id.clone().into())) );
+
+        // let layout = Layout::<Ix> {
+        //     size: use_state(GenericWH {
+        //         w: px(w).into(),
+        //         h: px(h).into(),
+        //     }),
+        //     origin: use_state(GenericLoc::default()),
+        //     align: use_state(GenericLoc::default()),
+        //     path_styles: use_state(Dict::unit(EPath::<Ix>::default(), s())),
+        // };
+        // let other_styles_sv = use_state(s());
+
+        // // ─────────────────────────────────────────────────────────────────
+
+        // // TODO how to use Pre-acquired G_STATE_STORE Optimize performance
+        // let calculated_size = layout.size.watch().map(|g_wh: &GenericWH| {
+        //     // println!("in layout size watch map");
+        //     let (w, h) = g_wh.get_length_value();
+
+        //     Size2::new(w, h)
+        // });
+        // //TODO make dyn
+        // let calculated_origin = StateAnchor::constant(Trans3::identity());
+        // let calculated_align = StateAnchor::constant(Trans3::identity());
+        // let coordinates_trans = StateAnchor::constant(Trans3::identity());
+        // let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
+        // // ────────────────────────────────────────────────────────────────────────────────
+        // let loc_styles = (&calculated_size, &matrix).map(move |size: &Size2, mat4: &Mat4| {
+        //     let _enter = span!(Level::TRACE,
+        //                 "-> [root] [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
+        //                 %id)
+        //     .entered();
+
+        //     trace!("size: {}  , matrix: {}", size, CssTransform::from(*mat4));
+
+        //     // TODO use  key 更新 s(),
+        //     s().w(px(size.x)).h(px(size.y)).transform(*mat4)
+        // });
+        // let layout_calculated = LayoutCalculated {
+        //     size: calculated_size,
+        //     origin: calculated_origin,
+        //     align: calculated_align,
+        //     coordinates_trans,
+        //     matrix,
+        //     // • • • • •
+        //     loc_styles,
+        // };
+        // // let path_styles_sv = use_state(s());
+
+        // let styles_string = (
+        //     &layout.path_styles.watch(),
+        //     &layout_calculated.loc_styles,
+        //     &other_styles_sv.watch(),
+        // )
+        //     .map(
+        //         move |path_styles: &Dict<EPath<Ix>,Style>, loc_styles: &Style, other_styles: &Style| {
+        //             let _enter = span!(Level::TRACE,
+        //                     "-> [ROOT styles ] recalculation..(&other_styles_watch, &loc_styles).map ",
+        //                     %id)
+        //             .entered();
+
+        //             let ps = path_styles.values().fold(String::default(), |acc,v|{
+        //                  format!("{}{}",acc,v.render())
+        //             });
+
+        //             format!(
+        //                 "{}{}{}",
+        //                 other_styles.render(),
+        //                 ps,
+        //                 loc_styles.render()
+        //             )
+        //         },
+        //     );
+
+        // let paths = StateAnchor::constant(Dict::unit(EPath::<Ix>::default(), EdgeItemNode::Empty));
+
+        // let node:SaDictPathEiNode<Ix> = paths.map_(move |_k, _v| {
+        //     EdgeItemNode::EdgeData(EdgeData {
+        //         calculated: layout_calculated.clone(),
+        //         styles_string: styles_string.clone(),
+        //     })
+        // });
+
+        // Self {
+        //     id,
+        //     paths,
+        //     layout,
+        //     other_styles: other_styles_sv,
+        //     node,
+        // }
+    }
+    
+
+
+#[topo::nested]
+    pub fn new_child(
+        source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
+        target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
+        edges: StateAnchor<GraphEdgesDict<Ix>>,
         size: impl Into<GenericWH>,
         origin: impl Into<GenericLoc>,
         align: impl Into<GenericLoc>,
-    ) -> Self {
+    ) -> Self 
+    where Ix:std::fmt::Debug
+    {
         let id_sa:StateAnchor <EdgeIndex<Ix> > =( &source_node_nix_sa,&target_node_nix_sa).map(|s,t| {
             let _g = span!(Level::TRACE, "[ id_sa recalculation ]:source_node_nix_sa/target_node_nix_sa change ").entered();
             
@@ -602,7 +616,7 @@ where
 
         let other_styles_sv = use_state(s());
 
-        let source_node_nix_sa_re_get:StateAnchor<NodeIndex<Ix>> = id_sv.watch().then(|eid_sa_inner|{
+        let opt_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
             let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
 
             eid_sa_inner.map(|i:&EdgeIndex<Ix>|{
@@ -613,139 +627,157 @@ where
             }).into()
         });
 
-        let edges_clone = edges.clone();
-        let source_node_incoming_edge_dict_sa: StateAnchor< GraphEdgesDict<Ix>> = 
-            source_node_nix_sa_re_get.then(move|source_nix| {
+        let paths: SaDictPathEiNode<Ix> = 
+            opt_source_node_nix_sa_re_get.then(move|opt_source_nix:&Option<NodeIndex<Ix>>| {
 
                 let _g = span!(Level::TRACE, "[ source_node_incoming_edge_dict_sa recalculation ]:source_node_nix_sa_re_get change ").entered();
+
+                if opt_source_nix.is_none(){
+                    //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
+                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
+                }else{
+                    let opt_source_nix_clone = opt_source_nix.clone();
+                    edges.filter_map(move|one_eix, e| {
+                        
+                        println!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",one_eix.target_node_ix(),&opt_source_nix_clone);
+                        if   one_eix.target_node_ix() == &opt_source_nix_clone {
+
+                            Some(e.item.node.clone())
+
+                        }else{
+                            None
+                        }
+                        
+                    })
+                    .anchor()
+                    .then(|x:&Dict<EdgeIndex<Ix>, SaDictPathEiNode<Ix>>|{
+                        x.values().map(emg_state::StateAnchor::anchor).collect::<Anchor<Vector<_>>>()
+                        .map(|v:&Vector<_>|{
+                            let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
+                            Dict::unions(v.clone())})
+                    })
+                }
+                       
+
                 
-                let source_nix_clone = source_nix.clone();
-                edges_clone.filter(move|one_eix, _e| one_eix.target_node_ix() == &source_nix_clone).into()
             });
 
-        let paths_count: StateAnchor<usize> = source_node_incoming_edge_dict_sa.map(im::OrdMap::len);
+        // let paths_count: StateAnchor<usize> = paths_from_edges_sa.map(im::OrdMap::len);
 
-        let paths:StateAnchor<Dict<EPath<Ix>, EdgeItemNode>> = paths_count.then(move |l:&usize| ->Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
-            let _child_span =
-                    span!(Level::TRACE, "[ paths recalculation ]:paths_count change ").entered();
+        // let paths:StateAnchor<Dict<EPath<Ix>, EdgeItemNode>> = paths_count.then(move |l:&usize| ->Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
+        //     let _child_span =
+        //             span!(Level::TRACE, "[ paths recalculation ]:paths_count change ").entered();
 
-            if *l == usize::MIN {
-                let chose:Anchor<Dict<EPath<Ix>, EdgeItemNode>> =  (&source_node_nix_sa_re_get ,&root_ei_sa).then(
+        //     if *l == usize::MIN {
+        //         let chose:Anchor<Dict<EPath<Ix>, EdgeItemNode>> =  (&opt_source_node_nix_sa_re_get ,&root_ei_sa)
+        //         .then( |p_node_nix:&Option<NodeIndex<Ix>>,root_ei:&Self|-> Anchor<Dict<EPath<Ix>, EdgeItemNode>> {
+        //                 let _g = span!(Level::TRACE, "[ paths recalculation ]:source_node_nix_sa_re_get/root_ei_sa change ").entered();
 
-                    |p_node_nix:&NodeIndex<Ix>,root_ei:&Self|->Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
-                        let _g = span!(Level::TRACE, "[ paths recalculation ]:source_node_nix_sa_re_get/root_ei_sa change ").entered();
+        //                 let p_node_ix= p_node_nix.clone();
 
-                        let p_node_ix= p_node_nix.index().clone();
-
-                        root_ei.node.map(move |parent_e_node: &Dict<EPath<Ix>, EdgeItemNode>| {
+        //                 root_ei.node.map(move |parent_e_node: &Dict<EPath<Ix>, EdgeItemNode>| ->Dict<EPath<Ix>, EdgeItemNode>{
                             
-                            let _g = trace_span!( "[ paths recalculation ]:root_ei.node change ").entered();
+        //                         let _g = trace_span!( "[ paths recalculation ]:root_ei.node change ").entered();
 
-                            parent_e_node
-                                .iter()
-                                .map( |(parent_e_node_k, p_e_node_v)| {
-                                    let mut nk = parent_e_node_k.clone();
-                                    nk.0.push_back(edge_index(p_node_ix.clone(),p_node_ix.clone()));
-                                    (nk, p_e_node_v.clone())
-                                })
-                                .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
-                        }).into()
-                    }
+        //                         parent_e_node
+        //                         .iter()
+        //                         .map( |(parent_e_node_k, p_e_node_v)| {
+        //                             let mut nk = parent_e_node_k.clone();
+        //                             nk.0.push_back(EdgeIndex::new(p_node_ix.clone(),p_node_ix.clone()));
+        //                             (nk, p_e_node_v.clone())
+        //                         })
+        //                         .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
+        //                 }).into()
+        //         }).into();
+        //        chose
+        //     } else {
+        //        let chose:Anchor<Dict<EPath<Ix>, EdgeItemNode>> = paths_from_edges_sa.then(
+        //             |pe_node_dict: & Dict<EdgeIndex<Ix>, StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>>| ->Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
+        //                 let _g = trace_span!( "[ paths recalculation ]:source_node_incoming_edge_dict_sa change ").entered();
 
-                ).into();
-               chose
-            } else {
-               let chose:Anchor<Dict<EPath<Ix>, EdgeItemNode>> = source_node_incoming_edge_dict_sa.then(
-                    |pe_dict: &GraphEdgesDict<Ix>| ->Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
-                        let _g = trace_span!( "[ paths recalculation ]:source_node_incoming_edge_dict_sa change ").entered();
-
-                        pe_dict
-                            .iter()
-                            .map(|(parent_incoming_eix, parent_e)| -> Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
+        //                 pe_node_dict
+        //                     .iter()
+        //                     .map(|(parent_incoming_eix, parent_ei_node)| -> Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
                                 
 
-                                let parent_incoming_eix_clone = parent_incoming_eix.clone();
+        //                         let parent_incoming_eix_clone = parent_incoming_eix.clone();
                                 
-                                parent_e.item.node.map(
-                                    move |parent_e_node: & Dict<EPath<Ix>, EdgeItemNode>| {
+        //                         parent_ei_node.map(
+        //                             move |parent_e_node: & Dict<EPath<Ix>, EdgeItemNode>| {
                                             
-                                        let _g = trace_span!( "[ paths recalculation ]:parent_e.item.node change ").entered();
+        //                                 let _g = trace_span!( "[ paths recalculation ]:parent_e.item.node change ").entered();
 
-                                            parent_e_node.iter()
-                                            .map(|(parent_e_node_k, p_e_node_v)| {
-                                                let mut nk = parent_e_node_k.clone();
+        //                                     parent_e_node.iter()
+        //                                     .map(|(parent_e_node_k, p_e_node_v)| {
+        //                                         let mut nk = parent_e_node_k.clone();
                                                 
-                                                //TODO node 可以自带 self nix ,下游不必每个子节点都重算
+        //                                         //TODO node 可以自带 self nix ,下游不必每个子节点都重算
 
-                                                nk.0.push_back(parent_incoming_eix_clone.clone());
-                                                (nk, p_e_node_v.clone())
-                                            })
-                                            .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
-                                    },
-                                ).into()
-                            })
-                            .collect::<Anchor<Vector<_>>>()
-                            .map(|v:&Vector<_>|{
-                                let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
-                                Dict::unions(v.clone())})
+        //                                         nk.0.push_back(parent_incoming_eix_clone.clone());
+        //                                         (nk, p_e_node_v.clone())
+        //                                     })
+        //                                     .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
+        //                             },
+        //                         ).into()
+        //                     })
+        //                     .collect::<Anchor<Vector<_>>>()
+        //                     .map(|v:&Vector<_>|{
+        //                         let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
+        //                         Dict::unions(v.clone())})
                           
-                    },
-                ).into();
-                chose
-            }
-        });
-
+        //             } ).into();
+        //         chose
+        //     }
+        // });
 
         //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
-        let node: StateAnchor<Dict<EPath<Ix>, EdgeItemNode>> =
-            paths.map_( move |path, path_edge_item_node| {
-                let _child_span =
-                    span!(Level::TRACE, "[ node recalculation ]:paths change ").entered();
+        let paths_clone = paths.clone();
+        let node:SaDictPathEiNode<Ix> = id_sv.watch().then(move|id_sa|{
+            
+            let paths_clone2 = paths_clone.clone();
+                
+            id_sa.then(move |eid:&EdgeIndex<Ix>|{
 
-                // TODO  make path specialization style at EmgEdgeItem dict path->style variable
+                let eid_clone = eid.clone();
+                
+                paths_clone2.map(move |p_node_as_paths:&Dict<EPath<Ix>, EdgeItemNode>|{
+                    
+                    p_node_as_paths.iter()
+                                .map(|(parent_e_node_k, p_ei_node_v)| {
+                                    let mut nk = parent_e_node_k.clone();
+                                    
+                                    //TODO node 可以自带 self nix ,下游不必每个子节点都重算
 
-                let layout_calculated = layout_calculating(id_sv, path_edge_item_node, &layout);
+                                    nk.0.push_back(eid_clone.clone());
+                                    (nk, p_ei_node_v.clone())
+                                })
+                                .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
 
-                let p = path.clone();
+                }).map_( move |path:&EPath<Ix>, path_edge_item_node:&EdgeItemNode| {
 
-                let this_path_style_string_sa: StateAnchor<Option<String>> = layout
-                    .path_styles
-                    .watch()
-                    .map(move |d: &Dict<EPath<Ix>, Style>| {
-                        let _g = trace_span!( "[  this_path_style_string_sa recalculation ]:layout.path_styles change ").entered();
+                    let _child_span =
+                        span!(Level::TRACE, "[ node recalculation ]:paths change ").entered();
                         
-                        d.get(&p).map(seed_styles::Style::render)
-                    });
+                       
+                    let (layout_calculated,styles_string) =  match path_edge_item_node {
+                        EdgeItemNode::Empty => path_ein_empty_node_builder(&layout, other_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> {path_with_ed_node_builder(id_sv, ped, &layout, path, other_styles_sv)}
+                                    
+                        EdgeItemNode::String(_)  => {
+                            todo!("EdgeItemNode::String(_) not implemented yet");
+                
+                        }
+                                
+                    };
+                    EdgeItemNode::EdgeData(EdgeData {
+                        calculated: layout_calculated,
+                        styles_string,
+                    })
+                }).into()
 
-
-                let styles_string = (
-                    &this_path_style_string_sa,
-                    &layout_calculated.loc_styles,
-                    &other_styles_sv.watch(),
-                )
-                    .map(
-                        move |path_styles_string: &Option<String>,
-                              loc_styles: &Style,
-                              other_styles: &Style| {
-                            let _enter = span!(Level::TRACE,
-                            "-> [ styles ] recalculation..(&other_styles_watch,&loc_styles &loc_styles).map",
-                            )
-                            .entered();
-
-                            format!(
-                                "{}{}{}",
-                                other_styles.render(),
-                                path_styles_string.as_ref().unwrap_or(&String::default()),
-                                loc_styles.render()
-                            )
-                        },
-                    );
-
-                EdgeItemNode::EdgeData(EdgeData {
-                    calculated: layout_calculated,
-                    styles_string,
-                })
-            });
+            }).into()
+        });
+            
 
         Self {
             id: id_sv,
@@ -755,6 +787,111 @@ where
             node,
         }
     }
+}
+
+fn path_with_ed_node_builder<Ix>(
+    id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>, 
+    ped: &EdgeData,
+     layout: &Layout<Ix>,
+      path: &EPath<Ix>, 
+      other_styles_sv: StateVar<Style>) -> (LayoutCalculated, StateAnchor<String>) 
+where
+Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
+{
+    let layout_calculated = layout_calculating(id_sv, ped, layout);
+    let p = path.clone();
+    let this_path_style_string_sa: StateAnchor<Option<String>> = layout
+                        .path_styles
+                        .watch()
+                        .map(move |d: &Dict<EPath<Ix>, Style>| {
+                            let _g = trace_span!( "[  this_path_style_string_sa recalculation ]:layout.path_styles change ").entered();
+    
+                            d.get(&p).map(seed_styles::Style::render)
+                        });
+    let styles_string = (
+                        &this_path_style_string_sa,
+                        &layout_calculated.loc_styles,
+                        &other_styles_sv.watch(),
+                    )
+                        .map(
+                            move |path_styles_string: &Option<String>,
+                                loc_styles: &Style,
+                                other_styles: &Style| {
+                                let _enter = span!(Level::TRACE,
+                                "-> [ styles ] recalculation..(&other_styles_watch,&loc_styles &loc_styles).map",
+                                )
+                                .entered();
+
+                                format!(
+                                    "{}{}{}",
+                                    other_styles.render(),
+                                    path_styles_string.as_ref().unwrap_or(&String::default()),
+                                    loc_styles.render()
+                                )
+                            },
+                        );
+    (layout_calculated,styles_string)
+}
+
+fn path_ein_empty_node_builder<Ix>(layout: &Layout<Ix>, other_styles_sv: StateVar<Style>) -> (LayoutCalculated, StateAnchor<String>)
+ where 
+    Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
+    {
+    let calculated_size = layout.size.watch().map(|g_wh: &GenericWH| {
+            // println!("in layout size watch map");
+            let (w, h) = g_wh.get_length_value();
+
+            Size2::new(w, h)
+        });
+    let calculated_origin = StateAnchor::constant(Trans3::identity());
+    let calculated_align = StateAnchor::constant(Trans3::identity());
+    let coordinates_trans = StateAnchor::constant(Trans3::identity());
+    let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
+    let loc_styles = (&calculated_size, &matrix).map(move |size: &Size2, mat4: &Mat4| {
+            let _enter = span!(Level::TRACE,
+                        "-> [root] [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
+                        )
+            .entered();
+
+            trace!("size: {}  , matrix: {}", size, CssTransform::from(*mat4));
+
+            // TODO use  key 更新 s(),
+            s().w(px(size.x)).h(px(size.y)).transform(*mat4)
+        });
+    let layout_calculated = LayoutCalculated {
+            size: calculated_size,
+            origin: calculated_origin,
+            align: calculated_align,
+            coordinates_trans,
+            matrix,
+            // • • • • •
+            loc_styles,
+        };
+    let styles_string = (
+            &layout.path_styles.watch(),
+            &layout_calculated.loc_styles,
+            &other_styles_sv.watch(),
+        )
+        .map(
+            move |path_styles: &Dict<EPath<Ix>,Style>, loc_styles: &Style, other_styles: &Style| {
+                let _enter = span!(Level::TRACE,
+                        "-> [ROOT styles ] recalculation..(&other_styles_watch, &loc_styles).map ",
+                        )
+                .entered();
+
+                let ps = path_styles.values().fold(String::default(), |acc,v|{
+                    format!("{}{}",acc,v.render())
+                });
+
+                format!(
+                    "{}{}{}",
+                    other_styles.render(),
+                    ps,
+                    loc_styles.render()
+                )
+            },
+        );
+    (layout_calculated,styles_string)
 }
 
 // fn try_get_parent_calc_size(parent: &StateVar<Option<EdgeItemNode>>) -> Option<Size2> {
@@ -792,7 +929,7 @@ impl EdgeItemNode {
 // #[topo::nested]
 // pub fn emg_edge_item_default<Ix>(
 //     eix: EdgeIndex<Ix>,
-//     paths_sa: StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>,
+//     paths_sa:SaDictPathWithEINode<Ix>,
 // ) -> EmgEdgeItem<Ix> {
 //     EmgEdgeItem::new_child(
 //         eix,
@@ -853,7 +990,7 @@ pub fn css<
 // }
 #[cfg(test)]
 mod tests {
-
+    #![allow(clippy::too_many_lines)]
     use super::*;
     use emg_refresh::RefreshUseFor;
     use im::vector;
@@ -921,21 +1058,25 @@ mod tests {
 
             let css_width = CssWidth::from(px(100));
             let css_height = CssHeight::from(px(100));
-            // ─────────────────────────────────────────────────────────────────
+            let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
 
-            let mut root_e =use_state( EmgEdgeItem::new_root_in_topo("root", 1920, 1080));
-            
+
+            let root_e_source =use_state( None);
+            let root_e_target = use_state(Some(node_index("root")));
+            let mut root_e = EmgEdgeItem::new_root_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(EdgeIndex::new(None,Some(node_index("root"))), Edge::new(root_e_source, root_e_target, root_e.clone()));
+                nd
+            });
                 
-            let e_dict_sv:StateVar<Dict<EdgeIndex<&str>, Edge<EmgEdgeItem<&str>, &str>>> = use_state(Dict::new());
-// ────────────────────────────────────────────────────────────────────────────────
 
-            let e1_source =use_state( node_index("root"));
-            let e1_target = use_state(node_index("1"));
+            let e1_source =use_state( Some(node_index("root")));
+            let e1_target = use_state(Some(node_index("1")));
             let e1 = EmgEdgeItem::new_child(
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
-                root_e.watch(),
                 size(px(50), px(50)),
                 origin2(pc(0), pc(0)),
                 align2(pc(50), pc(50)),
@@ -946,16 +1087,14 @@ mod tests {
                 nd.insert(edge_index("root","1"), Edge::new(e1_source, e1_target, e1.clone()));
                 nd
             });
-            // ─────────────────────────────────────────────────────────────────
 
             
-            let e2_source =use_state( node_index("1"));
-            let e2_target = use_state(node_index("2"));
+            let e2_source =use_state( Some(node_index("1")));
+            let e2_target = use_state(Some(node_index("2")));
             let mut e2 = EmgEdgeItem::new_child(
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
-                root_e.watch(),
                 size(px(10), px(10)),
                 origin2(pc(100), pc(100)),
                 align2(pc(100), pc(100)),
@@ -965,20 +1104,20 @@ mod tests {
                 nd.insert(edge_index("1","2"), Edge::new(e2_source, e2_target, e2.clone()));
                 nd
             });
-            // ─────────────────────────────────────────────────────────────────
 
 
             // debug!("refresh_use before {}", &ec);
             let _span = span!(Level::TRACE, "debug print e1");
             _span.in_scope(|| {
-                trace!("refresh_use before {}", &e1);
+                trace!("loc refresh_use before {}", &e1);
             });
-            info!("=========================================================");
+            info!("l2 =========================================================");
 
             root_e.refresh_use(&vec![css(css_width)]);
+            // root_e.refresh_use(&css(css_width.clone()));
             root_e.refresh_use(&Css(css_height));
             assert_eq!(
-                e1.get_edge_data(&EPath(vector![edge_index("root", "root")]))
+                e1.get_edge_data(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .unwrap()
                     .calculated
                     .coordinates_trans
@@ -991,11 +1130,12 @@ mod tests {
             e2.refresh_use(&Css(CssHeight::from(px(20))));
 
             trace!("refresh_use after {:#?}", &e2);
-            info!("..=========================================================");
+            info!("l3 =========================================================");
             assert_eq!(
                 e2.get_edge_data(&EPath(vector![
-                    edge_index("root", "root"),
-                    edge_index("root", "1")
+                    edge_index_no_source("root"),
+                    edge_index("root", "1"),
+                    edge_index("1", "2")
                 ]))
                 .unwrap()
                 .calculated
@@ -1006,24 +1146,19 @@ mod tests {
             trace!(
                 "{}",
                 e2.get_edge_data(&EPath(vector![
-                    edge_index("root", "root"),
-                    edge_index("root", "1")
+                    edge_index_no_source("root"),
+                    edge_index("root", "1"),
+                    edge_index("1", "2")
                 ]))
                 .unwrap()
                 .styles_string
                 .get(),
             );
             info!("..=========================================================");
-            // trace!("end----- {:#?}", &root_e);
-            // trace!("end----- {:#?}", &e1);
-            // trace!("end----- {:#?}", &e2);
-
-            // ─────────────────────────────────────────────────────────────────
         }
     }
     #[test]
     fn it_works() {
-        // init();
         let _xx = setup_global_subscriber();
         {
             let span = span!(Level::TRACE, "start");
@@ -1037,20 +1172,26 @@ mod tests {
 
             let css_width = CssWidth::from(px(100));
             let css_height = CssHeight::from(px(100));
-            // ─────────────────────────────────────────────────────────────────
 
-            let mut root_e =use_state( EmgEdgeItem::new_root_in_topo("root", 1920, 1080));
-            let e_dict_sv:StateVar<Dict<EdgeIndex<&str>, Edge<EmgEdgeItem<&str>, &str>>> = use_state(Dict::new());
-        // ─────────────────────────────────────────────────────────────────
+            let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
+
+            let root_e_source =use_state( None);
+            let root_e_target = use_state(Some(node_index("root")));
+            let mut root_e = EmgEdgeItem::new_root_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(EdgeIndex::new(None,Some(node_index("root"))), Edge::new(root_e_source, root_e_target, root_e.clone()));
+                nd
+            });
 
 
-            let e1_source =use_state( node_index("root"));
-            let e1_target = use_state(node_index("1"));
+
+            let e1_source =use_state( Some(node_index("root")));
+            let e1_target = use_state(Some(node_index("1")));
             let mut e1 = EmgEdgeItem::new_child(
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
-                root_e.watch(),
                 size(px(10), px(10)),
                 origin2(pc(100), pc(100)),
                 align2(pc(50), pc(20)),
@@ -1061,13 +1202,12 @@ mod tests {
                 nd
             });
 
-            let e2_source =use_state( node_index("1"));
-            let e2_target = use_state(node_index("2"));
+            let e2_source =use_state( Some(node_index("1")));
+            let e2_target = use_state(Some(node_index("2")));
             let mut e2 = EmgEdgeItem::new_child(
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
-                root_e.watch(),
             size(px(10), px(10)),
                 origin2(pc(100), pc(100)),
                 align2(pc(50), pc(20)),
@@ -1085,13 +1225,13 @@ mod tests {
             _span.in_scope(|| {
                 trace!("refresh_use before {}", &e1);
             });
-            info!("=========================================================");
+            info!("l1 =========================================================");
 
             assert_eq!(
                 e1.node
                     .get()
-                    .get(&EPath(vector![edge_index("root", "root")]))
-                    .and_then(|x| x.as_edge_data())
+                    .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
                     .unwrap()
                     .calculated
                     .coordinates_trans
@@ -1145,8 +1285,8 @@ mod tests {
             assert_eq!(
                 e1.node
                     .get()
-                    .get(&EPath(vector![edge_index("root", "root")]))
-                    .and_then(|x| x.as_edge_data())
+                    .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
                     .unwrap()
                     .calculated
                     .coordinates_trans
@@ -1188,8 +1328,8 @@ mod tests {
             assert_eq!(
                 e1.node
                     .get()
-                    .get(&EPath(vector![edge_index("root", "root")]))
-                    .and_then(|x| x.as_edge_data())
+                    .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
                     .unwrap()
                     .calculated
                     .size
@@ -1198,29 +1338,28 @@ mod tests {
             );
             info!("=========================================================");
             assert_eq!(
-                e1.node.get().get(&EPath(vector![edge_index("root", "root")]))
-                    .and_then(|x| x.as_edge_data())
+                e1.node.get().get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
                 .unwrap()
                 .styles_string
                 .get() ,
             "width: 12px;\nheight: 10px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,10,0,1);\n"
             );
             trace!("refresh_use after {}", &e1);
-            // ─────────────────────────────────────────────────────────────────
-            // ────────────────────────────────────────────────────────────────────────────────
             info!("=========================================================");
 
             trace!("refresh_use after {}", &e2);
-            info!("=========================================================");
+            info!("l1351 =========================================================");
             e2.refresh_use(&Css(CssHeight::from(px(50))));
             assert_eq!(
                 e2.node
                     .get()
                     .get(&EPath(vector![
-                        edge_index("root", "root"),
-                        edge_index("root", "1")
+                        edge_index_no_source("root"),
+                        edge_index("root", "1"),
+                        edge_index("1", "2")
                     ]))
-                    .and_then(|x| x.as_edge_data())
+                    .and_then(EdgeItemNode::as_edge_data)
                     .unwrap()
                     .calculated
                     .coordinates_trans
@@ -1246,20 +1385,16 @@ mod tests {
                 e2.node
                     .get()
                     .get(&EPath(vector![
-                        edge_index("root", "root"),
-                        edge_index("root", "1")
+                        edge_index_no_source( "root"),
+                        edge_index("root", "1"),
+                        edge_index("1", "2")
                     ]))
-                    .and_then(|x| x.as_edge_data())
+                    .and_then(EdgeItemNode::as_edge_data)
                     .unwrap()
                     .styles_string
                     .get(),
             );
             info!("..=========================================================");
-            // trace!("end----- {:#?}", &root_e);
-            // trace!("end----- {:#?}", &e1);
-            // trace!("end----- {:#?}", &e2);
-
-            // ─────────────────────────────────────────────────────────────────
         }
     }
 
@@ -1269,23 +1404,34 @@ mod tests {
         {
             let _g = span!(Level::TRACE, "change_parent").entered();
 
-            let root_e =use_state( EmgEdgeItem::new_root_in_topo("root", 100, 100));
-            let e_dict_sv:StateVar<Dict<EdgeIndex<&str>, Edge<EmgEdgeItem<&str>, &str>>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
 
-            // ─────────────────────────────────────────────────────────────────
+            let root_e_source =use_state( None);
+            let root_e_target = use_state(Some(node_index("root")));
+            let root_e = EmgEdgeItem::new_root_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),100, 100);
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(EdgeIndex::new(None,Some(node_index("root"))), Edge::new(root_e_source, root_e_target, root_e.clone()));
+                nd
+            });
 
-            
 
-            let root_e2 = EmgEdgeItem::<&str>::new_root_in_topo("root2", 200, 200);
+            let s_root_e2_source =use_state( None);
+            let root_e2_target = use_state(Some(node_index("root2")));
+            let root_e2 = EmgEdgeItem::new_root_in_topo(s_root_e2_source.watch(), root_e2_target.watch(),e_dict_sv.watch(),200, 200);
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(EdgeIndex::new(None,Some(node_index("root2"))), Edge::new(s_root_e2_source, root_e2_target, root_e2.clone()));
+                nd
+            });
+            // ---------------------------------------
 
-            // ─────────────────────────────────────────────────────────────────
-            let e1_source =use_state( node_index("root"));
-            let e1_target = use_state(node_index("1"));
+            let e1_source =use_state( Some(node_index("root")));
+            let e1_target = use_state(Some(node_index("1")));
             let e1 = EmgEdgeItem::new_child(
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
-                root_e.watch(),
                 size(px(10), px(10)),
                 origin2(pc(0), pc(0)),
                 align2(pc(50), pc(50)),
@@ -1296,15 +1442,14 @@ mod tests {
                 nd
             });
 
-
+            //-------------------------------------
             
-            let e2_source =use_state( node_index("1"));
-            let e2_target = use_state(node_index("2"));
-            let mut e2 = EmgEdgeItem::new_child(
+            let e2_source =use_state( Some(node_index("1")));
+            let e2_target = use_state(Some(node_index("2")));
+            let e2 = EmgEdgeItem::new_child(
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
-                root_e.watch(),
                      size(px(10), px(10)),
                 origin2(pc(0), pc(0)),
                 align2(pc(100), pc(000)),
@@ -1316,42 +1461,41 @@ mod tests {
             });
           
 
+            trace!("---e1 {}", &e1); 
 
             assert_eq!(
-                e1.get_edge_data(&EPath(vector![edge_index("root", "root")]))
+                e1.get_edge_data(&EPath(vector![edge_index_no_source("root"),edge_index("root", "1")]))
                     .unwrap()
                     .calculated
                     .coordinates_trans
                     .get(),
                 Trans3::new(50.0, 50.0, 0.)
             );
-            // @setup end────────────────────────────────────────────────────────────────────────────────
-            // ────────────────────────────────────────────────────────────────────────────────
 
             e1_source
-                .set(node_index("root2"));
-            trace!("---new root2:e1 {}", &e1);// !  root2 没有找到, 用的 root edge  默认的
+                .set(Some(node_index("root2")));
+            trace!("---new root2:e1 {}", &e1); 
 
             assert_eq!(
-                e1.get_edge_data(&EPath(vector![edge_index("root2", "root2"),]))
+                e1.get_edge_data(&EPath(vector![edge_index_no_source("root2"),edge_index("root2", "1")]))
                     .unwrap()
                     .calculated
                     .coordinates_trans
                     .get(),
                 Trans3::new(100.0, 100.0, 0.)
             );
-            // ─────────────────────────────────────────────────────────────────
             info!("..=========================================================");
             trace!("new root_e2:e1 {}", &e1);
             info!("--------------------------------------------------");
             trace!("new root_e2:e2 {}", &e2);
             info!("..=========================================================");
             //local
-            assert_eq!(e2.id.get(), edge_index("e1", "e2"));
+            assert_eq!(e2.id.get(), edge_index("1", "2"));
             assert_eq!(
                 e2.get_edge_data(&EPath(vector![
-                    edge_index("root2", "root2"),
-                    edge_index("root2", "e1")
+                    edge_index_no_source( "root2"),
+                    edge_index("root2", "1"),
+                    edge_index("1", "2"),
                 ]))
                 .unwrap()
                 .calculated
@@ -1364,9 +1508,13 @@ mod tests {
             //     .set_with(|id| id.clone().use_incoming(node_index("root")));
             // parent_for_e2_sa.set(root_e.clone());
             // local use root
-            assert_eq!(e2.id.get(), edge_index("root", "e2"));
+            e2_source.set(Some(node_index("root")));
+            assert_eq!(e2.id.get(), edge_index("root", "2"));
             assert_eq!(
-                e2.get_edge_data(&EPath(vector![edge_index("root", "root"),]))
+                e2.get_edge_data(&EPath(vector![
+                    edge_index_no_source( "root"),
+                    edge_index("root", "2"),
+                ]))
                     .unwrap()
                     .calculated
                     .coordinates_trans

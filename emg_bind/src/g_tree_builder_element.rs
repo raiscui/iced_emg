@@ -1,14 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-04-09 12:15:23
+ * @LastEditTime: 2021-04-10 16:34:14
  * @LastEditors: Rais
  * @Description:
  */
 use std::{borrow::Borrow, ops::Deref};
 
-use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
-use emg_layout::{edge_item_data_with_parent, EdgeData, EdgeData, EdgeItemNode};
+use crate::{runtime::Element, EventNode, GElement, GraphType, GraphView,Layer, NodeIndex};
+use emg::edge_index;
+use emg_layout::{emg_edge_item_default, EdgeData, EdgeData, EdgeItemNode, EmgEdgeItem};
 use emg_refresh::{RefreshFor, RefreshUseFor};
 use emg_state::{topo, use_state, StateVar};
 use std::rc::Rc;
@@ -78,36 +79,36 @@ impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
         }
     }
 }
-/// # Panics
-///
-/// Will panic if `tree_layer` is not `GTreeBuilderElement::Layer`
+// type NodeIndex<Ix> = (NodeIndex<String>, StateVar<Option<EdgeItemNode>>);
 
-type IllicitTreeBuildEnv = (NodeIndex<String>, StateVar<Option<EdgeItemNode>>);
+impl<'a, Message, Ix> GraphType<'a, Message,Ix>  {
 
-#[topo::nested]
+    #[topo::nested]
 pub fn handle_root<'a, Message>(
-    g: &mut GraphType<'a, Message>,
+    &mut self,
     tree_layer: &GTreeBuilderElement<'a, Message>,
 ) where
     Message: Clone + std::fmt::Debug,
 {
     match tree_layer.borrow() {
-        GTreeBuilderElement::Layer(id, edge_refreshers, children_list) => {
+        GTreeBuilderElement::Layer(root_id, edge_refreshers, children_list) => {
             let _span = trace_span!("=> handle_root [layer] ",%id).entered();
             trace!("{:?}==>{:?}", &id, &children_list);
 
-            let e = EdgeItemNode::new_root(1920, 1080);
-            e.refresh_use(edge_refreshers);
+            // let root_ei = EmgEdgeItem::<<GraphType as crate::GraphView>::Ix>::new_root(
+            let root_ei = EmgEdgeItem::<Ix>::new_root_in_topo(root_id.clone(), 1920, 1080);
+            root_ei.refresh_use(edge_refreshers);
 
-            let nix = g.insert_root(id.clone(), Layer::new(id).into(), e.clone());
+            let nix = self.insert_node(root_id.clone(), Layer::new(root_id).into());
 
-            let e_sv = use_state(Some(e.clone()));
-            illicit::Layer::new().offer((nix.clone(), e_sv)).enter(|| {
+            self.set_root_edge(root_ei);
+
+            illicit::Layer::new().offer(nix.clone()).enter(|| {
                 assert_eq!(
-                    *illicit::expect::<IllicitTreeBuildEnv>(),
+                    *illicit::expect::<NodeIndex<Ix>>(),
                     (nix.clone(), e_sv)
                 );
-                trace!("{:?}", *illicit::expect::<IllicitTreeBuildEnv>());
+                trace!("{:?}", *illicit::expect::<NodeIndex<Ix>>());
                 children_list
                     .iter()
                     .for_each(|child_layer| handle_children(g, child_layer));
@@ -120,12 +121,12 @@ pub fn handle_root<'a, Message>(
 }
 #[topo::nested]
 pub fn handle_children<'a, Message>(
-    g: &mut GraphType<'a, Message>,
+    &mut self,
     tree_layer: &'_ GTreeBuilderElement<'a, Message>,
 ) where
     Message: Clone + std::fmt::Debug,
 {
-    let (parent_nix, parent_sv) = *illicit::expect::<IllicitTreeBuildEnv>();
+    let parent_nix = *illicit::expect::<NodeIndex<Ix>>();
     match tree_layer.borrow() {
         //
         GTreeBuilderElement::Layer(id, edge_refreshers, children_list) => {
@@ -133,21 +134,27 @@ pub fn handle_children<'a, Message>(
 
             trace!("{:?}==>{:?}", &id, &children_list);
             // node index
-            let nix = g.insert_node(id.clone(), Layer::new(id).into());
+            let nix = self.insert_node(id.clone(), Layer::new(id).into());
+
+            
 
             // edge
+            let p_nix_sv = use_state(parent_nix.clone());
+            let xx = self.get_raw_edges().watch().filter_map(|eix,ei|{
+                if (eix.target_node_ix() ==  )
+            });
 
-            let mut e = edge_item_data_with_parent(id.clone(), parent_sv);
-            e.refresh_use(edge_refreshers);
+            let mut ei = edge_item_data_with_parent(id.clone(), parent_sv);
+            ei.refresh_use(edge_refreshers);
 
             // insert to emg graph
-            g.insert_update_edge(&parent_nix, &nix, e);
+            self.insert_update_edge(&parent_nix, &nix, ei);
 
             // next
-            let e_sv = use_state(Some(e.clone()));
+            let e_sv = use_state(Some(ei.clone()));
             illicit::Layer::new().offer((nix.clone(), e_sv)).enter(|| {
                 assert_eq!(
-                    *illicit::expect::<IllicitTreeBuildEnv>(),
+                    *illicit::expect::<NodeIndex<Ix>>(),
                     (nix.clone(), e_sv)
                 );
                 children_list
@@ -158,31 +165,31 @@ pub fn handle_children<'a, Message>(
         GTreeBuilderElement::El(id, element) => {
             let _span = trace_span!("-> handle_children [El] ",%id,?parent_nix).entered();
 
-            let nix = g.insert_node(id.clone(), element.clone().into());
+            let nix = self.insert_node(id.clone(), element.clone().into());
 
             //TODO maybe have edge_item_data_with_parent
             let e = format!("{} -> {}", parent_nix.index(), nix.index()).into();
             trace!("{}", &e);
-            g.insert_update_edge(&parent_nix, &nix, e);
+            self.insert_update_edge(&parent_nix, &nix, e);
         }
         GTreeBuilderElement::GElementTree(id, edge_refreshers, gel, refreshers) => {
             let _span = trace_span!("-> handle_children [GElementTree] ",%id,?parent_nix).entered();
 
             //node index
-            let nix = g.insert_node(id.clone(), gel.clone());
+            let nix = self.insert_node(id.clone(), gel.clone());
 
             //edge
             let mut e = edge_item_data_with_parent(id.clone(), parent_sv);
             e.refresh_use(edge_refreshers);
 
             //insert
-            g.insert_update_edge(&parent_nix, &nix, e);
+            self.insert_update_edge(&parent_nix, &nix, e);
 
             //next
             let e_sv = use_state(Some(e.clone()));
             illicit::Layer::new().offer((nix.clone(), e_sv)).enter(|| {
                 assert_eq!(
-                    *illicit::expect::<IllicitTreeBuildEnv>(),
+                    *illicit::expect::<NodeIndex<Ix>>(),
                     (nix.clone(), e_sv)
                 );
                 refreshers
@@ -194,12 +201,12 @@ pub fn handle_children<'a, Message>(
             let _span = trace_span!("-> handle_children [RefreshUse] ",%id,?parent_nix).entered();
 
             //node index
-            let nix = g.insert_node(id.clone(), u.clone().into());
+            let nix = self.insert_node(id.clone(), u.clone().into());
 
             //edge
             let e = format!("{} -> {}", parent_nix.index(), nix.index()).into();
             trace!("{}", &e);
-            g.insert_update_edge(&parent_nix, &nix, e);
+            self.insert_update_edge(&parent_nix, &nix, e);
         }
         GTreeBuilderElement::Cl(_id, dyn_fn) => {
             let _span = trace_span!("-> handle_children [Cl] ",%_id,?parent_nix).entered();
@@ -212,15 +219,21 @@ pub fn handle_children<'a, Message>(
 
             // TODO: make all into() style?
             // node index
-            let nix = g.insert_node(id.clone(), callback.clone().into());
+            let nix = self.insert_node(id.clone(), callback.clone().into());
 
             //edge
             let e = format!("{} -> {}", parent_nix.index(), nix.index()).into();
             trace!("{}", &e);
-            g.insert_update_edge(&parent_nix, &nix, e);
+            self.insert_update_edge(&parent_nix, &nix, e);
         }
     };
 }
+}
+
+/// # Panics
+///
+/// Will panic if `tree_layer` is not `GTreeBuilderElement::Layer`
+
 
 // #[must_use]
 // pub fn make_id(name: &str) -> String {
