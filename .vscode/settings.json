@@ -26,7 +26,9 @@
         "**/.project": true,
         "**/.settings": true,
         "**/*.meta": true,
-        "emg_bind": true
+        "emg_bind": false
     },
-    "explorerExclude.backup": null
+  
+    "rust-analyzer.checkOnSave.allTargets": false,
+    "rust-analyzer.cargo.target": "wasm32-unknown-unknown",
 }

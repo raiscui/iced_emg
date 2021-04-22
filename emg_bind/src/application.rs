@@ -2,25 +2,25 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-03-13 09:53:31
+ * @LastEditTime: 2021-04-21 22:04:10
  * @LastEditors: Rais
  * @Description:
  */
 
-use crate::{GTreeBuilderElement, GraphType};
+use crate::{GTreeBuilderElement, GTreeBuilderFn, GraphType};
 
 use std::{cell::RefCell, fmt, rc::Rc};
 
-pub use iced_web::{futures, Command};
+pub use crate::runtime::{futures, Command};
 
-use iced_web::dodrio;
-use iced_web::Bus;
-use iced_web::Css;
-pub use iced_web::Element;
-pub use iced_web::Subscription;
+use crate::runtime::dodrio;
+use crate::runtime::Bus;
+use crate::runtime::Css;
+pub use crate::runtime::Element;
+pub use crate::runtime::Subscription;
 
 #[doc(no_inline)]
-use iced_web::Executor;
+use crate::runtime::Executor;
 
 /// An EMG edition interactive web application.
 ///
@@ -110,7 +110,7 @@ pub trait Application {
 
         let mut emg_graph = GraphType::<Self::Message>::default();
         let root = Self::tree_build(Rc::clone(&application));
-        crate::handle_root(&mut emg_graph, &root);
+        emg_graph.handle_root_in_topo(&root);
         let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
         // let emg_graph_rc = (emg_graph);
         // GraphType::<Self::Message>::init();

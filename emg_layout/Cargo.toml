@@ -6,8 +6,11 @@ edition = "2018"
 resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[profile.dev]
+split-debuginfo = "unpacked"
+
 [dependencies]
-nalgebra = "0.24.1"
+nalgebra = "0.26.1"
 derive_more = "0.99"
 seed_styles = { path = "../../styles_hooks/seed_styles" }
 emg_refresh = { path = "../emg_refresh" }
@@ -24,5 +27,3 @@ indented = "0.1.0"
 # tracing-log = { version = "", features = ["env_logger"] }
 tracing-flame = "0.1.0"
 im = ""
-[profile.dev]
-split-debuginfo = "unpacked"

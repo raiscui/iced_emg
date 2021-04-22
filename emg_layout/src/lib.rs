@@ -24,21 +24,19 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 use derive_more::TryInto;
-use emg::{edge_index, node_index,edge_index_no_source, Edge, EdgeIndex, NodeIndex};
+use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{
     topo, use_state, Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor,
     StateVar,
 };
-use im::vector;
+
 use im::Vector;
-use na::{
-    Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3,
-};
+use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, SVector, Similarity3, Translation3, Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;
 use styles::{
-    pc, px, s, CssHeight, CssTransform, CssValueTrait, CssWidth, ExactLength, Percent, Style,
+     px, s, CssHeight, CssTransform, CssValueTrait, CssWidth, ExactLength, Percent, Style,
     UpdateStyle,
 };
 use styles::{CssHeightTrait, CssTransformTrait, CssWidthTrait};
@@ -53,8 +51,8 @@ mod calc;
 mod impl_refresh;
 // ────────────────────────────────────────────────────────────────────────────────
 
-type Size2 = Vector2<f64>;
-type Vec3 = Vector3<f64>;
+type Size2 = SVector<f64,2>;
+type Vec3 = SVector<f64,3>;
 type Trans3 = Translation3<f64>;
 type Rot3 = Rotation3<f64>;
 type Transform9 = Affine3<f64>;
@@ -129,14 +127,7 @@ impl Default for GenericSize {
     }
 }
 
-impl Default for GenericWH {
-    fn default() -> Self {
-        Self {
-            w: px(16).into(),
-            h: px(16).into(),
-        }
-    }
-}
+
 impl Default for GenericLoc {
     fn default() -> Self {
         Self {
@@ -200,7 +191,14 @@ pub struct GenericWH {
     w: GenericSize,
     h: GenericSize,
 }
-
+impl Default for GenericWH {
+    fn default() -> Self {
+        Self {
+            w: px(16).into(),
+            h: px(16).into(),
+        }
+    }
+}
 impl GenericWH {
     pub fn new(w: impl Into<GenericSize>, h: impl Into<GenericSize>) -> Self {
         Self {
@@ -351,6 +349,12 @@ pub struct EdgeData {
                                         // animations:
 }
 
+impl EdgeData {
+    #[must_use] pub fn styles_string(&self) -> String {
+        self.styles_string.get()
+    }
+}
+
 impl Eq for EdgeData {}
 
 impl std::fmt::Display for EdgeData {
@@ -416,6 +420,32 @@ where
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug, Default)]
 pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(Vector<EdgeIndex<Ix>>);
 
+impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
+    #[must_use] pub fn new(vec:Vector<EdgeIndex<Ix>>)->Self{
+        Self(vec)
+    }
+
+    #[must_use] pub fn back(&self)->Option< &EdgeIndex<Ix>>{
+        self.0.back()
+    }
+
+    #[must_use] pub fn get(&self)->&Vector<EdgeIndex<Ix>>{
+        &self.0
+    }
+
+    pub fn get_mut(&mut self)-> &mut Vector<EdgeIndex<Ix>>{
+        &mut self.0
+    }
+
+    pub fn set(&mut self,vec:Vector<EdgeIndex<Ix>>){
+        self.0 = vec; 
+    }
+
+    pub fn set_with<T:FnMut(&mut Vector<EdgeIndex<Ix>>)>(&mut self,mut func:T){
+         func( &mut self.0);
+    }
+}
+
 impl<Ix> std::fmt::Display for EPath<Ix>
 where
     Ix: Clone + Hash + Eq + PartialEq + Default + std::fmt::Display,
@@ -433,7 +463,7 @@ where
     }
 }
 
-type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
+pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct EmgEdgeItem<Ix>
 where
@@ -475,7 +505,7 @@ type SaDictPathEiNode<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>;
 
 impl<Ix> EmgEdgeItem<Ix>
 where
-    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display,
+    Ix: Clone + Hash + Ord + Default 
 {
     #[must_use]
     pub fn get_edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
@@ -483,17 +513,37 @@ where
             .get()
             .get(key)
             .and_then(|x| x.as_edge_data().cloned())
+            
     }
+}
+
+impl<Ix> EmgEdgeItem<Ix>
+where
+    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display,
+{
+  
 
     #[topo::nested]
     #[instrument(skip(edges))]
-    pub fn new_root_in_topo<T: Into<f64> + std::fmt::Debug>(
+    pub fn default_in_topo(
+        source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
+        target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
+        edges: StateAnchor<GraphEdgesDict<Ix>>,
+         ) -> Self  where Ix:std::fmt::Debug{
+
+        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    GenericWH::default(), GenericLoc::default(), GenericLoc::default(),)
+
+         }
+
+    #[topo::nested]
+    #[instrument(skip(edges))]
+    pub fn default_with_wh_in_topo<T: Into<f64> + std::fmt::Debug>(
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         edges: StateAnchor<GraphEdgesDict<Ix>>,
          w: T, h: T) -> Self  where Ix:std::fmt::Debug{
 
-        Self::new_child(source_node_nix_sa, target_node_nix_sa, edges,    size(px(w), px(h)), GenericLoc::default(), GenericLoc::default(),)
+        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    size(px(w), px(h)), GenericLoc::default(), GenericLoc::default(),)
         // let id:StateVar< StateAnchor<EdgeIndex<Ix>>> =use_state( StateAnchor::constant(edge_index(id.clone().into(), id.clone().into())) );
 
         // let layout = Layout::<Ix> {
@@ -590,7 +640,7 @@ where
 
 
 #[topo::nested]
-    pub fn new_child(
+    pub fn new_in_topo(
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         edges: StateAnchor<GraphEdgesDict<Ix>>,
@@ -599,6 +649,7 @@ where
         align: impl Into<GenericLoc>,
     ) -> Self 
     where Ix:std::fmt::Debug
+
     {
         let id_sa:StateAnchor <EdgeIndex<Ix> > =( &source_node_nix_sa,&target_node_nix_sa).map(|s,t| {
             let _g = span!(Level::TRACE, "[ id_sa recalculation ]:source_node_nix_sa/target_node_nix_sa change ").entered();
@@ -621,9 +672,9 @@ where
 
             eid_sa_inner.map(|i:&EdgeIndex<Ix>|{
                 
-                let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:eid_sa_inner change ").entered();
+                let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:eid_sa_inner change ",edge_index=%i).entered();
                 
-                i.source_node_ix().clone()
+                i.source_nix().clone()
             }).into()
         });
 
@@ -637,10 +688,10 @@ where
                     Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
                 }else{
                     let opt_source_nix_clone = opt_source_nix.clone();
-                    edges.filter_map(move|one_eix, e| {
+                    edges.filter_map(move|someone_eix, e| {
                         
-                        println!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",one_eix.target_node_ix(),&opt_source_nix_clone);
-                        if   one_eix.target_node_ix() == &opt_source_nix_clone {
+                        println!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_source_nix_clone);
+                        if   someone_eix.target_nix() == &opt_source_nix_clone {
 
                             Some(e.item.node.clone())
 
@@ -743,15 +794,15 @@ where
                 paths_clone2.map(move |p_node_as_paths:&Dict<EPath<Ix>, EdgeItemNode>|{
                     
                     p_node_as_paths.iter()
-                                .map(|(parent_e_node_k, p_ei_node_v)| {
-                                    let mut nk = parent_e_node_k.clone();
-                                    
-                                    //TODO node 可以自带 self nix ,下游不必每个子节点都重算
+                        .map(|(parent_e_node_k, p_ei_node_v)| {
+                            let mut nk = parent_e_node_k.clone();
+                            
+                            //TODO node 可以自带 self nix ,下游不必每个子节点都重算
 
-                                    nk.0.push_back(eid_clone.clone());
-                                    (nk, p_ei_node_v.clone())
-                                })
-                                .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
+                            nk.0.push_back(eid_clone.clone());
+                            (nk, p_ei_node_v.clone())
+                        })
+                        .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
 
                 }).map_( move |path:&EPath<Ix>, path_edge_item_node:&EdgeItemNode| {
 
@@ -761,11 +812,9 @@ where
                        
                     let (layout_calculated,styles_string) =  match path_edge_item_node {
                         EdgeItemNode::Empty => path_ein_empty_node_builder(&layout, other_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> {path_with_ed_node_builder(id_sv, ped, &layout, path, other_styles_sv)}
-                                    
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &layout, path, other_styles_sv),
                         EdgeItemNode::String(_)  => {
-                            todo!("EdgeItemNode::String(_) not implemented yet");
-                
+                            todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
                                 
                     };
@@ -789,6 +838,7 @@ where
     }
 }
 
+
 fn path_with_ed_node_builder<Ix>(
     id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>, 
     ped: &EdgeData,
@@ -796,7 +846,7 @@ fn path_with_ed_node_builder<Ix>(
       path: &EPath<Ix>, 
       other_styles_sv: StateVar<Style>) -> (LayoutCalculated, StateAnchor<String>) 
 where
-Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
+Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord +std::fmt::Display
 {
     let layout_calculated = layout_calculating(id_sv, ped, layout);
     let p = path.clone();
@@ -840,7 +890,6 @@ fn path_ein_empty_node_builder<Ix>(layout: &Layout<Ix>, other_styles_sv: StateVa
     let calculated_size = layout.size.watch().map(|g_wh: &GenericWH| {
             // println!("in layout size watch map");
             let (w, h) = g_wh.get_length_value();
-
             Size2::new(w, h)
         });
     let calculated_origin = StateAnchor::constant(Trans3::identity());
@@ -992,6 +1041,7 @@ pub fn css<
 mod tests {
     #![allow(clippy::too_many_lines)]
     use super::*;
+    use emg::{edge_index, edge_index_no_source, node_index};
     use emg_refresh::RefreshUseFor;
     use im::vector;
     use seed_styles::CssWidth;
@@ -1063,17 +1113,17 @@ mod tests {
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
-            let mut root_e = EmgEdgeItem::new_root_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            let mut root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
-                nd.insert(EdgeIndex::new(None,Some(node_index("root"))), Edge::new(root_e_source, root_e_target, root_e.clone()));
+                nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
                 nd
             });
                 
 
             let e1_source =use_state( Some(node_index("root")));
             let e1_target = use_state(Some(node_index("1")));
-            let e1 = EmgEdgeItem::new_child(
+            let e1 = EmgEdgeItem::new_in_topo(
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
@@ -1091,7 +1141,7 @@ mod tests {
             
             let e2_source =use_state( Some(node_index("1")));
             let e2_target = use_state(Some(node_index("2")));
-            let mut e2 = EmgEdgeItem::new_child(
+            let mut e2 = EmgEdgeItem::new_in_topo(
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
@@ -1177,7 +1227,7 @@ mod tests {
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
-            let mut root_e = EmgEdgeItem::new_root_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            let mut root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
                 nd.insert(EdgeIndex::new(None,Some(node_index("root"))), Edge::new(root_e_source, root_e_target, root_e.clone()));
@@ -1188,7 +1238,7 @@ mod tests {
 
             let e1_source =use_state( Some(node_index("root")));
             let e1_target = use_state(Some(node_index("1")));
-            let mut e1 = EmgEdgeItem::new_child(
+            let mut e1 = EmgEdgeItem::new_in_topo(
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
@@ -1204,7 +1254,7 @@ mod tests {
 
             let e2_source =use_state( Some(node_index("1")));
             let e2_target = use_state(Some(node_index("2")));
-            let mut e2 = EmgEdgeItem::new_child(
+            let mut e2 = EmgEdgeItem::new_in_topo(
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
@@ -1238,6 +1288,7 @@ mod tests {
                     .get(),
                 Trans3::new(950.0, 206.0, 0.)
             );
+
 
             let xx = vec![css(css_width)];
 
@@ -1408,7 +1459,7 @@ mod tests {
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
-            let root_e = EmgEdgeItem::new_root_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),100, 100);
+            let root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),100, 100);
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
                 nd.insert(EdgeIndex::new(None,Some(node_index("root"))), Edge::new(root_e_source, root_e_target, root_e.clone()));
@@ -1418,7 +1469,7 @@ mod tests {
 
             let s_root_e2_source =use_state( None);
             let root_e2_target = use_state(Some(node_index("root2")));
-            let root_e2 = EmgEdgeItem::new_root_in_topo(s_root_e2_source.watch(), root_e2_target.watch(),e_dict_sv.watch(),200, 200);
+            let root_e2 = EmgEdgeItem::default_with_wh_in_topo(s_root_e2_source.watch(), root_e2_target.watch(),e_dict_sv.watch(),200, 200);
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
                 nd.insert(EdgeIndex::new(None,Some(node_index("root2"))), Edge::new(s_root_e2_source, root_e2_target, root_e2.clone()));
@@ -1428,7 +1479,7 @@ mod tests {
 
             let e1_source =use_state( Some(node_index("root")));
             let e1_target = use_state(Some(node_index("1")));
-            let e1 = EmgEdgeItem::new_child(
+            let e1 = EmgEdgeItem::new_in_topo(
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
@@ -1446,7 +1497,7 @@ mod tests {
             
             let e2_source =use_state( Some(node_index("1")));
             let e2_target = use_state(Some(node_index("2")));
-            let e2 = EmgEdgeItem::new_child(
+            let e2 = EmgEdgeItem::new_in_topo(
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
@@ -1522,7 +1573,7 @@ mod tests {
                 Trans3::new(100.0, 0.0, 0.)
             );
             trace!("re new root:e2 {}", &e2);
-            info!("..=========================================================");
+            info!("l1525 =========================================================");
         }
     }
     // #[test]

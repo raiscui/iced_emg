@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-22 14:04:42
+ * @LastEditTime: 2021-04-22 14:35:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@ use crate::{
     NodeBuilderWidget,
 };
 use emg_refresh::{RefreshFor, RefreshUseFor, RefreshWhoNoWarper};
-use std::ops::Deref;
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 impl<'a, Message> RefreshWhoNoWarper for GElement<'a, Message> {}
@@ -32,7 +32,7 @@ where
             //refreshing use any impl RefreshFor
             (gel, Refresher_(refresher)) => {
                 log::debug!("{} refresh use refresher", gel);
-                gel.refresh_use(refresher.deref());
+                gel.refresh_use(&**refresher);
             }
             // TODO: do not many clone event_callback
 

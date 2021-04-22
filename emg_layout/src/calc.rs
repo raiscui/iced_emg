@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-04-19 11:32:49
+ * @LastEditTime: 2021-04-22 17:46:16
  * @LastEditors: Rais
 * @Description:
 */
@@ -22,11 +22,10 @@ pub fn layout_calculating<Ix>(
     layout: &Layout<Ix>,
 ) -> LayoutCalculated 
 where 
-    Ix: 'static + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default + std::cmp::Ord 
+    Ix: 'static + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default + std::cmp::Ord+ std::fmt::Display 
     
     {
-        
-    let _span_ = trace_span!( "->[ layout_calculating ]").entered();
+    let _span_ = trace_span!( "->[ layout_calculating ] ").entered();
     
             let EdgeData{
                 calculated: p_calculated,
@@ -39,16 +38,15 @@ where
 
             let calculated_size = (p_calc_size_sa, &layout.size.watch()).map(
                 move |p_calc_size: &Size2, wh: &GenericWH| {
-
-                  
-                
                         
                         // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
                     let _enter = trace_span!( 
                         "-> [ calculated_size ] recalculation..(&p_calculated.size, &layout.size.watch()).map ",
                         ).entered();
 
-                    calculation_size(p_calc_size, wh)
+                    let new_size = calculation_size(p_calc_size, wh);
+                    trace!("new size: {}",&new_size);
+                    new_size
                 },
             );
 
