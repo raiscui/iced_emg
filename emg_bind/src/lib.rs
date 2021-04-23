@@ -16,7 +16,7 @@ pub use iced as runtime;
 
 #[cfg(target_arch = "wasm32")]
 pub use iced_web as runtime;
-#[cfg(target_arch = "wasm32")]
+
 pub use uuid::Uuid;
 
 mod application;

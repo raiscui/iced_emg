@@ -64,6 +64,7 @@ fn make_id(name: &str) -> String {
 //@ @Parse ──────────────────────────────
 
 // type OptEdge = Option<Edge>;
+// the "@"
 #[derive(Debug)]
 enum At {
     Id(ID),
@@ -118,7 +119,6 @@ impl Parse for AtList {
 
 //@ Edge ──────────────────────────────
 
-// type OptEdge = Option<Edge>;
 #[derive(Debug)]
 struct Edge {
     bracket_token: token::Bracket,

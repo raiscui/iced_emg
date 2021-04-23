@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-04-22 17:54:16
+ * @LastEditTime: 2021-04-22 20:49:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -139,6 +139,7 @@ where
     type Ix = String;
     // TODO: use builder ?
     #[topo::nested]
+    #[instrument(skip(self))]
     fn setup_wh_edge_in_topo<T: Into<f64> + std::fmt::Debug>(
         &mut self,
         ei: EdgeIndex<Self::Ix>,
@@ -162,6 +163,7 @@ where
 
     // TODO: use builder ?
     #[topo::nested]
+    #[instrument(skip(self, size, origin, align))]
     fn setup_edge_in_topo(
         &mut self,
         ei: EdgeIndex<Self::Ix>,
@@ -186,6 +188,7 @@ where
     }
     // TODO: use builder ?
     #[topo::nested]
+    #[instrument(skip(self))]
     fn setup_default_edge_in_topo(
         &mut self,
         ei: EdgeIndex<Self::Ix>,
