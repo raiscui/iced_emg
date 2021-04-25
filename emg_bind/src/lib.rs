@@ -24,7 +24,7 @@ mod button;
 mod g_element;
 mod g_tree_builder_element;
 // mod graph_store;
-mod emg_impl;
+mod bind_view;
 mod impl_refresh;
 mod layer;
 mod node_builder;
@@ -33,8 +33,8 @@ mod sandbox;
 // mod topo_store;
 
 pub use application::{Application, Command, Element, Subscription};
+pub use bind_view::*;
 pub use button::Button;
-pub use emg_impl::*;
 pub use g_element::*;
 pub use g_tree_builder_element::*;
 pub use layer::Layer;

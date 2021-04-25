@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-04-22 20:49:35
+ * @LastEditTime: 2021-04-25 17:50:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -214,7 +214,7 @@ where
         match tree_layer.borrow() {
             GTreeBuilderElement::Layer(root_id, edge_refreshers, children_list) => {
                 let _span = trace_span!("=> handle_root [layer] ",%root_id).entered();
-                trace!("{:?}==>{:?}", &root_id, &children_list);
+                trace!("{:?}==>{:#?}", &root_id, &children_list);
                 // ─────────────────────────────────────────────────────────────────
 
                 let nix = self.insert_node(root_id.clone(), Layer::new(root_id).into());
@@ -246,18 +246,13 @@ where
                 let _span =
                     trace_span!("-> handle_children_in_topo [layer] ", ?id, ?parent_nix).entered();
 
-                trace!("{:?}==>{:?}", &id, &children_list);
+                trace!("{:?}==>{:#?}", &id, &children_list);
                 // node index
                 let nix = self.insert_node(id.clone(), Layer::new(id).into());
 
                 // edge
                 let mut ei = self
-                    .setup_edge_in_topo(
-                        EdgeIndex::new(parent_nix.clone(), nix.clone()),
-                        size(px(50), px(50)),
-                        origin2(pc(0), pc(0)),
-                        align2(pc(50), pc(50)),
-                    )
+                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix.clone()))
                     .unwrap();
                 ei.refresh_use(edge_refreshers);
 
@@ -276,6 +271,7 @@ where
                         .for_each(|child_layer| self.handle_children_in_topo(child_layer));
                 });
             }
+
             GTreeBuilderElement::El(id, element) => {
                 let _span =
                     trace_span!("-> handle_children_in_topo [El] ", ?id, ?parent_nix).entered();
@@ -290,6 +286,7 @@ where
                     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
                     .unwrap();
             }
+
             GTreeBuilderElement::GElementTree(id, edge_refreshers, gel, refreshers) => {
                 let _span =
                     trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
@@ -318,6 +315,7 @@ where
                         .for_each(|child_layer| self.handle_children_in_topo(child_layer));
                 });
             }
+
             GTreeBuilderElement::RefreshUse(id, u) => {
                 let _span =
                     trace_span!("-> handle_children_in_topo [RefreshUse] ", ?id, ?parent_nix)
@@ -330,6 +328,7 @@ where
                     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
                     .unwrap();
             }
+
             GTreeBuilderElement::Cl(id, dyn_fn) => {
                 let _span = trace_span!(
                     "-> handle_children_in_topo [Cl] dyn_fn running",
@@ -340,6 +339,7 @@ where
 
                 dyn_fn();
             }
+
             // TODO make RC remove most clones
             GTreeBuilderElement::Event(id, callback) => {
                 let _span =

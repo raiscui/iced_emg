@@ -97,7 +97,7 @@ where
                 
 
             let loc_styles = (&calculated_size, &matrix).map( move |calc_size: &Size2, mat4: &Mat4| {
-                            log::trace!( "------------size: {:?}  , matrix: {}", &calc_size, CssTransform::from(*mat4) );
+                            trace!( "------------size: {:?}  , matrix: {}", &calc_size, CssTransform::from(*mat4) );
 
                         { let _ender = trace_span!( 
                                     "-> [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",

@@ -21,9 +21,12 @@ log = ""
 env_logger = ""
 # tracing = { version = "^0.1" }
 tracing = { version = "^0.1" }
-tracing-subscriber = { version = "0.2.16" }
+
 # tracing-wasm = "0.2.0"
 indented = "0.1.0"
 # tracing-log = { version = "", features = ["env_logger"] }
-tracing-flame = "0.1.0"
 im = ""
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.2.17" }
+tracing-flame = "0.1.0"

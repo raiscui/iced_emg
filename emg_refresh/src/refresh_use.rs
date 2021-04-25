@@ -45,6 +45,7 @@ impl<Who> RefreshUseFor<Self> for Who {
 mod updater_test1 {
     use std::convert::TryFrom;
     use std::rc::Rc;
+    use tracing::info;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{impl_refresh::RefreshUseNoWarper, RefreshFor, RefreshWhoNoWarper, Refresher};
@@ -69,10 +70,15 @@ mod updater_test1 {
         }
     }
 
+    fn setup_tracing() {
+        console_error_panic_hook::set_once();
+        tracing_wasm::set_as_global_default();
+    }
+
     #[wasm_bindgen_test]
 
     fn realtime_update() {
-        console_log::init_with_level(log::Level::Debug).ok();
+        setup_tracing();
 
         let mut f = String::from("xx");
         let a = Refresher::new(|| 99);
@@ -94,7 +100,7 @@ mod updater_test1 {
 
         // let xxx: i16 = 2;
 
-        log::info!("{}", &f);
+        info!("{}", &f);
         // log::info!("{}", &n);
         assert_eq!("xx,99,99,string..,99,99,99,string..,35", f);
     }

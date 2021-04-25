@@ -93,6 +93,7 @@ mod updater_test {
     // use crate::CloneState;
     use crate::RefreshFor;
     use crate::RefreshUseFor;
+    use tracing::info;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
@@ -107,9 +108,14 @@ mod updater_test {
 
     use emg_state::use_state;
 
+    fn setup_tracing() {
+        console_error_panic_hook::set_once();
+        tracing_wasm::set_as_global_default();
+    }
+
     #[wasm_bindgen_test]
     fn test_anchor() {
-        console_log::init_with_level(log::Level::Debug).ok();
+        setup_tracing();
 
         #[allow(unused)]
         let mut s = String::from("sss");
@@ -124,18 +130,18 @@ mod updater_test {
         ff.refresh_use(&ff_w);
         ff.refresh_use(&ffw_vec);
         ff2.refresh_for(&mut ff);
-        log::info!("==== test_anchor: {}", ff.get());
+        info!("==== test_anchor: {}", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
         s.refresh_use(&ff2);
         ff2.refresh_for(&mut s);
-        log::info!("==== test_anchor: {}", &s);
+        info!("==== test_anchor: {}", &s);
         assert_eq!("sss,2,2", &s);
         // ─────────────────────────────────────────────────────────────────
 
         ff.refresh_use(&n);
         n.refresh_for(&mut ff);
-        log::info!("==== test_anchor 2: {}", ff.get());
+        info!("==== test_anchor 2: {}", ff.get());
         assert_eq!("hello,2,2,2,2,2,99,99", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
@@ -143,14 +149,14 @@ mod updater_test {
 
         ff.refresh_use(&a);
         a.refresh_for(&mut ff);
-        log::info!("==== test_anchor 3: {}", ff.get());
+        info!("==== test_anchor 3: {}", ff.get());
 
         assert_eq!("hello,2,2,2,2,2,99,99,4,4", ff.get());
     }
     #[wasm_bindgen_test]
 
     fn test_refresher_for() {
-        console_log::init_with_level(log::Level::Debug).ok();
+        setup_tracing();
 
         let mut f = String::from("ccc");
 
@@ -158,19 +164,19 @@ mod updater_test {
         let add = RefresherFor::new(|xx: &mut String| xx.push_str("ddd"));
         a.refresh_for(&mut f);
         a.refresh_for(&mut f);
-        log::info!("{}", &f);
+        info!("{}", &f);
         assert_eq!("cccdddddd", f)
     }
     #[wasm_bindgen_test]
 
     fn realtime_update() {
-        console_log::init_with_level(log::Level::Debug).ok();
+        setup_tracing();
 
         let mut f = String::from("xx");
         let a = Refresher::new(|| 99);
         a.refresh_for(&mut f);
         a.refresh_for(&mut f);
-        log::info!("{}", &f);
+        info!("{}", &f);
         assert_eq!("xx,99,99", f);
     }
 }

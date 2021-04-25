@@ -4,7 +4,11 @@ version = "0.1.0"
 authors = ["崔路明 <cuiluming@chaoway.net>"]
 edition = "2018"
 publish = false
+resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.dev]
+split-debuginfo = "unpacked"
 
 [dependencies]
 syn = { version = "1", features = ["full" ,"extra-traits"] }

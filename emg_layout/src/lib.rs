@@ -13,11 +13,7 @@
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
 
-use std::{
-    clone::Clone,
-    cmp::{Eq, Ord},
-    hash::Hash,
-};
+use std::{cell::Ref, clone::Clone, cmp::{Eq, Ord}, hash::Hash, rc::Rc};
 
 use calc::layout_calculating;
 use derive_more::Display;
@@ -26,10 +22,7 @@ use derive_more::Into;
 use derive_more::TryInto;
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
-use emg_state::{
-    topo, use_state, Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor,
-    StateVar,
-};
+use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, topo, use_state};
 
 use im::Vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, SVector, Similarity3, Translation3, Vector2, Vector3};
@@ -353,6 +346,9 @@ impl EdgeData {
     #[must_use] pub fn styles_string(&self) -> String {
         self.styles_string.get()
     }
+    #[must_use] pub fn store_styles_string(&self,store: &Ref<GStateStore>) -> String {
+        self.styles_string.store_get(store)
+    }
 }
 
 impl Eq for EdgeData {}
@@ -515,6 +511,14 @@ where
             .and_then(|x| x.as_edge_data().cloned())
             
     }
+    #[must_use]
+    pub fn store_get_edge_data(&self,store:&Ref<GStateStore>, key: &EPath<Ix>) -> Option<EdgeData> {
+        self.node.store_get(store)
+            .get(key)
+            .and_then(|x| x.as_edge_data().cloned())
+            
+    }
+   
 }
 
 impl<Ix> EmgEdgeItem<Ix>
@@ -657,7 +661,9 @@ where
             EdgeIndex::new(s.clone(),t.clone())
         });
         let id_sv = use_state(id_sa);
-        let _child_span = trace_span!(" build new child ",id=%id_sv).entered();
+        let _child_span = trace_span!(" building new child ",id=%id_sv).entered();
+        // ─────────────────────────────────────────────────────────────────
+
         let layout = Layout::<Ix> {
             size: use_state(size.into()),
             origin: use_state(origin.into()),
@@ -668,7 +674,7 @@ where
         let other_styles_sv = use_state(s());
 
         let opt_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
-            let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
+            let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
 
             eid_sa_inner.map(|i:&EdgeIndex<Ix>|{
                 

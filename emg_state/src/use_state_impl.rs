@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-04-21 13:51:40
+ * @LastEditTime: 2021-04-25 15:19:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,13 @@ use anchors::{
     singlethread::{Anchor, Engine, MultiAnchor, Var},
 };
 use anymap::any::Any;
-use std::{cell::RefCell, clone::Clone, collections::HashMap, marker::PhantomData};
+use std::{
+    cell::{Ref, RefCell},
+    clone::Clone,
+    collections::HashMap,
+    marker::PhantomData,
+    rc::Rc,
+};
 use tracing::trace_span;
 // use delegate::delegate;
 use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
@@ -22,7 +28,7 @@ thread_local! {
     );
 }
 #[allow(clippy::module_name_repetitions)]
-struct GStateStore {
+pub struct GStateStore {
     anymap: anymap::Map<dyn Any>,
     id_to_key_map: HashMap<StorageKey, DefaultKey>,
     primary_slotmap: DenseSlotMap<DefaultKey, StorageKey>,
@@ -40,6 +46,9 @@ impl Default for GStateStore {
 }
 
 impl GStateStore {
+    /// # Panics
+    ///
+    /// Will panic if engine cannot `borrow_mut`
     fn engine_get<O: Clone + 'static>(&self, anchor: &Anchor<O>) -> O {
         let _g = trace_span!("-> enging_get", "type: {}", &std::any::type_name::<O>()).entered();
         self.engine.try_borrow_mut().map_or_else(
@@ -233,6 +242,14 @@ where
         read_state_val_with_topo_id(self.id, func)
     }
 
+    #[must_use]
+    pub fn store_get_rc(&self, store: &Ref<GStateStore>) -> Rc<T> {
+        store
+            .get_state_with_id::<T>(&StorageKey::TopoKey(self.id))
+            .expect("You are trying to get a var state that doesn't exist in this context!")
+            .get()
+    }
+
     pub fn get_var_with<F: Fn(&Var<T>) -> R, R>(&self, func: F) -> R {
         read_var_with_topo_id(self.id, func)
     }
@@ -267,7 +284,7 @@ where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
-
+    fn store_get(&self, store: &Ref<GStateStore>) -> T;
     fn try_get(&self) -> Option<T>;
 }
 
@@ -281,6 +298,15 @@ where
         // (*var.get()).clone()
         self.get_with(std::clone::Clone::clone)
         // log::debug!("=====StateVar get {:?}", &t);
+    }
+
+    fn store_get(&self, store: &Ref<GStateStore>) -> T {
+        store
+            .get_state_with_id::<T>(&StorageKey::TopoKey(self.id))
+            .expect("You are trying to get a var state that doesn't exist in this context!")
+            .get()
+            .as_ref()
+            .clone()
     }
 
     fn try_get(&self) -> Option<T> {
@@ -325,6 +351,7 @@ where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
+    fn store_get(&self, store: &Ref<GStateStore>) -> T;
 }
 impl<T> CloneStateAnchor<T> for StateAnchor<T>
 where
@@ -332,6 +359,9 @@ where
 {
     fn get(&self) -> T {
         global_engine_get_anchor_val(&self.0)
+    }
+    fn store_get(&self, store: &Ref<GStateStore>) -> T {
+        store.engine_get(&self.0)
     }
 }
 
@@ -717,6 +747,14 @@ fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, fu
         )
     })
 }
+
+pub fn state_store_with<F, R>(func: F) -> R
+where
+    F: FnOnce(Ref<GStateStore>) -> R,
+{
+    G_STATE_STORE.with(|g_state_store_refcell| func(g_state_store_refcell.borrow()))
+}
+
 // fn read_var_with_topo_id_old<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
 //     let var = remove_state_with_topo_id::<T>(id)
 //         .expect("You are trying to read a type state that doesn't exist in this context!");

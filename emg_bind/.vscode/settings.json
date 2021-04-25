@@ -7,10 +7,7 @@
         "activityBar.foreground": "#15202b",
         "activityBar.inactiveForeground": "#15202b99",
         "activityBarBadge.background": "#945bc4",
-        "activityBarBadge.foreground": "#e7e7e7",
-        "editorGroup.border": "#65c89b",
-        "panel.border": "#65c89b",
-        "sideBar.border": "#65c89b"
+        "activityBarBadge.foreground": "#e7e7e7"
     },
     "peacock.color": "#42b883",
     "cSpell.words": [

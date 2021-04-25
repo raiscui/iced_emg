@@ -635,9 +635,8 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use emg_refresh::Refresher;
             #[allow(unused)]
-            use emg_state::{use_state, CloneState};
-            #[allow(unused)]
-            use gtree::log;
+            use emg_state::{use_state, StateMultiAnchor,CloneStateVar,CloneStateAnchor};
+
             #[allow(unused)]
             use std::rc::Rc;
             #[allow(unused)]
