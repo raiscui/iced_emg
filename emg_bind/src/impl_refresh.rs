@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-03-22 14:04:42
+ * @LastEditTime: 2021-04-23 18:26:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,8 @@ use crate::{
     NodeBuilderWidget,
 };
 use emg_refresh::{RefreshFor, RefreshUseFor, RefreshWhoNoWarper};
-use std::ops::Deref;
+use tracing::trace;
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 impl<'a, Message> RefreshWhoNoWarper for GElement<'a, Message> {}
@@ -31,14 +32,14 @@ where
             //其他任何 el 刷新, 包括 el=refresher
             //refreshing use any impl RefreshFor
             (gel, Refresher_(refresher)) => {
-                log::debug!("{} refresh use refresher", gel);
-                gel.refresh_use(refresher.deref());
+                trace!("{} refresh use refresher", gel);
+                gel.refresh_use(&**refresher);
             }
             // TODO: do not many clone event_callback
 
             // layer 包裹 任何除了refresher的el
             (Layer_(l), any_not_refresher) => {
-                log::debug!("layer refresh use {} (do push)", any_not_refresher);
+                trace!("layer refresh use {} (do push)", any_not_refresher);
                 l.try_ref_push(any_not_refresher.clone());
             }
             // refresher 不与任何不是 refresher 的 el 产生刷新动作
@@ -70,12 +71,12 @@ impl<'a, Message> RefreshFor<GElement<'a, Message>> for i32 {
     fn refresh_for(&self, el: &mut GElement<'a, Message>) {
         match el {
             Text_(text) => {
-                log::info!("==========Text update use i32");
+                trace!("==========Text update use i32");
                 text.content(format!("i32:{}", self));
             }
 
             other => {
-                log::debug!("====> {} refreshing use i32", other);
+                trace!("====> {} refreshing use i32", other);
             }
         }
     }
@@ -87,12 +88,12 @@ where
     Message: 'static + Clone,
 {
     fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<'a, Message>) {
-        log::debug!("node_builder_widget refresh use GElement (event_callback)");
+        trace!("node_builder_widget refresh use GElement (event_callback)");
 
         match self {
             // @ Clear type match
             Event_(event_callback) => {
-                log::debug!("node_builder_widget.add_event_callback(event_callback.clone()) ");
+                trace!("node_builder_widget.add_event_callback(event_callback.clone()) ");
                 node_builder_widget.add_event_callback(event_callback.clone());
             }
             // ─────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-04-07 09:48:27
+ * @LastEditTime: 2021-04-25 15:19:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,14 @@ use anchors::{
     singlethread::{Anchor, Engine, MultiAnchor, Var},
 };
 use anymap::any::Any;
-use std::{cell::RefCell, clone::Clone, collections::HashMap, marker::PhantomData};
+use std::{
+    cell::{Ref, RefCell},
+    clone::Clone,
+    collections::HashMap,
+    marker::PhantomData,
+    rc::Rc,
+};
+use tracing::trace_span;
 // use delegate::delegate;
 use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
 
@@ -21,7 +28,7 @@ thread_local! {
     );
 }
 #[allow(clippy::module_name_repetitions)]
-struct GStateStore {
+pub struct GStateStore {
     anymap: anymap::Map<dyn Any>,
     id_to_key_map: HashMap<StorageKey, DefaultKey>,
     primary_slotmap: DenseSlotMap<DefaultKey, StorageKey>,
@@ -39,8 +46,30 @@ impl Default for GStateStore {
 }
 
 impl GStateStore {
+    /// # Panics
+    ///
+    /// Will panic if engine cannot `borrow_mut`
     fn engine_get<O: Clone + 'static>(&self, anchor: &Anchor<O>) -> O {
-        self.engine.borrow_mut().get(anchor)
+        let _g = trace_span!("-> enging_get", "type: {}", &std::any::type_name::<O>()).entered();
+        self.engine.try_borrow_mut().map_or_else(
+            |err| {
+                panic!(
+                    "can't borrow_mut engine err: {} , for anchor type: {}",
+                    &err,
+                    &std::any::type_name::<O>()
+                )
+            },
+            |mut e| {
+                let _gg = trace_span!(
+                    "-> enging_get:engine borrow_muted , now getting.. ",
+                    "type: {}",
+                    &std::any::type_name::<O>()
+                )
+                .entered();
+
+                e.get(anchor)
+            },
+        )
     }
 
     fn state_exists_with_id<T: 'static>(&self, id: StorageKey) -> bool {
@@ -134,16 +163,22 @@ pub struct StateVar<T> {
     id: TopoKey,
     _phantom_data: PhantomData<T>,
 }
-
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let v = self.get_with(Clone::clone);
+    default fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = self.get();
         write!(f, "\u{2726} ({})", &v)
     }
 }
+impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<StateAnchor<T>> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = self.get();
+        write!(f, "\u{2726} ({})", &v)
+    }
+}
+
 impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVar<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let v = self.get_with(Clone::clone);
+        let v = self.get();
         f.debug_tuple("StateVar").field(&v).finish()
     }
 }
@@ -155,6 +190,19 @@ impl<T> Clone for StateVar<T> {
             id: self.id,
             _phantom_data: PhantomData::<T>,
         }
+    }
+}
+
+impl<T> StateVar<StateAnchor<T>>
+where
+    T: 'static + std::clone::Clone,
+{
+    #[must_use]
+    pub fn get(&self) -> T {
+        get_anchor_val_in_var_with_topo_id::<T>(self.id)
+    }
+    pub fn get_inner_anchor(&self) -> StateAnchor<T> {
+        self.get_with(std::clone::Clone::clone)
     }
 }
 
@@ -171,24 +219,35 @@ where
     }
 
     // stores a value of type T in a backing Store
-    pub fn set(self, value: T) {
+    pub fn set(&self, value: T) {
         set_state_with_topo_id::<T>(value, self.id);
     }
 
     /// `set_with` Fn(&T) -> T
     /// `G_STATE_STORE`  only use once to set, get.
-    pub fn set_with<F: Fn(&T) -> T>(self, func: F) {
+    pub fn set_with<F: Fn(&T) -> T>(&self, func: F) {
         read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func(var.get().as_ref())))
+    }
+    pub fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
+        read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func_once(var.get().as_ref())))
     }
 
     #[must_use]
-    pub fn state_exists(self) -> bool {
+    pub fn state_exists(&self) -> bool {
         state_exists_for_topo_id::<T>(self.id)
     }
 
     #[must_use]
     pub fn get_with<F: Fn(&T) -> R, R>(&self, func: F) -> R {
         read_state_val_with_topo_id(self.id, func)
+    }
+
+    #[must_use]
+    pub fn store_get_rc(&self, store: &Ref<GStateStore>) -> Rc<T> {
+        store
+            .get_state_with_id::<T>(&StorageKey::TopoKey(self.id))
+            .expect("You are trying to get a var state that doesn't exist in this context!")
+            .get()
     }
 
     pub fn get_var_with<F: Fn(&Var<T>) -> R, R>(&self, func: F) -> R {
@@ -225,7 +284,7 @@ where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
-
+    fn store_get(&self, store: &Ref<GStateStore>) -> T;
     fn try_get(&self) -> Option<T>;
 }
 
@@ -239,6 +298,15 @@ where
         // (*var.get()).clone()
         self.get_with(std::clone::Clone::clone)
         // log::debug!("=====StateVar get {:?}", &t);
+    }
+
+    fn store_get(&self, store: &Ref<GStateStore>) -> T {
+        store
+            .get_state_with_id::<T>(&StorageKey::TopoKey(self.id))
+            .expect("You are trying to get a var state that doesn't exist in this context!")
+            .get()
+            .as_ref()
+            .clone()
     }
 
     fn try_get(&self) -> Option<T> {
@@ -283,6 +351,7 @@ where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
+    fn store_get(&self, store: &Ref<GStateStore>) -> T;
 }
 impl<T> CloneStateAnchor<T> for StateAnchor<T>
 where
@@ -291,17 +360,22 @@ where
     fn get(&self) -> T {
         global_engine_get_anchor_val(&self.0)
     }
+    fn store_get(&self, store: &Ref<GStateStore>) -> T {
+        store.engine_get(&self.0)
+    }
 }
 
 pub use anchors::collections::ord_map::Dict;
 
 impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> StateAnchor<Dict<K, V>> {
+    #[track_caller]
     pub fn filter<F: FnMut(&K, &V) -> bool + 'static>(&self, mut f: F) -> Self {
         self.0
             .filter_map(move |k, v| if f(k, v) { Some(v.clone()) } else { None })
             .into()
     }
 
+    #[track_caller]
     pub fn map_<F: FnMut(&K, &V) -> T + 'static, T: Clone + PartialEq + 'static>(
         &self,
         mut f: F,
@@ -310,6 +384,7 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
     }
 
     /// FOOBAR
+    #[track_caller]
     pub fn filter_map<F: FnMut(&K, &V) -> Option<T> + 'static, T: Clone + PartialEq + 'static>(
         &self,
         f: F,
@@ -324,7 +399,7 @@ where
     T: 'static,
 {
     pub fn constant(val: T) -> Self {
-        Self(Anchor::constant(val))
+        G_STATE_STORE.with(|_g_state_store_refcell| Self(Anchor::constant(val)))
     }
     #[must_use]
     pub const fn anchor(&self) -> &Anchor<T> {
@@ -651,6 +726,17 @@ fn read_state_val_with_topo_id<F: FnOnce(&T) -> R, T: 'static, R>(id: TopoKey, f
 //     insert_var_with_topo_id(item, id);
 //     read
 // }
+
+fn get_anchor_val_in_var_with_topo_id<T: 'static + std::clone::Clone>(id: TopoKey) -> T {
+    G_STATE_STORE.with(|g_state_store_refcell| {
+        let store = g_state_store_refcell.borrow();
+        let var_with_sa = store
+            .get_state_with_id::<StateAnchor<T>>(&StorageKey::TopoKey(id))
+            .expect("You are trying to get a var state that doesn't exist in this context!");
+        store.engine_get((*var_with_sa.get()).clone().anchor())
+    })
+}
+
 fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
     G_STATE_STORE.with(|g_state_store_refcell| {
         func(
@@ -660,15 +746,15 @@ fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, fu
                 .expect("You are trying to get a var state that doesn't exist in this context!"),
         )
     })
-    // G_STATE_STORE.with(|g_state_store_refcell| {
-    //     let var = g_state_store_refcell
-    //         .borrow_mut()
-    //         .get_state_with_id::<T>(&StorageKey::TopoKey(id))
-    //         .expect("You are trying to get a var state that doesn't exist in this context!")
-    //         .clone();
-    //     func(&var)
-    // })
 }
+
+pub fn state_store_with<F, R>(func: F) -> R
+where
+    F: FnOnce(Ref<GStateStore>) -> R,
+{
+    G_STATE_STORE.with(|g_state_store_refcell| func(g_state_store_refcell.borrow()))
+}
+
 // fn read_var_with_topo_id_old<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
 //     let var = remove_state_with_topo_id::<T>(id)
 //         .expect("You are trying to read a type state that doesn't exist in this context!");
@@ -710,9 +796,20 @@ where
 #[allow(unused_variables)]
 mod state_test {
     use tracing::debug;
-    use wasm_bindgen_test::*;
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
+
+    // #[wasm_bindgen_test]
+    #[test]
+    fn sa_in_sv() {
+        let x = use_state(1);
+        let xw = x.watch();
+        let a = use_state(xw);
+        println!("{}", a);
+        println!("{}", a.get())
+    }
+    #[allow(clippy::similar_names)]
     #[wasm_bindgen_test]
     fn xx() {
         // let engine = Engine::new();
@@ -722,8 +819,8 @@ mod state_test {
         let b2 = a.watch();
         let cadd = b.map(|x| *x + 1);
         let cadd2 = b.map(|x| *x + 2);
-        let caddc = cadd.clone();
-        let cadd2c = cadd2.clone();
+        let cadd_c = cadd.clone();
+        let cadd2_c = cadd2;
         let c = b.map(|x| format!("{}", x));
         let d = b.then(move |x| {
             if *x > 1 {
@@ -732,11 +829,11 @@ mod state_test {
                 cadd.anchor().clone()
             }
         });
-        debug!("========================{:?}", caddc.get());
-        debug!("========================{:?}", cadd2c.get());
+        debug!("========================{:?}", cadd_c.get());
+        debug!("========================{:?}", cadd2_c.get());
 
-        assert_eq!(caddc.get(), 100);
-        assert_eq!(cadd2c.get(), 101);
+        assert_eq!(cadd_c.get(), 100);
+        assert_eq!(cadd2_c.get(), 101);
 
         let dd = Var::new(99);
         let ddw = dd.watch();

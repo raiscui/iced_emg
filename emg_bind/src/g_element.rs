@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-03-22 13:40:08
+ * @LastEditTime: 2021-04-22 17:52:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -50,27 +50,6 @@ impl<'a, Message: std::clone::Clone + 'static> GElement<'a, Message> {
     pub fn is_event_(&self) -> bool {
         matches!(self, Self::Event_(..))
     }
-
-    // fn convert_inside_to_node_builder_widget_(self) -> Result<Self, ()> {
-    //     use match_any::match_any;
-    //     match_any! (self,
-    //         NodeBuilderWidget_(_)=>Ok(self),
-    //         Layer_( x)=> {
-    //             Ok(NodeBuilderWidget_(NodeBuilderWidget::new(Rc::new(x))))
-    //         },
-    //         Element_(_) |Text_(_)|Refresher_(_)|EventCallBack_(_)=>Err(()),
-    //         _Empty=>Err(())
-    //     )
-    // }
-
-    // /// # Errors
-    // ///
-    // /// Will return `Err` if `GElement` does impl `NodeBuilder` trait,it can't convert to `NodeBuilder`.
-    // // TODO use Error type
-    // #[allow(clippy::result_unit_err)]
-    // pub fn try_convert_inside_to_node_builder_widget_(&mut self) -> Result<&mut Self, ()> {
-    //     replace_with_result(self, Self::convert_inside_to_node_builder_widget_)
-    // }
 }
 
 impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElement<'a, Message> {

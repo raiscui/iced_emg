@@ -1,53 +1,65 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-04-07 16:14:49
+ * @LastEditTime: 2021-04-25 20:06:05
  * @LastEditors: Rais
  * @Description:
  */
 
 use std::{any::Any, panic::Location};
 
-use emg_refresh::{RefreshFor, RefreshUseFor, RefreshUseNoWarper, RefreshWhoNoWarper};
+use emg_refresh::{RefreshFor, RefreshUseFor, RefreshWhoNoWarper};
 
 pub use seed_styles as styles;
-use styles::{CssHeight, CssValueTrait, CssWidth, Style, UpdateStyle};
-use tracing::{debug, trace_span};
+use styles::{CssHeight, CssValueTrait, CssWidth, UpdateStyle};
+use tracing::{debug, trace, trace_span};
 
-use crate::{Css, EdgeData, EdgeItemNode, EmgEdgeItem, GenericWH, Layout};
+use crate::{
+    add_values::{AlignX, AlignY, OriginX, OriginY},
+    Css, EmgEdgeItem, GenericLoc, GenericWH,
+};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-// TODO lifetime
-// impl RefreshFor<EdgeData> for Vec<Box<Css<Use>>>
-// where
-//     Use: CssValueTrait + std::clone::Clone,
-// {
-//     #[track_caller]
-//     fn refresh_for(&self, who: &mut EdgeData) {
-//         for i in self {
-//             // let ii = i.as_ref();
-//             who.refresh_use(i.as_ref());
-//         }
-//     }
-// }
 //TODO lifetime
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Vec<Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>>
+impl<Ix> RefreshWhoNoWarper for EmgEdgeItem<Ix> where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default
+{
+}
+
+// impl<T> RefreshUseNoWarper for Css<T> where T: CssValueTrait + Clone + 'static {}
+
+//NOTE: overwrite default impl<Who> RefreshFor<Who> for Box<dyn RefreshFor<Who>>
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
-        for i in self {
-            let _g = trace_span!(
-                "-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
-            )
-            .entered();
-            // let ii = i.as_ref();
-            who.refresh_use(i.as_ref());
-        }
+        let _g = trace_span!(
+            "!!!!!!!!!!!!!!-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
+        )
+        .entered();
+        // let ii = i.as_ref();
+        who.refresh_use(self.as_ref());
     }
 }
+// impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Vec<Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>>
+// where
+//     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+// {
+//     #[track_caller]
+//     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+//         for i in self {
+//             let _g = trace_span!(
+//                 "-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
+//             )
+//             .entered();
+//             // let ii = i.as_ref();
+//             who.refresh_use(i.as_ref());
+//         }
+//     }
+// }
 // impl RefreshFor<EdgeData> for Vec<Box<(dyn RefreshFor<EdgeData> + 'static)>> {
 //     #[track_caller]
 //     fn refresh_for(&self, _who: &mut EdgeData) {
@@ -58,6 +70,7 @@ where
 //         // }
 //     }
 // }
+//TODO 做 不是refresh 版本的
 #[track_caller]
 fn css_refresh_edgedata<Use, Ix>(css: &Css<Use>, ed: &EmgEdgeItem<Ix>)
 where
@@ -76,8 +89,11 @@ where
             };
             debug!("new {}", &new);
             new
-        })
-    } else if let Some(css_height) = any.downcast_ref::<CssHeight>() {
+        });
+        return;
+    }
+
+    if let Some(css_height) = any.downcast_ref::<CssHeight>() {
         debug!("match CssHeight {}", &css_height);
         ed.layout.size.set_with(|size| {
             let new = GenericWH {
@@ -87,8 +103,11 @@ where
 
             debug!("new {}", &new);
             new
-        })
-    } else {
+        });
+        return;
+    }
+
+    {
         // @ 不唯一, 多次会重复 ─────────────────────────────────────────────────────────────────
 
         ed.other_styles.set_with(|s| {
@@ -115,6 +134,78 @@ where
         let _g = trace_span!("-> RefreshFor<EdgeItem> for Css<Use>").entered();
 
         css_refresh_edgedata(self, who);
+    }
+}
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for OriginX
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+{
+    #[track_caller]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for OriginX").entered();
+
+        who.layout.origin.set_with(|origin| {
+            let new = GenericLoc {
+                x: self.clone().into(),
+                ..origin.clone()
+            };
+            trace!("new {}", &new);
+            new
+        });
+    }
+}
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for OriginY
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+{
+    #[track_caller]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for OriginY").entered();
+
+        who.layout.origin.set_with(|origin| {
+            let new = GenericLoc {
+                y: self.clone().into(),
+                ..origin.clone()
+            };
+            trace!("new {}", &new);
+            new
+        });
+    }
+}
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for AlignX
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+{
+    #[track_caller]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for AlignX").entered();
+
+        who.layout.align.set_with(|align| {
+            let new = GenericLoc {
+                x: self.clone().into(),
+                ..align.clone()
+            };
+            trace!("new {}", &new);
+            new
+        });
+    }
+}
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for AlignY
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+{
+    #[track_caller]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for AlignY").entered();
+
+        who.layout.align.set_with(|align| {
+            let new = GenericLoc {
+                y: self.clone().into(),
+                ..align.clone()
+            };
+            trace!("new {}", &new);
+            new
+        });
     }
 }
 // impl RefreshWhoNoWarper for EdgeItemNode {}

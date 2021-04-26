@@ -9,9 +9,11 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 keywords = ["web", "iced"]
 categories = ["web"]
+resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
+[profile.dev]
+split-debuginfo = "unpacked"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -21,7 +23,7 @@ emg = { path = "../../emg" }
 functionate = { path = "../../functionate" }
 overloadf = { path = "../../overloadf" }
 illicit = "1.1.2"
-log = "0.4"
+# log = "0.4"
 lazy_static = "1.4.0"
 dyn-clone = "1.0.4"
 # downcast-rs = "1.2.0"
@@ -55,9 +57,11 @@ tracing = { version = "^0.1" }
 # features = ["allocator_api"] 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-iced_web = { version = "0.3", path = "../../iced/web" }
 uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
-console_log = { version = "0.2", features = ["color"] }
+# console_log = { version = "0.2", features = ["color"] }
+iced_web = { version = "0.3", path = "../../iced/web" }
+# tracing-wasm = "0.2.0"
+# console_error_panic_hook = "0.1.6"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

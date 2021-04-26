@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-04-02 19:01:12
+ * @LastEditTime: 2021-04-19 12:11:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -43,9 +43,10 @@ impl<Who> RefreshUseFor<Self> for Who {
 
 #[cfg(test)]
 mod updater_test1 {
+    use std::convert::TryFrom;
     use std::rc::Rc;
-
-    use wasm_bindgen_test::*;
+    use tracing::info;
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{impl_refresh::RefreshUseNoWarper, RefreshFor, RefreshWhoNoWarper, Refresher};
 
@@ -58,21 +59,26 @@ mod updater_test1 {
     // }
     impl RefreshWhoNoWarper for String {}
     impl RefreshUseNoWarper for String {}
-    impl RefreshFor<String> for String {
-        fn refresh_for(&self, el: &mut String) {
+    impl RefreshFor<Self> for String {
+        fn refresh_for(&self, el: &mut Self) {
             *el = format!("{},{}", el, self);
         }
     }
     impl RefreshFor<i32> for String {
         fn refresh_for(&self, el: &mut i32) {
-            *el = self.len() as i32
+            *el = i32::try_from(self.len()).unwrap();
         }
+    }
+
+    fn setup_tracing() {
+        console_error_panic_hook::set_once();
+        tracing_wasm::set_as_global_default();
     }
 
     #[wasm_bindgen_test]
 
     fn realtime_update() {
-        console_log::init_with_level(log::Level::Debug).ok();
+        setup_tracing();
 
         let mut f = String::from("xx");
         let a = Refresher::new(|| 99);
@@ -81,11 +87,11 @@ mod updater_test1 {
         a.refresh_for(&mut f);
         b.refresh_for(&mut f);
         let rca = Rc::new(a.clone());
-        let rcb = Rc::new(b);
+        let rc_b_string = Rc::new(b);
         f.refresh_use(&a);
         f.refresh_use(rca.as_ref());
         f.refresh_use(rca.as_ref());
-        f.refresh_use(rcb.as_ref());
+        f.refresh_use(rc_b_string.as_ref());
 
         let mut n = 0;
 
@@ -94,7 +100,7 @@ mod updater_test1 {
 
         // let xxx: i16 = 2;
 
-        log::info!("{}", &f);
+        info!("{}", &f);
         // log::info!("{}", &n);
         assert_eq!("xx,99,99,string..,99,99,99,string..,35", f);
     }

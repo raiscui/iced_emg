@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-01-21 11:05:55
- * @LastEditTime: 2021-03-16 15:47:07
+ * @LastEditTime: 2021-04-23 14:34:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -227,6 +227,6 @@ mod graph_store_test {
             B,
         }
         let l = GElement::<Message>::Layer_(Layer::new("xx"));
-        log::debug!("{}", l);
+        trace!("{}", l);
     }
 }

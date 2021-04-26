@@ -3,15 +3,15 @@ use derive_more::From;
 
 use std::{convert::TryFrom, rc::Rc};
 
-use crate::GElement;
-use emg::im::Vector;
-use iced::Element;
-use iced_web::{
+use crate::runtime::{
     dodrio::{
         self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
     },
     Bus, Css, Widget,
 };
+use crate::GElement;
+use emg::im::Vector;
+use iced::Element;
 
 /*
  * @Author: Rais
@@ -24,7 +24,7 @@ pub trait NodeBuilder<Message>
 where
     Message: 'static + Clone,
 {
-    fn make_element_builder<'b>(
+    fn generate_element_builder<'b>(
         &self,
         bump: &'b bumpalo::Bump,
         bus: &Bus<Message>,
@@ -158,8 +158,9 @@ where
 pub struct NodeBuilderWidget<'a, Message> {
     //TODO : instead use GElement
     widget: Rc<dyn NodeBuilder<Message> + 'a>,
-    //TODO use vecdeque
+    //TODO use vec deque
     event_callbacks: Vector<EventNode<Message>>,
+    layout_str: String,
 }
 
 impl<'a, Message> std::fmt::Debug for NodeBuilderWidget<'a, Message>
@@ -169,7 +170,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NodeBuilderWidget")
             .field("widget", &String::from("Rc<dyn NodeBuilder<Message> + 'a>"))
-            .field("event_callbacks", &self.event_callbacks())
+            .field("event_callbacks", &self.event_callbacks)
             .finish()
     }
 }
@@ -179,7 +180,12 @@ impl<'a, Message: std::clone::Clone> NodeBuilderWidget<'a, Message> {
         Self {
             widget,
             event_callbacks: Vector::new(),
+            layout_str: String::default(),
         }
+    }
+
+    pub fn add_styles_string(&mut self, styles: &str) {
+        self.layout_str += styles;
     }
     pub fn add_event_callback(&mut self, event_callback: EventNode<Message>) {
         self.event_callbacks.push_back(event_callback);
@@ -231,11 +237,16 @@ where
         bus: &Bus<Message>,
         style_sheet: &mut Css<'b>,
     ) -> Node<'b> {
-        let mut element_builder = self.widget.make_element_builder(bump, bus, style_sheet);
+        let mut element_builder = self.widget.generate_element_builder(bump, bus, style_sheet);
 
+        element_builder = element_builder.attr(
+            "style",
+            bumpalo::collections::String::from_str_in(self.layout_str.as_str(), bump)
+                .into_bump_str(),
+        );
         // let mut v =
         //     bumpalo::collections::Vec::from_iter_in(self.event_callbacks.iter().cloned(), bump);
-
+        // TODO: `self.event_callbacks`   use take replace the clone
         let mut event_nodes = self.event_callbacks.clone();
 
         while let Some(event_node) = event_nodes.pop_front() {
@@ -286,7 +297,7 @@ where
 mod node_builder_test {
     use emg::im::vector;
     use iced::Text;
-    use wasm_bindgen_test::*;
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::Button;
 
@@ -325,6 +336,7 @@ mod node_builder_test {
                 EventNode::Cb(EventCallback(String::from("ff"), Box::new((a2)))),
                 EventMessage(String::from("x"), Box::new(|| Message::A)).into(),
             ],
+            layout_str: String::default(),
         };
     }
 }

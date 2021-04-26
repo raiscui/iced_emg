@@ -6,14 +6,12 @@
         "activityBar.foreground": "#15202b",
         "activityBar.inactiveForeground": "#15202b99",
         "activityBarBadge.background": "#b2c975",
-        "activityBarBadge.foreground": "#15202b",
-        "editorGroup.border": "#c160a6",
-        "panel.border": "#c160a6",
-        "sideBar.border": "#c160a6"
+        "activityBarBadge.foreground": "#15202b"
     },
     "peacock.color": "#ab438e",
     "git.ignoreLimitWarning": true,
     "cSpell.words": [
+        "Gtree",
         "elems",
         "expl",
         "glayer"
@@ -29,7 +27,9 @@
         "**/.project": true,
         "**/.settings": true,
         "**/*.meta": true,
-        "emg_bind": true
+        "emg_bind": false
     },
-    "explorerExclude.backup": null
+  
+    "rust-analyzer.checkOnSave.allTargets": false,
+    "rust-analyzer.cargo.target": "wasm32-unknown-unknown",
 }

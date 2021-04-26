@@ -121,7 +121,7 @@ impl<'a, Message> NodeBuilder<Message> for Button<'a, Message>
 where
     Message: 'static + Clone,
 {
-    fn make_element_builder<'b>(
+    fn generate_element_builder<'b>(
         &self,
         bump: &'b bumpalo::Bump,
         bus: &Bus<Message>,
@@ -159,7 +159,7 @@ where
                 bumpalo::format!(
                     in bump,
                     "background: {}; border-radius: {}px; width:{}; \
-                    min-width: {}; color: {}",
+                    min-width: {}; color: {};",
                     background,
                     style.border_radius,
                     css::length(self.width),
@@ -218,7 +218,7 @@ where
                 bumpalo::format!(
                     in bump,
                     "background: {}; border-radius: {}px; width:{}; \
-                    min-width: {}; color: {}",
+                    min-width: {}; color: {};",
                     background,
                     style.border_radius,
                     css::length(self.width),

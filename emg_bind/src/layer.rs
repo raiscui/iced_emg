@@ -142,13 +142,14 @@ impl<'a, Message> NodeBuilder<Message> for Layer<'a, Message>
 where
     Message: 'static + Clone,
 {
-    fn make_element_builder<'b>(
+    fn generate_element_builder<'b>(
         &self,
         bump: &'b bumpalo::Bump,
         bus: &Bus<Message>,
         style_sheet: &mut Css<'b>,
     ) -> ElementBuilder<
         'b,
+        //TODO: replace use Vec or im::Vector, match node() replace node() fn logic.
         bumpalo::collections::Vec<'b, Listener<'b>>,
         bumpalo::collections::Vec<'b, Attribute<'b>>,
         bumpalo::collections::Vec<'b, Node<'b>>,
@@ -177,7 +178,7 @@ where
             "style",
             bumpalo::format!(
                 in bump,
-                "width: {}; height: {}; display: block; position: absolute",
+                "width: {}; height: {}; display: block; position: absolute;",
                 css::length(self.width),
                 css::length(self.height)
             )
@@ -225,7 +226,7 @@ where
             "style",
             bumpalo::format!(
                 in bump,
-                "width: {}; height: {}; display: block; position: absolute",
+                "width: {}; height: {}; display: block; position: absolute;",
                 css::length(self.width),
                 css::length(self.height)
             )
