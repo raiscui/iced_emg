@@ -631,7 +631,7 @@ impl ToTokens for Gtree {
                 GTreeBuilderElement,
             };
             #[allow(unused)]
-            use emg_layout::{css, styles::*};
+            use emg_layout::{css, styles::*,add_values::*};
             #[allow(unused)]
             use emg_refresh::Refresher;
             #[allow(unused)]

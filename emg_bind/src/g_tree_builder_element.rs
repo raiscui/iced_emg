@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-04-25 17:50:54
+ * @LastEditTime: 2021-04-25 20:07:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,11 +9,7 @@ use std::borrow::Borrow;
 
 use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
 use emg::{edge_index_no_source, Edge, EdgeIndex};
-use emg_layout::{
-    align2, origin2, size,
-    styles::{pc, px},
-    EmgEdgeItem, GenericLoc, GenericWH,
-};
+use emg_layout::{EmgEdgeItem, GenericLoc, GenericWH};
 use emg_refresh::{RefreshFor, RefreshUseFor};
 use emg_state::{topo, use_state};
 use std::rc::Rc;

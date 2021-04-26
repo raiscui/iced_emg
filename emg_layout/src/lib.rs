@@ -42,6 +42,9 @@ use tracing::{span, trace_span,error,instrument, trace, Level};
 
 mod calc;
 mod impl_refresh;
+pub mod add_values;
+
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 type Size2 = SVector<f64,2>;
@@ -56,8 +59,7 @@ struct Mat4(Matrix4<f64>);
 
 // type Mat4 = Matrix4<f64>;
 
-#[derive(Display, Clone, Debug, From, TryInto, PartialEq, PartialOrd, Eq)]
-#[try_into(owned, ref, ref_mut)]
+#[derive(Display, Clone, Debug, From, PartialEq, PartialOrd, Eq)]
 #[display(fmt = "{}")]
 pub enum GenericSize {
     #[display(fmt = "auto")]
