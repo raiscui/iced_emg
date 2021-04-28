@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-04-25 15:19:57
+ * @LastEditTime: 2021-04-27 14:36:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -286,6 +286,8 @@ where
     fn get(&self) -> T;
     fn store_get(&self, store: &Ref<GStateStore>) -> T;
     fn try_get(&self) -> Option<T>;
+
+    fn update<F: FnOnce(&mut T) -> ()>(&self, func: F);
 }
 
 impl<T> CloneStateVar<T> for StateVar<T>
@@ -311,6 +313,14 @@ where
 
     fn try_get(&self) -> Option<T> {
         clone_state_with_topo_id::<T>(self.id).map(|v| (*v.get()).clone())
+    }
+
+    fn update<F: FnOnce(&mut T) -> ()>(&self, func: F) {
+        read_var_with_topo_id::<_, T, ()>(self.id, |var| {
+            let mut old = (*var.get()).clone();
+            func(&mut old);
+            var.set(old);
+        })
     }
 }
 #[derive(Clone, PartialEq, Eq)]
@@ -800,6 +810,16 @@ mod state_test {
 
     use super::*;
 
+    #[test]
+    #[wasm_bindgen_test]
+    fn update() {
+        let a = use_state(111);
+        a.update(|aa| aa + 1);
+        println!("{}", &a);
+        a.update(|aa| aa - 2);
+        println!("{}", &a);
+    }
+
     // #[wasm_bindgen_test]
     #[test]
     fn sa_in_sv() {
@@ -807,7 +827,7 @@ mod state_test {
         let xw = x.watch();
         let a = use_state(xw);
         println!("{}", a);
-        println!("{}", a.get())
+        println!("{}", a.get());
     }
     #[allow(clippy::similar_names)]
     #[wasm_bindgen_test]
@@ -815,6 +835,7 @@ mod state_test {
         // let engine = Engine::new();
 
         let a = use_state(99);
+
         let b = a.watch();
         let b2 = a.watch();
         let cadd = b.map(|x| *x + 1);
