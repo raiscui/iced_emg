@@ -37,7 +37,7 @@ emg_state = { path = "../emg_state" }
 emg_refresh = { path = "../emg_refresh" }
 emg_layout = { path = "../emg_layout" }
 # for app
-wasm-bindgen-futures = "0.4"
+wasm-bindgen-futures = "^0.4"
 
 
 iced_style = { path = "../../iced/style" }
@@ -64,7 +64,7 @@ iced_web = { version = "0.3", path = "../../iced/web" }
 # console_error_panic_hook = "0.1.6"
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3"
+wasm-bindgen-test = "^0.3"
 
 
 #for app
@@ -74,7 +74,7 @@ path = "../../iced/futures"
 
 # for app
 [dependencies.web-sys]
-version = "0.3.27"
+version = "^0.3"
 features = [
     "console",
     "Document",

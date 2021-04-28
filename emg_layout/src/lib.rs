@@ -19,7 +19,7 @@ use calc::layout_calculating;
 use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
-use derive_more::TryInto;
+// use derive_more::TryInto;
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, topo, use_state};
@@ -58,6 +58,7 @@ type Pos3 = Point3<f64>;
 struct Mat4(Matrix4<f64>);
 
 // type Mat4 = Matrix4<f64>;
+
 
 #[derive(Display, Clone, Debug, From, PartialEq, PartialOrd, Eq)]
 #[display(fmt = "{}")]
@@ -1053,7 +1054,7 @@ mod tests {
     use emg_refresh::RefreshUseFor;
     use im::vector;
     use seed_styles::CssWidth;
-    use styles::pc;
+    use styles::{CssBackgroundColorTrait, h, hsl, pc, width};
     use tracing::info;
 
     use tracing_flame::FlameLayer;
@@ -1227,9 +1228,9 @@ mod tests {
             info!("=========================================================");
 
             // let cc = Transform9::identity();
-
-            let css_width = CssWidth::from(px(100));
-            let css_height = CssHeight::from(px(100));
+            let ff = s().width(pc(11)).bg_color(hsl(40,70,30));
+            let css_width = width(px(100));
+            let css_height = h(px(100));
 
             let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
 

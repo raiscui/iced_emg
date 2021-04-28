@@ -13,6 +13,8 @@ split-debuginfo = "unpacked"
 nalgebra = "0.26.1"
 derive_more = "0.99"
 seed_styles = { path = "../../styles_hooks/seed_styles" }
+seed_style_macros = { path = "../../styles_hooks/seed_styles/seed_style_macros" }
+
 emg_refresh = { path = "../emg_refresh" }
 emg_state = { path = "../emg_state" }
 emg = { path = "../../emg" }
@@ -26,6 +28,7 @@ tracing = { version = "^0.1" }
 indented = "0.1.0"
 # tracing-log = { version = "", features = ["env_logger"] }
 im = ""
+
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.2.17" }

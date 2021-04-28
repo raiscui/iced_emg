@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-04-25 20:06:05
+ * @LastEditTime: 2021-04-27 17:50:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -44,6 +44,7 @@ where
         who.refresh_use(self.as_ref());
     }
 }
+
 // impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Vec<Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>>
 // where
 //     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
@@ -123,6 +124,7 @@ where
         });
     }
 }
+// ────────────────────────────────────────────────────────────────────────────────
 
 impl<Use, Ix> RefreshFor<EmgEdgeItem<Ix>> for Css<Use>
 where
@@ -134,6 +136,44 @@ where
         let _g = trace_span!("-> RefreshFor<EdgeItem> for Css<Use>").entered();
 
         css_refresh_edgedata(self, who);
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for CssWidth
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+{
+    #[track_caller]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for CssWidth").entered();
+
+        who.layout.size.set_with(|origin| {
+            let new = GenericWH {
+                w: self.clone().into(),
+                ..origin.clone()
+            };
+            trace!("new {}", &new);
+            new
+        });
+    }
+}
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for CssHeight
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+{
+    #[track_caller]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for CssHeight").entered();
+
+        who.layout.size.set_with(|origin| {
+            let new = GenericWH {
+                h: self.clone().into(),
+                ..origin.clone()
+            };
+            trace!("new {}", &new);
+            new
+        });
     }
 }
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for OriginX

@@ -1,10 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-04-25 19:56:42
- * @LastEditTime: 2021-04-25 20:02:20
+ * @LastEditTime: 2021-04-26 23:17:48
  * @LastEditors: Rais
  * @Description:
  */
+
+use seed_style_macros::AddStyleMacro;
 
 use crate::{
     styles::{ExactLength, Percent},
@@ -13,7 +15,7 @@ use crate::{
 use derive_more::Display;
 use derive_more::From;
 
-#[derive(Display, Clone, Debug, From)]
+#[derive(Display, Clone, Debug, From, AddStyleMacro)]
 #[display(fmt = "{}")]
 pub enum OriginX {
     #[display(fmt = "auto")]
@@ -27,8 +29,8 @@ pub enum OriginX {
     StringValue(String),
 }
 impl From<OriginX> for GenericSize {
-    fn from(w: OriginX) -> Self {
-        match w {
+    fn from(v: OriginX) -> Self {
+        match v {
             OriginX::Auto => Self::Auto,
             OriginX::Length(x) => x.into(),
             OriginX::Percentage(x) => x.into(),
@@ -38,7 +40,7 @@ impl From<OriginX> for GenericSize {
         }
     }
 }
-#[derive(Display, Clone, Debug, From)]
+#[derive(Display, Clone, Debug, From, AddStyleMacro)]
 #[display(fmt = "{}")]
 pub enum OriginY {
     #[display(fmt = "auto")]
@@ -52,8 +54,8 @@ pub enum OriginY {
     StringValue(String),
 }
 impl From<OriginY> for GenericSize {
-    fn from(w: OriginY) -> Self {
-        match w {
+    fn from(v: OriginY) -> Self {
+        match v {
             OriginY::Auto => Self::Auto,
             OriginY::Length(x) => x.into(),
             OriginY::Percentage(x) => x.into(),
@@ -63,7 +65,7 @@ impl From<OriginY> for GenericSize {
         }
     }
 }
-#[derive(Display, Clone, Debug, From)]
+#[derive(Display, Clone, Debug, From, AddStyleMacro)]
 #[display(fmt = "{}")]
 pub enum AlignX {
     #[display(fmt = "auto")]
@@ -77,8 +79,8 @@ pub enum AlignX {
     StringValue(String),
 }
 impl From<AlignX> for GenericSize {
-    fn from(w: AlignX) -> Self {
-        match w {
+    fn from(v: AlignX) -> Self {
+        match v {
             AlignX::Auto => Self::Auto,
             AlignX::Length(x) => x.into(),
             AlignX::Percentage(x) => x.into(),
@@ -88,7 +90,7 @@ impl From<AlignX> for GenericSize {
         }
     }
 }
-#[derive(Display, Clone, Debug, From)]
+#[derive(Display, Clone, Debug, From, AddStyleMacro)]
 #[display(fmt = "{}")]
 pub enum AlignY {
     #[display(fmt = "auto")]
@@ -102,8 +104,8 @@ pub enum AlignY {
     StringValue(String),
 }
 impl From<AlignY> for GenericSize {
-    fn from(w: AlignY) -> Self {
-        match w {
+    fn from(v: AlignY) -> Self {
+        match v {
             AlignY::Auto => Self::Auto,
             AlignY::Length(x) => x.into(),
             AlignY::Percentage(x) => x.into(),
