@@ -2,10 +2,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-04-21 22:04:10
+ * @LastEditTime: 2021-05-06 10:04:30
  * @LastEditors: Rais
  * @Description:
  */
+
+use tracing::trace_span;
 
 use crate::{GTreeBuilderElement, GTreeBuilderFn, GraphType};
 
@@ -17,7 +19,7 @@ use crate::runtime::dodrio;
 use crate::runtime::Bus;
 use crate::runtime::Css;
 pub use crate::runtime::Element;
-pub use crate::runtime::Subscription;
+use crate::Subscription;
 
 #[doc(no_inline)]
 use crate::runtime::Executor;
@@ -58,7 +60,11 @@ pub trait Application {
     /// this method.
     ///
     /// Any [`Command`] returned will be executed immediately in the background.
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message>;
+    fn update(
+        &mut self,
+        graph: &mut GraphType<Self::Message>,
+        message: Self::Message,
+    ) -> Command<Self::Message>;
 
     /// Returns the widgets to display in the [`Application`].
     ///
@@ -80,11 +86,15 @@ pub trait Application {
     fn tree_build<'a>(this: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
 
     /// Runs the [`Application`].
-    fn run(flags: Self::Flags)
+    /// # Errors
+    /// never error,  `iced::Error`
+    fn run(flags: iced::Settings<Self::Flags>) -> iced::Result
     where
         Self: 'static + Sized,
     {
         use futures::stream::StreamExt;
+
+        let _g = trace_span!("application::run").entered();
 
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
@@ -97,7 +107,7 @@ pub trait Application {
             sender.clone(),
         );
 
-        let (app, command) = runtime.enter(|| Self::new(flags));
+        let (app, command) = runtime.enter(|| Self::new(flags.flags));
 
         let mut title = app.title();
         document.set_title(&title);
@@ -129,29 +139,46 @@ pub trait Application {
 
         let event_loop = receiver.for_each(move |message| {
             let (command, subscription) = runtime.enter(|| {
-                let command = application.borrow_mut().update(message);
-                let subscription = application.borrow().subscription();
+                let update_span = trace_span!("application->update");
+                let sub_span = trace_span!("application->subscription");
+                let command = update_span.in_scope(|| {
+                    application
+                        .borrow_mut()
+                        .update(&mut *emg_graph_rc_refcell.borrow_mut(), message)
+                });
+                let subscription = sub_span.in_scope(|| application.borrow().subscription());
 
                 (command, subscription)
             });
 
             let new_title = application.borrow().title();
 
-            runtime.spawn(command);
-            runtime.track(subscription);
+            {
+                let _g = trace_span!("application->spawn command").entered();
+                runtime.spawn(command);
+            }
+            {
+                let _g = trace_span!("application->track subscription").entered();
+                runtime.track(subscription);
+            }
 
             if title != new_title {
                 document.set_title(&new_title);
 
                 title = new_title;
             }
-
-            vdom.weak().schedule_render();
+            {
+                let _g = trace_span!("application->schedule_render").entered();
+                vdom.weak().schedule_render();
+            }
 
             futures::future::ready(())
         });
 
         wasm_bindgen_futures::spawn_local(event_loop);
+        // ─────────────────────────────────────────────────────────────────
+
+        Ok(())
     }
 }
 
@@ -167,17 +194,26 @@ where
 {
     fn render(&self, context: &mut dodrio::RenderContext<'a>) -> dodrio::Node<'a> {
         use dodrio::builder::div;
+        let _g = trace_span!("application->render").entered();
 
         let ui = self.application.borrow();
         let emg_graph_ref = self.g.borrow();
-        let element = ui.view(&*emg_graph_ref);
+
+        let view_span = trace_span!("application->view");
+        let element = view_span.in_scope(|| ui.view(&*emg_graph_ref));
+
         let mut css = Css::new();
 
-        let node = element.node(context.bump, &self.bus, &mut css);
+        let node_span = trace_span!("application->element.node");
+        let node = node_span.in_scope(|| element.node(context.bump, &self.bus, &mut css));
 
-        div(context.bump)
-            .attr("style", "width: 100%; height: 100%")
-            .children(vec![css.node(context.bump), node])
-            .finish()
+        {
+            let _g = trace_span!("application-> dodrio .finish").entered();
+
+            div(context.bump)
+                .attr("style", "width: 100%; height: 100%")
+                .children(vec![css.node(context.bump), node])
+                .finish()
+        }
     }
 }
