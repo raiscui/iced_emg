@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-04-25 15:24:47
+ * @LastEditTime: 2021-05-06 17:43:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,9 +12,7 @@ pub use emg::NodeIndex;
 use emg::{edge_index_no_source, im::vector, Outgoing};
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshUseFor;
-use emg_state::{state_store_with, GStateStore};
 use std::{
-    cell::Ref,
     convert::{TryFrom, TryInto},
     hash::Hash,
 };
@@ -33,7 +31,6 @@ pub trait GraphView<'a, Message> {
 
     fn gelement_refresh_and_comb(
         &self,
-        store: &Ref<GStateStore>,
         edges: &GraphEdgesDict<Self::Ix>,
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
@@ -46,7 +43,6 @@ pub trait GraphView<'a, Message> {
 
     fn children_to_elements(
         &self,
-        store: &Ref<GStateStore>,
         edges: &GraphEdgesDict<Self::Ix>,
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
@@ -68,10 +64,9 @@ where
     type N = N<'a, Message>;
     type E = E<Ix>;
 
-    #[instrument(skip(self, store, edges))]
+    #[instrument(skip(self, edges))]
     fn gelement_refresh_and_comb(
         &self,
-        store: &Ref<GStateStore>,
         edges: &GraphEdgesDict<Self::Ix>,
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
@@ -80,7 +75,7 @@ where
     ) -> GElement<'a, Message> {
         let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone(); //TODO cache
 
-        let mut children_s = self.children_to_elements(store, edges, cix, paths);
+        let mut children_s = self.children_to_elements(edges, cix, paths);
 
         let event_callbacks = children_s
             .drain_filter(|gel| gel.is_event_())
@@ -101,8 +96,9 @@ where
 
                     let ei = &edges.get(paths.back().unwrap()).unwrap().item;
 
-                    let ed = ei.store_get_edge_data(store, paths).unwrap();
-                    let edge_styles = ed.store_styles_string(store);
+                    let store = self.store();
+                    let ed = ei.store_edge_data(&store, paths).unwrap();
+                    let edge_styles = ed.store_styles_string(&store);
                     warn!("styles---------------> {}", &edge_styles);
 
                     node_builder_widget.add_styles_string(edge_styles.as_str());
@@ -127,10 +123,9 @@ where
         }
     }
 
-    #[instrument(skip(self, store, edges))]
+    #[instrument(skip(self, edges))]
     fn children_to_elements(
         &self,
-        store: &Ref<GStateStore>,
         edges: &GraphEdgesDict<Self::Ix>,
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
@@ -143,7 +138,7 @@ where
                     let mut new_paths = paths.clone();
                     new_paths.set_with(|ev| ev.push_back(eix.clone()));
 
-                    self.gelement_refresh_and_comb(store, edges, this_child_nix.index(), &new_paths)
+                    self.gelement_refresh_and_comb(edges, this_child_nix.index(), &new_paths)
                 })
             })
             .collect() //TODO use iter
@@ -152,14 +147,12 @@ where
     #[instrument(skip(self))]
     fn view(&self, cix: Self::Ix) -> Element<'a, Message> {
         let _g = trace_span!("ffffffffffffffffffffffff", ?cix);
-        state_store_with(|store| {
-            let edges = self.raw_edges().store_get_rc(&store);
-            let paths: EPath<Self::Ix> = EPath::new(vector![edge_index_no_source(cix.clone())]);
-            // TODO add store in gelement_refresh_and_comb
-            self.gelement_refresh_and_comb(&store, &edges, &cix, &paths)
-                .try_into()
-                .unwrap()
-        })
+        let edges = self.raw_edges().store_get_rc(&self.store());
+        let paths: EPath<Self::Ix> = EPath::new(vector![edge_index_no_source(cix.clone())]);
+        // TODO add store in gelement_refresh_and_comb
+        self.gelement_refresh_and_comb(&edges, &cix, &paths)
+            .try_into()
+            .unwrap()
     }
 
     // fn global_view(cix: Self::Ix) -> Element<'a, Message> {
