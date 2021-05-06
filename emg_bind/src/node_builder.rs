@@ -259,6 +259,7 @@ where
                         use dodrio::bumpalo::collections::String;
                         String::from_str_in(event.as_str(), bump).into_bump_str()
                     };
+                    //TODO : gave a event_bus on node_builder fn .
                     element_builder = element_builder.on(event_bump_string, callback);
                 }
                 EventNode::CbMessage(EventMessage(event, msg)) => {
