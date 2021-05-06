@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2021-03-09 10:33:20
+ * @LastEditTime: 2021-05-05 13:31:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -30,7 +30,7 @@ pub trait Sandbox {
     ///
     /// This is where you define your __update logic__. All the __messages__,
     /// produced by user interactions, will be handled by this method.
-    fn update(&mut self, message: Self::Message);
+    fn update(&mut self, graph: &mut GraphType<Self::Message>, message: Self::Message);
 
     /// Returns the widgets to display in the [`Sandbox`].
     ///
@@ -73,9 +73,7 @@ pub trait Sandbox {
         Self: 'static + Sized,
     {
         #[allow(clippy::unit_arg)]
-        <Self as Application>::run(settings.flags);
-
-        Ok(())
+        <Self as Application>::run(settings)
     }
 }
 #[allow(clippy::use_self)]
@@ -95,8 +93,12 @@ where
         T::title(self)
     }
 
-    fn update(&mut self, message: T::Message) -> Command<T::Message> {
-        T::update(self, message);
+    fn update(
+        &mut self,
+        graph: &mut GraphType<T::Message>,
+        message: T::Message,
+    ) -> Command<T::Message> {
+        T::update(self, graph, message);
 
         Command::none()
     }
