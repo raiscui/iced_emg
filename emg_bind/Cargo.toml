@@ -24,11 +24,11 @@ functionate = { path = "../../functionate" }
 overloadf = { path = "../../overloadf" }
 illicit = "1.1.2"
 # log = "0.4"
-lazy_static = "1.4.0"
+# lazy_static = "1.4.0"
 dyn-clone = "1.0.4"
 # downcast-rs = "1.2.0"
 
-strum = "0.20.0"
+strum = "0.20"
 strum_macros = "0.20"
 
 match_any = "1.0.1"
@@ -42,11 +42,13 @@ wasm-bindgen-futures = "^0.4"
 
 iced_style = { path = "../../iced/style" }
 # from_variants = "0.5.0"
-derive_more = "0.99.11"
+derive_more = "^0.99"
 delegate = "0.5.1"
 
 
 tracing = { version = "^0.1" }
+
+# stream_throttle ={ version = "0.4.0",default-features = false, features = ["timer-futures-timer"], path = "../../stream-throttle"}
 
 
 # [patch.crates-io]
@@ -62,6 +64,8 @@ uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
 iced_web = { version = "0.3", path = "../../iced/web" }
 # tracing-wasm = "0.2.0"
 # console_error_panic_hook = "0.1.6"
+wasm-bindgen="^0.2"
+gloo-timers = "0.2.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "^0.3"
@@ -76,6 +80,7 @@ path = "../../iced/futures"
 [dependencies.web-sys]
 version = "^0.3"
 features = [
+    "Window",
     "console",
     "Document",
     "HtmlElement",
@@ -84,4 +89,5 @@ features = [
     "EventTarget",
     "InputEvent",
     "KeyboardEvent",
+    "IdleRequestOptions"
 ]
