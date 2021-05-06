@@ -214,6 +214,8 @@ impl GenericWH {
                 .expect("root size h get failed, expected Length Px struct"),
         )
     }
+
+    
 }
 #[derive(Display, Debug, Clone, PartialEq, PartialOrd)]
 // #[derive(Debug, Clone, Into)]
@@ -262,6 +264,19 @@ where
     origin: StateVar<GenericLoc>,
     align: StateVar<GenericLoc>,
     path_styles: StateVar<Dict<EPath<Ix>, Style>>,
+}
+
+impl<Ix> Layout<Ix>
+where
+    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
+{
+    /// Set the layout's size.
+    fn set_size(&self, size: GenericWH) {
+        self.size.set(size);
+    }
+    pub fn store_set_size(&self,store: &GStateStore, size: GenericWH) {
+        self.size.store_set(store, size)
+    }
 }
 impl<Ix> Copy for Layout<Ix> where
     Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static
@@ -349,7 +364,7 @@ impl EdgeData {
     #[must_use] pub fn styles_string(&self) -> String {
         self.styles_string.get()
     }
-    #[must_use] pub fn store_styles_string(&self,store: &Ref<GStateStore>) -> String {
+    #[must_use] pub fn store_styles_string(&self,store: &GStateStore) -> String {
         self.styles_string.store_get(store)
     }
 }
@@ -468,12 +483,12 @@ pub struct EmgEdgeItem<Ix>
 where
     Ix: Clone + Hash + Eq + Ord + 'static + Default,
 {
-    pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
-    pub paths:SaDictPathEiNode<Ix>, // with parent self
+    pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,// dyn by Edge(source_nix , target_nix)
+    pub paths:DictPathEiNodeSA<Ix>, // with parent self
     pub layout: Layout<Ix>,
     pub other_styles: StateVar<Style>,
     // no self  first try
-    pub node:SaDictPathEiNode<Ix>, //TODO with self?  not with self?
+    pub node:DictPathEiNodeSA<Ix>, //TODO with self?  not with self?
 }
 impl<
         Ix: 'static
@@ -499,26 +514,33 @@ impl<
         write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
     }
 }
-type SaDictPathEiNode<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>;
+type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>;
 
 
 impl<Ix> EmgEdgeItem<Ix>
 where
     Ix: Clone + Hash + Ord + Default 
 {
+    fn set_size(&self,size:GenericWH){
+        self.layout.set_size(size)
+    }
+    pub fn store_set_size(&self,store: &GStateStore,size:GenericWH){
+        self.layout.store_set_size(store,size)
+    }
+    
     #[must_use]
-    pub fn get_edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
+    fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
         self.node
             .get()
             .get(key)
-            .and_then(|x| x.as_edge_data().cloned())
+            .and_then(|x| x.as_edge_data()).cloned()
             
     }
     #[must_use]
-    pub fn store_get_edge_data(&self,store:&Ref<GStateStore>, key: &EPath<Ix>) -> Option<EdgeData> {
+    pub fn store_edge_data(&self,store:&GStateStore, key: &EPath<Ix>) -> Option<EdgeData> {
         self.node.store_get(store)
             .get(key)
-            .and_then(|x| x.as_edge_data().cloned())
+            .and_then(|x|  x.as_edge_data()).cloned()
             
     }
    
@@ -551,97 +573,7 @@ where
          w: T, h: T) -> Self  where Ix:std::fmt::Debug{
 
         Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    size(px(w), px(h)), GenericLoc::default(), GenericLoc::default(),)
-        // let id:StateVar< StateAnchor<EdgeIndex<Ix>>> =use_state( StateAnchor::constant(edge_index(id.clone().into(), id.clone().into())) );
-
-        // let layout = Layout::<Ix> {
-        //     size: use_state(GenericWH {
-        //         w: px(w).into(),
-        //         h: px(h).into(),
-        //     }),
-        //     origin: use_state(GenericLoc::default()),
-        //     align: use_state(GenericLoc::default()),
-        //     path_styles: use_state(Dict::unit(EPath::<Ix>::default(), s())),
-        // };
-        // let other_styles_sv = use_state(s());
-
-        // // ─────────────────────────────────────────────────────────────────
-
-        // // TODO how to use Pre-acquired G_STATE_STORE Optimize performance
-        // let calculated_size = layout.size.watch().map(|g_wh: &GenericWH| {
-        //     // println!("in layout size watch map");
-        //     let (w, h) = g_wh.get_length_value();
-
-        //     Size2::new(w, h)
-        // });
-        // //TODO make dyn
-        // let calculated_origin = StateAnchor::constant(Trans3::identity());
-        // let calculated_align = StateAnchor::constant(Trans3::identity());
-        // let coordinates_trans = StateAnchor::constant(Trans3::identity());
-        // let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
-        // // ────────────────────────────────────────────────────────────────────────────────
-        // let loc_styles = (&calculated_size, &matrix).map(move |size: &Size2, mat4: &Mat4| {
-        //     let _enter = span!(Level::TRACE,
-        //                 "-> [root] [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
-        //                 %id)
-        //     .entered();
-
-        //     trace!("size: {}  , matrix: {}", size, CssTransform::from(*mat4));
-
-        //     // TODO use  key 更新 s(),
-        //     s().w(px(size.x)).h(px(size.y)).transform(*mat4)
-        // });
-        // let layout_calculated = LayoutCalculated {
-        //     size: calculated_size,
-        //     origin: calculated_origin,
-        //     align: calculated_align,
-        //     coordinates_trans,
-        //     matrix,
-        //     // • • • • •
-        //     loc_styles,
-        // };
-        // // let path_styles_sv = use_state(s());
-
-        // let styles_string = (
-        //     &layout.path_styles.watch(),
-        //     &layout_calculated.loc_styles,
-        //     &other_styles_sv.watch(),
-        // )
-        //     .map(
-        //         move |path_styles: &Dict<EPath<Ix>,Style>, loc_styles: &Style, other_styles: &Style| {
-        //             let _enter = span!(Level::TRACE,
-        //                     "-> [ROOT styles ] recalculation..(&other_styles_watch, &loc_styles).map ",
-        //                     %id)
-        //             .entered();
-
-        //             let ps = path_styles.values().fold(String::default(), |acc,v|{
-        //                  format!("{}{}",acc,v.render())
-        //             });
-
-        //             format!(
-        //                 "{}{}{}",
-        //                 other_styles.render(),
-        //                 ps,
-        //                 loc_styles.render()
-        //             )
-        //         },
-        //     );
-
-        // let paths = StateAnchor::constant(Dict::unit(EPath::<Ix>::default(), EdgeItemNode::Empty));
-
-        // let node:SaDictPathEiNode<Ix> = paths.map_(move |_k, _v| {
-        //     EdgeItemNode::EdgeData(EdgeData {
-        //         calculated: layout_calculated.clone(),
-        //         styles_string: styles_string.clone(),
-        //     })
-        // });
-
-        // Self {
-        //     id,
-        //     paths,
-        //     layout,
-        //     other_styles: other_styles_sv,
-        //     node,
-        // }
+       
     }
     
 
@@ -687,7 +619,7 @@ where
             }).into()
         });
 
-        let paths: SaDictPathEiNode<Ix> = 
+        let paths: DictPathEiNodeSA<Ix> = 
             opt_source_node_nix_sa_re_get.then(move|opt_source_nix:&Option<NodeIndex<Ix>>| {
 
                 let _g = span!(Level::TRACE, "[ source_node_incoming_edge_dict_sa recalculation ]:source_node_nix_sa_re_get change ").entered();
@@ -710,7 +642,7 @@ where
                         
                     })
                     .anchor()
-                    .then(|x:&Dict<EdgeIndex<Ix>, SaDictPathEiNode<Ix>>|{
+                    .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
                         x.values().map(emg_state::StateAnchor::anchor).collect::<Anchor<Vector<_>>>()
                         .map(|v:&Vector<_>|{
                             let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
@@ -792,7 +724,7 @@ where
 
         //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
         let paths_clone = paths.clone();
-        let node:SaDictPathEiNode<Ix> = id_sv.watch().then(move|id_sa|{
+        let node:DictPathEiNodeSA<Ix> = id_sv.watch().then(move|id_sa|{
             
             let paths_clone2 = paths_clone.clone();
                 
@@ -1176,7 +1108,7 @@ mod tests {
             // root_e.refresh_use(&css(css_width.clone()));
             root_e.refresh_use(&Css(css_height));
             assert_eq!(
-                e1.get_edge_data(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                e1.edge_data(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .unwrap()
                     .calculated
                     .coordinates_trans
@@ -1191,7 +1123,7 @@ mod tests {
             trace!("refresh_use after {:#?}", &e2);
             info!("l3 =========================================================");
             assert_eq!(
-                e2.get_edge_data(&EPath(vector![
+                e2.edge_data(&EPath(vector![
                     edge_index_no_source("root"),
                     edge_index("root", "1"),
                     edge_index("1", "2")
@@ -1204,7 +1136,7 @@ mod tests {
             );
             trace!(
                 "{}",
-                e2.get_edge_data(&EPath(vector![
+                e2.edge_data(&EPath(vector![
                     edge_index_no_source("root"),
                     edge_index("root", "1"),
                     edge_index("1", "2")
@@ -1524,7 +1456,7 @@ mod tests {
             trace!("---e1 {}", &e1); 
 
             assert_eq!(
-                e1.get_edge_data(&EPath(vector![edge_index_no_source("root"),edge_index("root", "1")]))
+                e1.edge_data(&EPath(vector![edge_index_no_source("root"),edge_index("root", "1")]))
                     .unwrap()
                     .calculated
                     .coordinates_trans
@@ -1537,7 +1469,7 @@ mod tests {
             trace!("---new root2:e1 {}", &e1); 
 
             assert_eq!(
-                e1.get_edge_data(&EPath(vector![edge_index_no_source("root2"),edge_index("root2", "1")]))
+                e1.edge_data(&EPath(vector![edge_index_no_source("root2"),edge_index("root2", "1")]))
                     .unwrap()
                     .calculated
                     .coordinates_trans
@@ -1552,7 +1484,7 @@ mod tests {
             //local
             assert_eq!(e2.id.get(), edge_index("1", "2"));
             assert_eq!(
-                e2.get_edge_data(&EPath(vector![
+                e2.edge_data(&EPath(vector![
                     edge_index_no_source( "root2"),
                     edge_index("root2", "1"),
                     edge_index("1", "2"),
@@ -1571,7 +1503,7 @@ mod tests {
             e2_source.set(Some(node_index("root")));
             assert_eq!(e2.id.get(), edge_index("root", "2"));
             assert_eq!(
-                e2.get_edge_data(&EPath(vector![
+                e2.edge_data(&EPath(vector![
                     edge_index_no_source( "root"),
                     edge_index("root", "2"),
                 ]))
