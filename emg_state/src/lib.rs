@@ -6,6 +6,7 @@ pub mod use_state_impl;
 pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::MultiAnchor as AnchorMultiAnchor;
 pub use topo;
+pub use use_state_impl::state_store;
 pub use use_state_impl::state_store_with;
 pub use use_state_impl::use_state;
 pub use use_state_impl::CloneStateAnchor;
