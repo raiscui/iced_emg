@@ -1,5 +1,5 @@
 //! Listen to external events in your application.
-use crate::Hasher;
+use crate::{animation::RafEventRecipe, Hasher};
 use crate::{
     event::{self, Event},
     window::WindowEventRecipe,
@@ -38,12 +38,19 @@ pub use iced_futures::subscription::Recipe;
 /// not captured by any widget.
 #[must_use]
 pub fn events() -> Subscription<Event> {
-    Subscription::from_recipe(WindowEventRecipe::default())
-        .filter_map(|(e, status)| match status {
-            event::Status::Ignored => Some(e),
-            event::Status::Captured => None,
-        })
-        .map(Event::Window)
+    Subscription::batch(
+        vec![
+            Subscription::from_recipe(WindowEventRecipe::default())
+                .map(|(e, s)| (event::Event::Window(e), s)),
+            // Subscription::from_recipe(RafEventRecipe::default())
+            //     .map(|(e, s)| (event::Event::OnAnimationFrame(e), s)),
+        ]
+        .into_iter(),
+    )
+    .filter_map(|(e, status)| match status {
+        event::Status::Ignored => Some(e),
+        event::Status::Captured => None,
+    })
 }
 
 #[allow(clippy::module_name_repetitions)]

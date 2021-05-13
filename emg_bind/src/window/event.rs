@@ -136,7 +136,7 @@ impl Recipe<Hasher, (crate::event::Event, event::Status)> for WindowEventRecipe 
         // ─────────────────────────────────────────────────────────────────
 
         let mut idle_opt = IdleRequestOptions::new();
-        idle_opt.timeout(66);
+        idle_opt.timeout(99);
 
         let on_resize = Box::new(move || {
             let _g = trace_span!("window on resize -> event").entered();
@@ -156,7 +156,17 @@ impl Recipe<Hasher, (crate::event::Event, event::Status)> for WindowEventRecipe 
                     .expect("idle callback init failed"),
             );
             // ─────────────────────────────────────────────────────────────────
+
+            // let window_am = Rc::new(web_sys::window().unwrap());
+            // let am = Closure::wrap(Box::new(move || {
+            //     let _g = trace_span!("animation").entered();
+            //     trace!("in animation..........");
+            // }) as Box<dyn Fn()>);
+            // window_am.request_animation_frame(am.as_ref().unchecked_ref());
+            // am.forget();
         });
+        // ─────────────────────────────────────────────────────────────────
+
         // ────────────────────────────────────────────────────────────────────────────────
 
         // let on_resize = Box::new(move || {

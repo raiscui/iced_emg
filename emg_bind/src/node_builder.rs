@@ -1,7 +1,12 @@
+mod gelement2nodebuilderwidget;
+mod text;
+pub use text::Text;
 // use dyn_clone::DynClone;
+// ────────────────────────────────────────────────────────────────────────────────
+
 use derive_more::From;
 
-use std::{convert::TryFrom, rc::Rc};
+use std::rc::Rc;
 
 use crate::runtime::{
     dodrio::{
@@ -9,7 +14,6 @@ use crate::runtime::{
     },
     Bus, Css, Widget,
 };
-use crate::GElement;
 use emg::im::Vector;
 use iced::Element;
 
@@ -20,9 +24,8 @@ use iced::Element;
  * @LastEditors: Rais
  * @Description:
  */
-pub trait NodeBuilder<Message>
-where
-    Message: 'static + Clone,
+pub trait NodeBuilder<Message> // where
+// Message: 'static,
 {
     fn generate_element_builder<'b>(
         &self,
@@ -197,34 +200,6 @@ impl<'a, Message: std::clone::Clone> NodeBuilderWidget<'a, Message> {
         &self.event_callbacks
     }
 }
-
-impl<'a, Message> TryFrom<GElement<'a, Message>> for NodeBuilderWidget<'a, Message>
-where
-    Message: 'static + Clone,
-{
-    type Error = GElement<'a, Message>;
-
-    fn try_from(gel: GElement<'a, Message>) -> Result<Self, Self::Error> {
-        use match_any::match_any;
-        use GElement::{Button_, Layer_};
-        match_any! (gel,
-            Layer_( x) |Button_(x)=> {
-                Ok(NodeBuilderWidget::new(Rc::new(x)))
-            },
-            _=>Err(gel)
-        )
-    }
-}
-
-// TODO move to utilities
-// fn take<T>(vec: &mut Vec<T>, index: usize) -> Option<T> {
-//     // fn take<T>(mut vec: iced_web::dodrio::bumpalo::collections::Vec<T>, index: usize) -> Option<T> {
-//     if index < vec.len() {
-//         Some(vec.swap_remove(index))
-//     } else {
-//         None
-//     }
-// }
 
 impl<'a, Message> Widget<Message> for NodeBuilderWidget<'a, Message>
 where

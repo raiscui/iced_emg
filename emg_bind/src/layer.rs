@@ -139,8 +139,8 @@ where
 use crate::NodeBuilder;
 
 impl<'a, Message> NodeBuilder<Message> for Layer<'a, Message>
-where
-    Message: 'static + Clone,
+// where
+// Message: 'static,
 {
     fn generate_element_builder<'b>(
         &self,
@@ -154,11 +154,10 @@ where
         bumpalo::collections::Vec<'b, Attribute<'b>>,
         bumpalo::collections::Vec<'b, Node<'b>>,
     > {
-        let children: Vec<_> = self
+        let children = self
             .children
             .iter()
-            .map(|element| element.node(bump, bus, style_sheet))
-            .collect();
+            .map(|element| element.node(bump, bus, style_sheet));
 
         // TODO: Complete styling
         layer(
@@ -184,10 +183,7 @@ where
             )
             .into_bump_str(),
         )
-        .children(bumpalo::collections::Vec::from_iter_in(
-            children.into_iter(),
-            bump,
-        ))
+        .children(bumpalo::collections::Vec::from_iter_in(children, bump))
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -202,38 +198,8 @@ where
         publish: &Bus<Message>,
         style_sheet: &mut Css<'b>,
     ) -> dodrio::Node<'b> {
-        let children: Vec<_> = self
-            .children
-            .iter()
-            .map(|element| element.node(bump, publish, style_sheet))
-            .collect();
-
-        // TODO: Complete styling
-        layer(
-            // bumpalo::format!(in bump,"{}{}",&self.id,"-layer").into_bump_str(),
-            bump,
-        )
-        // .attr(
-        //     "class",
-        //     bumpalo::format!(in bump, "{} {}", spacing_class, padding_class)
-        //         .into_bump_str(),
-        // )
-        .attr(
-            "index",
-            bumpalo::collections::String::from_str_in(self.id.as_str(), bump).into_bump_str(),
-        )
-        .attr(
-            "style",
-            bumpalo::format!(
-                in bump,
-                "width: {}; height: {}; display: block; position: absolute;",
-                css::length(self.width),
-                css::length(self.height)
-            )
-            .into_bump_str(),
-        )
-        .children(children)
-        .finish()
+        self.generate_element_builder(bump, publish, style_sheet)
+            .finish()
     }
 }
 

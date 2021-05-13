@@ -36,8 +36,10 @@ match_any = "1.0.1"
 emg_state = { path = "../emg_state" }
 emg_refresh = { path = "../emg_refresh" }
 emg_layout = { path = "../emg_layout" }
+emg_animation = { path = "../emg_animation" }
+emg_orders= { path = "../emg_orders" }
 # for app
-wasm-bindgen-futures = "^0.4"
+
 
 
 iced_style = { path = "../../iced/style" }
@@ -59,6 +61,7 @@ tracing = { version = "^0.1" }
 # features = ["allocator_api"] 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "^0.4"
 uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
 # console_log = { version = "0.2", features = ["color"] }
 iced_web = { version = "0.3", path = "../../iced/web" }
@@ -67,7 +70,7 @@ iced_web = { version = "0.3", path = "../../iced/web" }
 wasm-bindgen="^0.2"
 gloo-timers = "0.2.1"
 
-[dev-dependencies]
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "^0.3"
 
 
@@ -77,7 +80,7 @@ version = "0.2"
 path = "../../iced/futures"
 
 # for app
-[dependencies.web-sys]
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "^0.3"
 features = [
     "Window",

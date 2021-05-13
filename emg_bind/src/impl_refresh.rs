@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-04-23 18:26:51
+ * @LastEditTime: 2021-05-11 13:39:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -77,6 +77,23 @@ impl<'a, Message> RefreshFor<GElement<'a, Message>> for i32 {
 
             other => {
                 trace!("====> {} refreshing use i32", other);
+            }
+        }
+    }
+}
+/// `GElement` refresh use X
+/// for Refresher<GElement> many type
+// this is `GElement` refresh use `i32`
+impl<'a, Message> RefreshFor<GElement<'a, Message>> for u32 {
+    fn refresh_for(&self, el: &mut GElement<'a, Message>) {
+        match el {
+            Text_(text) => {
+                trace!("==========Text update use u32");
+                text.content(format!("u32:{}", self));
+            }
+
+            other => {
+                trace!("====> {} refreshing use u32", other);
             }
         }
     }

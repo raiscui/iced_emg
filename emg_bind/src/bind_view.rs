@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-05-06 17:43:13
+ * @LastEditTime: 2021-05-11 15:32:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -99,7 +99,7 @@ where
                     let store = self.store();
                     let ed = ei.store_edge_data(&store, paths).unwrap();
                     let edge_styles = ed.store_styles_string(&store);
-                    warn!("styles---------------> {}", &edge_styles);
+                    trace!("styles---------------> {}", &edge_styles);
 
                     node_builder_widget.add_styles_string(edge_styles.as_str());
 
@@ -114,7 +114,7 @@ where
                 }
             }
             Err(old_gel) => {
-                error!(
+                trace!(
                     "NodeBuilderWidget::<Message>::try_from  error use: {}",
                     old_gel
                 );

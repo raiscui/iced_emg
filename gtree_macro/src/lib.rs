@@ -627,7 +627,7 @@ impl ToTokens for Gtree {
 
             #[allow(unused)]
             use emg_bind::{
-                runtime::Element, runtime::Text, EventCallback, EventMessage, GElement,
+                runtime::Element, EventCallback, EventMessage, GElement,
                 GTreeBuilderElement,
             };
             #[allow(unused)]

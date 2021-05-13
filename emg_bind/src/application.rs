@@ -2,14 +2,17 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-05-06 10:04:30
+ * @LastEditTime: 2021-05-13 12:45:48
  * @LastEditors: Rais
  * @Description:
  */
 
-use tracing::trace_span;
+use tracing::{debug, debug_span, trace, trace_span};
 
-use crate::{GTreeBuilderElement, GTreeBuilderFn, GraphType};
+use crate::{
+    animation::AmClosure, orders::OrdersContainer, GTreeBuilderElement, GTreeBuilderFn, GraphType,
+};
+use emg_orders::Orders;
 
 use std::{cell::RefCell, fmt, rc::Rc};
 
@@ -131,20 +134,27 @@ pub trait Application {
 
         let instance = Instance {
             application: application.clone(),
-            bus: Bus::new(sender),
+            bus: Bus::new(sender.clone()),
             g: Rc::clone(&emg_graph_rc_refcell),
         };
 
         let vdom = dodrio::Vdom::new(&body, instance);
-
+        // ─────────────────────────────────────────────────────────────────
+        let orders = OrdersContainer::new(Bus::new(sender));
         let event_loop = receiver.for_each(move |message| {
+            orders.reset_render();
+            let _g_event_loop = debug_span!("event_loop", ?message).entered();
+            debug!("receiver-message: {:?}", message);
             let (command, subscription) = runtime.enter(|| {
                 let update_span = trace_span!("application->update");
                 let sub_span = trace_span!("application->subscription");
+
                 let command = update_span.in_scope(|| {
-                    application
-                        .borrow_mut()
-                        .update(&mut *emg_graph_rc_refcell.borrow_mut(), message)
+                    application.borrow_mut().update(
+                        &mut emg_graph_rc_refcell.borrow_mut(),
+                        // &orders,
+                        message,
+                    )
                 });
                 let subscription = sub_span.in_scope(|| application.borrow().subscription());
 
@@ -168,9 +178,14 @@ pub trait Application {
                 title = new_title;
             }
             {
-                let _g = trace_span!("application->schedule_render").entered();
-                vdom.weak().schedule_render();
+                let _g = debug_span!("application->schedule_render_with_orders").entered();
+                debug!("schedule_render_with_orders");
+                vdom.weak().schedule_render_with_orders(orders.clone());
             }
+            // {
+            //     let _g = trace_span!("application->track subscription").entered();
+            //     runtime.track(subscription);
+            // }
 
             futures::future::ready(())
         });
@@ -194,7 +209,8 @@ where
 {
     fn render(&self, context: &mut dodrio::RenderContext<'a>) -> dodrio::Node<'a> {
         use dodrio::builder::div;
-        let _g = trace_span!("application->render").entered();
+        let _g = debug_span!("application->render").entered();
+        debug!("render");
 
         let ui = self.application.borrow();
         let emg_graph_ref = self.g.borrow();
@@ -207,13 +223,11 @@ where
         let node_span = trace_span!("application->element.node");
         let node = node_span.in_scope(|| element.node(context.bump, &self.bus, &mut css));
 
-        {
-            let _g = trace_span!("application-> dodrio .finish").entered();
-
+        trace_span!("application-> dodrio .finish").in_scope(|| {
             div(context.bump)
                 .attr("style", "width: 100%; height: 100%")
                 .children(vec![css.node(context.bump), node])
                 .finish()
-        }
+        })
     }
 }

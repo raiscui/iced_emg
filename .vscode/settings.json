@@ -12,9 +12,12 @@
     "git.ignoreLimitWarning": true,
     "cSpell.words": [
         "Gtree",
+        "Posix",
+        "cmds",
         "elems",
         "expl",
-        "glayer"
+        "glayer",
+        "interp"
     ],
     "files.exclude": {
         "**/.git": true,

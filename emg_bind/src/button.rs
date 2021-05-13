@@ -191,53 +191,7 @@ where
         bus: &Bus<Message>,
         style_sheet: &mut Css<'b>,
     ) -> dodrio::Node<'b> {
-        use dodrio::builder::button;
-
-        // TODO: State-based styling
-        let style = self.style.active();
-
-        let padding_class = style_sheet.insert(bump, css::Rule::Padding(self.padding));
-
-        let background = match style.background {
-            None => String::from("none"),
-            Some(background) => match background {
-                Background::Color(color) => css::color(color),
-            },
-        };
-
-        let class = {
-            use dodrio::bumpalo::collections::String;
-
-            String::from_str_in(&padding_class, bump).into_bump_str()
-        };
-
-        let mut node = button(bump)
-            .attr("class", class)
-            .attr(
-                "style",
-                bumpalo::format!(
-                    in bump,
-                    "background: {}; border-radius: {}px; width:{}; \
-                    min-width: {}; color: {};",
-                    background,
-                    style.border_radius,
-                    css::length(self.width),
-                    css::min_length(self.min_width),
-                    css::color(style.text_color)
-                )
-                .into_bump_str(),
-            )
-            .children(vec![self.content.node(bump, bus, style_sheet)]);
-
-        if let Some(on_press) = self.on_press.clone() {
-            let event_bus = bus.clone();
-
-            node = node.on("click", move |_root, _vdom, _event| {
-                event_bus.publish(on_press.clone());
-            });
-        }
-
-        node.finish()
+       self.generate_element_builder(bump,bus,style_sheet).finish()
     }
 }
 

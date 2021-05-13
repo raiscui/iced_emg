@@ -6,6 +6,8 @@
 #![feature(unboxed_closures, fn_traits, thread_local)]
 // #![feature(specialization)]
 #![feature(drain_filter)]
+// ────────────────────────────────────────────────────────────────────────────────
+#![feature(convert_float_to_int)] //RafEventRecipe:  (timestamp * 1000.).trunc().to_int_unchecked::<u64>()
 
 // bumpalo
 // #![feature(allocator_api)]
@@ -24,11 +26,13 @@ mod button;
 mod g_element;
 mod g_tree_builder_element;
 // mod graph_store;
+mod animation;
 mod bind_view;
 mod graph_layout;
 mod impl_refresh;
 mod layer;
 mod node_builder;
+mod orders;
 mod sandbox;
 // ────────────────────────────────────────────────────────────────────────────────
 pub use runtime::Hasher;
@@ -56,6 +60,38 @@ pub use subscription::Subscription;
 // pub use topo_store::CloneState;
 // pub use topo_store::StateAccess;
 
+// ────────────────────────────────────────────────────────────────────────────────
+// @TODO Refactor once `optin_builtin_traits` or `negative_impls`
+// @TODO is stable (https://github.com/seed-rs/seed/issues/391).
+// --
+// @TODO Remove `'static` bound from all `MsU`s once `optin_builtin_traits`, `negative_impls`
+// @TODO or https://github.com/rust-lang/rust/issues/41875 is stable.
+#[macro_export]
+macro_rules! map_callback_return_to_option_ms {
+    ($cb_type:ty, $callback:expr, $panic_text:literal, $output_type:tt) => {{
+        let t_type = std::any::TypeId::of::<MsU>();
+        if t_type == std::any::TypeId::of::<Message>() {
+            $output_type::new(move |value| {
+                (&mut Some($callback(value)) as &mut dyn std::any::Any)
+                    .downcast_mut::<Option<Message>>()
+                    .and_then(Option::take)
+            })
+        } else if t_type == std::any::TypeId::of::<Option<Message>>() {
+            $output_type::new(move |value| {
+                (&mut $callback(value) as &mut dyn std::any::Any)
+                    .downcast_mut::<Option<Message>>()
+                    .and_then(Option::take)
+            })
+        } else if t_type == std::any::TypeId::of::<()>() {
+            $output_type::new(move |value| {
+                $callback(value);
+                None
+            }) as $output_type<$cb_type>
+        } else {
+            panic!($panic_text);
+        }
+    }};
+}
 #[cfg(test)]
 mod tests {
     #[test]

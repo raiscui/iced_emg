@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-04-29 10:03:54
- * @LastEditTime: 2021-04-30 17:00:44
+ * @LastEditTime: 2021-05-11 13:32:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,6 +28,7 @@ pub enum Event {
     Window(window::Event),
     // /// A touch event
     // Touch(touch::Event),
+    OnAnimationFrame(emg_animation::Msg),
 }
 
 /// The status of an [`Event`] after being processed.

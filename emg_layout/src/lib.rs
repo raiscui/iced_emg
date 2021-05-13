@@ -271,6 +271,7 @@ where
     Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {
     /// Set the layout's size.
+    #[cfg(test)]
     fn set_size(&self, size: GenericWH) {
         self.size.set(size);
     }
@@ -521,6 +522,7 @@ impl<Ix> EmgEdgeItem<Ix>
 where
     Ix: Clone + Hash + Ord + Default 
 {
+    #[cfg(test)]
     fn set_size(&self,size:GenericWH){
         self.layout.set_size(size)
     }
@@ -528,19 +530,20 @@ where
         self.layout.store_set_size(store,size)
     }
     
+    #[cfg(test)]
     #[must_use]
     fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
         self.node
             .get()
             .get(key)
-            .and_then(|x| x.as_edge_data()).cloned()
-            
+            .and_then(EdgeItemNode::as_edge_data).cloned()
     }
+
     #[must_use]
     pub fn store_edge_data(&self,store:&GStateStore, key: &EPath<Ix>) -> Option<EdgeData> {
         self.node.store_get(store)
             .get(key)
-            .and_then(|x|  x.as_edge_data()).cloned()
+            .and_then(EdgeItemNode::as_edge_data).cloned()
             
     }
    
@@ -1160,7 +1163,7 @@ mod tests {
             info!("=========================================================");
 
             // let cc = Transform9::identity();
-            let ff = s().width(pc(11)).bg_color(hsl(40,70,30));
+            let _ff = s().width(pc(11)).bg_color(hsl(40,70,30));
             let css_width = width(px(100));
             let css_height = h(px(100));
 
@@ -1357,6 +1360,22 @@ mod tests {
                     .coordinates_trans
                     .get(),
                 Trans3::new(-4.0, -48.0, 0.0)
+            );
+            e2.set_size(GenericWH::new(px(100), px(100)));
+            assert_eq!(
+                e2.node
+                    .get()
+                    .get(&EPath(vector![
+                        edge_index_no_source("root"),
+                        edge_index("root", "1"),
+                        edge_index("1", "2")
+                    ]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .size
+                    .get(),
+                    Size2::new(100.0, 100.0)
             );
             let _span1 = span!(Level::TRACE, "debug print 1");
             _span1.in_scope(|| {
