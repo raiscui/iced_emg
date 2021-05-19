@@ -1,12 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2021-05-05 13:31:42
+ * @LastEditTime: 2021-05-13 18:14:31
  * @LastEditors: Rais
  * @Description:
  */
 use std::{cell::RefCell, rc::Rc};
 
+use emg_orders::Orders;
 use iced::{Color, Element, Error, Settings};
 
 use crate::{Application, Command, GTreeBuilderElement, GraphType, Subscription};
@@ -85,7 +86,7 @@ where
     type Flags = ();
     type Message = T::Message;
 
-    fn new(_flags: ()) -> (Self, Command<T::Message>) {
+    fn new(_flags: (), _orders: &impl Orders<Self::Message>) -> (Self, Command<T::Message>) {
         (T::new(), Command::none())
     }
 
@@ -96,6 +97,7 @@ where
     fn update(
         &mut self,
         graph: &mut GraphType<T::Message>,
+        _orders: &impl Orders<T::Message>,
         message: T::Message,
     ) -> Command<T::Message> {
         T::update(self, graph, message);

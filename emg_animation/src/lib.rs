@@ -1,25 +1,27 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
-
 // ────────────────────────────────────────────────────────────────────────────────
-
+#![feature(slice_concat_ext)]
+#![feature(div_duration)]
+#![feature(extend_one)]
 mod models;
 mod render;
 // ────────────────────────────────────────────────────────────────────────────────
 
 use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
 
-use im::vector;
-use models::{map_to_motion, Animation, Interpolation, Property, Step};
+use im::{vector, Vector};
+use models::{map_to_motion, update_animation, Animation, Interpolation, Property, Step};
 use render::warn_for_double_listed_properties;
 
 // ────────────────────────────────────────────────────────────────────────────────
 pub use crate::models::color::fill;
+pub use crate::models::opacity::opacity;
 pub use crate::models::Tick;
 pub use crate::models::Timing;
 // ────────────────────────────────────────────────────────────────────────────────
-use crate::models::{CubicCurveMotion, Motion, QuadraticCurveMotion, ShadowMotion};
+use crate::models::{Easing, Motion};
 
 #[allow(clippy::enum_glob_use)]
 use crate::models::Interpolation::*;
@@ -43,12 +45,12 @@ const fn init_motion(position: f64, unit: String) -> Motion {
 }
 
 // initialState : List Animation.Model.Property -> Animation msg
-fn initial_state<Message>(current: Vec<Property>) -> Animation<Message>
+fn initial_state<Message>(current: Vector<Property>) -> Animation<Message>
 where
     Message: Clone,
 {
     Animation {
-        steps: vec![],
+        steps: vector![],
         style: current,
         timing: Timing {
             current: Duration::ZERO,
@@ -59,12 +61,12 @@ where
     }
 }
 
-fn identity<T>(x: T) -> T {
+const fn identity<T>(x: T) -> T {
     x
 }
 
 // speed : { perSecond : Float } -> Animation.Model.Interpolation
-fn speed(speed_value: f64) -> Interpolation {
+const fn speed(speed_value: f64) -> Interpolation {
     AtSpeed {
         per_second: speed_value,
     }
@@ -75,11 +77,13 @@ fn default_interpolation_by_property(prop: Property) -> Interpolation {
     use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     // -- progress is set to 1 because it is changed to 0 when the animation actually starts
     // -- This is analagous to the spring starting at rest.
-    let linear = |duration: Duration| Easing {
-        progress: 1.,
-        start: 0.,
-        duration,
-        ease: Rc::new(dbg2!(identity::<f64>)),
+    let linear = |duration: Duration| {
+        Easing(Easing {
+            progress: 1.,
+            start: 0.,
+            duration,
+            ease: Rc::new(dbg2!(identity::<f64>)),
+        })
     };
 
     let default_spring = Spring {
@@ -88,18 +92,14 @@ fn default_interpolation_by_property(prop: Property) -> Interpolation {
     };
 
     match prop {
-        Exact(_, _)
-        | Shadow(_, _, _)
-        | Prop(_, _)
-        | Prop2(_, _, _)
-        | Prop4(_, _, _, _, _)
-        | Points(_)
-        | Path(_) => default_spring,
+        Exact(..) | Shadow(..) | Prop(..) | Prop2(..) | Prop4(..) | Points(..) | Path(..) => {
+            default_spring
+        }
 
-        Color(_, _, _, _, _) => linear(Duration::from_millis(400)),
+        Color(..) => linear(Duration::from_millis(400)),
 
-        Prop3(name, _, _, _) => {
-            if name == "rotate3d" {
+        Prop3(name, ..) => {
+            if name.as_str() == "rotate3d" {
                 speed(PI)
             } else {
                 default_spring
@@ -115,25 +115,28 @@ fn set_default_interpolation(prop: Property) -> Property {
     let interp = default_interpolation_by_property(prop.clone());
 
     map_to_motion(
-        Rc::new(move |mut m: Motion| -> Motion {
+        &move |mut m: Motion| -> Motion {
             m.interpolation = interp.clone();
             m
-        })
-        .as_ref(),
+        },
         prop,
     )
 }
 
 // style : List Animation.Model.Property -> Animation msg
 #[must_use]
-pub fn style<Message>(props: &[Property]) -> Animation<Message>
+pub fn style<Message>(props: Vector<Property>) -> Animation<Message>
 where
     Message: Clone,
 {
     //
-    warn_for_double_listed_properties(props);
-    let props = props.to_vec();
-    initial_state(props.into_iter().map(set_default_interpolation).collect())
+    warn_for_double_listed_properties(&props);
+    initial_state(
+        props
+            .into_iter()
+            .map(set_default_interpolation)
+            .collect::<Vector<Property>>(),
+    )
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -142,7 +145,7 @@ where
 ///This is used because the wait at the start of an interruption works differently than a normal wait.
 
 //    extractInitialWait : List (Animation.Model.Step msg) -> ( Time.Posix, List (Animation.Model.Step msg) )
-fn extract_initial_wait<Message>(steps: &[Step<Message>]) -> (Duration, Vec<Step<Message>>)
+fn extract_initial_wait<Message>(steps: Vector<Step<Message>>) -> (Duration, Vector<Step<Message>>)
 where
     Message: Clone,
 {
@@ -162,24 +165,25 @@ where
     //         _ ->
     //             ( Time.millisToPosix 0, steps )
     use Step::Wait;
-    match steps {
-        [] => (Duration::ZERO, vec![]),
-        [step, tail @ ..] => {
+    match steps.front() {
+        None => (Duration::ZERO, steps),
+        Some(step) => {
             if let Wait(till) = step {
-                let (additional_time, remaining_steps) = extract_initial_wait(tail);
-                return (*till + additional_time, remaining_steps);
+                let (additional_time, remaining_steps) = extract_initial_wait(steps.skip(1));
+                (*till + additional_time, remaining_steps)
+            } else {
+                (Duration::ZERO, steps)
             }
-            (Duration::ZERO, steps.to_vec())
         } // [step] => (Duration::ZERO, steps),
     }
 }
 
 ///Interrupt any running animations with the following animation.
 // interrupt : List (Animation.Model.Step msg) -> Animation msg -> Animation msg
-fn interrupt<'a, Message>(
-    steps: &[Step<Message>],
-    model: &'a mut Animation<Message>,
-) -> &'a mut Animation<Message>
+pub fn interrupt<Message>(
+    steps: Vector<Step<Message>>,
+    model: &mut Animation<Message>,
+) -> &mut Animation<Message>
 where
     Message: Clone,
 {
@@ -188,13 +192,26 @@ where
     model
 }
 
-fn to<Message>(props: &[Property]) -> Step<Message> {
-    Step::To(props.to_vec())
+#[must_use]
+pub fn to<Message>(props: Vector<Property>) -> Step<Message>
+where
+    Message: Clone,
+{
+    Step::To(props)
 }
 
 // custom : String -> Float -> String -> Animation.Model.Property
 fn custom(name: String, value: f64, unit: String) -> Property {
-    Property::Prop(name, init_motion(value, unit))
+    Property::Prop(Rc::new(name), init_motion(value, unit))
+}
+
+/// Update an animation.
+//TODO : Implement this
+pub fn update<Message: std::clone::Clone + std::fmt::Debug>(
+    tick: Tick,
+    animation: &mut Animation<Message>,
+) {
+    update_animation(tick, animation)
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -237,14 +254,17 @@ impl<T: ?Sized> fmt::Debug for Debuggable<T> {
 
 // ────────────────────────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
 
+    use im::vector;
+
     use crate::{
         extract_initial_wait, fill, interrupt,
-        models::{color::Color, opacity::opacity, Step},
-        style, to, State,
+        models::{color::Color, opacity::opacity, update_animation, Step},
+        style, to, State, Tick,
     };
 
     #[derive(Clone, Debug)]
@@ -254,12 +274,18 @@ mod tests {
     }
     #[test]
     fn it_works() {
-        let styles: State<Message> = style(&[fill(Color::new(0, 0, 0, 1.))]);
+        let styles: State<Message> = style(vector![fill(Color::new(0, 0, 0, 1.))]);
         println!("{:#?}", styles);
     }
     #[test]
     fn test_extract_initial_wait() {
-        let ff = extract_initial_wait(&[
+        let xx = vector![
+            Step::Wait(Duration::from_millis(16)),
+            Step::_Step,
+            Step::Send(Message::A),
+        ];
+        println!("{:#?}", xx);
+        let ff = extract_initial_wait(vector![
             Step::Wait(Duration::from_millis(16)),
             Step::_Step,
             Step::Send(Message::A),
@@ -272,9 +298,42 @@ mod tests {
         assert_eq!(format!("{:?}", v), format!("{:?}", ff))
     }
     #[test]
+    fn test_update_animation() {
+        let mut am_state: State<Message> = style(vector![opacity(1.)]);
+        insta::assert_debug_snapshot!("init", &am_state);
+
+        interrupt(
+            vector![to(vector![opacity(0.)]), to(vector![opacity(1.)])],
+            &mut am_state,
+        );
+        insta::assert_debug_snapshot!("interrupt", &am_state);
+
+        let mut now = Duration::from_millis(10000);
+        update_animation(Tick(now), &mut am_state);
+        insta::assert_debug_snapshot!("am1-first", &am_state);
+
+        now += Duration::from_millis(16);
+        update_animation(Tick(now), &mut am_state);
+        insta::assert_debug_snapshot!("am2", &am_state);
+
+        now += Duration::from_millis(17);
+        update_animation(Tick(now), &mut am_state);
+        insta::assert_debug_snapshot!("am3", &am_state);
+
+        for _ in 0..180 {
+            now += Duration::from_millis(17);
+            update_animation(Tick(now), &mut am_state);
+        }
+        println!("{:#?}", &am_state);
+        insta::assert_debug_snapshot!("am_last", &am_state);
+    }
+    #[test]
     fn test_interrupt() {
-        let mut am_state: State<Message> = style(&[opacity(1.)]);
-        let interrupt1 = interrupt(&[to(&[opacity(0.)]), to(&[opacity(1.)])], &mut am_state);
+        let mut am_state: State<Message> = style(vector![opacity(1.)]);
+        let interrupt1 = interrupt(
+            vector![to(vector![opacity(0.)]), to(vector![opacity(1.)])],
+            &mut am_state,
+        );
         println!("{:#?}", interrupt1);
     }
 }

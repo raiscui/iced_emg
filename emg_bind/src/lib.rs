@@ -39,8 +39,10 @@ pub use runtime::Hasher;
 pub mod event;
 pub mod subscription;
 pub mod window;
-// ────────────────────────────────────────────────────────────────────────────────
 
+// ────────────────────────────────────────────────────────────────────────────────
+pub use emg_animation::Tick;
+pub use emg_orders::Orders;
 // mod state_store;
 // mod topo_store;
 pub use application::{Application, Command, Element};

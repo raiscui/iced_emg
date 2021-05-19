@@ -1,15 +1,19 @@
+use emg_animation::Tick;
+
 // @TODO: Add links to doc comment once https://github.com/rust-lang/rust/issues/43466 is resolved
 // or use nightly rustdoc. Applicable to the entire code base.
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub trait Orders<Message: 'static> {
+pub trait Orders<Message> {
     type AppMs: 'static;
-    type TickMsg: 'static;
 
     // type Mdl: 'static;
     // type INodes: IntoNodes<Self::AppMs> + 'static;
     // ────────────────────────────────────────────────────────────────────────────────
+    fn re_render(&self);
+    fn set_re_render_msg(&self, msg: Message) -> &Self;
+    fn publish(&self, msg: Self::AppMs);
     fn reset_render(&self);
     // fn process_after_render_queue(&self);
     fn process_after_render_queue(&self, new_render_timestamp: f64);
@@ -207,7 +211,7 @@ pub trait Orders<Message: 'static> {
     // @TODO or https://github.com/rust-lang/rust/issues/41875 is stable
     fn after_next_render<MsU: 'static>(
         &self,
-        callback: impl FnOnce(Self::TickMsg) -> MsU + 'static,
+        callback: impl FnOnce(Tick) -> MsU + 'static,
     ) -> &Self;
     // ────────────────────────────────────────────────────────────────────────────────
 

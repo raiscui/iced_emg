@@ -1,24 +1,20 @@
-use emg_animation::Msg as AmMsg;
+use crate::Orders;
 use emg_animation::Tick;
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-05-13 13:37:50
+ * @LastEditTime: 2021-05-14 11:48:24
  * @LastEditors: Rais
  * @Description:
  */
 use iced_web::Bus;
-use tracing::{debug_span, error};
-use wasm_bindgen::UnwrapThrowExt;
-use web_sys::window;
+use tracing::{debug, debug_span, error};
 
 use crate::map_callback_return_to_option_ms;
-use emg_orders::Orders;
+
 use std::{
     cell::{Cell, RefCell},
-    collections::VecDeque,
     rc::Rc,
-    time::Duration,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -58,7 +54,8 @@ pub enum Effect<Message> {
 // type StoredPopstate = RefCell<Option<Closure<dyn FnMut(web_sys::Event)>>>;
 
 #[allow(clippy::type_complexity)]
-pub(crate) struct OrdersData<Message: 'static, TickMsg> {
+#[allow(clippy::redundant_pub_crate)]
+pub(crate) struct OrdersData<Message, TickMsg> {
     // pub model: RefCell<Option<Mdl>>,
     // pub(crate) root_el: RefCell<Option<El<Ms>>>,
     // pub popstate_closure: StoredPopstate,
@@ -75,19 +72,22 @@ pub(crate) struct OrdersData<Message: 'static, TickMsg> {
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
 pub struct OrdersContainer<Message>
-where
-    Message: 'static,
-    // INodes: IntoNodes<Ms>,
+// where
+// Message: 'static,
+// INodes: IntoNodes<Ms>,
 {
     pub(crate) should_render: Rc<Cell<ShouldRender>>,
     pub(crate) data: Rc<OrdersData<Message, Tick>>,
-    bus: Bus<Message>, // pub(crate) effects: VecDeque<Effect<Ms>>,
-                       // app: App<Ms, Mdl, INodes>
+    bus: Bus<Message>,
+    pub(crate) re_render_msg: Rc<RefCell<Option<Message>>>,
+    //
+    // pub(crate) effects: VecDeque<Effect<Ms>>,
+    // app: App<Ms, Mdl, INodes>
 }
 
 impl<Message> OrdersContainer<Message>
-where
-    Message: 'static,
+// where
+// Message: 'static,
 {
     pub fn new(bus: Bus<Message>) -> Self {
         Self {
@@ -107,20 +107,31 @@ where
                 render_info: Cell::new(None),
             }),
             bus,
+            re_render_msg: Rc::new(RefCell::new(None)),
         }
     }
 }
 
 impl<Message> Orders<Message> for OrdersContainer<Message>
 where
-    Message: 'static,
+    Message: Clone + 'static,
 {
     type AppMs = Message;
-    type TickMsg = Tick;
     // type Mdl = Mdl;
     // type INodes = INodes;
 
     // ────────────────────────────────────────────────────────────────────────────────
+    fn set_re_render_msg(&self, msg: Message) -> &Self {
+        self.re_render_msg.replace(Some(msg));
+        self
+    }
+    fn re_render(&self) {
+        let msg = self.re_render_msg.borrow().as_ref().cloned().unwrap();
+        self.publish(msg);
+    }
+    fn publish(&self, msg: Self::AppMs) {
+        self.bus.publish(msg);
+    }
     fn reset_render(&self) {
         self.should_render.set(ShouldRender::Render);
     }
@@ -148,6 +159,8 @@ where
         //     // )
         //     .map(|callback| Effect::TriggeredHandler(Box::new(move || callback(tick))))
         //     .collect();
+        let len = self.data.after_next_render_callbacks.borrow().len();
+        debug!("len after_next_render_callbacks: {:?} ", &len);
 
         self.data
             .after_next_render_callbacks
@@ -297,10 +310,10 @@ where
 
     fn after_next_render<MsU: 'static>(
         &self,
-        callback: impl FnOnce(Self::TickMsg) -> MsU + 'static,
+        callback: impl FnOnce(Tick) -> MsU + 'static,
     ) -> &Self {
         let callback = map_callback_return_to_option_ms!(
-            dyn FnOnce(Self::TickMsg) -> Option<Message>,
+            dyn FnOnce(Tick) -> Option<Message>,
             callback,
             "Callback can return only Msg, Option<Msg> or ()!",
             Box
