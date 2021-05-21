@@ -10,7 +10,6 @@ members = [
     "emg_state",
     "emg_animation",
     "emg_orders",
-    "serde_closure",
     "emg_debuggable",
 ]
 exclude = ["tests"]
