@@ -7,6 +7,8 @@ use tracing::{trace, warn};
 
 use crate::Debuggable;
 
+// use emg_debuggable::{dbg4, Debuggable};
+
 #[derive(Clone, Debug)]
 pub struct Easing {
     pub progress: Precision,
@@ -183,6 +185,19 @@ where
     pub(crate) timing: Timing,
     pub(crate) running: bool,
     pub(crate) interruption: StepTimeVector<Message>,
+}
+
+impl<Message> Animation<Message>
+where
+    Message: Clone,
+{
+    pub fn get_position(&self, i: usize) -> Precision {
+        let p = self.style.get(i).unwrap();
+        match p {
+            Property::Prop(_name, m) => m.position,
+            _ => todo!("not implemented"),
+        }
+    }
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Tick(pub Duration);

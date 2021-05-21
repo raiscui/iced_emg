@@ -8,7 +8,7 @@
 mod models;
 mod render;
 // ────────────────────────────────────────────────────────────────────────────────
-
+// use emg_debuggable::dbg4;
 use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
 
 use im::{vector, Vector};
@@ -73,7 +73,7 @@ const fn speed(speed_value: f64) -> Interpolation {
 }
 
 // defaultInterpolationByProperty : Animation.Model.Property -> Animation.Model.Interpolation
-fn default_interpolation_by_property(prop: Property) -> Interpolation {
+fn default_interpolation_by_property(prop: &Property) -> Interpolation {
     use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     // -- progress is set to 1 because it is changed to 0 when the animation actually starts
     // -- This is analagous to the spring starting at rest.
@@ -82,7 +82,7 @@ fn default_interpolation_by_property(prop: Property) -> Interpolation {
             progress: 1.,
             start: 0.,
             duration,
-            ease: Rc::new(dbg2!(identity::<f64>)),
+            ease: Rc::new(dbg4!(identity::<f64>)),
         })
     };
 
@@ -112,7 +112,7 @@ fn default_interpolation_by_property(prop: Property) -> Interpolation {
 
 // setDefaultInterpolation : Animation.Model.Property -> Animation.Model.Property
 fn set_default_interpolation(prop: Property) -> Property {
-    let interp = default_interpolation_by_property(prop.clone());
+    let interp = default_interpolation_by_property(&prop);
 
     map_to_motion(
         &move |mut m: Motion| -> Motion {
@@ -216,9 +216,6 @@ pub fn update<Message: std::clone::Clone + std::fmt::Debug>(
 // ────────────────────────────────────────────────────────────────────────────────
 
 // ────────────────────────────────────────────────────────────────────────────────
-
-/// Extends a (possibly unsized) value with a Debug string.
-// (This type is unsized when T is unsized)
 #[derive(Clone)]
 pub struct Debuggable<T: ?Sized> {
     text: &'static str,
@@ -235,7 +232,7 @@ impl<T: ?Sized> std::ops::Deref for Debuggable<T> {
 
 /// Produce a Debuggable<T> from an expression for T
 #[macro_export]
-macro_rules! dbg2 {
+macro_rules! dbg4 {
     ($($body:tt)+) => {
         Debuggable {
             text: stringify!($($body)+),
@@ -251,7 +248,6 @@ impl<T: ?Sized> fmt::Debug for Debuggable<T> {
         write!(f, "{}", self.text)
     }
 }
-
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]

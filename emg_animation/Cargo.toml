@@ -2,14 +2,20 @@
 name = "emg_animation"
 version = "0.1.0"
 edition = "2018"
-
+resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.dev]
+split-debuginfo = "unpacked"
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 tracing = { version = "^0.1" }
-im="15.0.0"
+im = "15.0.0"
 iter_fixed = "0.2.0"
 # emg_orders = { path = "../emg_orders"}
+emg_debuggable = { path = "../emg_debuggable" }
 
 [dev-dependencies]
-insta = {version = "1.7.1"}
+insta = { version = "1.7.1" }
