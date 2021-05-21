@@ -1,19 +1,30 @@
+use std::hash::Hash;
+
+//TODO Tick 脱库
 use emg_animation::Tick;
+use emg_debuggable::Debuggable;
 
 // @TODO: Add links to doc comment once https://github.com/rust-lang/rust/issues/43466 is resolved
 // or use nightly rustdoc. Applicable to the entire code base.
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub trait Orders<Message> {
+pub trait Orders<Message>: Clone {
     type AppMs: 'static;
 
     // type Mdl: 'static;
     // type INodes: IntoNodes<Self::AppMs> + 'static;
     // ────────────────────────────────────────────────────────────────────────────────
-    fn re_render(&self);
-    fn set_re_render_msg(&self, msg: Message) -> &Self;
-    fn publish(&self, msg: Self::AppMs);
+    // fn re_render(&self);
+    // fn set_re_render_msg(&self, msg: Message) -> &Self;
+
+    fn schedule_render_then<MsU: 'static, F: FnOnce(Tick) -> MsU + 'static>(
+        &self,
+        task_name: &'static str,
+        // debuggable_callback: Debuggable<F>,
+        cb: F,
+    ) -> &Self;
+    fn publish(&self, msg: Message);
     fn reset_render(&self);
     // fn process_after_render_queue(&self);
     fn process_after_render_queue(&self, new_render_timestamp: f64);
@@ -209,9 +220,11 @@ pub trait Orders<Message> {
     #[allow(clippy::shadow_unrelated)]
     // @TODO remove `'static`s once `optin_builtin_traits`, `negative_impls`
     // @TODO or https://github.com/rust-lang/rust/issues/41875 is stable
-    fn after_next_render<MsU: 'static>(
+    fn after_next_render<MsU: 'static, F: FnOnce(Tick) -> MsU + 'static>(
         &self,
-        callback: impl FnOnce(Tick) -> MsU + 'static,
+        task_name: &'static str,
+        // debuggable_callback: Debuggable<F>,
+        cb: F,
     ) -> &Self;
     // ────────────────────────────────────────────────────────────────────────────────
 

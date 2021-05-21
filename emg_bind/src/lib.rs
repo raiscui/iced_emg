@@ -35,6 +35,7 @@ mod node_builder;
 mod orders;
 mod sandbox;
 // ────────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 pub use runtime::Hasher;
 pub mod event;
 pub mod subscription;
@@ -74,19 +75,19 @@ macro_rules! map_callback_return_to_option_ms {
         let t_type = std::any::TypeId::of::<MsU>();
         if t_type == std::any::TypeId::of::<Message>() {
             $output_type::new(move |value| {
-                (&mut Some($callback(value)) as &mut dyn std::any::Any)
+                (&mut Some($callback.call_once((value,))) as &mut dyn std::any::Any)
                     .downcast_mut::<Option<Message>>()
                     .and_then(Option::take)
             })
         } else if t_type == std::any::TypeId::of::<Option<Message>>() {
             $output_type::new(move |value| {
-                (&mut $callback(value) as &mut dyn std::any::Any)
+                (&mut $callback.call_once((value,)) as &mut dyn std::any::Any)
                     .downcast_mut::<Option<Message>>()
                     .and_then(Option::take)
             })
         } else if t_type == std::any::TypeId::of::<()>() {
             $output_type::new(move |value| {
-                $callback(value);
+                $callback.call_once((value,));
                 None
             }) as $output_type<$cb_type>
         } else {

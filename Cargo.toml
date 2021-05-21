@@ -9,8 +9,8 @@ members = [
     "emg_refresh",
     "emg_state",
     "emg_animation",
-    "emg_orders"
+    "emg_orders",
+    "serde_closure",
+    "emg_debuggable",
 ]
-exclude = [
-    "tests",
-]
+exclude = ["tests"]

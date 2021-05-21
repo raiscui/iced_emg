@@ -641,6 +641,8 @@ impl ToTokens for Gtree {
             use std::rc::Rc;
             #[allow(unused)]
             use GElement::*;
+            // #[allow(unused)]
+            // pub use emg_bind::serde_closure;
 
             // #[allow(unused)]
             // use anchors::singlethread::*;

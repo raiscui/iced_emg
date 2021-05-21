@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2021-05-13 18:14:31
+ * @LastEditTime: 2021-05-21 09:02:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -112,7 +112,10 @@ where
     fn view<'a>(&self, g: &'a GraphType<'_, T::Message>) -> Element<'a, T::Message> {
         T::view(self, g)
     }
-    fn tree_build<'a>(this: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, T::Message> {
+    fn tree_build<'a>(
+        this: Rc<RefCell<Self>>,
+        _orders: impl Orders<Self::Message> + 'static,
+    ) -> GTreeBuilderElement<'a, T::Message> {
         T::tree_build(this)
     }
 }

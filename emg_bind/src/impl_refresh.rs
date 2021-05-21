@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-05-11 13:39:37
+ * @LastEditTime: 2021-05-19 19:07:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@ use crate::{
     NodeBuilderWidget,
 };
 use emg_refresh::{RefreshFor, RefreshUseFor, RefreshWhoNoWarper};
-use tracing::trace;
+use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -93,7 +93,21 @@ impl<'a, Message> RefreshFor<GElement<'a, Message>> for u32 {
             }
 
             other => {
-                trace!("====> {} refreshing use u32", other);
+                warn!("not implemented ====> {} refreshing use u32", other);
+            }
+        }
+    }
+}
+impl<'a, Message> RefreshFor<GElement<'a, Message>> for f64 {
+    fn refresh_for(&self, el: &mut GElement<'a, Message>) {
+        match el {
+            Text_(text) => {
+                trace!("==========Text update use f64");
+                text.content(format!("f64:{}", self));
+            }
+
+            other => {
+                warn!("not implemented ====> {} refreshing use f64", other);
             }
         }
     }

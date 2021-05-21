@@ -1,3 +1,11 @@
+/*
+ * @Author: Rais
+ * @Date: 2021-03-08 18:20:22
+ * @LastEditTime: 2021-05-19 23:08:29
+ * @LastEditors: Rais
+ * @Description:
+ */
+
 mod gelement2nodebuilderwidget;
 mod text;
 pub use text::Text;
@@ -17,13 +25,6 @@ use crate::runtime::{
 use emg::im::Vector;
 use iced::Element;
 
-/*
- * @Author: Rais
- * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-03-13 16:24:37
- * @LastEditors: Rais
- * @Description:
- */
 pub trait NodeBuilder<Message> // where
 // Message: 'static,
 {
@@ -46,20 +47,22 @@ pub trait NodeBuilder<Message> // where
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub trait EventCbClone: Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) {
-    fn clone_box(&self) -> Box<dyn EventCbClone>;
+pub trait EventCbClone<Message>:
+    Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>
+{
+    fn clone_box(&self) -> Box<dyn EventCbClone<Message>>;
 }
 
-impl<T> EventCbClone for T
+impl<Message, T> EventCbClone<Message> for T
 where
-    T: 'static + Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) + Clone,
+    T: 'static + Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message> + Clone,
 {
-    fn clone_box(&self) -> Box<dyn EventCbClone> {
+    fn clone_box(&self) -> Box<dyn EventCbClone<Message>> {
         Box::new(self.clone())
     }
 }
 
-impl Clone for Box<dyn EventCbClone> {
+impl<Message> Clone for Box<dyn EventCbClone<Message>> {
     fn clone(&self) -> Self {
         (**self).clone_box()
     }
@@ -101,11 +104,11 @@ impl<Message> Clone for Box<dyn EventMessageCbClone<Message>> {
 type EventNameString = String;
 
 #[derive(Clone)]
-pub struct EventCallback(EventNameString, Box<dyn EventCbClone>);
+pub struct EventCallback<Message>(EventNameString, Box<dyn EventCbClone<Message>>);
 
-impl EventCallback {
+impl<Message> EventCallback<Message> {
     #[must_use]
-    pub fn new(name: EventNameString, cb: Box<dyn EventCbClone>) -> Self {
+    pub fn new(name: EventNameString, cb: Box<dyn EventCbClone<Message>>) -> Self {
         Self(name, cb)
     }
 }
@@ -120,7 +123,7 @@ impl<Message> EventMessage<Message> {
 }
 #[derive(Clone, From)]
 pub enum EventNode<Message> {
-    Cb(EventCallback),
+    Cb(EventCallback<Message>),
     CbMessage(EventMessage<Message>),
 }
 
@@ -227,6 +230,7 @@ where
         while let Some(event_node) = event_nodes.pop_front() {
             // let aa = collections::String::from_str_in(event.as_str(), bump);
             // element_builder = element_builder.on(aa.into_bump_str(), callback);
+            let event_bus = bus.clone();
 
             match event_node {
                 EventNode::Cb(EventCallback(event, callback)) => {
@@ -234,22 +238,30 @@ where
                         use dodrio::bumpalo::collections::String;
                         String::from_str_in(event.as_str(), bump).into_bump_str()
                     };
-                    //TODO : gave a event_bus on node_builder fn .
-                    element_builder = element_builder.on(event_bump_string, callback);
+
+                    // element_builder = element_builder.on(event_bump_string, callback);
+                    element_builder = element_builder.on(
+                        event_bump_string,
+                        move |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| {
+                            if let Some(msg) = callback(root, vdom, event) {
+                                event_bus.publish(msg);
+                            }
+                        },
+                    );
                 }
-                EventNode::CbMessage(EventMessage(event, msg)) => {
+                EventNode::CbMessage(EventMessage(event, msg_fn)) => {
                     let event_bump_string = {
                         use dodrio::bumpalo::collections::String;
                         String::from_str_in(event.as_str(), bump).into_bump_str()
                     };
-                    let event_bus = bus.clone();
+                    // let event_bus = bus.clone();
 
                     element_builder = element_builder.on(
                         event_bump_string,
                         move |_root: &mut dyn RootRender,
                               _vdom: VdomWeak,
                               _event: web_sys::Event| {
-                            event_bus.publish(msg());
+                            event_bus.publish(msg_fn());
                         },
                     );
                 }
@@ -289,11 +301,11 @@ mod node_builder_test {
     fn test_node_builder() {
         let bump = bumpalo::Bump::new();
         let x = bump.alloc("hello");
-        let a = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| {};
+        let a = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| {None};
 
         // let cc = EventCallbackCloneStatic::new(a);
 
-        let a2 = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| {};
+        let a2 = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| {None};
         // let aa2 = fff(a2);
 
         // let cc2 = EventCallbackCloneStatic::new(a2);

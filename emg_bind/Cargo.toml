@@ -37,9 +37,8 @@ emg_state = { path = "../emg_state" }
 emg_refresh = { path = "../emg_refresh" }
 emg_layout = { path = "../emg_layout" }
 emg_animation = { path = "../emg_animation" }
-emg_orders= { path = "../emg_orders" }
+emg_orders = { path = "../emg_orders" }
 # for app
-
 
 
 iced_style = { path = "../../iced/style" }
@@ -50,6 +49,10 @@ delegate = "0.5.1"
 
 tracing = { version = "^0.1" }
 
+indexmap = "1.6.2"
+fxhash = "0.2.1"
+
+emg_debuggable = { path = "../emg_debuggable" }
 # stream_throttle ={ version = "0.4.0",default-features = false, features = ["timer-futures-timer"], path = "../../stream-throttle"}
 
 
@@ -67,7 +70,7 @@ uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
 iced_web = { version = "0.3", path = "../../iced/web" }
 # tracing-wasm = "0.2.0"
 # console_error_panic_hook = "0.1.6"
-wasm-bindgen="^0.2"
+wasm-bindgen = "^0.2"
 gloo-timers = "0.2.1"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
@@ -92,5 +95,5 @@ features = [
     "EventTarget",
     "InputEvent",
     "KeyboardEvent",
-    "IdleRequestOptions"
+    "IdleRequestOptions",
 ]

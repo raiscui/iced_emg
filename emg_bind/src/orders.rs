@@ -1,25 +1,88 @@
+use emg_debuggable::Debuggable;
+
 use crate::Orders;
 use emg_animation::Tick;
+use fxhash::FxBuildHasher;
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-05-14 11:48:24
+ * @LastEditTime: 2021-05-21 16:39:09
  * @LastEditors: Rais
  * @Description:
  */
-use iced_web::Bus;
+use iced_web::{
+    dodrio::{Vdom, VdomWeak},
+    Bus,
+};
+use indexmap::IndexMap;
 use tracing::{debug, debug_span, error};
 
 use crate::map_callback_return_to_option_ms;
 
 use std::{
     cell::{Cell, RefCell},
+    cmp::PartialEq,
+    hash::Hash,
     rc::Rc,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
+// type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
+type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
 
 // ────────────────────────────────────────────────────────────────────────────────
+// pub struct HashClosure<TickMsg, Message> {
+//     fn_str: String,
+//     pub(crate) callback: Box<dyn FnOnce<(TickMsg,), Output = Option<Message>>>,
+// }
+
+// impl<TickMsg, Message> PartialEq for HashClosure<TickMsg, Message> {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.fn_str == other.fn_str
+//     }
+// }
+
+// impl<TickMsg, Message> Eq for HashClosure<TickMsg, Message> {}
+
+// impl<TickMsg, Message> HashClosure<TickMsg, Message>
+// where
+//     Message: 'static,
+// {
+//     fn callback(self, t: TickMsg) -> Option<Message> {
+//         self.callback.call_once((t,))
+//     }
+//     fn new<MsU: 'static, F: FnOnce<(TickMsg,), Output = MsU> + 'static>(cb: Debuggable<F>) -> Self {
+//         // let fn_str = format!("{:?}", callback);
+//         let fn_str = cb.text;
+//         let box_callback = map_callback_return_to_option_ms!(
+//             dyn FnOnce<(TickMsg,), Output = Option<Message>>,
+//             cb,
+//             "Callback can return only Msg, Option<Msg> or ()!",
+//             Box
+//         );
+
+//         Self {
+//             fn_str,
+//             callback: box_callback,
+//         }
+//     }
+// }
+
+// impl<TickMsg, Message> Hash for HashClosure<TickMsg, Message>
+// where
+//     Message: 'static,
+// {
+//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+//         self.fn_str.hash(state);
+//         // self.callback.hash(&mut state);
+//         // fn hash<T: Hash + ?Sized>(v: &T) -> usize {
+//         //     let mut state = FxHasher::default();
+//         //     v.hash(&mut state);
+//         //     state.finish() as usize
+//         // }
+//     }
+// }
+
 pub enum ShouldRender {
     Render,
     ForceRenderNow,
@@ -29,7 +92,7 @@ pub enum ShouldRender {
 pub enum Effect<Message> {
     Msg(Option<Message>),
     // Notification(Notification),
-    TriggeredHandler(Box<dyn FnOnce() -> Option<Message>>),
+    // TriggeredHandler(Box<dyn FnOnce() -> Option<Message>>),
 }
 
 // impl<Message> From<Box<dyn FnOnce() -> Option<Message>>> for Effect<Message> {
@@ -64,7 +127,8 @@ pub(crate) struct OrdersData<Message, TickMsg> {
     // pub sub_manager: RefCell<SubManager<Ms>>,
     // pub msg_listeners: RefCell<Vec<Box<dyn Fn(&Ms)>>>,
     // pub scheduled_render_handle: RefCell<Option<util::RequestAnimationFrameHandle>>,
-    pub after_next_render_callbacks: RefCell<Vec<Box<dyn FnOnce(TickMsg) -> Option<Message>>>>,
+    pub after_next_render_callbacks:
+        RefCell<FxIndexMap<String, Box<dyn FnOnce(TickMsg) -> Option<Message>>>>,
     pub render_info: Cell<Option<TickMsg>>,
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -80,9 +144,9 @@ pub struct OrdersContainer<Message>
     pub(crate) data: Rc<OrdersData<Message, Tick>>,
     bus: Bus<Message>,
     pub(crate) re_render_msg: Rc<RefCell<Option<Message>>>,
-    //
-    // pub(crate) effects: VecDeque<Effect<Ms>>,
-    // app: App<Ms, Mdl, INodes>
+    pub vdom: Rc<RefCell<Option<VdomWeak>>>, //
+                                             // pub(crate) effects: VecDeque<Effect<Ms>>,
+                                             // app: App<Ms, Mdl, INodes>
 }
 
 impl<Message> OrdersContainer<Message>
@@ -103,11 +167,12 @@ impl<Message> OrdersContainer<Message>
                 // sub_manager: RefCell::new(SubManager::new()),
                 // msg_listeners: RefCell::new(Vec::new()),
                 // scheduled_render_handle: RefCell::new(None),
-                after_next_render_callbacks: RefCell::new(Vec::new()),
+                after_next_render_callbacks: RefCell::new(FxIndexMap::default()),
                 render_info: Cell::new(None),
             }),
             bus,
             re_render_msg: Rc::new(RefCell::new(None)),
+            vdom: Rc::new(RefCell::new(None)),
         }
     }
 }
@@ -121,15 +186,32 @@ where
     // type INodes = INodes;
 
     // ────────────────────────────────────────────────────────────────────────────────
-    fn set_re_render_msg(&self, msg: Message) -> &Self {
-        self.re_render_msg.replace(Some(msg));
+    // fn set_re_render_msg(&self, msg: Message) -> &Self {
+    //     self.re_render_msg.replace(Some(msg));
+    //     self
+    // }
+    // fn re_render(&self) {
+    //     let msg = self.re_render_msg.borrow().as_ref().cloned().unwrap();
+    //     self.publish(msg);
+    // }
+
+    fn schedule_render_then<MsU: 'static, F: FnOnce<(Tick,), Output = MsU> + 'static>(
+        &self,
+        task_name: &'static str,
+        // debuggable_callback: Debuggable<F>,
+        cb: F,
+    ) -> &Self {
+        self.after_next_render(task_name, cb)
+            .vdom
+            .borrow()
+            .as_ref()
+            .unwrap()
+            // .weak()
+            .schedule_render_with_orders(self.clone());
         self
     }
-    fn re_render(&self) {
-        let msg = self.re_render_msg.borrow().as_ref().cloned().unwrap();
-        self.publish(msg);
-    }
-    fn publish(&self, msg: Self::AppMs) {
+
+    fn publish(&self, msg: Message) {
         self.bus.publish(msg);
     }
     fn reset_render(&self) {
@@ -139,16 +221,7 @@ where
         if self.data.after_next_render_callbacks.borrow().is_empty() {
             return;
         }
-        let build_time = debug_span!("build_time");
-        let tick = build_time.in_scope(|| {
-            // let new_render_timestamp = window()
-            //     .expect("get window")
-            //     .performance()
-            //     .expect("get `Performance`")
-            //     .now();
-
-            Tick::new(new_render_timestamp)
-        });
+        let tick = Tick::new(new_render_timestamp);
         // let mut queue: VecDeque<Effect<Message>> = self
         //     .data
         //     .after_next_render_callbacks
@@ -160,16 +233,21 @@ where
         //     .map(|callback| Effect::TriggeredHandler(Box::new(move || callback(tick))))
         //     .collect();
         let len = self.data.after_next_render_callbacks.borrow().len();
-        debug!("len after_next_render_callbacks: {:?} ", &len);
+        debug!("len after_next_render_callbacks: {:?} ", len);
 
         self.data
             .after_next_render_callbacks
-            .replace(Vec::new())
+            .replace(FxIndexMap::default())
             .into_iter()
             //TODO:  for_each or just once?
-            .for_each(|callback| {
+            .for_each(|(task_name, callback)| {
+                debug!("after_next_render_callbacks: {:?}", task_name);
                 self.process_queue_message(callback(tick));
-            })
+            });
+        // debug!(
+        //     "process_after_render_queue: end, after_next_render_callbacks list:{:?}",
+        //     self.data.after_next_render_callbacks.borrow().len()
+        // );
     }
     // fn process_effect_queue(&self, queue: VecDeque<Effect<Message>>) {
     //     let process_queue_time = debug_span!("process_queue_time");
@@ -308,21 +386,23 @@ where
     //     Rc::new(identity)
     // }
 
-    fn after_next_render<MsU: 'static>(
+    fn after_next_render<MsU: 'static, F: FnOnce(Tick) -> MsU + 'static>(
         &self,
-        callback: impl FnOnce(Tick) -> MsU + 'static,
+        task_name: &'static str,
+        cb: F,
     ) -> &Self {
-        let callback = map_callback_return_to_option_ms!(
+        let box_callback = map_callback_return_to_option_ms!(
             dyn FnOnce(Tick) -> Option<Message>,
-            callback,
+            cb,
             "Callback can return only Msg, Option<Msg> or ()!",
             Box
         );
 
-        self.data
-            .after_next_render_callbacks
-            .borrow_mut()
-            .push(callback);
+        let mut map = self.data.after_next_render_callbacks.borrow_mut();
+
+        map.shift_remove(task_name);
+        map.insert(task_name.to_string(), box_callback);
+
         self
     }
 

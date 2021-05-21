@@ -2,7 +2,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-05-13 19:39:53
+ * @LastEditTime: 2021-05-21 16:22:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -88,7 +88,10 @@ pub trait Application {
         Subscription::none()
     }
 
-    fn tree_build<'a>(this: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
+    fn tree_build<'a>(
+        this: Rc<RefCell<Self>>,
+        orders: impl Orders<Self::Message> + 'static,
+    ) -> GTreeBuilderElement<'a, Self::Message>;
 
     /// Runs the [`Application`].
     /// # Errors
@@ -111,7 +114,7 @@ pub trait Application {
             Self::Executor::new().expect("Create executor"),
             sender.clone(),
         );
-        let orders = OrdersContainer::<Self::Message>::new(Bus::new(sender.clone()));
+        let mut orders = OrdersContainer::<Self::Message>::new(Bus::new(sender.clone()));
 
         let (app, command) = runtime.enter(|| Self::new(flags.flags, &orders));
 
@@ -125,7 +128,7 @@ pub trait Application {
         // ─────────────────────────────────────────────────────────────────
 
         let mut emg_graph = GraphType::<Self::Message>::default();
-        let root = Self::tree_build(Rc::clone(&application));
+        let root = Self::tree_build(Rc::clone(&application), orders.clone());
         emg_graph.handle_root_in_topo(&root);
         let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
         // let emg_graph_rc = (emg_graph);
@@ -142,8 +145,10 @@ pub trait Application {
         };
 
         let vdom = dodrio::Vdom::new(&body, instance);
+        *orders.vdom.borrow_mut() = Some(vdom.weak());
         // ─────────────────────────────────────────────────────────────────
         let event_loop = receiver.for_each(move |message| {
+            //TODO check render enum;
             orders.reset_render();
             let _g_event_loop = debug_span!("event_loop", ?message).entered();
             debug!("receiver-message: {:?}", message);

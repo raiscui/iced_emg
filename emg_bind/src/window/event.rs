@@ -47,12 +47,10 @@ pub enum Event {
     // FilesHoveredLeft,
 }
 
-pub struct WindowEventRecipe {
-}
+pub struct WindowEventRecipe {}
 
 impl Default for WindowEventRecipe {
     fn default() -> Self {
-     
         Self {}
     }
 }
@@ -68,6 +66,7 @@ impl Recipe<Hasher, (crate::event::Event, event::Status)> for WindowEventRecipe 
         // std::any::TypeId::of::<Marker>().hash(state);
 
         std::any::TypeId::of::<Self>().hash(state);
+
         // self.hash(state);
     }
 
@@ -138,21 +137,16 @@ impl Recipe<Hasher, (crate::event::Event, event::Status)> for WindowEventRecipe 
                     .expect("idle callback init failed"),
             );
             // ─────────────────────────────────────────────────────────────────
-
         });
-      
+
         let event_send_closure = Closure::wrap(on_resize as Box<dyn FnMut()>);
 
         window.set_onresize(Some(event_send_closure.as_ref().unchecked_ref()));
         event_send_closure.forget();
 
-        receiver
-         
-            .boxed_local()
+        receiver.boxed_local()
     }
 }
-
-
 
 #[cfg(test)]
 mod test {
