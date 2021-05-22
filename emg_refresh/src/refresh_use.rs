@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2021-04-19 12:11:55
+ * @LastEditTime: 2021-05-22 09:41:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -48,7 +48,10 @@ mod updater_test1 {
     use tracing::info;
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::{impl_refresh::RefreshUseNoWarper, RefreshFor, RefreshWhoNoWarper, Refresher};
+    use crate::{
+        impl_refresh::RefreshUseNoWarper, test::setup_tracing, RefreshFor, RefreshWhoNoWarper,
+        Refresher,
+    };
 
     use super::*;
 
@@ -70,16 +73,9 @@ mod updater_test1 {
         }
     }
 
-    fn setup_tracing() {
-        console_error_panic_hook::set_once();
-        tracing_wasm::set_as_global_default();
-    }
-
     #[wasm_bindgen_test]
-
     fn realtime_update() {
         setup_tracing();
-
         let mut f = String::from("xx");
         let a = Refresher::new(|| 99);
         let b = Refresher::new(|| String::from("string.."));

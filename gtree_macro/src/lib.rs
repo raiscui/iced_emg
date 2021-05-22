@@ -809,24 +809,65 @@ mod tests {
 
         println!();
         let input = r#" 
-         @=a Layer [
-            @E=[css(CssWidth::from(px(2)))] @=b 
-            Layer [
-                @=c 
+        @=a
+        Layer [
+             @=b @E=[w(pc(50)),origin_x(pc(50)),align_x(pc(50))]
+             Layer [
+                @=c
                 Layer [],
-                @=caef 
                 Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
-                Text::new(format!("in quote..{}", "b")) => [
+
+                @=an E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
+                Text::new(format!("in quote.. {}", "b")) => [
                     RefreshUse ||{100},
-                    // RefreshUse  a.watch()
+                    RefreshUse  move||{
+                        that3.borrow().an.get_position(0)
+                    },
                 ],
-                @=e Layer [
+              
+                @E=[w(px(150)),origin_x(pc(100)),align_x(pc(100))]
+                Text::new(format!("in quote.. {}", "b")) => [
+                    RefreshUse ||{100},
+                    RefreshUse this.borrow().ddd
+                ],
+                @E=[w(px(150)),origin_x(pc(0)),align_x(pc(0))]
+                Text::new(format!("dt.. {}", "b")) => [
+                    RefreshUse move||{that.borrow().dt.get_with(Duration:: subsec_millis)}
+                ],
+                @E=[w(px(250)),origin_x(pc(0)),align_y(pc(140))]
+                Text::new(format!("dt.. {}", "b")) => [
+                    RefreshUse move||{that2.borrow().dt2.get(). subsec_millis()}
+                ],
+                @=e @E=[w(px(60)),h(px(40)),css(background_color("red")),origin_x(pc(50)),align_y(pc(150))]
+                Layer [
+                    @E=[w(px(150)),h(px(30)),origin_x(pc(60)),align_y(pc(250))]
                     Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                        On:click move||{ 
-                            // a.set((*a.get()).clone()+1);
-                            log::debug!("click");
-                            Message::None 
-                        }
+                        On:click move||{
+                            trace!("bbbbbbbbbbbbb");
+
+                            a.set_with(|v|v+1);
+                            Message::None
+                        },
+                        
+                    ],
+                    @=b2 @E=[w(px(150)),h(px(30)),origin_x(pc(60)),align_y(pc(300))]
+                    Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+                        On:click move |_root, vdom, _event| {
+                            interrupt(
+                                vector![to(vector![emg_animation::opacity(0.)]), to(vector![emg_animation::opacity(1.)])],
+                                &mut that4.borrow_mut().an,
+                            );
+
+                                        a.set(a.get()+1);
+                                    orders.schedule_render_then("am",
+                                        |tick| {
+                                            Message::Event(Event::OnAnimationFrame(tick))
+                                        }
+                                    );
+
+                                  
+                                    None
+                                        }
                     ]
                 ],
             ]

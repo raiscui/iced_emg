@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-05-06 17:48:51
+ * @LastEditTime: 2021-05-22 09:25:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -272,7 +272,7 @@ where
         self.store_get_var_with(store, anchors::expert::Var::get)
     }
 
-    fn get_var_with<F: Fn(&Var<T>) -> R, R>(&self, func: F) -> R {
+    pub fn get_var_with<F: Fn(&Var<T>) -> R, R>(&self, func: F) -> R {
         read_var_with_topo_id(self.id, func)
     }
     pub fn store_get_var_with<F: Fn(&Var<T>) -> R, R>(&self, store: &GStateStore, func: F) -> R {

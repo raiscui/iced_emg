@@ -1,18 +1,19 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-04-27 17:50:03
+ * @LastEditTime: 2021-05-22 17:36:17
  * @LastEditors: Rais
  * @Description:
  */
 
 use std::{any::Any, panic::Location};
 
-use emg_refresh::{RefreshFor, RefreshUseFor, RefreshWhoNoWarper};
+use emg_refresh::{RefreshFor, RefreshUseFor, RefreshUseNoWarper, RefreshWhoNoWarper};
 
+use emg_state::{CloneStateVar, StateVar};
 pub use seed_styles as styles;
 use styles::{CssHeight, CssValueTrait, CssWidth, UpdateStyle};
-use tracing::{debug, trace, trace_span};
+use tracing::{debug, trace, trace_span, warn};
 
 use crate::{
     add_values::{AlignX, AlignY, OriginX, OriginY},
@@ -29,8 +30,7 @@ impl<Ix> RefreshWhoNoWarper for EmgEdgeItem<Ix> where
 
 // impl<T> RefreshUseNoWarper for Css<T> where T: CssValueTrait + Clone + 'static {}
 
-//NOTE: overwrite default impl<Who> RefreshFor<Who> for Box<dyn RefreshFor<Who>>
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Box<(dyn RefreshFor<EmgEdgeItem<Ix>>)>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
@@ -42,6 +42,34 @@ where
         .entered();
         // let ii = i.as_ref();
         who.refresh_use(self.as_ref());
+    }
+}
+
+impl<Ix, Use> RefreshFor<EmgEdgeItem<Ix>> for StateVar<Use>
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+    Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
+{
+    #[allow(clippy::redundant_closure_for_method_calls)]
+    default fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        let rc_var = self.get_var_with(|x| x.get());
+        warn!("Edge  Refresh use StateVar");
+        who.refresh_use(&*rc_var);
+    }
+}
+
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateVar<CssHeight>
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+    // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
+{
+    #[allow(clippy::redundant_closure_for_method_calls)]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        let rc_var = self.get_var_with(|x| x.get());
+        warn!("Edge  Refresh use StateVar<CssWidth>");
+        who.refresh_use(&*rc_var);
     }
 }
 
@@ -73,7 +101,7 @@ where
 // }
 //TODO 做 不是refresh 版本的
 #[track_caller]
-fn css_refresh_edgedata<Use, Ix>(css: &Css<Use>, ed: &EmgEdgeItem<Ix>)
+fn css_refresh_edgedata<Use, Ix>(css: &Css<Use>, ed: &mut EmgEdgeItem<Ix>)
 where
     Use: CssValueTrait + std::clone::Clone,
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
@@ -82,29 +110,14 @@ where
 
     let any = &css.0 as &dyn Any;
     if let Some(css_width) = any.downcast_ref::<CssWidth>() {
-        debug!("match CssWidth {}", &css_width);
-        ed.layout.size.set_with(|size| {
-            let new = GenericWH {
-                w: css_width.clone().into(),
-                ..size.clone()
-            };
-            debug!("new {}", &new);
-            new
-        });
+        debug!("dyn match CssWidth {}", &css_width);
+        ed.refresh_use(css_width);
         return;
     }
 
     if let Some(css_height) = any.downcast_ref::<CssHeight>() {
-        debug!("match CssHeight {}", &css_height);
-        ed.layout.size.set_with(|size| {
-            let new = GenericWH {
-                h: css_height.clone().into(),
-                ..size.clone()
-            };
-
-            debug!("new {}", &new);
-            new
-        });
+        debug!("dyn match CssHeight {}", &css_height);
+        ed.refresh_use(css_height);
         return;
     }
 

@@ -6,7 +6,7 @@ use fxhash::FxBuildHasher;
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-05-21 16:39:09
+ * @LastEditTime: 2021-05-21 18:45:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -167,7 +167,10 @@ impl<Message> OrdersContainer<Message>
                 // sub_manager: RefCell::new(SubManager::new()),
                 // msg_listeners: RefCell::new(Vec::new()),
                 // scheduled_render_handle: RefCell::new(None),
-                after_next_render_callbacks: RefCell::new(FxIndexMap::default()),
+                after_next_render_callbacks: RefCell::new(FxIndexMap::with_capacity_and_hasher(
+                    1,
+                    FxBuildHasher::default(),
+                )),
                 render_info: Cell::new(None),
             }),
             bus,
@@ -233,11 +236,14 @@ where
         //     .map(|callback| Effect::TriggeredHandler(Box::new(move || callback(tick))))
         //     .collect();
         let len = self.data.after_next_render_callbacks.borrow().len();
-        debug!("len after_next_render_callbacks: {:?} ", len);
+        debug!("len after_next_render_callbacks: {:?} ", &len);
 
         self.data
             .after_next_render_callbacks
-            .replace(FxIndexMap::default())
+            .replace(FxIndexMap::with_capacity_and_hasher(
+                len + 1,
+                FxBuildHasher::default(),
+            ))
             .into_iter()
             //TODO:  for_each or just once?
             .for_each(|(task_name, callback)| {

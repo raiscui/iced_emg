@@ -984,19 +984,22 @@ pub fn css<
 #[cfg(test)]
 mod tests {
     #![allow(clippy::too_many_lines)]
-    use super::*;
+    use crate::*;
+
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_refresh::RefreshUseFor;
+    use emg_state::StateVar;
     use im::vector;
     use seed_styles::CssWidth;
     use styles::{CssBackgroundColorTrait, h, hsl, pc, width};
-    use tracing::info;
+    use tracing::{info, span};
 
     use tracing_flame::FlameLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
     fn setup_global_subscriber() -> impl Drop {
         std::env::set_var("RUST_LOG", "trace");
+        std::env::set_var("RUST_LOG", "warn");
 
         let _el = env_logger::try_init();
 
@@ -1050,8 +1053,8 @@ mod tests {
 
             info!("=========================================================");
 
-            let css_width = CssWidth::from(px(100));
-            let css_height = CssHeight::from(px(100));
+            let css_width = width(px(100));
+            let css_height = h(px(100));
             let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
 
 
@@ -1163,6 +1166,7 @@ mod tests {
             info!("=========================================================");
 
             // let cc = Transform9::identity();
+            let c = width(pc(11));
             let _ff = s().width(pc(11)).bg_color(hsl(40,70,30));
             let css_width = width(px(100));
             let css_height = h(px(100));
@@ -1234,7 +1238,8 @@ mod tests {
             );
 
 
-            let xx = vec![css(css_width)];
+            let xx = vec![css_width];
+            // let xx = vec![css(css_width)];
 
             root_e.refresh_use(&xx);
             root_e.refresh_use(&xx);
@@ -1276,7 +1281,9 @@ mod tests {
             trace!("refresh_use after css_width {}", &e1);
             info!("=========================================================");
 
-            root_e.refresh_use(&Css(css_height));
+            root_e.refresh_use(&Css(css_height.clone()));
+            let tempcss= use_state(css_height);
+            root_e.refresh_use(&tempcss);
             assert_eq!(
                 e1.node
                     .get()
