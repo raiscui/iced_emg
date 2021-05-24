@@ -19,6 +19,7 @@ use calc::layout_calculating;
 use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
+use either::Either;
 // use derive_more::TryInto;
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
@@ -73,6 +74,17 @@ pub enum GenericSize {
     Inherit,
     StringValue(String),
 }
+
+impl GenericSize {
+    #[must_use]
+    pub fn get_length_value(&self) ->  f64 {
+        (
+            self
+                .try_get_length_value()
+                .expect("directly get length value failed, expected Length Px struct"),
+        )
+    }
+}
 impl From<CssWidth> for GenericSize {
     fn from(w: CssWidth) -> Self {
         match w {
@@ -97,6 +109,36 @@ impl From<CssHeight> for GenericSize {
         }
     }
 }
+
+#[derive(Debug,Display,Clone,PartialEq,Eq)]
+enum EitherDyn<T>{
+    Const(T),
+    DynA(StateAnchor<T>)
+}
+
+impl<T> From<StateAnchor<T>> for EitherDyn<T> {
+    fn from(v: StateAnchor<T>) -> Self {
+        Self::DynA(v)
+    }
+}
+
+impl<T> From<T> for EitherDyn<T> {
+    fn from(v: T) -> Self {
+        Self::Const(v)
+    }
+}
+
+impl<T> From <CssWidth> for EitherDyn<T>{
+    fn from(v: CssWidth) -> Self {
+        T::from(v).into()
+    }
+}
+impl<T> From <CssHeight> for EitherDyn<T>{
+    fn from(v: CssHeight) -> Self {
+        T::from(v).into()
+    }
+}
+
 
 impl GenericSize {
     /// # Errors
@@ -190,8 +232,8 @@ pub struct GenericWH {
 impl Default for GenericWH {
     fn default() -> Self {
         Self {
-            w: px(16).into(),
-            h: px(16).into(),
+            w: px(0).into(),
+            h: px(0).into(),
         }
     }
 }
@@ -260,9 +302,17 @@ pub struct Layout<Ix>
 where
     Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {
-    size: StateVar<GenericWH>,
-    origin: StateVar<GenericLoc>,
-    align: StateVar<GenericLoc>,
+    w:StateVar<EitherDyn<GenericSize>>,
+    h:StateVar<EitherDyn<GenericSize>>,
+    z:StateVar<EitherDyn<u64>>,
+    origin_x: StateVar<EitherDyn<GenericSize>>,
+    origin_y: StateVar<EitherDyn<GenericSize>>,
+    origin_z: StateVar<EitherDyn<GenericSize>>,
+    align_x: StateVar<EitherDyn<GenericSize>>,
+    align_y: StateVar<EitherDyn<GenericSize>>,
+    align_z: StateVar<EitherDyn<GenericSize>>,
+    // origin: StateVar<GenericLoc>,
+    // align: StateVar<GenericLoc>,
     path_styles: StateVar<Dict<EPath<Ix>, Style>>,
 }
 
@@ -272,11 +322,26 @@ where
 {
     /// Set the layout's size.
     #[cfg(test)]
-    fn set_size(&self, size: GenericWH) {
-        self.size.set(size);
+    fn set_size(&self,
+         w: impl Into< EitherDyn<GenericSize>>,
+        h: impl Into< EitherDyn<GenericSize>>,) {
+            self.w.set(w.into());
+            self.h.set(h.into());
     }
-    pub fn store_set_size(&self,store: &GStateStore, size: GenericWH) {
-        self.size.store_set(store, size)
+    pub fn store_set_size(&self,store: &GStateStore,
+        w: impl Into< EitherDyn<GenericSize>>,
+        h: impl Into< EitherDyn<GenericSize>>,) {
+        self.store_set_w(store,w);
+        self.store_set_h(store,h);
+    }
+
+    pub fn store_set_w(&self, store: &GStateStore,w:impl Into< EitherDyn<GenericSize>>) {
+        self.w.store_set(store, w.into());
+
+    }
+    pub fn store_set_h(&self, store: &GStateStore,h:impl Into< EitherDyn<GenericSize>>) {
+        self.h.store_set(store, h.into());
+
     }
 }
 impl<Ix> Copy for Layout<Ix> where
@@ -284,29 +349,21 @@ impl<Ix> Copy for Layout<Ix> where
 {
 }
 
-// impl<Ix> Default for Layout<Ix> {
-//     #[topo::nested]
-//     fn default() -> Self {
-//         Self {
-//             size: use_state(GenericWH::default()),
-//             origin: use_state(GenericLoc::default()),
-//             align: use_state(GenericLoc::default()),
-//         }
-//     }
-// }
-
-// impl<Ix> Ord for Layout<Ix> where Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord {}
-// impl<Ix> Eq for Layout<Ix> where Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord {}
 impl<Ix> std::fmt::Display for Layout<Ix>
 where
     Ix: Clone + Hash + Eq + Default + Ord + 'static + std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let x = format!(
-            "size:{{\n{};\n}}\norigin:{{\n{};\n}}\nalign:{{\n{};\npath_styles:{{\n{};\n}}",
-            indented(&self.size),
-            indented(&self.origin),
-            indented(&self.align),
+            "size:{{\nw:{},h:{};\n}}\norigin:{{\nx:{},y:{},z:{};\n}}\nalign:{{\nx:{},y:{},z:{};\npath_styles:{{\n{};\n}}",
+            indented(&self.w),
+            indented(&self.h),
+            indented(&self.origin_x),
+            indented(&self.origin_y),
+            indented(&self.origin_z),
+            indented(&self.align_x),
+            indented(&self.align_y),
+            indented(&self.align_z),
             indented(DictDisplay(self.path_styles.get()))
         );
         write!(f, "Layout {{\n{}\n}}", indented(&x))
@@ -347,11 +404,6 @@ pub struct LayoutCalculated {
     matrix: StateAnchor<Mat4>,
     loc_styles: StateAnchor<Style>,
 }
-// impl std::fmt::Debug for Layoutcalculated {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         f.debug_tuple("Layoutcalculated").finish()
-//     }
-// }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EdgeData {
@@ -383,21 +435,7 @@ impl std::fmt::Display for EdgeData {
     }
 }
 
-// impl std::fmt::Debug for EdgeData {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         // let layout = self.layout.get();
-//         // let size = layout.size.get();
-//         // drop(layout);
-//         // drop(size);
-//         // let calculated = self.calculated.get();
-//         // let calculated_size = calculated.size.get();
-//         // drop(calculated);
-//         f.debug_tuple("EdgeData")
-//             // .field(&size)
-//             // .field(&calculated_size)
-//             .finish()
-//     }
-// }
+
 
 impl From<Mat4> for CssTransform {
     fn from(Mat4(matrix): Mat4) -> Self {
@@ -523,11 +561,14 @@ where
     Ix: Clone + Hash + Ord + Default 
 {
     #[cfg(test)]
-    fn set_size(&self,size:GenericWH){
-        self.layout.set_size(size)
+    fn set_size(&self,w: impl Into< EitherDyn<GenericSize>>,
+        h: impl Into< EitherDyn<GenericSize>>,){
+        self.layout.set_size(w,h)
     }
-    pub fn store_set_size(&self,store: &GStateStore,size:GenericWH){
-        self.layout.store_set_size(store,size)
+    pub fn store_set_size(&self,store: &GStateStore,  
+        w: impl Into< EitherDyn<GenericSize>>,
+        h: impl Into< EitherDyn<GenericSize>>,){
+        self.layout.store_set_size(store,w,h)
     }
     
     #[cfg(test)]
@@ -563,7 +604,7 @@ where
         edges: StateAnchor<GraphEdgesDict<Ix>>,
          ) -> Self  where Ix:std::fmt::Debug{
 
-        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    GenericWH::default(), GenericLoc::default(), GenericLoc::default(),)
+        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    GenericSize::default(), GenericSize::default(), GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),)
 
          }
 
@@ -575,7 +616,7 @@ where
         edges: StateAnchor<GraphEdgesDict<Ix>>,
          w: T, h: T) -> Self  where Ix:std::fmt::Debug{
 
-        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    size(px(w), px(h)), GenericLoc::default(), GenericLoc::default(),)
+        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    size(px(w)), size(px(h)), GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default())
        
     }
     
@@ -586,9 +627,14 @@ where
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         edges: StateAnchor<GraphEdgesDict<Ix>>,
-        size: impl Into<GenericWH>,
-        origin: impl Into<GenericLoc>,
-        align: impl Into<GenericLoc>,
+        w:  impl Into< EitherDyn<GenericSize>>,
+        h:  impl Into< EitherDyn<GenericSize>>,
+        origin_x: impl Into< EitherDyn<GenericSize>>,
+        origin_y: impl Into< EitherDyn<GenericSize>>,
+        origin_z: impl Into< EitherDyn<GenericSize>>,
+        align_x:  impl Into< EitherDyn<GenericSize>>,
+        align_y:  impl Into< EitherDyn<GenericSize>>,
+        align_z:  impl Into< EitherDyn<GenericSize>>,
     ) -> Self 
     where Ix:std::fmt::Debug
 
@@ -603,9 +649,15 @@ where
         // ─────────────────────────────────────────────────────────────────
 
         let layout = Layout::<Ix> {
-            size: use_state(size.into()),
-            origin: use_state(origin.into()),
-            align: use_state(align.into()),
+            w: use_state(w.into()),
+            h: use_state(h.into()),
+            z: use_state(0.into()),
+            origin_x: use_state(origin_x.into()),
+            origin_y: use_state(origin_y.into()),
+            origin_z: use_state(origin_z.into()),
+            align_x: use_state(align_x.into()),
+            align_y: use_state(align_y.into()),
+            align_z: use_state(align_z.into()),
             path_styles: use_state(Dict::unit(EPath::<Ix>::default(), s())),
         };
 
@@ -657,73 +709,7 @@ where
                 
             });
 
-        // let paths_count: StateAnchor<usize> = paths_from_edges_sa.map(im::OrdMap::len);
-
-        // let paths:StateAnchor<Dict<EPath<Ix>, EdgeItemNode>> = paths_count.then(move |l:&usize| ->Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
-        //     let _child_span =
-        //             span!(Level::TRACE, "[ paths recalculation ]:paths_count change ").entered();
-
-        //     if *l == usize::MIN {
-        //         let chose:Anchor<Dict<EPath<Ix>, EdgeItemNode>> =  (&opt_source_node_nix_sa_re_get ,&root_ei_sa)
-        //         .then( |p_node_nix:&Option<NodeIndex<Ix>>,root_ei:&Self|-> Anchor<Dict<EPath<Ix>, EdgeItemNode>> {
-        //                 let _g = span!(Level::TRACE, "[ paths recalculation ]:source_node_nix_sa_re_get/root_ei_sa change ").entered();
-
-        //                 let p_node_ix= p_node_nix.clone();
-
-        //                 root_ei.node.map(move |parent_e_node: &Dict<EPath<Ix>, EdgeItemNode>| ->Dict<EPath<Ix>, EdgeItemNode>{
-                            
-        //                         let _g = trace_span!( "[ paths recalculation ]:root_ei.node change ").entered();
-
-        //                         parent_e_node
-        //                         .iter()
-        //                         .map( |(parent_e_node_k, p_e_node_v)| {
-        //                             let mut nk = parent_e_node_k.clone();
-        //                             nk.0.push_back(EdgeIndex::new(p_node_ix.clone(),p_node_ix.clone()));
-        //                             (nk, p_e_node_v.clone())
-        //                         })
-        //                         .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
-        //                 }).into()
-        //         }).into();
-        //        chose
-        //     } else {
-        //        let chose:Anchor<Dict<EPath<Ix>, EdgeItemNode>> = paths_from_edges_sa.then(
-        //             |pe_node_dict: & Dict<EdgeIndex<Ix>, StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>>| ->Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
-        //                 let _g = trace_span!( "[ paths recalculation ]:source_node_incoming_edge_dict_sa change ").entered();
-
-        //                 pe_node_dict
-        //                     .iter()
-        //                     .map(|(parent_incoming_eix, parent_ei_node)| -> Anchor<Dict<EPath<Ix>, EdgeItemNode>>{
-                                
-
-        //                         let parent_incoming_eix_clone = parent_incoming_eix.clone();
-                                
-        //                         parent_ei_node.map(
-        //                             move |parent_e_node: & Dict<EPath<Ix>, EdgeItemNode>| {
-                                            
-        //                                 let _g = trace_span!( "[ paths recalculation ]:parent_e.item.node change ").entered();
-
-        //                                     parent_e_node.iter()
-        //                                     .map(|(parent_e_node_k, p_e_node_v)| {
-        //                                         let mut nk = parent_e_node_k.clone();
-                                                
-        //                                         //TODO node 可以自带 self nix ,下游不必每个子节点都重算
-
-        //                                         nk.0.push_back(parent_incoming_eix_clone.clone());
-        //                                         (nk, p_e_node_v.clone())
-        //                                     })
-        //                                     .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
-        //                             },
-        //                         ).into()
-        //                     })
-        //                     .collect::<Anchor<Vector<_>>>()
-        //                     .map(|v:&Vector<_>|{
-        //                         let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
-        //                         Dict::unions(v.clone())})
-                          
-        //             } ).into();
-        //         chose
-        //     }
-        // });
+       
 
         //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
         let paths_clone = paths.clone();
@@ -831,10 +817,31 @@ fn path_ein_empty_node_builder<Ix>(layout: &Layout<Ix>, other_styles_sv: StateVa
  where 
     Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
     {
-    let calculated_size = layout.size.watch().map(|g_wh: &GenericWH| {
+        
+    let calculated_size = (&layout.w.watch(),&layout.h.watch()).then(|w: &EitherDyn<GenericSize>,h: &EitherDyn<GenericSize>| {
             // println!("in layout size watch map");
-            let (w, h) = g_wh.get_length_value();
-            Size2::new(w, h)
+            match (w,h){
+                (EitherDyn::Const(_), EitherDyn::Const(_)) => {
+                    (&layout.w.watch(),&layout.h.watch()).map(|w,h|{
+                        Size2::new(w.get_length_value(), h.get_length_value())
+                    }).into()
+                }
+                (EitherDyn::Const(w), EitherDyn::DynA(sa_h)) => {
+                    sa_h.map(|h: &GenericSize|{
+                        Size2::new(w.get_length_value(),h.get_length_value())
+                    }).into()
+                }
+                (EitherDyn::DynA(sa_w), EitherDyn::Const(h)) => {
+                    sa_w.map(|w:&GenericSize|{
+                        Size2::new(w.get_length_value(), h.get_length_value())
+                    }).into()
+                }
+                (EitherDyn::DynA(sa_w), EitherDyn::DynA(sa_h)) => {
+                    (sa_w,sa_h).map(|w,h|{
+                        Size2::new(w.get_length_value(), h.get_length_value())
+                    }).into()
+                }
+            }
         });
     let calculated_origin = StateAnchor::constant(Trans3::identity());
     let calculated_align = StateAnchor::constant(Trans3::identity());
@@ -887,19 +894,7 @@ fn path_ein_empty_node_builder<Ix>(layout: &Layout<Ix>, other_styles_sv: StateVa
     (layout_calculated,styles_string)
 }
 
-// fn try_get_parent_calc_size(parent: &StateVar<Option<EdgeItemNode>>) -> Option<Size2> {
-//     parent
-//         .get()
-//         .and_then(|ei| ei.as_edge_data().map(|ed| ed.current.calculated.size.get()))
-// }
-// fn get_parent_calc_size_to_string(parent: &StateVar<Option<EdgeItemNode>>) -> String {
-//     match try_get_parent_calc_size(parent) {
-//         Some(size) => {
-//             format!("w:{} h:{}", &size.x, &size.y)
-//         }
-//         None => String::from("None"),
-//     }
-// }
+
 
 #[derive(Display, From, Clone, Debug, PartialEq, Eq)]
 pub enum EdgeItemNode {
@@ -919,19 +914,7 @@ impl EdgeItemNode {
     }
 }
 
-// #[topo::nested]
-// pub fn emg_edge_item_default<Ix>(
-//     eix: EdgeIndex<Ix>,
-//     paths_sa:SaDictPathWithEINode<Ix>,
-// ) -> EmgEdgeItem<Ix> {
-//     EmgEdgeItem::new_child(
-//         eix,
-//         paths_sa.clone(),
-//         size(px(16), px(16)),
-//         origin2(pc(0), pc(0)),
-//         align2(pc(0), pc(0)),
-//     )
-// }
+
 
 impl Default for EdgeItemNode {
     fn default() -> Self {
@@ -951,8 +934,8 @@ impl<T: Clone + seed_styles::CssValueTrait> From<T> for Css<T> {
     }
 }
 
-pub fn size(w: impl Into<GenericSize>, h: impl Into<GenericSize>) -> GenericWH {
-    GenericWH::new(w, h)
+pub fn size(v: impl Into<GenericSize>) -> EitherDyn<GenericSize> {
+    v.into().into()
 }
 pub fn origin2(x: impl Into<GenericSize>, y: impl Into<GenericSize>) -> GenericLoc {
     GenericLoc::new(x, y, px(0))
@@ -970,17 +953,7 @@ pub fn css<
     // pub fn css<Use: CssValueTrait + std::clone::Clone + 'static>(v: Use) -> Box<Css<Use>> {
     Box::new(Css(v))
 }
-// fn get_current_edge_data(edge_item_sv: StateVar<Option<EdgeItemNode>>) -> EdgeData {
-//     edge_item_sv
-//         .get()
-//         .unwrap()
-//         .as_current_edge_data()
-//         .unwrap()
-//         .clone()
-// }
-// fn get_edge_parent(edge_item_sv: StateVar<Option<EdgeItemNode>>) -> StateVar<Option<EdgeItemNode>> {
-//     edge_item_sv.get().unwrap().as_edge_data().unwrap().parent
-// }
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::too_many_lines)]

@@ -1,11 +1,11 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-04-22 17:46:16
+ * @LastEditTime: 2021-05-24 20:51:40
  * @LastEditors: Rais
 * @Description:
 */
-use crate::{ EdgeData, EdgeItemNode, GenericLoc, GenericSize, GenericWH, Layout, LayoutCalculated, Mat4, Size2, Trans3};
+use crate::{EdgeData, EdgeItemNode, EitherDyn, GenericLoc, GenericSize, GenericWH, Layout, LayoutCalculated, Mat4, Size2, Trans3};
 
 use emg::EdgeIndex;
 use emg_state::{ StateMultiAnchor,StateAnchor,StateVar};
@@ -36,15 +36,39 @@ where
             let p_calc_size_sa = &p_calculated.size;
             // ─────────────────────────────────────────────────────────────────
 
-            let calculated_size = (p_calc_size_sa, &layout.size.watch()).map(
-                move |p_calc_size: &Size2, wh: &GenericWH| {
+            let calculated_size = (p_calc_size_sa, &layout.w.watch(),&layout.h.watch()).then(
+                move |p_calc_size: &Size2, w: &EitherDyn<GenericSize>,h:&EitherDyn<GenericSize>| {
                         
                         // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
                     let _enter = trace_span!( 
                         "-> [ calculated_size ] recalculation..(&p_calculated.size, &layout.size.watch()).map ",
                         ).entered();
+                        
+                        
+                    let new_size = match (w,h){
+                            (EitherDyn::Const(_), EitherDyn::Const(_)) => {
+                                (&layout.w.watch(),&layout.h.watch()).map(|w,h|{
+                                    Size2::new(calculation_w(p_calc_size, w), calculation_h(p_calc_size, h))
+                                }).into()
+                            }
+                            (EitherDyn::Const(w), EitherDyn::DynA(sa_h)) => {
+                                sa_h.map(|h: &GenericSize|{
+                                    Size2::new(calculation_w(p_calc_size, w), calculation_h(p_calc_size, h))
+                                  
+                                }).into()
+                            }
+                            (EitherDyn::DynA(sa_w), EitherDyn::Const(h)) => {
+                                sa_w.map(|w:&GenericSize|{
+                                    Size2::new(calculation_w(p_calc_size, w), calculation_h(p_calc_size, h))
+                                }).into()
+                            }
+                            (EitherDyn::DynA(sa_w), EitherDyn::DynA(sa_h)) => {
+                                (sa_w,sa_h).map(|w,h|{
+                                    Size2::new(calculation_w(p_calc_size, w), calculation_h(p_calc_size, h))
+                                }).into()
+                            }
+                        };
 
-                    let new_size = calculation_size(p_calc_size, wh);
                     trace!("new size: {}",&new_size);
                     new_size
                 },
@@ -128,9 +152,9 @@ where
     
 }
 
-fn calculation_size(p_calc_size: &Size2, wh: &GenericWH) -> Size2 {
-    trace!("calculation_size");
-    let calc_w = match wh.w {
+fn calculation_w(p_calc_size: &Size2, w: &GenericSize) -> f64 {
+    trace!("calculation_w");
+    let calc_w = match w {
         GenericSize::Length(ex_l) => {
             let v = ex_l.value.into_inner();
             match ex_l.unit {
@@ -152,32 +176,89 @@ fn calculation_size(p_calc_size: &Size2, wh: &GenericWH) -> Size2 {
             todo!()
         }
     };
-    let calc_h = match wh.h {
-        GenericSize::Percentage(pc) => p_calc_size.x * pc.value()*0.01,
 
-        GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
-            match ex_l.unit {
-                styles::Unit::Px => v,
-                styles::Unit::Rem
-                | styles::Unit::Em
-                | styles::Unit::Cm
-                | styles::Unit::Vw
-                | styles::Unit::Vh => {
-                    todo!()
-                }
-            }
-        }
-        GenericSize::Auto
-        | GenericSize::Initial
-        | GenericSize::Inherit
-        | GenericSize::StringValue(_) => {
-            todo!()
-        }
-    };
 
-    Size2::new(calc_w, calc_h)
+    calc_w
 }
+fn calculation_h(p_calc_size: &Size2, h: &GenericSize) -> f64 {
+    trace!("calculation_h");
+    
+    let calc_h = match h {
+        GenericSize::Percentage(pc) => p_calc_size.x * pc.value()*0.01,
+
+        GenericSize::Length(ex_l) => {
+            let v = ex_l.value.into_inner();
+            match ex_l.unit {
+                styles::Unit::Px => v,
+                styles::Unit::Rem
+                | styles::Unit::Em
+                | styles::Unit::Cm
+                | styles::Unit::Vw
+                | styles::Unit::Vh => {
+                    todo!()
+                }
+            }
+        }
+        GenericSize::Auto
+        | GenericSize::Initial
+        | GenericSize::Inherit
+        | GenericSize::StringValue(_) => {
+            todo!()
+        }
+    };
+
+    calc_h
+}
+// fn calculation_size(p_calc_size: &Size2, wh: &GenericWH) -> Size2 {
+//     trace!("calculation_size");
+//     let calc_w = match wh.w {
+//         GenericSize::Length(ex_l) => {
+//             let v = ex_l.value.into_inner();
+//             match ex_l.unit {
+//                 styles::Unit::Px => v,
+//                 styles::Unit::Rem
+//                 | styles::Unit::Em
+//                 | styles::Unit::Cm
+//                 | styles::Unit::Vw
+//                 | styles::Unit::Vh => {
+//                     todo!()
+//                 }
+//             }
+//         }
+//         GenericSize::Percentage(pc) => p_calc_size.x * pc.value()*0.01,
+//         GenericSize::Auto
+//         | GenericSize::Initial
+//         | GenericSize::Inherit
+//         | GenericSize::StringValue(_) => {
+//             todo!()
+//         }
+//     };
+//     let calc_h = match wh.h {
+//         GenericSize::Percentage(pc) => p_calc_size.x * pc.value()*0.01,
+
+//         GenericSize::Length(ex_l) => {
+//             let v = ex_l.value.into_inner();
+//             match ex_l.unit {
+//                 styles::Unit::Px => v,
+//                 styles::Unit::Rem
+//                 | styles::Unit::Em
+//                 | styles::Unit::Cm
+//                 | styles::Unit::Vw
+//                 | styles::Unit::Vh => {
+//                     todo!()
+//                 }
+//             }
+//         }
+//         GenericSize::Auto
+//         | GenericSize::Initial
+//         | GenericSize::Inherit
+//         | GenericSize::StringValue(_) => {
+//             todo!()
+//         }
+//     };
+
+//     Size2::new(calc_w, calc_h)
+// }
 
 fn calculation_align(p_calc_size: &Size2, align: &GenericLoc) -> Trans3 {
     trace!("calculation_align");

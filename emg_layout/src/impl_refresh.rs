@@ -69,7 +69,10 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let rc_var = self.get_var_with(|x| x.get());
         warn!("Edge  Refresh use StateVar<CssWidth>");
-        who.refresh_use(&*rc_var);
+
+        who.layout.size = (r)
+
+        // who.refresh_use(&*rc_var);
     }
 }
 

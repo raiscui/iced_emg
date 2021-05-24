@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-06 14:13:04
- * @LastEditTime: 2021-05-06 17:42:40
+ * @LastEditTime: 2021-05-24 13:42:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,8 +16,8 @@ pub trait GraphMethods<Ix> {
     fn edge_item_set_size(
         &self,
         e: &EdgeIndex<Ix>,
-        w: impl Into<GenericSize>,
-        h: impl Into<GenericSize>,
+        w: impl Into<Either<GenericSize, StateAnchor<GenericSize>>>,
+        h: impl Into<Either<GenericSize, StateAnchor<GenericSize>>>,
     );
 }
 impl<'a, Message, Ix> GraphMethods<Ix> for GraphType<'a, Message, Ix>
@@ -29,10 +29,9 @@ where
     fn edge_item_set_size(
         &self,
         e: &EdgeIndex<Ix>,
-        w: impl Into<GenericSize>,
-        h: impl Into<GenericSize>,
+        w: impl Into<Either<GenericSize, StateAnchor<GenericSize>>>,
+        h: impl Into<Either<GenericSize, StateAnchor<GenericSize>>>,
     ) {
-        self.edge_item(e)
-            .store_set_size(&self.store(), GenericWH::new(w, h));
+        self.edge_item(e).store_set_size(&self.store(), w, h);
     }
 }
