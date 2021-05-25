@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-05-22 09:25:09
+ * @LastEditTime: 2021-05-25 09:10:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -400,6 +400,14 @@ where
 {
     fn from(sa: StateAnchor<T>) -> Self {
         sa.0
+    }
+}
+impl<T> From<T> for StateAnchor<T>
+where
+    T: 'static,
+{
+    fn from(v: T) -> Self {
+        StateAnchor::constant(v)
     }
 }
 

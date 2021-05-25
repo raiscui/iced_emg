@@ -13,20 +13,19 @@
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
 
-use std::{cell::Ref, clone::Clone, cmp::{Eq, Ord}, hash::Hash, rc::Rc};
+use std::{clone::Clone, cmp::{Eq, Ord}, hash::Hash, rc::Rc};
 
 use calc::layout_calculating;
 use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
-use either::Either;
 // use derive_more::TryInto;
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, topo, use_state};
 
 use im::Vector;
-use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, SVector, Similarity3, Translation3, Vector2, Vector3};
+use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;
 use styles::{
@@ -48,12 +47,7 @@ pub mod add_values;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-type Size2 = SVector<f64,2>;
-type Vec3 = SVector<f64,3>;
-type Trans3 = Translation3<f64>;
-type Rot3 = Rotation3<f64>;
-type Transform9 = Affine3<f64>;
-type Pos3 = Point3<f64>;
+
 
 #[derive(Display, Debug, PartialEq, PartialOrd, Copy, Clone, From, Into)]
 struct Mat4(Matrix4<f64>);
@@ -78,11 +72,11 @@ pub enum GenericSize {
 impl GenericSize {
     #[must_use]
     pub fn get_length_value(&self) ->  f64 {
-        (
+        
             self
                 .try_get_length_value()
-                .expect("directly get length value failed, expected Length Px struct"),
-        )
+                .expect("directly get length value failed, expected Length Px struct")
+        
     }
 }
 impl From<CssWidth> for GenericSize {
@@ -110,34 +104,62 @@ impl From<CssHeight> for GenericSize {
     }
 }
 
-#[derive(Debug,Display,Clone,PartialEq,Eq)]
-enum EitherDyn<T>{
-    Const(T),
-    DynA(StateAnchor<T>)
-}
+#[derive(Debug,Clone,PartialEq,Eq,Display)]
+pub struct GenericSizeAnchor(StateAnchor<GenericSize>);
 
-impl<T> From<StateAnchor<T>> for EitherDyn<T> {
-    fn from(v: StateAnchor<T>) -> Self {
-        Self::DynA(v)
+impl std::ops::Deref for GenericSizeAnchor {
+    type Target = StateAnchor<GenericSize>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-impl<T> From<T> for EitherDyn<T> {
+
+
+
+impl<T> From<T> for GenericSizeAnchor
+where T : Into<GenericSize> + Clone+'static{
     fn from(v: T) -> Self {
-        Self::Const(v)
+       Self(StateAnchor::constant( v.into()))
+    }
+}
+impl<T> From<StateAnchor<T>> for GenericSizeAnchor
+where T : Into<GenericSize> + Clone+'static{
+    fn from(v: StateAnchor<T>) -> Self {
+        
+        Self(v.map(|x|x.clone().into()))
     }
 }
 
-impl<T> From <CssWidth> for EitherDyn<T>{
-    fn from(v: CssWidth) -> Self {
-        T::from(v).into()
-    }
-}
-impl<T> From <CssHeight> for EitherDyn<T>{
-    fn from(v: CssHeight) -> Self {
-        T::from(v).into()
-    }
-}
+// #[derive(Debug,Display,Clone,PartialEq,Eq)]
+// enum EitherDyn<T>{
+//     Const(T),
+//     DynA(StateAnchor<T>)
+// }
+
+// impl<T> From<StateAnchor<T>> for EitherDyn<T> {
+//     fn from(v: StateAnchor<T>) -> Self {
+//         Self::DynA(v)
+//     }
+// }
+
+// impl<T> From<T> for EitherDyn<T> {
+//     fn from(v: T) -> Self {
+//         Self::Const(v)
+//     }
+// }
+
+// impl<T> From <CssWidth> for EitherDyn<T>{
+//     fn from(v: CssWidth) -> Self {
+//         T::from(v).into()
+//     }
+// }
+// impl<T> From <CssHeight> for EitherDyn<T>{
+//     fn from(v: CssHeight) -> Self {
+//         T::from(v).into()
+//     }
+// }
 
 
 impl GenericSize {
@@ -177,39 +199,39 @@ impl Default for GenericLoc {
 }
 
 struct Transforms {
-    loc: Trans3,
-    scale: Vec3,
-    rotate: Rot3,
+    loc: Translation3<f64>,
+    scale: Vector3<f64>,
+    rotate: Rotation3<f64>,
 }
 impl Default for Transforms {
     fn default() -> Self {
         Self {
-            loc: Trans3::identity(),
-            scale: Vec3::from_element(0.),
-            rotate: Rot3::identity(),
+            loc: Translation3::<f64>::identity(),
+            scale: Vector3::<f64>::from_element(0.),
+            rotate: Rotation3::<f64>::identity(),
         }
     }
 }
 #[derive(Debug, Clone)]
 struct M4Data {
-    m4: Transform9,
-    m4_def: Transform9,
-    layout_m4: Transform9,
+    m4: Affine3<f64>,
+    m4_def: Affine3<f64>,
+    layout_m4: Affine3<f64>,
     //TODO m4fDef:ED msg -> M4.Mat4
-    world_inv: Transform9,
-    layout_inv: Transform9,
-    m4offset: Transform9,
+    world_inv: Affine3<f64>,
+    layout_inv: Affine3<f64>,
+    m4offset: Affine3<f64>,
 }
 impl Default for M4Data {
     fn default() -> Self {
         Self {
-            m4: Transform9::identity(),
-            m4_def: Transform9::identity(),
-            layout_m4: Transform9::identity(),
+            m4: Affine3::<f64>::identity(),
+            m4_def: Affine3::<f64>::identity(),
+            layout_m4: Affine3::<f64>::identity(),
             //TODO m4fDef:ED msg -> M4.Mat4
-            world_inv: Transform9::identity(),
-            layout_inv: Transform9::identity(),
-            m4offset: Transform9::identity(),
+            world_inv: Affine3::<f64>::identity(),
+            layout_inv: Affine3::<f64>::identity(),
+            m4offset: Affine3::<f64>::identity(),
         }
     }
 }
@@ -302,15 +324,15 @@ pub struct Layout<Ix>
 where
     Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {
-    w:StateVar<EitherDyn<GenericSize>>,
-    h:StateVar<EitherDyn<GenericSize>>,
-    z:StateVar<EitherDyn<u64>>,
-    origin_x: StateVar<EitherDyn<GenericSize>>,
-    origin_y: StateVar<EitherDyn<GenericSize>>,
-    origin_z: StateVar<EitherDyn<GenericSize>>,
-    align_x: StateVar<EitherDyn<GenericSize>>,
-    align_y: StateVar<EitherDyn<GenericSize>>,
-    align_z: StateVar<EitherDyn<GenericSize>>,
+    w:StateVar<GenericSizeAnchor>,
+    h:StateVar<GenericSizeAnchor>,
+    z:StateVar<StateAnchor<u64>>,
+    origin_x: StateVar<GenericSizeAnchor>,
+    origin_y: StateVar<GenericSizeAnchor>,
+    origin_z: StateVar<GenericSizeAnchor>,
+    align_x: StateVar<GenericSizeAnchor>,
+    align_y: StateVar<GenericSizeAnchor>,
+    align_z: StateVar<GenericSizeAnchor>,
     // origin: StateVar<GenericLoc>,
     // align: StateVar<GenericLoc>,
     path_styles: StateVar<Dict<EPath<Ix>, Style>>,
@@ -323,23 +345,23 @@ where
     /// Set the layout's size.
     #[cfg(test)]
     fn set_size(&self,
-         w: impl Into< EitherDyn<GenericSize>>,
-        h: impl Into< EitherDyn<GenericSize>>,) {
+         w: impl Into<GenericSizeAnchor>,
+        h: impl Into<GenericSizeAnchor>,) {
             self.w.set(w.into());
             self.h.set(h.into());
     }
     pub fn store_set_size(&self,store: &GStateStore,
-        w: impl Into< EitherDyn<GenericSize>>,
-        h: impl Into< EitherDyn<GenericSize>>,) {
+        w: impl Into<GenericSizeAnchor>,
+        h: impl Into<GenericSizeAnchor>,) {
         self.store_set_w(store,w);
         self.store_set_h(store,h);
     }
 
-    pub fn store_set_w(&self, store: &GStateStore,w:impl Into< EitherDyn<GenericSize>>) {
+    pub fn store_set_w(&self, store: &GStateStore,w:impl Into<GenericSizeAnchor>) {
         self.w.store_set(store, w.into());
 
     }
-    pub fn store_set_h(&self, store: &GStateStore,h:impl Into< EitherDyn<GenericSize>>) {
+    pub fn store_set_h(&self, store: &GStateStore,h:impl Into<GenericSizeAnchor>) {
         self.h.store_set(store, h.into());
 
     }
@@ -397,10 +419,10 @@ where
     "indented(loc_styles)"
 )]
 pub struct LayoutCalculated {
-    size: StateAnchor<Size2>,
-    origin: StateAnchor<Trans3>,
-    align: StateAnchor<Trans3>,
-    coordinates_trans: StateAnchor<Trans3>,
+    size: StateAnchor<Vector2<f64>>,
+    origin: StateAnchor<Translation3<f64>>,
+    align: StateAnchor<Translation3<f64>>,
+    coordinates_trans: StateAnchor<Translation3<f64>>,
     matrix: StateAnchor<Mat4>,
     loc_styles: StateAnchor<Style>,
 }
@@ -561,13 +583,15 @@ where
     Ix: Clone + Hash + Ord + Default 
 {
     #[cfg(test)]
-    fn set_size(&self,w: impl Into< EitherDyn<GenericSize>>,
-        h: impl Into< EitherDyn<GenericSize>>,){
+    fn set_size(&self,
+        w: impl Into<GenericSizeAnchor>,
+        h: impl Into<GenericSizeAnchor>,)
+        {
         self.layout.set_size(w,h)
     }
     pub fn store_set_size(&self,store: &GStateStore,  
-        w: impl Into< EitherDyn<GenericSize>>,
-        h: impl Into< EitherDyn<GenericSize>>,){
+        w: impl Into<GenericSizeAnchor>,
+        h: impl Into<GenericSizeAnchor>,){
         self.layout.store_set_size(store,w,h)
     }
     
@@ -604,7 +628,10 @@ where
         edges: StateAnchor<GraphEdgesDict<Ix>>,
          ) -> Self  where Ix:std::fmt::Debug{
 
-        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    GenericSize::default(), GenericSize::default(), GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),)
+        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    
+            (GenericSize::default().into(), GenericSize::default().into()), 
+            (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into()),
+            (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into()),)
 
          }
 
@@ -616,7 +643,10 @@ where
         edges: StateAnchor<GraphEdgesDict<Ix>>,
          w: T, h: T) -> Self  where Ix:std::fmt::Debug{
 
-        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    size(px(w)), size(px(h)), GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default(),GenericSize::default())
+        Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    
+            (px(w).into(), px(h).into()), 
+            (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into()),
+            (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into()))
        
     }
     
@@ -627,14 +657,9 @@ where
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         edges: StateAnchor<GraphEdgesDict<Ix>>,
-        w:  impl Into< EitherDyn<GenericSize>>,
-        h:  impl Into< EitherDyn<GenericSize>>,
-        origin_x: impl Into< EitherDyn<GenericSize>>,
-        origin_y: impl Into< EitherDyn<GenericSize>>,
-        origin_z: impl Into< EitherDyn<GenericSize>>,
-        align_x:  impl Into< EitherDyn<GenericSize>>,
-        align_y:  impl Into< EitherDyn<GenericSize>>,
-        align_z:  impl Into< EitherDyn<GenericSize>>,
+        size:  (GenericSizeAnchor,GenericSizeAnchor),
+        origin: (GenericSizeAnchor,GenericSizeAnchor, GenericSizeAnchor),
+        align:  (GenericSizeAnchor,GenericSizeAnchor,GenericSizeAnchor),
     ) -> Self 
     where Ix:std::fmt::Debug
 
@@ -649,15 +674,15 @@ where
         // ─────────────────────────────────────────────────────────────────
 
         let layout = Layout::<Ix> {
-            w: use_state(w.into()),
-            h: use_state(h.into()),
-            z: use_state(0.into()),
-            origin_x: use_state(origin_x.into()),
-            origin_y: use_state(origin_y.into()),
-            origin_z: use_state(origin_z.into()),
-            align_x: use_state(align_x.into()),
-            align_y: use_state(align_y.into()),
-            align_z: use_state(align_z.into()),
+            w: use_state(size.0),
+            h: use_state(size.1),
+            z: use_state(StateAnchor::constant(0)),
+            origin_x: use_state(origin.0),
+            origin_y: use_state(origin.1),
+            origin_z: use_state(origin.2),
+            align_x: use_state(align.0),
+            align_y: use_state(align.1),
+            align_z: use_state(align.2),
             path_styles: use_state(Dict::unit(EPath::<Ix>::default(), s())),
         };
 
@@ -818,36 +843,19 @@ fn path_ein_empty_node_builder<Ix>(layout: &Layout<Ix>, other_styles_sv: StateVa
     Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
     {
         
-    let calculated_size = (&layout.w.watch(),&layout.h.watch()).then(|w: &EitherDyn<GenericSize>,h: &EitherDyn<GenericSize>| {
-            // println!("in layout size watch map");
-            match (w,h){
-                (EitherDyn::Const(_), EitherDyn::Const(_)) => {
-                    (&layout.w.watch(),&layout.h.watch()).map(|w,h|{
-                        Size2::new(w.get_length_value(), h.get_length_value())
-                    }).into()
-                }
-                (EitherDyn::Const(w), EitherDyn::DynA(sa_h)) => {
-                    sa_h.map(|h: &GenericSize|{
-                        Size2::new(w.get_length_value(),h.get_length_value())
-                    }).into()
-                }
-                (EitherDyn::DynA(sa_w), EitherDyn::Const(h)) => {
-                    sa_w.map(|w:&GenericSize|{
-                        Size2::new(w.get_length_value(), h.get_length_value())
-                    }).into()
-                }
-                (EitherDyn::DynA(sa_w), EitherDyn::DynA(sa_h)) => {
-                    (sa_w,sa_h).map(|w,h|{
-                        Size2::new(w.get_length_value(), h.get_length_value())
-                    }).into()
-                }
-            }
+    let calculated_size:StateAnchor<Vector2<f64>> = (&layout.w.watch(),&layout.h.watch()).then(|sa_w: &GenericSizeAnchor,sa_h: &GenericSizeAnchor| {
+            (&**sa_w,&**sa_h).map(|w:&GenericSize,h:&GenericSize|->Vector2<f64>{
+                //TODO check editor display error 
+                Vector2::<f64>::from_vec(vec![w.get_length_value(), h.get_length_value()])
+                // Vector2::<f64>::new(w.get_length_value(), h.get_length_value())
+            }).into()    
+            
         });
-    let calculated_origin = StateAnchor::constant(Trans3::identity());
-    let calculated_align = StateAnchor::constant(Trans3::identity());
-    let coordinates_trans = StateAnchor::constant(Trans3::identity());
+    let calculated_origin = StateAnchor::constant(Translation3::<f64>::identity());
+    let calculated_align = StateAnchor::constant(Translation3::<f64>::identity());
+    let coordinates_trans = StateAnchor::constant(Translation3::<f64>::identity());
     let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
-    let loc_styles = (&calculated_size, &matrix).map(move |size: &Size2, mat4: &Mat4| {
+    let loc_styles = (&calculated_size, &matrix).map(move |size: &Vector2<f64>, mat4: &Mat4| {
             let _enter = span!(Level::TRACE,
                         "-> [root] [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
                         )
@@ -934,9 +942,9 @@ impl<T: Clone + seed_styles::CssValueTrait> From<T> for Css<T> {
     }
 }
 
-pub fn size(v: impl Into<GenericSize>) -> EitherDyn<GenericSize> {
-    v.into().into()
-}
+// pub fn size(v: impl Into<GenericSize>) -> GenericSizeAnchor {
+//     v.into().into()
+// }
 pub fn origin2(x: impl Into<GenericSize>, y: impl Into<GenericSize>) -> GenericLoc {
     GenericLoc::new(x, y, px(0))
 }
@@ -1047,9 +1055,9 @@ mod tests {
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
-                size(px(50), px(50)),
-                origin2(pc(0), pc(0)),
-                align2(pc(50), pc(50)),
+                (px(50).into(), px(50).into()),
+                 (pc(0).into(), pc(0).into(), pc(0).into()),
+                  (pc(50).into(), pc(50).into(), pc(50).into()),
             );
 
             e_dict_sv.set_with(|d|{
@@ -1065,9 +1073,9 @@ mod tests {
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
-                size(px(10), px(10)),
-                origin2(pc(100), pc(100)),
-                align2(pc(100), pc(100)),
+                (px(10).into(), px(10).into()),
+                 (pc(100).into(), pc(100).into(), pc(100).into()), 
+                 (pc(100).into(), pc(100).into(), pc(100).into()),
             );
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
@@ -1086,13 +1094,14 @@ mod tests {
             root_e.refresh_use(&vec![css(css_width)]);
             // root_e.refresh_use(&css(css_width.clone()));
             root_e.refresh_use(&Css(css_height));
+            let f = Translation3::<f64>::new(50., 50., 0.);
             assert_eq!(
                 e1.edge_data(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .unwrap()
                     .calculated
                     .coordinates_trans
                     .get(),
-                Trans3::new(50., 50., 0.)
+                Translation3::<f64>::new(50., 50., 0.)
             );
             info!("=========================================================");
 
@@ -1111,7 +1120,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-                Trans3::new(30., 30., 0.)
+                Translation3::<f64>::new(30., 30., 0.)
             );
             trace!(
                 "{}",
@@ -1138,7 +1147,7 @@ mod tests {
             // vec![ CssWidth::from(px(100))].up
             info!("=========================================================");
 
-            // let cc = Transform9::identity();
+            // let cc = Affine3<f64>::identity();
             let c = width(pc(11));
             let _ff = s().width(pc(11)).bg_color(hsl(40,70,30));
             let css_width = width(px(100));
@@ -1163,9 +1172,9 @@ mod tests {
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
-                size(px(10), px(10)),
-                origin2(pc(100), pc(100)),
-                align2(pc(50), pc(20)),
+                (px(10).into(), px(10).into()), 
+                (pc(100).into(), pc(100).into(), pc(100).into()), 
+                (pc(50).into(), pc(20).into(), pc(20).into()),
             );
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
@@ -1179,9 +1188,9 @@ mod tests {
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
-            size(px(10), px(10)),
-                origin2(pc(100), pc(100)),
-                align2(pc(50), pc(20)),
+            (px(10).into(), px(10).into()), 
+            (pc(100).into(), pc(100).into(), pc(100).into()), 
+            (pc(50).into(), pc(20).into(), pc(20).into()),
             );
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
@@ -1207,7 +1216,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Trans3::new(950.0, 206.0, 0.)
+                Translation3::<f64>::new(950.0, 206.0, 0.)
             );
 
 
@@ -1254,7 +1263,7 @@ mod tests {
             trace!("refresh_use after css_width {}", &e1);
             info!("=========================================================");
 
-            root_e.refresh_use(&Css(css_height.clone()));
+            // root_e.refresh_use(&Css(css_height.clone()));
             let tempcss= use_state(css_height);
             root_e.refresh_use(&tempcss);
             assert_eq!(
@@ -1266,8 +1275,34 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Trans3::new(40., 10., 0.)
+                Translation3::<f64>::new(40., 10., 0.)
             );
+            info!("=========================================================");
+            tempcss.set(h(px(1111)));
+            assert_ne!(
+                e1.node
+                    .get()
+                    .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Translation3::<f64>::new(40., 10., 0.)
+            );
+            tempcss.set(h(px(100)));
+            assert_eq!(
+                e1.node
+                    .get()
+                    .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Translation3::<f64>::new(40., 10., 0.)
+            );
+
             info!("=========================================================");
 
             e1.refresh_use(&Css(CssWidth::from(px(12))));
@@ -1309,7 +1344,7 @@ mod tests {
                     .calculated
                     .size
                     .get(),
-                Size2::new(12., 10.)
+                Vector2::<f64>::new(12., 10.)
             );
             info!("=========================================================");
             assert_eq!(
@@ -1339,9 +1374,9 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Trans3::new(-4.0, -48.0, 0.0)
+                Translation3::<f64>::new(-4.0, -48.0, 0.0)
             );
-            e2.set_size(GenericWH::new(px(100), px(100)));
+            e2.set_size(px(100), px(100));
             assert_eq!(
                 e2.node
                     .get()
@@ -1355,7 +1390,7 @@ mod tests {
                     .calculated
                     .size
                     .get(),
-                    Size2::new(100.0, 100.0)
+                    Vector2::<f64>::new(100.0, 100.0)
             );
             let _span1 = span!(Level::TRACE, "debug print 1");
             _span1.in_scope(|| {
@@ -1423,9 +1458,9 @@ mod tests {
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
-                size(px(10), px(10)),
-                origin2(pc(0), pc(0)),
-                align2(pc(50), pc(50)),
+                (px(10).into(), px(10).into()),
+                 (pc(0).into(), pc(0).into(), pc(0).into()), 
+                 (pc(50).into(), pc(50).into(), pc(50).into()),
             );
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
@@ -1441,9 +1476,9 @@ mod tests {
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
-                     size(px(10), px(10)),
-                origin2(pc(0), pc(0)),
-                align2(pc(100), pc(000)),
+                     (px(10).into(), px(10).into()), 
+                     (pc(0).into(), pc(0).into(), pc(0).into()), 
+                     (pc(100).into(), pc(000).into(), pc(000).into()),
             );
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
@@ -1460,7 +1495,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Trans3::new(50.0, 50.0, 0.)
+                Translation3::<f64>::new(50.0, 50.0, 0.)
             );
 
             e1_source
@@ -1473,7 +1508,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Trans3::new(100.0, 100.0, 0.)
+                Translation3::<f64>::new(100., 100., 0.)
             );
             info!("..=========================================================");
             trace!("new root_e2:e1 {}", &e1);
@@ -1492,7 +1527,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-                Trans3::new(10.0, 00.0, 0.)
+                Translation3::<f64>::new(10.0, 00.0, 0.)
             );
 
             // e2.id
@@ -1510,7 +1545,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Trans3::new(100.0, 0.0, 0.)
+                Translation3::<f64>::new(100.0, 0.0, 0.)
             );
             trace!("re new root:e2 {}", &e2);
             info!("l1525 =========================================================");
@@ -1543,7 +1578,7 @@ mod tests {
     //             .calculated
     //             .coordinates_trans
     //             .get(),
-    //         Trans3::new(50.0, 50.0, 0.)
+    //         Translation3<f64>::new(50.0, 50.0, 0.)
     //     );
 
     //     ec.as_edge_data_with_parent().unwrap().parent.set(None);
@@ -1553,7 +1588,7 @@ mod tests {
     //             .calculated
     //             .coordinates_trans
     //             .get(),
-    //         Trans3::new(100.0, 100.0, 0.)
+    //         Translation3<f64>::new(100.0, 100.0, 0.)
     //     );
     //     // ─────────────────────────────────────────────────────────────────
     //     //local
@@ -1563,7 +1598,7 @@ mod tests {
     //             .calculated
     //             .coordinates_trans
     //             .get(),
-    //         Trans3::new(10.0, 00.0, 0.)
+    //         Translation3<f64>::new(10.0, 00.0, 0.)
     //     );
 
     //     ec2.as_edge_data_with_parent().unwrap().parent.set(None);
@@ -1575,7 +1610,7 @@ mod tests {
     //             .calculated
     //             .coordinates_trans
     //             .get(),
-    //         Trans3::new(100.0, 0.0, 0.)
+    //         Translation3<f64>::new(100.0, 0.0, 0.)
     //     );
     // }
 }
