@@ -11,17 +11,18 @@ resolver = "2"
 split-debuginfo = "unpacked"
 
 [dependencies]
-syn = { version = "=1.0.65", features = ["full" ,"extra-traits"] }
+syn = { version = "=1.0.65", features = ["full", "extra-traits"] }
 # "extra-traits"
 proc-macro2 = { version = "1.0", features = ["nightly"] }
 quote = "1"
 # proc-quote = "0.4.0"
 # lazy_static ="1.4"
-trace-var={path = "../../trace-var"}
-match_any="1.0.1"
+trace-var = { path = "../../trace-var" }
+match_any = "1.0.1"
+
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-uuid = { version = "0.8", features = [ "v4","wasm-bindgen"] }
+uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-uuid = { version = "0.8", features = [ "v4"] }
+uuid = { version = "0.8", features = ["v4"] }

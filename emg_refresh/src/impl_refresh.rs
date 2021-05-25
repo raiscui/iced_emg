@@ -3,7 +3,7 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-04-19 18:38:16
+ * @LastEditTime: 2021-05-22 15:41:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@ use crate::RefreshFor;
 
 use crate::{RefreshUseFor, Refresher, RefresherFor};
 use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
-use tracing::debug;
+use tracing::{debug, warn};
 // ────────────────────────────────────────────────────────────────────────────────
 
 // impl<Who> RefreshUseFor<Who> for AnchorWithUpdater<Who>
@@ -69,7 +69,7 @@ where
 
     Use: RefreshUseNoWarper + RefreshFor<Who>,
 {
-    fn refresh_for(&self, who: &mut Who) {
+    default fn refresh_for(&self, who: &mut Who) {
         for i in self {
             who.refresh_use(i);
         }
@@ -91,7 +91,7 @@ where
     Who: RefreshWhoNoWarper,
     Use: RefreshUseNoWarper + RefreshFor<Who>,
 {
-    fn refresh_for(&self, who: &mut Who) {
+    default fn refresh_for(&self, who: &mut Who) {
         who.refresh_use(self.as_ref());
     }
 }
@@ -115,7 +115,9 @@ where
     Who: RefreshWhoNoWarper,
     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static,
 {
-    fn refresh_for(&self, who: &mut Who) {
+    default fn refresh_for(&self, who: &mut Who) {
+        warn!("who Refresh use StateVar");
+
         who.refresh_use(&self.get());
     }
 }
@@ -236,7 +238,7 @@ where
     Who: RefreshWhoNoWarper,
     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static + std::fmt::Debug,
 {
-    fn refresh_for(&self, who: &mut Who) {
+    default fn refresh_for(&self, who: &mut Who) {
         let u_s_e = self.get();
         // log::debug!(" ============ StateAnchor get:{:?}", &u_s_e);
         who.refresh_use(&u_s_e);

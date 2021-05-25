@@ -1,13 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-08 15:12:45
- * @LastEditTime: 2021-05-10 15:37:54
+ * @LastEditTime: 2021-05-18 15:50:31
  * @LastEditors: Rais
  * @Description:
  */
 
-use std::{collections::HashSet, convert::TryFrom};
-
+use im::Vector;
 use tracing::error;
 
 use crate::models::{property_name, Property};
@@ -46,7 +45,7 @@ fn list_find_dup<T: Eq>(eq_fn: impl Fn(&T, &T) -> bool, list: &[T]) -> Vec<&T> {
         .1
 }
 
-pub fn warn_for_double_listed_properties(props: &[Property]) -> &[Property] {
+pub fn warn_for_double_listed_properties(props: &Vector<Property>) -> &Vector<Property> {
     let mut names = props
         .iter()
         .filter(|&prop| !is_transformation(prop))

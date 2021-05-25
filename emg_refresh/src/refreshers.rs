@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-04-19 12:12:21
+ * @LastEditTime: 2021-05-22 09:07:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -91,8 +91,8 @@ pub trait RefreshFor<Who> {
 mod updater_test {
 
     // use crate::CloneState;
-    use crate::RefreshFor;
     use crate::RefreshUseFor;
+    use crate::{test::setup_tracing, RefreshFor};
     use tracing::info;
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -107,11 +107,6 @@ mod updater_test {
     use emg_state::CloneStateVar;
 
     use emg_state::use_state;
-
-    fn setup_tracing() {
-        console_error_panic_hook::set_once();
-        tracing_wasm::set_as_global_default();
-    }
 
     #[wasm_bindgen_test]
     fn test_anchor() {

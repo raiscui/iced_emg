@@ -47,23 +47,10 @@ pub enum Event {
     // FilesHoveredLeft,
 }
 
-pub struct WindowEventRecipe {
-    // sender: UnboundedSender<(Event, event::Status)>,
-// sender: Sender<(Event, event::Status)>,
-// receiver: UnboundedReceiver<(Event, event::Status)>,
-// receiver: Receiver<(Event, event::Status)>,
-// closure: Box<Closure<dyn Fn()>>,
-// _publish: Rc<dyn Fn((Event, event::Status))>,
-// boxed_local: BoxStream<(Event, event::Status)>,
-}
+pub struct WindowEventRecipe {}
 
 impl Default for WindowEventRecipe {
     fn default() -> Self {
-        // let (sender, receiver) = futures::channel::mpsc::channel(10);
-
-        // let (sender, receiver) = futures::channel::mpsc::unbounded();
-
-        // Self::new(sender, receiver)
         Self {}
     }
 }
@@ -79,6 +66,7 @@ impl Recipe<Hasher, (crate::event::Event, event::Status)> for WindowEventRecipe 
         // std::any::TypeId::of::<Marker>().hash(state);
 
         std::any::TypeId::of::<Self>().hash(state);
+
         // self.hash(state);
     }
 
@@ -123,20 +111,13 @@ impl Recipe<Hasher, (crate::event::Event, event::Status)> for WindowEventRecipe 
                 warn!("Error sending event to subscription: {:?}", error);
             }
 
-            //     // b────────────────────────────────────────────────────────────────────────────────
-
-            //     // if let Err(error) = sender2.unbounded_send(()) {
-            //     //     warn!("Error sending event to subscription: {:?}", error);
-            //     // }
-            //     // ────────────────────────────────────────────────────────────────────────────────
-
             let _droppable = idle_timeout2.borrow_mut().take();
             // }));
         }) as Box<dyn FnMut()>));
         // ─────────────────────────────────────────────────────────────────
 
         let mut idle_opt = IdleRequestOptions::new();
-        idle_opt.timeout(99);
+        // idle_opt.timeout(66);
 
         let on_resize = Box::new(move || {
             let _g = trace_span!("window on resize -> event").entered();
@@ -156,151 +137,16 @@ impl Recipe<Hasher, (crate::event::Event, event::Status)> for WindowEventRecipe 
                     .expect("idle callback init failed"),
             );
             // ─────────────────────────────────────────────────────────────────
-
-            // let window_am = Rc::new(web_sys::window().unwrap());
-            // let am = Closure::wrap(Box::new(move || {
-            //     let _g = trace_span!("animation").entered();
-            //     trace!("in animation..........");
-            // }) as Box<dyn Fn()>);
-            // window_am.request_animation_frame(am.as_ref().unchecked_ref());
-            // am.forget();
         });
-        // ─────────────────────────────────────────────────────────────────
 
-        // ────────────────────────────────────────────────────────────────────────────────
-
-        // let on_resize = Box::new(move || {
-        //     trace!("on_resize");
-
-        //     if false {
-        //         // if *running.borrow() {
-        //         let _gg = trace_span!("window on resize -> is running").entered();
-        //         trace!("resize disable");
-        //     } else {
-        //         let _gg = trace_span!("window on resize -> running false").entered();
-
-        //         *running.borrow_mut() = true;
-        //         let running_clone = running.clone();
-
-        //         let sender2 = sender.clone();
-
-        //         // with_animation_frame(move || {
-        //         // let f = Closure::wrap(Box::new(move || {
-        //         let _ggg = trace_span!("window on resize -> animation_frame").entered();
-        //         let window2 = window1.clone();
-
-        //         // • • • • •
-        //         if let Err(error) = sender2.unbounded_send((
-        //             // if let Err(error) = sender.try_send((
-        //             Event::Resized {
-        //                 width: 11.0,
-        //                 height: 11.0,
-        //             },
-        //             event::Status::Ignored,
-        //         )) {
-        //             warn!("Error sending event to subscription: {:?}", error);
-        //         }
-        //         // • • • • •
-
-        //         // let timeout_send = Closure::wrap(Box::new(move || {
-        //         //     // let window = web_sys::window().unwrap();
-        //         //     let w: JsValue = (window2).inner_width().unwrap();
-        //         //     let h: JsValue = (window2).inner_height().unwrap();
-        //         //     trace!("with_animation_frame-> on_resize: w:{:?} , h:{:?}", &w, &h);
-
-        //         //     if let Err(error) = sender2.unbounded_send(
-        //         // (
-        //         //         // if let Err(error) = sender.try_send((
-        //         //         Event::Resized {
-        //         //             width: w.as_f64().unwrap(),
-        //         //             height: h.as_f64().unwrap(),
-        //         //         },
-        //         //         event::Status::Ignored,
-        //         //     )
-        //         //) {
-        //         //         warn!("Error sending event to subscription: {:?}", error);
-        //         //     }
-
-        //         //     *running_clone.borrow_mut() = false;
-        //         // }) as Box<dyn FnMut()>);
-        //         // window1
-        //         //     .set_timeout_with_callback_and_timeout_and_arguments_0(
-        //         //         timeout_send.as_ref().unchecked_ref(),
-        //         //         1000,
-        //         //     )
-        //         //     .expect("..... ");
-
-        //         // timeout_send.forget();
-        //         // • • • • •
-
-        //         // if let Err(error) = sender2.unbounded_send((
-        //         //     // if let Err(error) = sender.try_send((
-        //         //     Event::Resized {
-        //         //         width: w.as_f64().unwrap(),
-        //         //         height: h.as_f64().unwrap(),
-        //         //     },
-        //         //     event::Status::Ignored,
-        //         // )) {
-        //         //     warn!("Error sending event to subscription: {:?}", error);
-        //         // }
-
-        //         // *running_clone.borrow_mut() = false;
-
-        //         /*
-        //         }) as Box<dyn FnMut()>);
-        //         */
-        //         // });
-
-        //         // request_animation_frame(&f);
-        //     }
-        // });
         let event_send_closure = Closure::wrap(on_resize as Box<dyn FnMut()>);
 
         window.set_onresize(Some(event_send_closure.as_ref().unchecked_ref()));
         event_send_closure.forget();
 
-        receiver
-            // .map(move |_x| {
-            //     let _g = trace_span!("window on resize -> got receiver ").entered();
-            //     trace!("==r :map: window on resize");
-            //     // let window = web_sys::window().unwrap();
-            //     let w: JsValue = (window1).inner_width().unwrap();
-            //     let h: JsValue = (window1).inner_height().unwrap();
-            //     (
-            //         // if let Err(error) = sender.try_send((
-            //         Event::Resized {
-            //             width: w.as_f64().unwrap(),
-            //             height: h.as_f64().unwrap(),
-            //         },
-            //         event::Status::Ignored,
-            //     )
-            // })
-            .boxed_local()
+        receiver.boxed_local()
     }
 }
-
-// fn with_animation_frame<F>(mut f: F)
-// where
-//     F: 'static + FnMut(),
-// {
-//     let g = Rc::new(RefCell::new(None));
-//     let h = g.clone();
-
-//     let f = Closure::wrap(Box::new(move || {
-//         *g.borrow_mut() = None;
-//         f();
-//     }) as Box<dyn FnMut()>);
-//     request_animation_frame(&f);
-
-//     *h.borrow_mut() = Some(f);
-// }
-
-// fn request_animation_frame(f: &Closure<dyn FnMut()>) {
-//     web_sys::window()
-//         .expect_throw("should have a window")
-//         .request_animation_frame(f.as_ref().unchecked_ref())
-//         .expect_throw("should register `requestAnimationFrame` OK");
-// }
 
 #[cfg(test)]
 mod test {

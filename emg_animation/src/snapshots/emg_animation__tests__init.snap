@@ -1,0 +1,30 @@
+---
+source: emg_animation/src/lib.rs
+expression: "&am_state"
+
+---
+Animation {
+    steps: [],
+    style: [
+        Prop(
+            "opacity",
+            Motion {
+                position: 1.0,
+                velocity: 0.0,
+                target: 1.0,
+                interpolation: Spring {
+                    stiffness: 170.0,
+                    damping: 26.0,
+                },
+                unit: "",
+                interpolation_override: None,
+            },
+        ),
+    ],
+    timing: Timing {
+        current: 0ns,
+        dt: 0ns,
+    },
+    running: false,
+    interruption: [],
+}

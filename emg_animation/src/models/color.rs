@@ -1,7 +1,11 @@
+use std::rc::Rc;
+
+use im::vector;
+
 /*
  * @Author: Rais
  * @Date: 2021-05-10 15:31:40
- * @LastEditTime: 2021-05-10 16:07:08
+ * @LastEditTime: 2021-05-18 22:41:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -35,11 +39,13 @@ fn custom_color(
     }: Color,
 ) -> Property {
     Property::Color(
-        name,
-        init_motion(f64::from(red), "".to_string()),
-        init_motion(f64::from(green), "".to_string()),
-        init_motion(f64::from(blue), "".to_string()),
-        init_motion(alpha, "".to_string()),
+        Rc::new(name),
+        vector![
+            init_motion(f64::from(red), "".to_string()),
+            init_motion(f64::from(green), "".to_string()),
+            init_motion(f64::from(blue), "".to_string()),
+            init_motion(alpha, "".to_string()),
+        ],
     )
 }
 #[must_use]

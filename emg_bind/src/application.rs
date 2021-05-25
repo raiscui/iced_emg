@@ -2,16 +2,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-05-13 12:45:48
+ * @LastEditTime: 2021-05-21 16:22:18
  * @LastEditors: Rais
  * @Description:
  */
 
 use tracing::{debug, debug_span, trace, trace_span};
 
-use crate::{
-    animation::AmClosure, orders::OrdersContainer, GTreeBuilderElement, GTreeBuilderFn, GraphType,
-};
+use crate::{orders::OrdersContainer, GTreeBuilderElement, GTreeBuilderFn, GraphType};
 use emg_orders::Orders;
 
 use std::{cell::RefCell, fmt, rc::Rc};
@@ -46,7 +44,10 @@ pub trait Application {
     /// Additionally, you can return a [`Command`] if you need to perform some
     /// async action in the background on startup. This is useful if you want to
     /// load state from a file, perform an initial HTTP request, etc.
-    fn new(flags: Self::Flags) -> (Self, Command<Self::Message>)
+    fn new(
+        flags: Self::Flags,
+        orders: &impl Orders<Self::Message>,
+    ) -> (Self, Command<Self::Message>)
     where
         Self: Sized;
 
@@ -66,6 +67,7 @@ pub trait Application {
     fn update(
         &mut self,
         graph: &mut GraphType<Self::Message>,
+        orders: &impl Orders<Self::Message>,
         message: Self::Message,
     ) -> Command<Self::Message>;
 
@@ -86,7 +88,10 @@ pub trait Application {
         Subscription::none()
     }
 
-    fn tree_build<'a>(this: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
+    fn tree_build<'a>(
+        this: Rc<RefCell<Self>>,
+        orders: impl Orders<Self::Message> + 'static,
+    ) -> GTreeBuilderElement<'a, Self::Message>;
 
     /// Runs the [`Application`].
     /// # Errors
@@ -109,8 +114,9 @@ pub trait Application {
             Self::Executor::new().expect("Create executor"),
             sender.clone(),
         );
+        let mut orders = OrdersContainer::<Self::Message>::new(Bus::new(sender.clone()));
 
-        let (app, command) = runtime.enter(|| Self::new(flags.flags));
+        let (app, command) = runtime.enter(|| Self::new(flags.flags, &orders));
 
         let mut title = app.title();
         document.set_title(&title);
@@ -122,7 +128,7 @@ pub trait Application {
         // ─────────────────────────────────────────────────────────────────
 
         let mut emg_graph = GraphType::<Self::Message>::default();
-        let root = Self::tree_build(Rc::clone(&application));
+        let root = Self::tree_build(Rc::clone(&application), orders.clone());
         emg_graph.handle_root_in_topo(&root);
         let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
         // let emg_graph_rc = (emg_graph);
@@ -134,25 +140,25 @@ pub trait Application {
 
         let instance = Instance {
             application: application.clone(),
-            bus: Bus::new(sender.clone()),
+            bus: Bus::new(sender),
             g: Rc::clone(&emg_graph_rc_refcell),
         };
 
         let vdom = dodrio::Vdom::new(&body, instance);
+        *orders.vdom.borrow_mut() = Some(vdom.weak());
         // ─────────────────────────────────────────────────────────────────
-        let orders = OrdersContainer::new(Bus::new(sender));
         let event_loop = receiver.for_each(move |message| {
+            //TODO check render enum;
             orders.reset_render();
             let _g_event_loop = debug_span!("event_loop", ?message).entered();
             debug!("receiver-message: {:?}", message);
             let (command, subscription) = runtime.enter(|| {
                 let update_span = trace_span!("application->update");
                 let sub_span = trace_span!("application->subscription");
-
                 let command = update_span.in_scope(|| {
                     application.borrow_mut().update(
                         &mut emg_graph_rc_refcell.borrow_mut(),
-                        // &orders,
+                        &orders,
                         message,
                     )
                 });
@@ -174,7 +180,7 @@ pub trait Application {
 
             if title != new_title {
                 document.set_title(&new_title);
-
+                //TODO: uncomment this
                 title = new_title;
             }
             {
