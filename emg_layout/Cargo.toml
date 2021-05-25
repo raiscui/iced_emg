@@ -12,7 +12,8 @@ split-debuginfo = "unpacked"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-nalgebra = "0.26.2"
+nalgebra = "0.25.4"
+# nalgebra = "0.26.2"
 derive_more = "0.99"
 seed_styles = { path = "../../styles_hooks/seed_styles" }
 seed_style_macros = { path = "../../styles_hooks/seed_styles/seed_style_macros" }
