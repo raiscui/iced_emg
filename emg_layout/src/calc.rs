@@ -1,11 +1,11 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-05-25 14:04:55
+ * @LastEditTime: 2021-05-26 08:29:42
  * @LastEditors: Rais
 * @Description:
 */
-use crate::{EdgeData, EdgeItemNode, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4};
+use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4};
 
 use emg::EdgeIndex;
 use emg_state::{ StateMultiAnchor,StateAnchor,StateVar};

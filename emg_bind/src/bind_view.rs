@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-05-11 15:32:35
+ * @LastEditTime: 2021-05-26 17:27:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -26,7 +26,7 @@ pub type GraphType<'a, Message, Ix = String> = Graph<N<'a, Message>, E<Ix>, Ix>;
 
 pub trait GraphView<'a, Message> {
     type N;
-    type Ix;
+    type Ix: std::fmt::Debug;
     type E;
 
     fn gelement_refresh_and_comb(
@@ -93,6 +93,7 @@ where
                 let _g = trace_span!("-> in NodeBuilderWidget").entered();
                 {
                     trace!("NodeBuilderWidget::<Message>::try_from  OK");
+                    node_builder_widget.set_id(format!("{:?}", cix));
 
                     let ei = &edges.get(paths.back().unwrap()).unwrap().item;
 

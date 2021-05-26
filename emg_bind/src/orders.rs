@@ -1,28 +1,21 @@
-use emg_debuggable::Debuggable;
-
 use crate::Orders;
 use emg_animation::Tick;
 use fxhash::FxBuildHasher;
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-05-21 18:45:47
+ * @LastEditTime: 2021-05-26 15:07:11
  * @LastEditors: Rais
  * @Description:
  */
-use iced_web::{
-    dodrio::{Vdom, VdomWeak},
-    Bus,
-};
+use iced_web::{dodrio::VdomWeak, Bus};
 use indexmap::IndexMap;
-use tracing::{debug, debug_span, error};
+use tracing::debug;
 
 use crate::map_callback_return_to_option_ms;
 
 use std::{
     cell::{Cell, RefCell},
-    cmp::PartialEq,
-    hash::Hash,
     rc::Rc,
 };
 
@@ -129,7 +122,7 @@ pub(crate) struct OrdersData<Message, TickMsg> {
     // pub scheduled_render_handle: RefCell<Option<util::RequestAnimationFrameHandle>>,
     pub after_next_render_callbacks:
         RefCell<FxIndexMap<String, Box<dyn FnOnce(TickMsg) -> Option<Message>>>>,
-    pub render_info: Cell<Option<TickMsg>>,
+    // pub render_info: Cell<Option<TickMsg>>,
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -171,7 +164,7 @@ impl<Message> OrdersContainer<Message>
                     1,
                     FxBuildHasher::default(),
                 )),
-                render_info: Cell::new(None),
+                // render_info: Cell::new(None),
             }),
             bus,
             re_render_msg: Rc::new(RefCell::new(None)),

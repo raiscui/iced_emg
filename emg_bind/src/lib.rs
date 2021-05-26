@@ -8,10 +8,11 @@
 #![feature(drain_filter)]
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(convert_float_to_int)] //RafEventRecipe:  (timestamp * 1000.).trunc().to_int_unchecked::<u64>()
-
-// bumpalo
-// #![feature(allocator_api)]
-// #![feature(generic_associated_types)]
+#![feature(negative_impls)] // NOTE for Gid refresh
+#![feature(min_specialization)] // NOTE for Gid refresh
+                                // bumpalo
+                                // #![feature(allocator_api)]
+                                // #![feature(generic_associated_types)]
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use iced as runtime;
@@ -28,6 +29,7 @@ mod g_tree_builder_element;
 // mod graph_store;
 mod animation;
 mod bind_view;
+mod gid;
 mod graph_layout;
 mod impl_refresh;
 mod layer;
@@ -35,7 +37,10 @@ mod node_builder;
 mod orders;
 mod sandbox;
 // ────────────────────────────────────────────────────────────────────────────────
+
 // ────────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
+pub use gid::Gid;
 pub use runtime::Hasher;
 pub mod event;
 pub mod subscription;
@@ -62,6 +67,7 @@ pub use subscription::Subscription;
 // pub use topo_store::use_state;
 // pub use topo_store::CloneState;
 // pub use topo_store::StateAccess;
+// ────────────────────────────────────────────────────────────────────────────────
 
 // ────────────────────────────────────────────────────────────────────────────────
 // @TODO Refactor once `optin_builtin_traits` or `negative_impls`

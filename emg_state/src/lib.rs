@@ -1,7 +1,8 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
-#![feature(specialization)]
+#![feature(min_specialization)]
+// #![feature(specialization)]
 pub mod use_state_impl;
 pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::MultiAnchor as AnchorMultiAnchor;

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-05-25 09:10:01
+ * @LastEditTime: 2021-05-26 08:26:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -163,12 +163,13 @@ impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
         write!(f, "\u{2726} ({})", &v)
     }
 }
-impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<StateAnchor<T>> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let v = self.get();
-        write!(f, "\u{2726} ({})", &v)
-    }
-}
+// NOTE: need #![feature(specialization)]
+// impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<StateAnchor<T>> {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         let v = self.get();
+//         write!(f, "\u{2726} ({})", &v)
+//     }
+// }
 
 impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVar<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -407,7 +408,7 @@ where
     T: 'static,
 {
     fn from(v: T) -> Self {
-        StateAnchor::constant(v)
+        Self::constant(v)
     }
 }
 

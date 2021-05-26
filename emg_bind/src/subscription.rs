@@ -1,5 +1,5 @@
 //! Listen to external events in your application.
-use crate::{animation::RafEventRecipe, Hasher};
+use crate::Hasher;
 use crate::{
     event::{self, Event},
     window::WindowEventRecipe,

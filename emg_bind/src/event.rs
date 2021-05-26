@@ -1,13 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-04-29 10:03:54
- * @LastEditTime: 2021-05-13 18:53:40
+ * @LastEditTime: 2021-05-26 15:09:21
  * @LastEditors: Rais
  * @Description:
  */
 //! Handle events of a user interface.
-use emg_animation::Tick;
-use emg_orders::Orders;
 
 // use crate::keyboard;
 // use crate::mouse;

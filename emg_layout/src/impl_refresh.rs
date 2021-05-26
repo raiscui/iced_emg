@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-05-25 12:51:40
+ * @LastEditTime: 2021-05-26 17:35:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -59,7 +59,7 @@ where
     }
 }
 
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateVar<CssHeight>
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateVar<CssWidth>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,
@@ -68,6 +68,36 @@ where
     #[allow(clippy::redundant_closure_for_method_calls)]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         warn!("Edge  Refresh use StateVar<CssWidth>");
+
+        who.layout.w.set(self.watch().into())
+
+        // who.refresh_use(&*rc_var);
+    }
+}
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateAnchor<CssWidth>
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+    // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
+{
+    #[allow(clippy::redundant_closure_for_method_calls)]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        warn!("Edge  Refresh use StateAnchor<CssWidth>");
+
+        who.layout.w.set(self.clone().into())
+
+        // who.refresh_use(&*rc_var);
+    }
+}
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateVar<CssHeight>
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+    // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
+{
+    #[allow(clippy::redundant_closure_for_method_calls)]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        warn!("Edge  Refresh use StateVar<CssHeight>");
 
         who.layout.h.set(self.watch().into())
 
@@ -82,7 +112,7 @@ where
 {
     #[allow(clippy::redundant_closure_for_method_calls)]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
-        warn!("Edge  Refresh use StateAnchor<CssWidth>");
+        warn!("Edge  Refresh use StateAnchor<CssHeight>");
 
         who.layout.h.set(self.clone().into())
 

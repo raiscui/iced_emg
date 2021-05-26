@@ -52,7 +52,8 @@ tracing = { version = "^0.1" }
 indexmap = "1.6.2"
 fxhash = "0.2.1"
 
-emg_debuggable = { path = "../emg_debuggable" }
+
+# emg_debuggable = { path = "../emg_debuggable" }
 # stream_throttle ={ version = "0.4.0",default-features = false, features = ["timer-futures-timer"], path = "../../stream-throttle"}
 
 

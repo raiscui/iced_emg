@@ -1094,7 +1094,6 @@ mod tests {
             root_e.refresh_use(&vec![css(css_width)]);
             // root_e.refresh_use(&css(css_width.clone()));
             root_e.refresh_use(&Css(css_height));
-            let f = Translation3::<f64>::new(50., 50., 0.);
             assert_eq!(
                 e1.edge_data(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .unwrap()
@@ -1148,7 +1147,6 @@ mod tests {
             info!("=========================================================");
 
             // let cc = Affine3<f64>::identity();
-            let c = width(pc(11));
             let _ff = s().width(pc(11)).bg_color(hsl(40,70,30));
             let css_width = width(px(100));
             let css_height = h(px(100));

@@ -15,7 +15,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 tracing = { version = "^0.1" }
 emg_animation = { path = "../emg_animation" }
-emg_debuggable = { path = "../emg_debuggable" }
+# emg_debuggable = { path = "../emg_debuggable" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # wasm-bindgen-futures = "^0.4"

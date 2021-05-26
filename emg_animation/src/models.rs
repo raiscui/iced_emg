@@ -191,8 +191,8 @@ impl<Message> Animation<Message>
 where
     Message: Clone,
 {
-    pub fn get_position(&self, i: usize) -> Precision {
-        let p = self.style.get(i).unwrap();
+    pub fn get_position(&self, style_i: usize) -> Precision {
+        let p = self.style.get(style_i).unwrap();
         match p {
             Property::Prop(_name, m) => m.position,
             _ => todo!("not implemented"),

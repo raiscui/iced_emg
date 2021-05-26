@@ -2,12 +2,16 @@
 //!
 //! A [`Button`] has some local [`State`].
 
+use emg_refresh::{RefreshFor, RefreshWhoNoWarper};
 pub use iced_style::button::{Style, StyleSheet};
 
-use crate::runtime::{
-    css,
-    dodrio::{self, bumpalo},
-    Background, Bus, Css, Element, Length, Widget,
+use crate::{
+    runtime::{
+        css,
+        dodrio::{self, bumpalo},
+        Background, Bus, Css, Element, Length, Widget,
+    },
+    Gid,
 };
 
 /// A generic widget that produces a message when pressed.
@@ -26,6 +30,7 @@ use crate::runtime::{
 #[allow(missing_debug_implementations)]
 #[derive(Clone)]
 pub struct Button<'a, Message> {
+    // id: String,
     content: Element<'a, Message>,
     on_press: Option<Message>,
     width: Length,
@@ -37,6 +42,12 @@ pub struct Button<'a, Message> {
     padding: u16,
     style: Box<dyn StyleSheet>,
 }
+// impl<'a, Message> RefreshWhoNoWarper for Button<'a, Message> {}
+// impl<'a, Message> RefreshFor<Button<'a, Message>> for Gid {
+//     fn refresh_for(&self, el: &mut Button<'a, Message>) {
+//         el.id = self.id();
+//     }
+// }
 
 impl<'a, Message> Button<'a, Message> {
     /// Creates a new [`Button`] with some local [`State`] and the given
@@ -47,6 +58,7 @@ impl<'a, Message> Button<'a, Message> {
         E: Into<Element<'a, Message>>,
     {
         Button {
+            // id: "".to_string(),
             content: content.into(),
             on_press: None,
             width: Length::Shrink,
@@ -191,7 +203,8 @@ where
         bus: &Bus<Message>,
         style_sheet: &mut Css<'b>,
     ) -> dodrio::Node<'b> {
-       self.generate_element_builder(bump,bus,style_sheet).finish()
+        self.generate_element_builder(bump, bus, style_sheet)
+            .finish()
     }
 }
 

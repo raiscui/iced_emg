@@ -2,7 +2,7 @@
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
 // ────────────────────────────────────────────────────────────────────────────────
-#![feature(generic_associated_types)]
+// #![feature(generic_associated_types)]
 #![feature(unboxed_closures)]
 mod orders;
 pub use orders::*;

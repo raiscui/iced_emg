@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-05-19 23:08:29
+ * @LastEditTime: 2021-05-26 17:30:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -162,6 +162,7 @@ where
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
 pub struct NodeBuilderWidget<'a, Message> {
+    id: String,
     //TODO : instead use GElement
     widget: Rc<dyn NodeBuilder<Message> + 'a>,
     //TODO use vec deque
@@ -184,10 +185,14 @@ where
 impl<'a, Message: std::clone::Clone> NodeBuilderWidget<'a, Message> {
     pub fn new(widget: Rc<dyn NodeBuilder<Message> + 'a>) -> Self {
         Self {
+            id: "".to_string(),
             widget,
             event_callbacks: Vector::new(),
             layout_str: String::default(),
         }
+    }
+    pub fn set_id(&mut self, id: String) {
+        self.id = id;
     }
 
     pub fn add_styles_string(&mut self, styles: &str) {
@@ -217,11 +222,17 @@ where
     ) -> Node<'b> {
         let mut element_builder = self.widget.generate_element_builder(bump, bus, style_sheet);
 
-        element_builder = element_builder.attr(
-            "style",
-            bumpalo::collections::String::from_str_in(self.layout_str.as_str(), bump)
-                .into_bump_str(),
-        );
+        element_builder = element_builder
+            .attr(
+                "index",
+                bumpalo::collections::String::from_str_in(self.id.as_str(), bump).into_bump_str(),
+            )
+            .attr(
+                "style",
+                bumpalo::collections::String::from_str_in(self.layout_str.as_str(), bump)
+                    .into_bump_str(),
+            );
+
         // let mut v =
         //     bumpalo::collections::Vec::from_iter_in(self.event_callbacks.iter().cloned(), bump);
         // TODO: `self.event_callbacks`   use take replace the clone
@@ -301,11 +312,11 @@ mod node_builder_test {
     fn test_node_builder() {
         let bump = bumpalo::Bump::new();
         let x = bump.alloc("hello");
-        let a = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| {None};
+        let a = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| None;
 
         // let cc = EventCallbackCloneStatic::new(a);
 
-        let a2 = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| {None};
+        let a2 = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| None;
         // let aa2 = fff(a2);
 
         // let cc2 = EventCallbackCloneStatic::new(a2);
@@ -318,6 +329,7 @@ mod node_builder_test {
         );
 
         let b = NodeBuilderWidget::<'_, Message> {
+            id: "".to_string(),
             widget: Rc::new(Button::new(Text::new("a"))),
             event_callbacks: vector![
                 EventCallback(String::from("xxx"), Box::new((a))).into(),

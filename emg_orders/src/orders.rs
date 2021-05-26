@@ -1,8 +1,5 @@
-use std::hash::Hash;
-
 //TODO Tick 脱库
 use emg_animation::Tick;
-use emg_debuggable::Debuggable;
 
 // @TODO: Add links to doc comment once https://github.com/rust-lang/rust/issues/43466 is resolved
 // or use nightly rustdoc. Applicable to the entire code base.
@@ -217,9 +214,9 @@ pub trait Orders<Message>: Clone {
     /// Panics when the handler doesn't return `Msg`, `Option<Msg>` or `()`.
     ///
     /// Stabilisation of issue [391](https://github.com/seed-rs/seed/issues/391) makes this a compile-time error.
-    #[allow(clippy::shadow_unrelated)]
-    // @TODO remove `'static`s once `optin_builtin_traits`, `negative_impls`
-    // @TODO or https://github.com/rust-lang/rust/issues/41875 is stable
+    // #[allow(clippy::shadow_unrelated)]
+    // TODO: remove `'static`s once `optin_builtin_traits`, `negative_impls`
+    // TODO: or https://github.com/rust-lang/rust/issues/41875 is stable
     fn after_next_render<MsU: 'static, F: FnOnce(Tick) -> MsU + 'static>(
         &self,
         task_name: &'static str,

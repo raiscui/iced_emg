@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-05-05 15:31:50
+ * @LastEditTime: 2021-05-26 15:08:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@ use std::borrow::Borrow;
 
 use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
 use emg::{edge_index_no_source, Edge, EdgeIndex};
-use emg_layout::{EmgEdgeItem, GenericLoc, GenericWH};
+use emg_layout::{EmgEdgeItem, GenericSizeAnchor};
 use emg_refresh::{RefreshFor, RefreshUseFor};
 use emg_state::{topo, use_state};
 use std::rc::Rc;
@@ -106,9 +106,9 @@ where
         &mut self,
         edge_index: EdgeIndex<Self::Ix>,
 
-        size: impl Into<GenericWH>,
-        origin: impl Into<GenericLoc>,
-        align: impl Into<GenericLoc>,
+        size: (GenericSizeAnchor, GenericSizeAnchor),
+        origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
+        align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
     ) -> Result<EmgEdgeItem<Self::Ix>, String>;
 
     /// # Errors
@@ -157,15 +157,14 @@ where
         Ok(edge_item)
     }
 
-    // TODO: use builder ?
     #[topo::nested]
     #[instrument(skip(self, size, origin, align))]
     fn setup_edge_in_topo(
         &mut self,
         ei: EdgeIndex<Self::Ix>,
-        size: impl Into<GenericWH>,
-        origin: impl Into<GenericLoc>,
-        align: impl Into<GenericLoc>,
+        size: (GenericSizeAnchor, GenericSizeAnchor),
+        origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
+        align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
         self.node_connect_eix(&ei).ok_or("node insert eix fails")?;
 
@@ -216,6 +215,7 @@ where
                 let nix = self.insert_node(root_id.clone(), Layer::new(root_id).into());
 
                 let mut root_ei = self
+                    //TODO: bind browser w h.
                     .setup_wh_edge_in_topo(edge_index_no_source(root_id.clone()), 1920, 1080)
                     .unwrap();
                 root_ei.refresh_use(edge_refreshers);
