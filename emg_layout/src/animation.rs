@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-06 09:16:26
+ * @LastEditTime: 2021-06-06 09:59:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -314,6 +314,8 @@ where
         let sa_running = (&sa_queued_interruptions, &sa_revised_steps)
             .map(|q, r| !q.is_empty() || !r.is_empty());
 
+            // ─────────────────────────────────────────────────────────────────
+
         // let sa_queued_interruptions_clone = sa_queued_interruptions.clone();
         // let sa_revised_steps_clone = sa_revised_steps.clone();
         // let sa_revised_props_clone = sa_revised_props.clone();
@@ -333,9 +335,9 @@ where
         //         .map(move |queued_interruptions, revised_steps, revised_props| {
         //             println!("timing change!");
 
-        //             interruption.set(queued_interruptions.clone());
-        //             steps.set(revised_steps.clone());
-        //             props.set(revised_props.clone());
+        //             interruption_og.set(queued_interruptions.clone());
+        //             steps_og.set(revised_steps.clone());
+        //             props_og.set(revised_props.clone());
         //         })
         //         ;
         // // .into()
@@ -378,7 +380,7 @@ where
 
     pub fn update_animation(&self) {
         //
-        // self.inside.interruption.get();
+        // self.inside.props.get();
         // self.store.borrow().engine_mut().stabilize();
         let queued_interruptions = self.queued_interruptions.get();
         let revised_steps = self.revised_steps.get();
@@ -560,7 +562,7 @@ mod tests {
                 println!("in ------ i:{}", &i);
                 // a.timing.get();
                 a.update_animation();
-                // println!("3***{:?}", a.inside.props.get());
+                println!("3***{:?}", a.inside.props.get());
             }
             insta::assert_debug_snapshot!("updated_end_0", &a);
             insta::assert_debug_snapshot!("updated_end_1", &a);
