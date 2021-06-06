@@ -142,7 +142,7 @@ where
         w: T,
         h: T,
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
-        self.node_connect_eix(&ei).ok_or("node insert eix fails")?;
+        self.nodes_connect_eix(&ei).ok_or("node insert eix fails")?;
         let source = use_state(ei.source_nix().as_ref().cloned());
         let target = use_state(ei.target_nix().as_ref().cloned());
         let edge_item = EmgEdgeItem::default_with_wh_in_topo(
@@ -166,7 +166,7 @@ where
         origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
         align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
-        self.node_connect_eix(&ei).ok_or("node insert eix fails")?;
+        self.nodes_connect_eix(&ei).ok_or("node insert eix fails")?;
 
         let source = use_state(ei.source_nix().as_ref().cloned());
         let target = use_state(ei.target_nix().as_ref().cloned());
@@ -188,7 +188,7 @@ where
         &mut self,
         ei: EdgeIndex<Self::Ix>,
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
-        self.node_connect_eix(&ei).ok_or("node insert eix fails")?;
+        self.nodes_connect_eix(&ei).ok_or("node insert eix fails")?;
 
         let source = use_state(ei.source_nix().as_ref().cloned());
         let target = use_state(ei.target_nix().as_ref().cloned());

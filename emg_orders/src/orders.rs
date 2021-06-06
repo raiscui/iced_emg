@@ -20,7 +20,7 @@ pub trait Orders<Message>: Clone {
         task_name: &'static str,
         // debuggable_callback: Debuggable<F>,
         cb: F,
-    ) -> &Self;
+    ) -> Option<MsU>;
     fn publish(&self, msg: Message);
     fn reset_render(&self);
     // fn process_after_render_queue(&self);

@@ -5,7 +5,9 @@
 #![feature(slice_concat_ext)]
 #![feature(div_duration)]
 #![feature(extend_one)]
-mod models;
+pub mod func;
+pub mod models;
+pub mod props;
 mod render;
 // ────────────────────────────────────────────────────────────────────────────────
 // use emg_debuggable::dbg4;
@@ -13,7 +15,7 @@ use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
 
 use im::{vector, Vector};
 use models::{map_to_motion, update_animation, Animation, Interpolation, Property, Step};
-use render::warn_for_double_listed_properties;
+use props::warn_for_double_listed_properties;
 
 // ────────────────────────────────────────────────────────────────────────────────
 pub use crate::models::color::fill;
@@ -45,7 +47,8 @@ const fn init_motion(position: f64, unit: String) -> Motion {
 }
 
 // initialState : List Animation.Model.Property -> Animation msg
-fn initial_state<Message>(current: Vector<Property>) -> Animation<Message>
+#[must_use]
+pub fn initial_state<Message>(current: Vector<Property>) -> Animation<Message>
 where
     Message: Clone,
 {
@@ -61,10 +64,6 @@ where
     }
 }
 
-const fn identity<T>(x: T) -> T {
-    x
-}
-
 // speed : { perSecond : Float } -> Animation.Model.Interpolation
 const fn speed(speed_value: f64) -> Interpolation {
     AtSpeed {
@@ -73,7 +72,8 @@ const fn speed(speed_value: f64) -> Interpolation {
 }
 
 // defaultInterpolationByProperty : Animation.Model.Property -> Animation.Model.Interpolation
-fn default_interpolation_by_property(prop: &Property) -> Interpolation {
+#[must_use]
+pub fn default_interpolation_by_property(prop: &Property) -> Interpolation {
     use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     // -- progress is set to 1 because it is changed to 0 when the animation actually starts
     // -- This is analagous to the spring starting at rest.
@@ -82,7 +82,7 @@ fn default_interpolation_by_property(prop: &Property) -> Interpolation {
             progress: 1.,
             start: 0.,
             duration,
-            ease: Rc::new(dbg4!(identity::<f64>)),
+            ease: Rc::new(dbg4!(std::convert::identity::<f64>)),
         })
     };
 
@@ -111,7 +111,8 @@ fn default_interpolation_by_property(prop: &Property) -> Interpolation {
 }
 
 // setDefaultInterpolation : Animation.Model.Property -> Animation.Model.Property
-fn set_default_interpolation(prop: Property) -> Property {
+#[must_use]
+pub fn set_default_interpolation(prop: Property) -> Property {
     let interp = default_interpolation_by_property(&prop);
 
     map_to_motion(
@@ -145,7 +146,10 @@ where
 ///This is used because the wait at the start of an interruption works differently than a normal wait.
 
 //    extractInitialWait : List (Animation.Model.Step msg) -> ( Time.Posix, List (Animation.Model.Step msg) )
-fn extract_initial_wait<Message>(steps: Vector<Step<Message>>) -> (Duration, Vector<Step<Message>>)
+#[must_use]
+pub fn extract_initial_wait<Message>(
+    steps: Vector<Step<Message>>,
+) -> (Duration, Vector<Step<Message>>)
 where
     Message: Clone,
 {
@@ -165,12 +169,13 @@ where
     //         _ ->
     //             ( Time.millisToPosix 0, steps )
     use Step::Wait;
-    match steps.front() {
+    let front = steps.front().cloned();
+    match front {
         None => (Duration::ZERO, steps),
         Some(step) => {
             if let Wait(till) = step {
                 let (additional_time, remaining_steps) = extract_initial_wait(steps.skip(1));
-                (*till + additional_time, remaining_steps)
+                (till + additional_time, remaining_steps)
             } else {
                 (Duration::ZERO, steps)
             }
@@ -220,6 +225,12 @@ pub fn update<Message: std::clone::Clone + std::fmt::Debug>(
 pub struct Debuggable<T: ?Sized> {
     text: &'static str,
     value: T,
+}
+
+impl<T: ?Sized> PartialEq for Debuggable<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.text.eq(other.text)
+    }
 }
 
 impl<T: ?Sized> std::ops::Deref for Debuggable<T> {

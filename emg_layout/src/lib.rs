@@ -7,22 +7,25 @@
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(iter_intersperse)]
 #![feature(min_specialization)]
+#![feature(auto_traits)]
+#![feature(negative_impls)]
 
 // // 固定 type  T:xxx
 // #![feature(trivial_bounds)]
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
 
-use std::{clone::Clone, cmp::{Eq, Ord}, hash::Hash, rc::Rc};
+use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, hash::Hash, rc::Rc};
 
 use calc::layout_calculating;
 use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
+use emg_core::GenericSize;
 use emg::{Edge, EdgeIndex, NodeIndex, };
-use emg_refresh::RefreshFor;
-use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, topo, use_state};
+use emg_refresh::{RefreshFor, RefreshWhoNoWarper};
+use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state};
 
 use im::Vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
@@ -42,6 +45,7 @@ use tracing::{span, trace_span,error,instrument, trace, Level};
 
 mod calc;
 mod impl_refresh;
+mod animation;
 pub mod add_values;
 
 
@@ -54,55 +58,7 @@ struct Mat4(Matrix4<f64>);
 
 // type Mat4 = Matrix4<f64>;
 
-
-#[derive(Display, Clone, Debug, From, PartialEq, PartialOrd, Eq)]
-#[display(fmt = "{}")]
-pub enum GenericSize {
-    #[display(fmt = "auto")]
-    Auto,
-    Length(ExactLength),
-    Percentage(Percent),
-    #[display(fmt = "initial")]
-    Initial,
-    #[display(fmt = "inherit")]
-    Inherit,
-    StringValue(String),
-}
-
-impl GenericSize {
-    #[must_use]
-    pub fn get_length_value(&self) ->  f64 {
-        
-            self
-                .try_get_length_value()
-                .expect("directly get length value failed, expected Length Px struct")
-        
-    }
-}
-impl From<CssWidth> for GenericSize {
-    fn from(w: CssWidth) -> Self {
-        match w {
-            CssWidth::Auto => Self::Auto,
-            CssWidth::Length(x) => x.into(),
-            CssWidth::Percentage(x) => x.into(),
-            CssWidth::Initial => Self::Initial,
-            CssWidth::Inherit => Self::Inherit,
-            CssWidth::StringValue(x) => x.into(),
-        }
-    }
-}
-impl From<CssHeight> for GenericSize {
-    fn from(w: CssHeight) -> Self {
-        match w {
-            CssHeight::Auto => Self::Auto,
-            CssHeight::Length(x) => x.into(),
-            CssHeight::Percentage(x) => x.into(),
-            CssHeight::Initial => Self::Initial,
-            CssHeight::Inherit => Self::Inherit,
-            CssHeight::StringValue(x) => x.into(),
-        }
-    }
-}
+// ────────────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug,Clone,PartialEq,Eq,Display)]
 pub struct GenericSizeAnchor(StateAnchor<GenericSize>);
@@ -114,18 +70,33 @@ impl std::ops::Deref for GenericSizeAnchor {
         &self.0
     }
 }
+// ────────────────────────────────────────────────────────────────────────────────
 
-
-
+impl ::core::ops::Mul<f64> for GenericSizeAnchor {
+    type Output = GenericSizeAnchor;
+    fn mul(self, rhs: f64) -> GenericSizeAnchor {
+        Self(self.0*rhs)
+    }
+}
+impl ::core::ops::Add for GenericSizeAnchor {
+    type Output = GenericSizeAnchor;
+    fn add(self, rhs: GenericSizeAnchor) -> GenericSizeAnchor {
+       Self( self.0+rhs.0)
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+pub auto trait NotStateAnchor {}
+impl<T> !NotStateAnchor for StateAnchor<T>{}
 
 impl<T> From<T> for GenericSizeAnchor
-where T : Into<GenericSize> + Clone+'static{
-    fn from(v: T) -> Self {
+where T : NotStateAnchor+ Into<GenericSize> + Clone+'static{
+     fn from(v: T) -> Self {
        Self(StateAnchor::constant( v.into()))
     }
 }
+
 impl<T> From<StateAnchor<T>> for GenericSizeAnchor
-where T : Into<GenericSize> + Clone+'static{
+where T :  Into<GenericSize> + Clone+'static{
     fn from(v: StateAnchor<T>) -> Self {
         
         Self(v.map(|x|x.clone().into()))
@@ -161,31 +132,6 @@ where T : Into<GenericSize> + Clone+'static{
 //     }
 // }
 
-
-impl GenericSize {
-    /// # Errors
-    ///
-    /// Will return `Err` if `self` does not `Length` and `Length`  unit is not px
-    pub fn try_get_length_value(&self) -> Result<f64, &Self> {
-        self.as_length()
-            .and_then(|l| l.try_get_number().ok())
-            .ok_or(self)
-    }
-
-    #[must_use]
-    pub const fn as_length(&self) -> Option<&ExactLength> {
-        if let Self::Length(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-}
-impl Default for GenericSize {
-    fn default() -> Self {
-        Self::Length(px(0))
-    }
-}
 
 
 impl Default for GenericLoc {
@@ -320,9 +266,7 @@ impl GenericLoc {
     }
 }
 #[derive(Debug, Clone, PartialEq)]
-pub struct Layout<Ix>
-where
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
+pub struct Layout
 {
     w:StateVar<GenericSizeAnchor>,
     h:StateVar<GenericSizeAnchor>,
@@ -333,14 +277,9 @@ where
     align_x: StateVar<GenericSizeAnchor>,
     align_y: StateVar<GenericSizeAnchor>,
     align_z: StateVar<GenericSizeAnchor>,
-    // origin: StateVar<GenericLoc>,
-    // align: StateVar<GenericLoc>,
-    path_styles: StateVar<Dict<EPath<Ix>, Style>>,
 }
 
-impl<Ix> Layout<Ix>
-where
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
+impl Layout
 {
     /// Set the layout's size.
     #[cfg(test)]
@@ -366,18 +305,15 @@ where
 
     }
 }
-impl<Ix> Copy for Layout<Ix> where
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static
+impl Copy for Layout 
 {
 }
 
-impl<Ix> std::fmt::Display for Layout<Ix>
-where
-    Ix: Clone + Hash + Eq + Default + Ord + 'static + std::fmt::Display,
+impl std::fmt::Display for Layout
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let x = format!(
-            "size:{{\nw:{},h:{};\n}}\norigin:{{\nx:{},y:{},z:{};\n}}\nalign:{{\nx:{},y:{},z:{};\npath_styles:{{\n{};\n}}",
+            "size:{{\nw:{},h:{};\n}}\norigin:{{\nx:{},y:{},z:{};\n}}\nalign:{{\nx:{},y:{},z:{}}}",
             indented(&self.w),
             indented(&self.h),
             indented(&self.origin_x),
@@ -386,7 +322,7 @@ where
             indented(&self.align_x),
             indented(&self.align_y),
             indented(&self.align_z),
-            indented(DictDisplay(self.path_styles.get()))
+            // 
         );
         write!(f, "Layout {{\n{}\n}}", indented(&x))
     }
@@ -430,7 +366,9 @@ pub struct LayoutCalculated {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EdgeData {
     calculated: LayoutCalculated,
-    styles_string: StateAnchor<String>, // matrix: M4Data,
+    styles_string: StateAnchor<String>, 
+    opt_p_calculated:Option<LayoutCalculated>,
+    // matrix: M4Data,
                                         // transforms_am: Transforms,
                                         // animations:
 }
@@ -539,17 +477,34 @@ where
 }
 
 pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct EmgEdgeItem<Ix>
 where
-    Ix: Clone + Hash + Eq + Ord + 'static + Default,
+    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
+    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {
+    //TODO save g_store
     pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,// dyn by Edge(source_nix , target_nix)
     pub paths:DictPathEiNodeSA<Ix>, // with parent self
-    pub layout: Layout<Ix>,
+    pub layout: Layout,
+    path_styles: StateVar<Dict<EPath<Ix>, Style>>, //TODO check use
+
     pub other_styles: StateVar<Style>,
     // no self  first try
     pub node:DictPathEiNodeSA<Ix>, //TODO with self?  not with self?
+    store:Rc<RefCell<GStateStore>>
+}
+
+
+impl<Ix> PartialEq for EmgEdgeItem<Ix> 
+where 
+Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
+
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.paths == other.paths && self.layout == other.layout && self.path_styles == other.path_styles
+        && self.other_styles == other.other_styles && self.node == other.node
+    }
 }
 impl<
         Ix: 'static
@@ -565,17 +520,18 @@ impl<
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let x = format!(
-            "id:{{\n{};\n}}\npaths:{{\n{};\n}}\nlayout:{{\n{};\n}}\nother_styles:{{\n{};\n}}\nnode:{{\n{};\n}}",
+            "id:{{\n{};\n}}\npaths:{{\n{};\n}}\nlayout:{{\n{};\n}}\npath_styles:{{\n{};\n}}\nother_styles:{{\n{};\n}}\nnode:{{\n{};\n}}",
             indented(&self.id),
             indented(DictDisplay(self.paths.get())),
             indented(&self.layout),
+            indented(DictDisplay(self.path_styles.get())),
             indented(&self.other_styles),
-            indented(DictDisplay(self.node.get()))
+            indented(DictDisplay(self.node.get())),
         );
         write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
     }
 }
-type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>;
+pub type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>;
 
 
 impl<Ix> EmgEdgeItem<Ix>
@@ -626,6 +582,7 @@ where
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         edges: StateAnchor<GraphEdgesDict<Ix>>,
+
          ) -> Self  where Ix:std::fmt::Debug{
 
         Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    
@@ -654,6 +611,7 @@ where
 
 #[topo::nested]
     pub fn new_in_topo(
+
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         edges: StateAnchor<GraphEdgesDict<Ix>>,
@@ -673,7 +631,7 @@ where
         let _child_span = trace_span!(" building new child ",id=%id_sv).entered();
         // ─────────────────────────────────────────────────────────────────
 
-        let layout = Layout::<Ix> {
+        let layout = Layout{
             w: use_state(size.0),
             h: use_state(size.1),
             z: use_state(StateAnchor::constant(0)),
@@ -683,8 +641,9 @@ where
             align_x: use_state(align.0),
             align_y: use_state(align.1),
             align_z: use_state(align.2),
-            path_styles: use_state(Dict::unit(EPath::<Ix>::default(), s())),
         };
+        let path_styles= use_state(Dict::unit(EPath::<Ix>::default(), s()));
+
 
         let other_styles_sv = use_state(s());
 
@@ -765,9 +724,9 @@ where
                         span!(Level::TRACE, "[ node recalculation ]:paths change ").entered();
                         
                        
-                    let (layout_calculated,styles_string) =  match path_edge_item_node {
-                        EdgeItemNode::Empty => path_ein_empty_node_builder(&layout, other_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &layout, path, other_styles_sv),
+                    let (opt_p_calculated,layout_calculated,styles_string) =  match path_edge_item_node {
+                        EdgeItemNode::Empty => path_ein_empty_node_builder(&layout, path_styles, other_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &layout, path, path_styles, other_styles_sv),
                         EdgeItemNode::String(_)  => {
                             todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
@@ -776,6 +735,7 @@ where
                     EdgeItemNode::EdgeData(EdgeData {
                         calculated: layout_calculated,
                         styles_string,
+                        opt_p_calculated
                     })
                 }).into()
 
@@ -787,8 +747,10 @@ where
             id: id_sv,
             paths,
             layout,
+            path_styles,
             other_styles: other_styles_sv,
             node,
+            store:state_store()
         }
     }
 }
@@ -797,16 +759,18 @@ where
 fn path_with_ed_node_builder<Ix>(
     id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>, 
     ped: &EdgeData,
-     layout: &Layout<Ix>,
+     layout: &Layout,
       path: &EPath<Ix>, 
-      other_styles_sv: StateVar<Style>) -> (LayoutCalculated, StateAnchor<String>) 
+      path_styles: StateVar<Dict<EPath<Ix>, Style>>,
+      other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>, LayoutCalculated, StateAnchor<String>) 
 where
-Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord +std::fmt::Display
+Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord +std::fmt::Display+'static
 {
+    let p_calculated = ped.calculated.clone();
     let layout_calculated = layout_calculating(id_sv, ped, layout);
     let p = path.clone();
-    let this_path_style_string_sa: StateAnchor<Option<String>> = layout
-                        .path_styles
+    let this_path_style_string_sa: StateAnchor<Option<String>> = 
+                        path_styles
                         .watch()
                         .map(move |d: &Dict<EPath<Ix>, Style>| {
                             let _g = trace_span!( "[  this_path_style_string_sa recalculation ]:layout.path_styles change ").entered();
@@ -835,14 +799,14 @@ Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
                                 )
                             },
                         );
-    (layout_calculated,styles_string)
+    (Some(p_calculated),layout_calculated,styles_string)
 }
 
-fn path_ein_empty_node_builder<Ix>(layout: &Layout<Ix>, other_styles_sv: StateVar<Style>) -> (LayoutCalculated, StateAnchor<String>)
+fn path_ein_empty_node_builder<Ix:'static>(layout: &Layout,path_styles:StateVar<Dict<EPath<Ix>, Style>>, other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>,LayoutCalculated, StateAnchor<String>)
  where 
     Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
     {
-        
+        //TODO 如果没有parent 那么 parent 就是 screen w h
     let calculated_size:StateAnchor<Vector2<f64>> = (&layout.w.watch(),&layout.h.watch()).then(|sa_w: &GenericSizeAnchor,sa_h: &GenericSizeAnchor| {
             (&**sa_w,&**sa_h).map(|w:&GenericSize,h:&GenericSize|->Vector2<f64>{
                 //TODO check editor display error 
@@ -876,7 +840,7 @@ fn path_ein_empty_node_builder<Ix>(layout: &Layout<Ix>, other_styles_sv: StateVa
             loc_styles,
         };
     let styles_string = (
-            &layout.path_styles.watch(),
+            &path_styles.watch(),
             &layout_calculated.loc_styles,
             &other_styles_sv.watch(),
         )
@@ -899,7 +863,7 @@ fn path_ein_empty_node_builder<Ix>(layout: &Layout<Ix>, other_styles_sv: StateVa
                 )
             },
         );
-    (layout_calculated,styles_string)
+    (None,layout_calculated,styles_string)
 }
 
 
@@ -907,7 +871,7 @@ fn path_ein_empty_node_builder<Ix>(layout: &Layout<Ix>, other_styles_sv: StateVa
 #[derive(Display, From, Clone, Debug, PartialEq, Eq)]
 pub enum EdgeItemNode {
     EdgeData(EdgeData),
-    String(String), //TODO make can write
+    String(String), //TODO make can write, in DictPathEiNodeSA it clone need RC?
     Empty,
 }
 
@@ -969,7 +933,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_refresh::RefreshUseFor;
-    use emg_state::StateVar;
+    use emg_state::{StateVar, state_store};
     use im::vector;
     use seed_styles::CssWidth;
     use styles::{CssBackgroundColorTrait, h, hsl, pc, width};
@@ -1029,6 +993,8 @@ mod tests {
         // init();
         let _xx = setup_global_subscriber();
         {
+
+       
             let span = span!(Level::TRACE, "loc-test");
             let _guard = span.enter();
 

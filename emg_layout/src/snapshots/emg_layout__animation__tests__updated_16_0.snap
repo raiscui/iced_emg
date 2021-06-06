@@ -1,0 +1,109 @@
+---
+source: emg_layout/src/animation.rs
+expression: "&a"
+
+---
+AnimationEdge {
+    inside: AnimationInside {
+        steps: StateVar(
+            [
+                _Step,
+                To(
+                    [
+                        Prop(
+                            "opacity",
+                            Motion {
+                                position: 1.0,
+                                velocity: 0.0,
+                                target: 1.0,
+                                interpolation: Spring {
+                                    stiffness: 170.0,
+                                    damping: 26.0,
+                                },
+                                unit: "",
+                                interpolation_override: None,
+                            },
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        interruption: StateVar(
+            [],
+        ),
+        props: StateVar(
+            [
+                Prop(
+                    "opacity",
+                    Motion {
+                        position: 0.95278155548,
+                        velocity: -2.83322,
+                        target: 0.0,
+                        interpolation: Spring {
+                            stiffness: 170.0,
+                            damping: 26.0,
+                        },
+                        unit: "",
+                        interpolation_override: None,
+                    },
+                ),
+            ],
+        ),
+    },
+    timing: StateAnchor(
+        Timing {
+            current: 16ms,
+            dt: 16.666ms,
+        },
+    ),
+    running: StateAnchor(
+        true,
+    ),
+    queued_interruptions: StateAnchor(
+        [],
+    ),
+    revised_steps: StateAnchor(
+        [
+            _Step,
+            To(
+                [
+                    Prop(
+                        "opacity",
+                        Motion {
+                            position: 1.0,
+                            velocity: 0.0,
+                            target: 1.0,
+                            interpolation: Spring {
+                                stiffness: 170.0,
+                                damping: 26.0,
+                            },
+                            unit: "",
+                            interpolation_override: None,
+                        },
+                    ),
+                ],
+            ),
+        ],
+    ),
+    revised_props: StateAnchor(
+        [
+            Prop(
+                "opacity",
+                Motion {
+                    position: 0.95278155548,
+                    velocity: -2.83322,
+                    target: 0.0,
+                    interpolation: Spring {
+                        stiffness: 170.0,
+                        damping: 26.0,
+                    },
+                    unit: "",
+                    interpolation_override: None,
+                },
+            ),
+        ],
+    ),
+    send_messages: StateAnchor(
+        [],
+    ),
+}

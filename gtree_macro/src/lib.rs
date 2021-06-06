@@ -863,10 +863,10 @@ mod tests {
                                         |tick| {
                                             Message::Event(Event::OnAnimationFrame(tick))
                                         }
-                                    );
+                                    )
 
                                   
-                                    None
+                                    
                                         }
                     ]
                 ],

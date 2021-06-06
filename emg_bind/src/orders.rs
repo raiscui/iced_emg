@@ -4,7 +4,7 @@ use fxhash::FxBuildHasher;
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-05-26 15:07:11
+ * @LastEditTime: 2021-05-31 17:08:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -196,7 +196,7 @@ where
         task_name: &'static str,
         // debuggable_callback: Debuggable<F>,
         cb: F,
-    ) -> &Self {
+    ) -> Option<MsU> {
         self.after_next_render(task_name, cb)
             .vdom
             .borrow()
@@ -204,7 +204,7 @@ where
             .unwrap()
             // .weak()
             .schedule_render_with_orders(self.clone());
-        self
+        None
     }
 
     fn publish(&self, msg: Message) {

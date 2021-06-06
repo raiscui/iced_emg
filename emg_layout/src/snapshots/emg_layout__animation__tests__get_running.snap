@@ -1,0 +1,69 @@
+---
+source: emg_layout/src/animation.rs
+expression: "&a"
+
+---
+AnimationEdge {
+    inside: AnimationInside {
+        steps: StateVar(
+            [],
+        ),
+        interruption: StateVar(
+            [],
+        ),
+        props: StateVar(
+            [
+                Prop(
+                    "opacity",
+                    Motion {
+                        position: 1.0,
+                        velocity: 0.0,
+                        target: 1.0,
+                        interpolation: Spring {
+                            stiffness: 170.0,
+                            damping: 26.0,
+                        },
+                        unit: "",
+                        interpolation_override: None,
+                    },
+                ),
+            ],
+        ),
+    },
+    timing: StateAnchor(
+        Timing {
+            current: 0ns,
+            dt: 0ns,
+        },
+    ),
+    running: StateAnchor(
+        false,
+    ),
+    queued_interruptions: StateAnchor(
+        [],
+    ),
+    revised_steps: StateAnchor(
+        [],
+    ),
+    revised_props: StateAnchor(
+        [
+            Prop(
+                "opacity",
+                Motion {
+                    position: 1.0,
+                    velocity: 0.0,
+                    target: 1.0,
+                    interpolation: Spring {
+                        stiffness: 170.0,
+                        damping: 26.0,
+                    },
+                    unit: "",
+                    interpolation_override: None,
+                },
+            ),
+        ],
+    ),
+    send_messages: StateAnchor(
+        [],
+    ),
+}

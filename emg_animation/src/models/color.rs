@@ -5,7 +5,7 @@ use im::vector;
 /*
  * @Author: Rais
  * @Date: 2021-05-10 15:31:40
- * @LastEditTime: 2021-05-18 22:41:41
+ * @LastEditTime: 2021-06-02 17:42:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,6 +19,7 @@ pub struct Color {
 }
 
 impl Color {
+    #[must_use]
     pub const fn new(red: u8, green: u8, blue: u8, alpha: f64) -> Self {
         Self {
             red,

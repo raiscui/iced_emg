@@ -17,6 +17,15 @@ pub struct Easing {
     pub ease: Rc<Debuggable<dyn Fn(Precision) -> Precision>>,
 }
 
+impl PartialEq for Easing {
+    fn eq(&self, other: &Self) -> bool {
+        self.progress == other.progress
+            && self.duration == other.duration
+            && self.start == other.start
+            && self.ease.text == other.ease.text
+    }
+}
+
 // impl Clone for Easing {
 //     fn clone(&self) -> Self {
 //         Self{
@@ -38,7 +47,7 @@ pub struct Easing {
 // 1秒(s) ＝1000毫秒(ms)
 // 1毫秒(ms)＝1000微秒(us)
 // 1微秒 micro (us)＝1000纳秒(ns)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Interpolation {
     Spring {
         stiffness: Precision,
@@ -50,7 +59,7 @@ pub enum Interpolation {
     },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Motion {
     pub(crate) position: Precision,
     pub(crate) velocity: Precision,
@@ -60,20 +69,27 @@ pub struct Motion {
     pub(crate) interpolation_override: Option<Interpolation>,
 }
 
-#[derive(Clone, Debug)]
+impl Motion {
+    /// Get a mutable reference to the motion's interpolation override.
+    pub fn interpolation_override_mut(&mut self) -> &mut Option<Interpolation> {
+        &mut self.interpolation_override
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct CubicCurveMotion {
     control1: Vector<Motion>,
     control2: Vector<Motion>,
     point: Vector<Motion>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct QuadraticCurveMotion {
     control: Vector<Motion>,
     point: Vector<Motion>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ArcMotion {
     x: Motion,
     y: Motion,
@@ -82,7 +98,7 @@ pub struct ArcMotion {
     end_angle: Motion,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PathCommand {
     Move(Vector<Motion>),
     MoveTo(Vector<Motion>),
@@ -105,7 +121,7 @@ pub enum PathCommand {
     Close,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ShadowMotion {
     offset_x: Motion,
     offset_y: Motion,
@@ -117,7 +133,7 @@ pub struct ShadowMotion {
     alpha: Motion,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Property {
     Exact(Rc<String>, String),
     Color(Rc<String>, Vector<Motion>),
@@ -129,29 +145,34 @@ pub enum Property {
     Angle(Rc<String>, Motion),
     Points(Vector<[Motion; 2]>),
     Path(Vector<PathCommand>),
+    // Anchor(Rc<String>, StateAnchor<GenericSize>),
 }
-// propertyName : Property -> String
-pub fn property_name(prop: &Property) -> &str {
-    use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
 
-    match prop {
-        Exact(name, ..)
-        | Color(name, ..)
-        | Shadow(name, ..)
-        | Prop(name, ..)
-        | Prop2(name, ..)
-        | Prop3(name, ..)
-        | Prop4(name, ..)
-        | Angle(name, ..) => name,
+impl Property {
+    #[must_use]
+    pub fn name(&self) -> &str {
+        use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
 
-        Points(_) => "points",
+        match self {
+            Exact(name, ..)
+            | Color(name, ..)
+            | Shadow(name, ..)
+            | Prop(name, ..)
+            | Prop2(name, ..)
+            | Prop3(name, ..)
+            | Prop4(name, ..)
+            | Angle(name, ..) => name,
 
-        Path(_) => "path",
+            Points(_) => "points",
+
+            Path(_) => "path",
+        }
     }
 }
+// propertyName : Property -> String
 
 #[allow(clippy::pub_enum_variant_names)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Step<Message>
 where
     Message: Clone,
@@ -166,13 +187,52 @@ where
     Loop(Vector<Step<Message>>),
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Timing {
     pub(crate) current: Duration,
     pub(crate) dt: Duration,
 }
 
-type StepTimeVector<Message> = Vector<(Duration, Vector<Step<Message>>)>;
+impl Timing {
+    #[must_use]
+    pub const fn new(current: Duration, dt: Duration) -> Self {
+        Self { current, dt }
+    }
+
+    /// Get a reference to the timing's current.
+    #[must_use]
+    pub const fn current(&self) -> Duration {
+        self.current
+    }
+
+    /// Get a reference to the timing's dt.
+    #[must_use]
+    pub const fn dt(&self) -> Duration {
+        self.dt
+    }
+
+    /// Set the timing's current.
+    pub fn set_current(&mut self, current: Duration) {
+        self.current = current;
+    }
+
+    /// Set the timing's dt.
+    pub fn set_dt(&mut self, dt: Duration) {
+        self.dt = dt;
+    }
+
+    /// Get a mutable reference to the timing's current.
+    pub fn current_mut(&mut self) -> &mut Duration {
+        &mut self.current
+    }
+
+    /// Get a mutable reference to the timing's dt.
+    pub fn dt_mut(&mut self) -> &mut Duration {
+        &mut self.dt
+    }
+}
+
+pub type StepTimeVector<Message> = Vector<(Duration, Vector<Step<Message>>)>;
 
 #[derive(Debug)]
 pub struct Animation<Message>
@@ -191,6 +251,10 @@ impl<Message> Animation<Message>
 where
     Message: Clone,
 {
+    /// # Panics
+    /// temp fn ,
+    /// Will panic if p not prop
+    #[must_use]
     pub fn get_position(&self, style_i: usize) -> Precision {
         let p = self.style.get(style_i).unwrap();
         match p {
@@ -446,7 +510,8 @@ pub fn update_animation<Message: std::clone::Clone + std::fmt::Debug>(
 }
 
 // resolveSteps : List Property -> List (Step msg) -> Time.Posix -> ( List Property, List msg, List (Step msg) )
-fn resolve_steps<Message>(
+#[must_use]
+pub fn resolve_steps<Message>(
     current_style: Vector<Property>,
     mut steps: Vector<Step<Message>>,
     dt: Duration,
@@ -538,10 +603,10 @@ where
     }
 }
 fn replace_props(props: Vector<Property>, replacements: &Vector<Property>) -> Vector<Property> {
-    let replacement_names: Vec<&str> = replacements.iter().map(property_name).collect();
+    let replacement_names: Vec<&str> = replacements.iter().map(Property::name).collect();
     let removed = props
         .into_iter()
-        .filter(|prop| replacement_names.contains(&property_name(prop)));
+        .filter(|prop| replacement_names.contains(&prop.name()));
     removed.chain(replacements.clone()).collect()
 }
 /// alreadyThere : List Property -> List Property -> Bool
@@ -879,15 +944,18 @@ fn step_interpolation(dt: Duration, mut motion: Motion) -> Motion {
             }
             motion
         }
-        Interpolation::Easing(Easing {
-            progress,
-            duration,
-            ease,
-            start,
-        }) => {
+        Interpolation::Easing(easing) => {
+            let Easing {
+                progress,
+                duration,
+                ease,
+                start,
+            } = easing;
+
             let new_progress =
                 (dt.div_duration_f64(duration) + (progress as f64)).min(1.) as Precision;
-            let eased = ease(new_progress);
+            // let eased = ease(new_progress);
+            let eased = (**ease)(new_progress);
 
             let distance = motion.target - start;
             let new_pos = (eased.mul_add(distance, start) * 10000.).trunc() * 0.0001;
@@ -970,9 +1038,7 @@ fn zip_properties_greedy(
                         let (mut matching_b_s, non_matching_b_s): (
                             Vector<Property>,
                             Vector<Property>,
-                        ) = stack_b
-                            .into_iter()
-                            .partition(|b| property_name(&a) == property_name(b));
+                        ) = stack_b.into_iter().partition(|b| a.name() == b.name());
                         //
                         let b_head = matching_b_s.pop_front();
                         let new_stack_b = {
@@ -1011,7 +1077,7 @@ fn zip_properties_greedy(
     for b in &warnings {
         warn!(
             "{} has no initial value and therefore will not be animated.",
-            property_name(b)
+            b.name()
         );
     }
     // props.reverse();

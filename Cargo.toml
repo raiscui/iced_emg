@@ -4,6 +4,7 @@ members = [
     "gtree_proc_macro",
     "gtree_macro",
     "gtree",
+    "emg_core",
     "emg_layout",
     "emg_bind",
     "emg_refresh",

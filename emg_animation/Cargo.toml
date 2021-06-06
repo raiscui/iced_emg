@@ -15,7 +15,8 @@ tracing = { version = "^0.1" }
 im = "15.0.0"
 iter_fixed = "0.2.0"
 # emg_orders = { path = "../emg_orders"}
-emg_debuggable = { path = "../emg_debuggable" }
-
+# emg_debuggable = { path = "../emg_debuggable" }
+emg_state = { path = "../emg_state" }
+emg_core = { path = "../emg_core" }
 [dev-dependencies]
 insta = { version = "1.7.1" }

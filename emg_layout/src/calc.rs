@@ -1,7 +1,9 @@
+use std::ops::Mul;
+
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-05-26 08:29:42
+ * @LastEditTime: 2021-06-02 17:27:44
  * @LastEditors: Rais
 * @Description:
 */
@@ -20,7 +22,7 @@ use tracing::{ trace,trace_span};
 pub fn layout_calculating<Ix>(
     id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
     path_edgedata: &EdgeData,
-    layout: &Layout<Ix>,
+    layout: &Layout,
 ) -> LayoutCalculated 
 where 
     Ix: 'static + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default + std::cmp::Ord+ std::fmt::Display 
@@ -30,7 +32,8 @@ where
     
             let EdgeData{
                 calculated: p_calculated,
-                styles_string: _
+                
+                ..
             }=path_edgedata;
             // ─────────────────────────────────────────────────────────────────
 
@@ -152,7 +155,7 @@ fn calculation_w(p_calc_size: &Vector2<f64>, w: &GenericSize) -> f64 {
     trace!("calculation_w");
     match w {
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
+            let v = ex_l.value();
             match ex_l.unit {
                 styles::Unit::Px => v,
                 styles::Unit::Rem
@@ -165,12 +168,24 @@ fn calculation_w(p_calc_size: &Vector2<f64>, w: &GenericSize) -> f64 {
             }
         }
         GenericSize::Percentage(pc) => p_calc_size.x * pc.value()*0.01,
+        
         GenericSize::Auto
         | GenericSize::Initial
         | GenericSize::Inherit
         | GenericSize::StringValue(_) => {
             todo!()
         }
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                     calculation_w(p_calc_size, a)*b.into_inner()
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                    calculation_w(p_calc_size, a)+ calculation_w(p_calc_size,b)
+
+                },
+            }
+        },
     }
 
 
@@ -179,12 +194,11 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
     trace!("calculation_h");
     
     match h {
-        GenericSize::Percentage(pc) => p_calc_size.x * pc.value()*0.01,
+        GenericSize::Percentage(pc) => p_calc_size.y * pc.value()*0.01,
 
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px => v,
+                styles::Unit::Px => ex_l.value(),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -200,6 +214,17 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
         | GenericSize::StringValue(_) => {
             todo!()
         }
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                    calculation_h(p_calc_size, a)*b.into_inner()
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                      calculation_h(p_calc_size, a)+ calculation_h(p_calc_size,b)
+
+                },
+            }
+        },
     }
 
 }
@@ -208,11 +233,16 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
 fn calculation_align(p_calc_size: &Vector2<f64>, align_x: &GenericSize,align_y: &GenericSize) -> Translation3<f64> {
     trace!("calculation_align");
 
-    let trans_x = match align_x {
+    calculation_align_x(p_calc_size, align_x) * calculation_align_y(p_calc_size, align_y)
+}
+
+fn calculation_align_x(p_calc_size: &Vector2<f64>, align_x: &GenericSize) -> Translation3<f64> {
+    trace!("calculation_align");
+
+     match align_x {
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px => Translation3::<f64>::new(v, 0., 0.),
+                styles::Unit::Px => Translation3::<f64>::new(ex_l.value(), 0., 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -229,8 +259,28 @@ fn calculation_align(p_calc_size: &Vector2<f64>, align_x: &GenericSize,align_y: 
         | GenericSize::StringValue(_) => {
             todo!()
         }
-    };
-    let trans_y = match align_y {
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+
+                    // let scaling = nalgebra::Similarity3::from_scaling(b.into_inner());
+                    let mut x = calculation_align_x(p_calc_size,a) ;
+                    x.vector.scale_mut(b.into_inner());
+                    x
+                    
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                      calculation_align_x(p_calc_size, a)* calculation_align_x(p_calc_size,b)
+                }
+            }
+        },
+    }
+}
+fn calculation_align_y(p_calc_size: &Vector2<f64>, align_y: &GenericSize) -> Translation3<f64> {
+    trace!("calculation_align");
+
+    
+    match align_y {
         GenericSize::Length(ex_l) => {
             let v = ex_l.value.into_inner();
             match ex_l.unit {
@@ -251,18 +301,34 @@ fn calculation_align(p_calc_size: &Vector2<f64>, align_x: &GenericSize,align_y: 
         | GenericSize::StringValue(_) => {
             todo!()
         }
-    };
-    trans_x * trans_y
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                  
+                    let mut v = calculation_align_y(p_calc_size,a) ;
+                    v.vector.scale_mut(b.into_inner());
+                    v
+
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                    calculation_align_y(p_calc_size, a) * calculation_align_y(p_calc_size,b)
+                }
+            }
+        },
+    }
 }
 
 pub fn calculation_origin(calc_size: &Vector2<f64>, origin_x: &GenericSize,origin_y: &GenericSize) -> Translation3<f64> {
     trace!("calculation_origin");
+    calculation_origin_x(calc_size, origin_x) * calculation_origin_y(calc_size, origin_y)
+}
+pub fn calculation_origin_x(calc_size: &Vector2<f64>, origin_x: &GenericSize) -> Translation3<f64> {
+    trace!("calculation_origin");
 
-    let trans_x = match origin_x {
+     match origin_x {
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px => Translation3::<f64>::new(-v, 0., 0.),
+                styles::Unit::Px => Translation3::<f64>::new(-ex_l.value(), 0., 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -279,12 +345,29 @@ pub fn calculation_origin(calc_size: &Vector2<f64>, origin_x: &GenericSize,origi
         | GenericSize::StringValue(_) => {
             todo!()
         }
-    };
-    let trans_y = match origin_y {
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                 
+                    let mut v = calculation_origin_x(calc_size,a) ;
+                    v.vector.scale_mut(b.into_inner());
+                    v
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                    calculation_origin_x(calc_size, a) * calculation_origin_x(calc_size,b)
+                }
+            }
+        },
+    }
+}
+pub fn calculation_origin_y(calc_size: &Vector2<f64>, origin_y: &GenericSize) -> Translation3<f64> {
+    trace!("calculation_origin");
+
+    
+     match origin_y {
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px => Translation3::<f64>::new(0., -v, 0.),
+                styles::Unit::Px => Translation3::<f64>::new(0., -ex_l.value(), 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -301,6 +384,17 @@ pub fn calculation_origin(calc_size: &Vector2<f64>, origin_x: &GenericSize,origi
         | GenericSize::StringValue(_) => {
             todo!()
         }
-    };
-    trans_x * trans_y
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                    let mut v = calculation_origin_y(calc_size,a) ;
+                    v.vector.scale_mut(b.into_inner());
+                    v
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                    calculation_origin_y(calc_size, a) * calculation_origin_y(calc_size,b)
+                }
+            }
+        },
+    }
 }

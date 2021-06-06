@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-05-26 08:26:34
+ * @LastEditTime: 2021-06-05 20:26:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,7 +12,7 @@ use anchors::{
 };
 use anymap::any::Any;
 use std::{cell::RefCell, clone::Clone, collections::HashMap, marker::PhantomData, rc::Rc};
-use tracing::trace_span;
+use tracing::{trace, trace_span};
 // use delegate::delegate;
 use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
 
@@ -27,6 +27,12 @@ pub struct GStateStore {
     id_to_key_map: HashMap<StorageKey, DefaultKey>,
     primary_slotmap: DenseSlotMap<DefaultKey, StorageKey>,
     engine: RefCell<Engine>,
+}
+
+impl std::fmt::Debug for GStateStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "the graph store")
+    }
 }
 impl Default for GStateStore {
     fn default() -> Self {
@@ -44,7 +50,9 @@ impl GStateStore {
     ///
     /// Will panic if engine cannot `borrow_mut`
     fn engine_get<O: Clone + 'static>(&self, anchor: &Anchor<O>) -> O {
+        trace!("engine_get: {}", &std::any::type_name::<O>());
         let _g = trace_span!("-> enging_get", "type: {}", &std::any::type_name::<O>()).entered();
+
         self.engine.try_borrow_mut().map_or_else(
             |err| {
                 panic!(
@@ -149,6 +157,11 @@ impl GStateStore {
     //             .and_then(|existing_secondary_map| existing_secondary_map.remove(key))
     //     }
     // }
+
+    /// Get a mutable reference to the g state store's engine.
+    pub fn engine_mut(&self) -> std::cell::RefMut<Engine> {
+        self.engine.borrow_mut()
+    }
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -223,7 +236,11 @@ where
     }
 
     // stores a value of type T in a backing Store
-    pub fn set(&self, value: T) {
+    pub fn set(&self, value: T)
+    // where
+    //     T: std::fmt::Debug,
+    {
+        // println!("set: {:?}", &value);
         set_state_with_topo_id::<T>(value, self.id);
     }
     pub fn store_set(&self, store: &GStateStore, value: T) {
