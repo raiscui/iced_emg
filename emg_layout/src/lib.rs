@@ -9,12 +9,17 @@
 #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
+// ────────────────────────────────────────────────────────────────────────────────
+#![feature(test)]
+// ────────────────────────────────────────────────────────────────────────────────
+
+
+
 
 // // 固定 type  T:xxx
 // #![feature(trivial_bounds)]
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
-
 use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, hash::Hash, rc::Rc};
 
 use calc::layout_calculating;
@@ -45,7 +50,7 @@ use tracing::{span, trace_span,error,instrument, trace, Level};
 
 mod calc;
 mod impl_refresh;
-mod animation;
+pub mod animation;
 pub mod add_values;
 
 

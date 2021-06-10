@@ -74,6 +74,11 @@ impl Motion {
     pub fn interpolation_override_mut(&mut self) -> &mut Option<Interpolation> {
         &mut self.interpolation_override
     }
+
+    /// Get a reference to the motion's position.
+    pub fn position(&self) -> &Precision {
+        &self.position
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -441,7 +446,8 @@ pub fn map_to_motion(func: &dyn Fn(Motion) -> Motion, prop: Property) -> Propert
 }
 fn refresh_timing(now: Duration, timing: Timing) -> Timing {
     let dt = {
-        let dt_tmp = now - timing.current;
+        let dt_tmp = now.saturating_sub(timing.current);
+
         if timing.current == Duration::ZERO || dt_tmp.as_millis() > 34 {
             Duration::from_micros(16666)
         } else {
@@ -614,7 +620,7 @@ fn already_there(current: Vector<Property>, target: Vector<Property>) -> bool {
     let x = start_towards(false, current, target);
     step(Duration::ZERO, x).iter().all(is_done)
 }
-type Precision = f64;
+pub type Precision = f64;
 const VELOCITY_ERROR_MARGIN: Precision = 0.01;
 const PROGRESS_ERROR_MARGIN: Precision = 0.005;
 
