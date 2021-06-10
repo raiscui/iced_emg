@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-10 12:18:35
+ * @LastEditTime: 2021-06-10 15:56:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -197,17 +197,17 @@ where
         // };
 
         let AnimationInside {
-            interruption: interruption_new,
-            steps: steps_new,
-            props: props_new,
+            interruption: interruption_init,
+            steps: steps_init,
+            props: props_init,
         } = sv_inside;
 
-        let sa_running = (&interruption_new.watch(), &steps_new.watch())
+        let sa_running = (&interruption_init.watch(), &steps_init.watch())
             .map(|q, r| !q.is_empty() || !r.is_empty());
 
         let interruption_cut = {
             let mut ct = sv_now.get();
-            (&sa_timing, &interruption_new.watch())
+            (&sa_timing, &interruption_init.watch())
                 .map(|t, i| (*t, i.clone()))
                 .cutoff(move |(timing, _)| {
                     let current = timing.current();
@@ -224,7 +224,7 @@ where
 
         let steps_cut = {
             let mut ct = sv_now.get();
-            (&sa_timing, &steps_new.watch())
+            (&sa_timing, &steps_init.watch())
                 .map(|t, i| (*t, i.clone()))
                 .cutoff(move |(timing, _)| {
                     let current = timing.current();
@@ -240,7 +240,7 @@ where
         };
         let props_cut = {
             let mut ct = sv_now.get();
-            (&sa_timing, &props_new.watch())
+            (&sa_timing, &props_init.watch())
                 .map(|t, i| (*t, i.clone()))
                 .cutoff(move |(timing, _)| {
                     let current = timing.current();
