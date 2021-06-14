@@ -216,7 +216,7 @@ pub fn update<Message: std::clone::Clone + std::fmt::Debug>(
     tick: Tick,
     animation: &mut Animation<Message>,
 ) {
-    update_animation(tick, animation)
+    update_animation(tick, animation);
 }
 // ────────────────────────────────────────────────────────────────────────────────
 

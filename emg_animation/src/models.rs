@@ -76,7 +76,8 @@ impl Motion {
     }
 
     /// Get a reference to the motion's position.
-    pub fn position(&self) -> &Precision {
+    #[must_use]
+    pub const fn position(&self) -> &Precision {
         &self.position
     }
 }
@@ -510,7 +511,7 @@ pub fn update_animation<Message: std::clone::Clone + std::fmt::Debug>(
     model.running = !revised_steps.is_empty() || !queued_interruptions.is_empty();
     model.interruption = queued_interruptions;
     model.steps = revised_steps;
-    model.style = revised_style
+    model.style = revised_style;
 
     //TODO: cmd send message
 }
