@@ -55,6 +55,8 @@ pub enum Unit {
     Cm,
     Vw,
     Vh,
+    Pc,
+    None,
 }
 
 pub fn px<T: Into<f64>>(val: T) -> ExactLength {
@@ -108,6 +110,9 @@ impl std::fmt::Display for ExactLength {
             Unit::Cm => write!(f, "{}cm", self.value),
             Unit::Vw => write!(f, "{}vw", self.value),
             Unit::Vh => write!(f, "{}vh", self.value),
+
+            Unit::None => write!(f, "{}", self.value),
+            Unit::Pc => unreachable!(),
         }
     }
 }

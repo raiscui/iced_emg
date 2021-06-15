@@ -18,5 +18,8 @@ iter_fixed = "0.2.0"
 # emg_debuggable = { path = "../emg_debuggable" }
 emg_state = { path = "../emg_state" }
 emg_core = { path = "../emg_core" }
+seed_styles = { path = "../../styles_hooks/seed_styles" }
+ordered-float = "2.5.1"
+
 [dev-dependencies]
 insta = { version = "1.7.1" }

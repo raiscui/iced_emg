@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-06-05 20:26:10
+ * @LastEditTime: 2021-06-11 10:38:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -244,22 +244,22 @@ where
         set_state_with_topo_id::<T>(value, self.id);
     }
     pub fn store_set(&self, store: &GStateStore, value: T) {
-        store.set_state_with_key::<T>(value, &StorageKey::TopoKey(self.id))
+        store.set_state_with_key::<T>(value, &StorageKey::TopoKey(self.id));
     }
 
     /// `set_with` Fn(&T) -> T
     /// `G_STATE_STORE`  only use once to set, get.
     pub fn set_with<F: Fn(&T) -> T>(&self, func: F) {
-        read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func(var.get().as_ref())))
+        read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func(var.get().as_ref())));
     }
     pub fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
         self.store_get_var_with(store, |var| {
             var.set(func(var.get().as_ref()));
-        })
+        });
     }
 
     pub fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
-        read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func_once(var.get().as_ref())))
+        read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func_once(var.get().as_ref())));
     }
     pub fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F) {
         let var = store
@@ -373,7 +373,7 @@ where
             let mut old = v.clone();
             func(&mut old);
             old
-        })
+        });
     }
     fn store_update<F: FnOnce(&mut T)>(&self, store: &GStateStore, func: F) {
         // read_var_with_topo_id::<_, T, ()>(self.id, |var| {
@@ -385,7 +385,7 @@ where
             let mut old = v.clone();
             func(&mut old);
             old
-        })
+        });
     }
 }
 #[derive(Clone, PartialEq, Eq)]
@@ -764,7 +764,7 @@ fn set_state_with_topo_id<T: 'static>(data: T, current_id: TopoKey) {
     G_STATE_STORE.with(|g_state_store_refcell| {
         g_state_store_refcell
             .borrow()
-            .set_state_with_key::<T>(data, &StorageKey::TopoKey(current_id))
+            .set_state_with_key::<T>(data, &StorageKey::TopoKey(current_id));
     });
 
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
@@ -773,7 +773,7 @@ fn insert_var_with_topo_id<T: 'static>(var: Var<T>, current_id: TopoKey) {
     G_STATE_STORE.with(|g_state_store_refcell| {
         g_state_store_refcell
             .borrow_mut()
-            .insert_var_with_key::<T>(var, &StorageKey::TopoKey(current_id))
+            .insert_var_with_key::<T>(var, &StorageKey::TopoKey(current_id));
     });
 
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));

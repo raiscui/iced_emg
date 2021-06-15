@@ -3,7 +3,7 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-06-02 19:34:18
+ * @LastEditTime: 2021-06-13 15:42:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -117,7 +117,11 @@ where
     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static,
 {
     default fn refresh_for(&self, who: &mut Who) {
-        warn!("who Refresh use StateVar");
+        warn!(
+            "who:{:?} Refresh use StateVar:{:?}",
+            &std::any::type_name::<Who>(),
+            &std::any::type_name::<Use>()
+        );
 
         who.refresh_use(&self.get());
     }

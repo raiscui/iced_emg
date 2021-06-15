@@ -29,7 +29,7 @@ use derive_more::Into;
 // use derive_more::TryInto;
 use emg_core::GenericSize;
 use emg::{Edge, EdgeIndex, NodeIndex, };
-use emg_refresh::{RefreshFor, RefreshWhoNoWarper};
+use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state};
 
 use im::Vector;
@@ -37,9 +37,13 @@ use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translatio
 use nalgebra as na;
 pub use seed_styles as styles;
 use styles::{
-     px, s, CssHeight, CssTransform, CssValueTrait, CssWidth, ExactLength, Percent, Style,
+     px, s, CssTransform, CssValueTrait, Style,
     UpdateStyle,
 };
+// use styles::Percent;
+// use styles::ExactLength;
+// use styles::CssWidth;
+// use styles::CssHeight;
 use styles::{CssHeightTrait, CssTransformTrait, CssWidthTrait};
 //
 // ────────────────────────────────────────────────────────────────────────────────
@@ -78,14 +82,14 @@ impl std::ops::Deref for GenericSizeAnchor {
 // ────────────────────────────────────────────────────────────────────────────────
 
 impl ::core::ops::Mul<f64> for GenericSizeAnchor {
-    type Output = GenericSizeAnchor;
-    fn mul(self, rhs: f64) -> GenericSizeAnchor {
+    type Output = Self;
+    fn mul(self, rhs: f64) -> Self {
         Self(self.0*rhs)
     }
 }
 impl ::core::ops::Add for GenericSizeAnchor {
-    type Output = GenericSizeAnchor;
-    fn add(self, rhs: GenericSizeAnchor) -> GenericSizeAnchor {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self {
        Self( self.0+rhs.0)
     }
 }
@@ -107,35 +111,6 @@ where T :  Into<GenericSize> + Clone+'static{
         Self(v.map(|x|x.clone().into()))
     }
 }
-
-// #[derive(Debug,Display,Clone,PartialEq,Eq)]
-// enum EitherDyn<T>{
-//     Const(T),
-//     DynA(StateAnchor<T>)
-// }
-
-// impl<T> From<StateAnchor<T>> for EitherDyn<T> {
-//     fn from(v: StateAnchor<T>) -> Self {
-//         Self::DynA(v)
-//     }
-// }
-
-// impl<T> From<T> for EitherDyn<T> {
-//     fn from(v: T) -> Self {
-//         Self::Const(v)
-//     }
-// }
-
-// impl<T> From <CssWidth> for EitherDyn<T>{
-//     fn from(v: CssWidth) -> Self {
-//         T::from(v).into()
-//     }
-// }
-// impl<T> From <CssHeight> for EitherDyn<T>{
-//     fn from(v: CssHeight) -> Self {
-//         T::from(v).into()
-//     }
-// }
 
 
 
@@ -553,7 +528,7 @@ where
     pub fn store_set_size(&self,store: &GStateStore,  
         w: impl Into<GenericSizeAnchor>,
         h: impl Into<GenericSizeAnchor>,){
-        self.layout.store_set_size(store,w,h)
+        self.layout.store_set_size(store,w,h);
     }
     
     #[cfg(test)]
@@ -941,7 +916,7 @@ mod tests {
     use emg_state::{StateVar, state_store};
     use im::vector;
     use seed_styles::CssWidth;
-    use styles::{CssBackgroundColorTrait, h, hsl, pc, width};
+    use styles::{CssBackgroundColorTrait, CssHeight, h, hsl, pc, width};
     use tracing::{info, span};
 
     use tracing_flame::FlameLayer;

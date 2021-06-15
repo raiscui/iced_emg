@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-10 15:56:02
+ * @LastEditTime: 2021-06-14 22:30:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -68,6 +68,7 @@ where
 }
 
 #[allow(clippy::module_name_repetitions)]
+#[derive(Clone)]
 pub struct AnimationEdge<Ix, Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
@@ -111,12 +112,15 @@ where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
     Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
 {
+    /// # Panics
+    ///
+    /// if not implemented
     #[must_use]
     pub fn get_position(&self, style_i: usize) -> Precision {
         self.inside.props.get_with(|props| {
             let p = props.get(style_i).unwrap();
             match p {
-                Property::Prop(_name, m) => m.position().clone(),
+                Property::Prop(_name, m) => **m.position(),
                 _ => todo!("not implemented"),
             }
         })
@@ -262,6 +266,7 @@ where
                       interruption: &StepTimeVector<Message>,
                       steps: &Vector<Step<Message>>,
                       props: &Vector<Property>| {
+                    //----------------------------------
                     let (mut ready_interruption, queued_interruptions): (
                         StepTimeVector<Message>,
                         StepTimeVector<Message>,
@@ -274,27 +279,26 @@ where
                         })
                         .partition(|(wait, _)| wait.is_zero());
 
-                    let (new_steps, new_props): (Vector<Step<Message>>, Vector<Property>) =
-                        match ready_interruption.pop_front() {
-                            Some((_ /* is zero */, interrupt_steps)) => (
-                                interrupt_steps,
-                                props
-                                    .clone()
-                                    .into_iter()
-                                    .map(|prop| {
-                                        map_to_motion(
-                                            Rc::new(|mut m: Motion| {
-                                                *m.interpolation_override_mut() = None;
-                                                m
-                                            })
-                                            .as_ref(),
-                                            prop,
-                                        )
-                                    })
-                                    .collect::<Vector<_>>(),
-                            ),
-                            None => (steps.clone(), props.clone()),
-                        };
+                    let (new_steps, new_props) = match ready_interruption.pop_front() {
+                        Some((_ /* is zero */, interrupt_steps)) => (
+                            interrupt_steps,
+                            props
+                                .clone()
+                                .into_iter()
+                                .map(|prop| {
+                                    map_to_motion(
+                                        Rc::new(|mut m: Motion| {
+                                            *m.interpolation_override_mut() = None;
+                                            m
+                                        })
+                                        .as_ref(),
+                                        prop,
+                                    )
+                                })
+                                .collect::<Vector<_>>(),
+                        ),
+                        None => (steps.clone(), props.clone()),
+                    };
                     let (revised_props, sent_messages, revised_steps) =
                         resolve_steps(new_props, new_steps, timing.dt());
                     (
@@ -363,7 +367,7 @@ where
         }
     }
 
-    pub fn interrupt(&self, steps: Vector<Step<Message>>) -> &Self {
+    pub fn interrupt(&self, steps: Vector<Step<Message>>) {
         //TODO use store
         self.inside
             .interruption
@@ -373,8 +377,6 @@ where
                 new_interruption.push_front(xx);
                 new_interruption
             });
-
-        self
     }
 
     pub fn update_animation(&self) {
@@ -603,7 +605,7 @@ mod tests {
             );
 
             let sv_now = use_state(Duration::ZERO);
-            let mut a: AnimationEdge<String, Message> =
+            let a: AnimationEdge<String, Message> =
                 AnimationEdge::new_in_topo(vector![opacity(1.)], edge_item, sv_now);
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);

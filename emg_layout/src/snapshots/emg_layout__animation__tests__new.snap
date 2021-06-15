@@ -16,14 +16,24 @@ AnimationEdge {
                 Prop(
                     "opacity",
                     Motion {
-                        position: 1.0,
-                        velocity: 0.0,
-                        target: 1.0,
+                        position: NotNan(
+                            1.0,
+                        ),
+                        velocity: NotNan(
+                            0.0,
+                        ),
+                        target: NotNan(
+                            1.0,
+                        ),
                         interpolation: Spring {
-                            stiffness: 170.0,
-                            damping: 26.0,
+                            stiffness: NotNan(
+                                170.0,
+                            ),
+                            damping: NotNan(
+                                26.0,
+                            ),
                         },
-                        unit: "",
+                        unit: None,
                         interpolation_override: None,
                     },
                 ),
@@ -50,14 +60,24 @@ AnimationEdge {
             Prop(
                 "opacity",
                 Motion {
-                    position: 1.0,
-                    velocity: 0.0,
-                    target: 1.0,
+                    position: NotNan(
+                        1.0,
+                    ),
+                    velocity: NotNan(
+                        0.0,
+                    ),
+                    target: NotNan(
+                        1.0,
+                    ),
                     interpolation: Spring {
-                        stiffness: 170.0,
-                        damping: 26.0,
+                        stiffness: NotNan(
+                            170.0,
+                        ),
+                        damping: NotNan(
+                            26.0,
+                        ),
                     },
-                    unit: "",
+                    unit: None,
                     interpolation_override: None,
                 },
             ),

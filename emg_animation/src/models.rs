@@ -1,11 +1,14 @@
 pub mod color;
 pub mod opacity;
+use emg_core::measures::Unit;
 use im::{vector, Vector};
 use iter_fixed::IntoIteratorFixed;
+use ordered_float::NotNan;
+use seed_styles::{CssWidth, ExactLength, Percent};
 use std::{rc::Rc, time::Duration};
 use tracing::{trace, warn};
 
-use crate::Debuggable;
+use crate::{init_motion, Debuggable};
 
 // use emg_debuggable::{dbg4, Debuggable};
 
@@ -13,7 +16,7 @@ use crate::Debuggable;
 pub struct Easing {
     pub progress: Precision,
     pub duration: Duration,
-    pub start: Precision,
+    pub start: NotNan<Precision>,
     pub ease: Rc<Debuggable<dyn Fn(Precision) -> Precision>>,
 }
 
@@ -50,23 +53,33 @@ impl PartialEq for Easing {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Interpolation {
     Spring {
-        stiffness: Precision,
-        damping: Precision,
+        stiffness: NotNan<Precision>,
+        damping: NotNan<Precision>,
     },
     Easing(Easing),
     AtSpeed {
-        per_second: Precision,
+        per_second: NotNan<Precision>,
     },
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Motion {
-    pub(crate) position: Precision,
-    pub(crate) velocity: Precision,
-    pub(crate) target: Precision,
+    pub(crate) position: NotNan<Precision>,
+    pub(crate) velocity: NotNan<Precision>,
+    pub(crate) target: NotNan<Precision>,
     pub(crate) interpolation: Interpolation,
-    pub(crate) unit: String,
+    pub(crate) unit: Unit,
     pub(crate) interpolation_override: Option<Interpolation>,
+}
+impl From<ExactLength> for Motion {
+    fn from(v: ExactLength) -> Self {
+        init_motion(v.value, v.unit)
+    }
+}
+impl From<Percent> for Motion {
+    fn from(v: Percent) -> Self {
+        init_motion(v.0, Unit::None)
+    }
 }
 
 impl Motion {
@@ -76,7 +89,8 @@ impl Motion {
     }
 
     /// Get a reference to the motion's position.
-    pub fn position(&self) -> &Precision {
+    #[must_use]
+    pub const fn position(&self) -> &NotNan<Precision> {
         &self.position
     }
 }
@@ -151,6 +165,19 @@ pub enum Property {
     Points(Vector<[Motion; 2]>),
     Path(Vector<PathCommand>),
     // Anchor(Rc<String>, StateAnchor<GenericSize>),
+}
+
+impl From<CssWidth> for Property {
+    fn from(v: CssWidth) -> Self {
+        match v {
+            CssWidth::Auto => todo!(),
+            CssWidth::Length(l) => Self::Prop(Rc::new("width".to_string()), l.into()),
+            CssWidth::Percentage(p) => Self::Prop(Rc::new("width".to_string()), p.into()),
+            CssWidth::Initial => todo!(),
+            CssWidth::Inherit => todo!(),
+            CssWidth::StringValue(_) => todo!(),
+        }
+    }
 }
 
 impl Property {
@@ -246,7 +273,7 @@ where
     // (Duration, Vec<Step<Message>>): Clone,
 {
     pub(crate) steps: Vector<Step<Message>>,
-    pub(crate) style: Vector<Property>,
+    pub(crate) props: Vector<Property>,
     pub(crate) timing: Timing,
     pub(crate) running: bool,
     pub(crate) interruption: StepTimeVector<Message>,
@@ -260,10 +287,10 @@ where
     /// temp fn ,
     /// Will panic if p not prop
     #[must_use]
-    pub fn get_position(&self, style_i: usize) -> Precision {
-        let p = self.style.get(style_i).unwrap();
+    pub fn get_position(&self, prop_index: usize) -> Precision {
+        let p = self.props.get(prop_index).unwrap();
         match p {
-            Property::Prop(_name, m) => m.position,
+            Property::Prop(_name, m) => m.position.into_inner(),
             _ => todo!("not implemented"),
         }
     }
@@ -485,7 +512,7 @@ pub fn update_animation<Message: std::clone::Clone + std::fmt::Debug>(
             Some((_ /* is zero */, interrupt_steps)) => (
                 interrupt_steps,
                 model
-                    .style
+                    .props
                     .clone()
                     .into_iter()
                     .map(|prop| {
@@ -500,7 +527,7 @@ pub fn update_animation<Message: std::clone::Clone + std::fmt::Debug>(
                     })
                     .collect::<Vector<_>>(),
             ),
-            None => (model.steps.clone(), model.style.clone()),
+            None => (model.steps.clone(), model.props.clone()),
         }
     };
 
@@ -510,7 +537,7 @@ pub fn update_animation<Message: std::clone::Clone + std::fmt::Debug>(
     model.running = !revised_steps.is_empty() || !queued_interruptions.is_empty();
     model.interruption = queued_interruptions;
     model.steps = revised_steps;
-    model.style = revised_style
+    model.props = revised_style;
 
     //TODO: cmd send message
 }
@@ -626,10 +653,10 @@ const PROGRESS_ERROR_MARGIN: Precision = 0.005;
 
 #[allow(clippy::match_same_arms)]
 fn position_error_margin(motion: &Motion) -> Precision {
-    (match motion.unit.as_str() {
-        "px" => 0.05,
-        "%" => 0.005,
-        _ => 0.001,
+    (match motion.unit {
+        Unit::Px => 0.05,
+        Unit::Pc => 0.005,
+        Unit::Rem | Unit::Em | Unit::Cm | Unit::Vw | Unit::Vh | Unit::None => 0.001,
     }) as Precision
 }
 fn motion_is_done(motion: &Motion) -> bool {
@@ -913,19 +940,20 @@ fn step_interpolation(dt: Duration, mut motion: Motion) -> Motion {
         Interpolation::AtSpeed { per_second } => {
             let (new_pos, finished) = {
                 if motion.position < motion.target {
-                    let new = per_second.mul_add(dt.as_secs_f64() as Precision, motion.position);
-                    (new, new >= motion.target)
+                    let new = per_second.mul_add(dt.as_secs_f64() as Precision, *motion.position);
+                    (new, new >= *motion.target)
                 } else {
                     // let new = motion.position - (per_second * (dt.as_secs_f64() as Precision));
-                    let new = (-per_second).mul_add(dt.as_secs_f64() as Precision, motion.position);
-                    (new, new <= motion.target)
+                    let new =
+                        (-per_second).mul_add(dt.as_secs_f64() as Precision, *motion.position);
+                    (new, new <= *motion.target)
                 }
             };
             if finished {
                 motion.position = motion.target;
-                motion.velocity = 0.;
+                motion.velocity = NotNan::default();
             } else {
-                motion.position = new_pos;
+                motion.position = NotNan::new(new_pos).unwrap();
                 motion.velocity = per_second * 1000.; // pos/ms,  dis per millisecond
             }
             motion
@@ -934,19 +962,19 @@ fn step_interpolation(dt: Duration, mut motion: Motion) -> Motion {
             let dt_sec = dt.as_secs_f64() as Precision;
             let f_spring = stiffness * (motion.target - motion.position);
 
-            let f_damper = (-1. * damping) * motion.velocity;
+            let f_damper = (damping * -1.) * motion.velocity;
 
             let a = f_spring + f_damper;
-            let new_velocity = a.mul_add(dt_sec, motion.velocity);
-            let new_pos = new_velocity.mul_add(dt_sec, motion.position);
+            let new_velocity = a.mul_add(dt_sec, *motion.velocity);
+            let new_pos = new_velocity.mul_add(dt_sec, *motion.position);
 
             let dx = (motion.target - new_pos).abs();
             if dx < position_error_margin(&motion) && new_velocity.abs() < VELOCITY_ERROR_MARGIN {
                 motion.position = motion.target;
-                motion.velocity = 0.;
+                motion.velocity = NotNan::default();
             } else {
-                motion.position = new_pos;
-                motion.velocity = new_velocity;
+                motion.position = NotNan::new(new_pos).unwrap();
+                motion.velocity = NotNan::new(new_velocity).unwrap();
             }
             motion
         }
@@ -964,20 +992,20 @@ fn step_interpolation(dt: Duration, mut motion: Motion) -> Motion {
             let eased = (**ease)(new_progress);
 
             let distance = motion.target - start;
-            let new_pos = (eased.mul_add(distance, start) * 10000.).trunc() * 0.0001;
+            let new_pos = (eased.mul_add(*distance, *start) * 10000.).trunc() * 0.0001;
             let new_velocity = if (new_progress - 1.).abs() < PROGRESS_ERROR_MARGIN {
                 0.
             } else {
                 Duration::from_micros(unsafe {
-                    ((new_pos - motion.position).abs() * 1000.)
+                    ((new_pos - motion.position.into_inner()).abs() * 1000.)
                         .round()
                         .to_int_unchecked()
                 })
                 .div_duration_f64(dt) as Precision
             };
 
-            motion.position = new_pos;
-            motion.velocity = new_velocity;
+            motion.position = NotNan::new(new_pos).unwrap();
+            motion.velocity = NotNan::new(new_velocity).unwrap();
 
             if has_interpolation_override {
                 motion.interpolation_override = Some(Interpolation::Easing(Easing {

@@ -93,9 +93,6 @@ impl Default for GenericSize {
     }
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
     #[test]

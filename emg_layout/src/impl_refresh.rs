@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-06-07 22:17:28
+ * @LastEditTime: 2021-06-15 08:16:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,6 +17,7 @@ use tracing::{debug, trace_span, warn};
 
 use crate::{
     add_values::{AlignX, AlignY, OriginX, OriginY},
+    animation::AnimationEdge,
     Css, EmgEdgeItem,
 };
 
@@ -69,7 +70,7 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         warn!("Edge  Refresh use StateVar<CssWidth>");
 
-        who.layout.w.set(self.watch().into())
+        who.layout.w.set(self.watch().into());
 
         // who.refresh_use(&*rc_var);
     }
@@ -84,7 +85,7 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         warn!("Edge  Refresh use StateAnchor<CssWidth>");
 
-        who.layout.w.set(self.clone().into())
+        who.layout.w.set(self.clone().into());
 
         // who.refresh_use(&*rc_var);
     }
@@ -99,7 +100,7 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         warn!("Edge  Refresh use StateVar<CssHeight>");
 
-        who.layout.h.set(self.watch().into())
+        who.layout.h.set(self.watch().into());
 
         // who.refresh_use(&*rc_var);
     }
@@ -114,7 +115,7 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         warn!("Edge  Refresh use StateAnchor<CssHeight>");
 
-        who.layout.h.set(self.clone().into())
+        who.layout.h.set(self.clone().into());
 
         // who.refresh_use(&*rc_var);
     }
@@ -198,6 +199,22 @@ where
         css_refresh_edgedata(self, who);
     }
 }
+
+// ────────────────────────────────────────────────────────────────────────────────
+impl<Ix, Message> RefreshFor<EmgEdgeItem<Ix>> for AnimationEdge<Ix, Message>
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    Message: Clone + std::fmt::Debug + PartialEq,
+{
+    #[track_caller]
+    fn refresh_for(&self, _who: &mut EmgEdgeItem<Ix>) {
+        let _g =
+            trace_span!("-> RefreshFor<EmgEdgeItem> using AnimationEdge<Ix, Message>").entered();
+
+        // who.layout.w.set(self.clone().into());
+    }
+}
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for CssWidth
@@ -208,7 +225,7 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for CssWidth").entered();
 
-        who.layout.w.set(self.clone().into())
+        who.layout.w.set(self.clone().into());
     }
 }
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for CssHeight
@@ -219,7 +236,7 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for CssHeight").entered();
 
-        who.layout.h.set(self.clone().into())
+        who.layout.h.set(self.clone().into());
     }
 }
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for OriginX
@@ -230,7 +247,7 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for OriginX").entered();
 
-        who.layout.origin_x.set(self.clone().into())
+        who.layout.origin_x.set(self.clone().into());
     }
 }
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for OriginY
@@ -241,7 +258,7 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for OriginY").entered();
 
-        who.layout.origin_y.set(self.clone().into())
+        who.layout.origin_y.set(self.clone().into());
     }
 }
 
@@ -253,7 +270,7 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for AlignX").entered();
 
-        who.layout.align_x.set(self.clone().into())
+        who.layout.align_x.set(self.clone().into());
     }
 }
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for AlignY
@@ -264,6 +281,6 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for AlignY").entered();
 
-        who.layout.align_y.set(self.clone().into())
+        who.layout.align_y.set(self.clone().into());
     }
 }
