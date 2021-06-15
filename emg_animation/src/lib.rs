@@ -9,13 +9,16 @@ pub mod func;
 pub mod models;
 pub mod props;
 mod render;
+use std::convert::TryInto;
 // ────────────────────────────────────────────────────────────────────────────────
 // use emg_debuggable::dbg4;
 use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
 
 use im::{vector, Vector};
 use models::{map_to_motion, update_animation, Animation, Interpolation, Property, Step};
+use ordered_float::NotNan;
 use props::warn_for_double_listed_properties;
+use seed_styles::Unit;
 
 // ────────────────────────────────────────────────────────────────────────────────
 pub use crate::models::color::fill;
@@ -32,14 +35,15 @@ use crate::models::Interpolation::*;
 pub type Msg = models::Tick;
 pub type State<Message> = models::Animation<Message>;
 
-const fn init_motion(position: f64, unit: String) -> Motion {
+fn init_motion(position: impl TryInto<NotNan<f64>>, unit: Unit) -> Motion {
+    let p: NotNan<f64> = position.try_into().ok().unwrap();
     Motion {
-        position,
-        velocity: 0.,
-        target: position,
+        position: p,
+        velocity: NotNan::default(),
+        target: p,
         interpolation: Spring {
-            stiffness: 170.,
-            damping: 26.,
+            stiffness: NotNan::new(170.).unwrap(),
+            damping: NotNan::new(26.).unwrap(),
         },
         unit,
         interpolation_override: None,
@@ -54,7 +58,7 @@ where
 {
     Animation {
         steps: vector![],
-        style: current,
+        props: current,
         timing: Timing {
             current: Duration::ZERO,
             dt: Duration::ZERO,
@@ -65,30 +69,32 @@ where
 }
 
 // speed : { perSecond : Float } -> Animation.Model.Interpolation
-const fn speed(speed_value: f64) -> Interpolation {
+fn speed(speed_value: f64) -> Interpolation {
     AtSpeed {
-        per_second: speed_value,
+        per_second: NotNan::new(speed_value).unwrap(),
     }
 }
 
-// defaultInterpolationByProperty : Animation.Model.Property -> Animation.Model.Interpolation
+/// # Panics
+///
+/// Will panic if number is nan
 #[must_use]
 pub fn default_interpolation_by_property(prop: &Property) -> Interpolation {
     use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     // -- progress is set to 1 because it is changed to 0 when the animation actually starts
-    // -- This is analagous to the spring starting at rest.
+    // -- This is analogous to the spring starting at rest.
     let linear = |duration: Duration| {
         Easing(Easing {
             progress: 1.,
-            start: 0.,
+            start: NotNan::default(),
             duration,
             ease: Rc::new(dbg4!(std::convert::identity::<f64>)),
         })
     };
 
     let default_spring = Spring {
-        stiffness: 170.,
-        damping: 26.,
+        stiffness: NotNan::new(170.).unwrap(),
+        damping: NotNan::new(26.).unwrap(),
     };
 
     match prop {
@@ -206,7 +212,7 @@ where
 }
 
 // custom : String -> Float -> String -> Animation.Model.Property
-fn custom(name: String, value: f64, unit: String) -> Property {
+fn custom(name: String, value: f64, unit: Unit) -> Property {
     Property::Prop(Rc::new(name), init_motion(value, unit))
 }
 

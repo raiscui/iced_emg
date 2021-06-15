@@ -18,14 +18,24 @@ AnimationEdge {
                 Prop(
                     "opacity",
                     Motion {
-                        position: 0.9984870140457791,
-                        velocity: 0.01456647065794588,
-                        target: 1.0,
+                        position: NotNan(
+                            0.9984870140457791,
+                        ),
+                        velocity: NotNan(
+                            0.01456647065794588,
+                        ),
+                        target: NotNan(
+                            1.0,
+                        ),
                         interpolation: Spring {
-                            stiffness: 170.0,
-                            damping: 26.0,
+                            stiffness: NotNan(
+                                170.0,
+                            ),
+                            damping: NotNan(
+                                26.0,
+                            ),
                         },
-                        unit: "",
+                        unit: None,
                         interpolation_override: None,
                     },
                 ),
@@ -54,14 +64,24 @@ AnimationEdge {
             Prop(
                 "opacity",
                 Motion {
-                    position: 0.9984870140457791,
-                    velocity: 0.01456647065794588,
-                    target: 1.0,
+                    position: NotNan(
+                        0.9984870140457791,
+                    ),
+                    velocity: NotNan(
+                        0.01456647065794588,
+                    ),
+                    target: NotNan(
+                        1.0,
+                    ),
                     interpolation: Spring {
-                        stiffness: 170.0,
-                        damping: 26.0,
+                        stiffness: NotNan(
+                            170.0,
+                        ),
+                        damping: NotNan(
+                            26.0,
+                        ),
                     },
-                    unit: "",
+                    unit: None,
                     interpolation_override: None,
                 },
             ),

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-06-13 16:05:09
+ * @LastEditTime: 2021-06-15 08:16:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -207,7 +207,7 @@ where
     Message: Clone + std::fmt::Debug + PartialEq,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, _who: &mut EmgEdgeItem<Ix>) {
         let _g =
             trace_span!("-> RefreshFor<EmgEdgeItem> using AnimationEdge<Ix, Message>").entered();
 

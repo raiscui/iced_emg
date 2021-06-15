@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-13 15:50:04
+ * @LastEditTime: 2021-06-14 22:30:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -120,7 +120,7 @@ where
         self.inside.props.get_with(|props| {
             let p = props.get(style_i).unwrap();
             match p {
-                Property::Prop(_name, m) => *m.position(),
+                Property::Prop(_name, m) => **m.position(),
                 _ => todo!("not implemented"),
             }
         })
@@ -605,7 +605,7 @@ mod tests {
             );
 
             let sv_now = use_state(Duration::ZERO);
-            let mut a: AnimationEdge<String, Message> =
+            let a: AnimationEdge<String, Message> =
                 AnimationEdge::new_in_topo(vector![opacity(1.)], edge_item, sv_now);
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
