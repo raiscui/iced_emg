@@ -915,8 +915,8 @@ mod tests {
     use emg_refresh::RefreshUseFor;
     use emg_state::{StateVar, state_store};
     use im::vector;
-    use seed_styles::CssWidth;
-    use styles::{CssBackgroundColorTrait, CssHeight, h, hsl, pc, width};
+ 
+    use styles::{CssBackgroundColorTrait,CssWidth, CssHeight, h, hsl, pc, width};
     use tracing::{info, span};
 
     use tracing_flame::FlameLayer;

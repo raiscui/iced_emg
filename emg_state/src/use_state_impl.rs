@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-06-11 10:38:49
+ * @LastEditTime: 2021-06-17 08:56:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,11 @@ use anchors::{
     singlethread::{Anchor, Engine, MultiAnchor, Var},
 };
 use anymap::any::Any;
-use std::{cell::RefCell, clone::Clone, collections::HashMap, marker::PhantomData, rc::Rc};
+
+use std::{
+    any::TypeId, cell::RefCell, clone::Clone, collections::HashMap, convert::TryFrom,
+    marker::PhantomData, rc::Rc,
+};
 use tracing::{trace, trace_span};
 // use delegate::delegate;
 use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
@@ -168,6 +172,7 @@ impl GStateStore {
 #[derive(PartialEq, Eq)]
 pub struct StateVar<T> {
     id: TopoKey,
+    has_similar: bool,
     _phantom_data: PhantomData<T>,
 }
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
@@ -196,6 +201,7 @@ impl<T> Clone for StateVar<T> {
     fn clone(&self) -> Self {
         Self {
             id: self.id,
+            has_similar: self.has_similar,
             _phantom_data: PhantomData::<T>,
         }
     }
@@ -231,6 +237,7 @@ where
     const fn new(id: TopoKey) -> Self {
         Self {
             id,
+            has_similar: false,
             _phantom_data: PhantomData,
         }
     }
@@ -341,6 +348,15 @@ where
 
     fn update<F: FnOnce(&mut T)>(&self, func: F);
     fn store_update<F: FnOnce(&mut T)>(&self, store: &GStateStore, func: F);
+
+    fn to_di_in_topo<B>(&self) -> StateVarDi<T, B>
+    where
+        B: From<T> + Clone + 'static;
+
+    fn to_bi_in_topo<B>(&self) -> (StateVarDi<T, B>, StateVarDi<B, T>)
+    where
+        B: From<T> + Clone + 'static,
+        T: From<B> + 'static;
 }
 
 impl<T> CloneStateVar<T> for StateVar<T>
@@ -387,7 +403,110 @@ where
             old
         });
     }
+
+    #[topo::nested]
+    fn to_di_in_topo<B>(&self) -> StateVarDi<T, B>
+    where
+        B: From<T> + Clone + 'static,
+    {
+        let b = use_state(self.get().into());
+        StateVarDi::new_use_into(*self, b)
+    }
+    #[topo::nested]
+    fn to_bi_in_topo<B>(&self) -> (StateVarDi<T, B>, StateVarDi<B, T>)
+    where
+        B: From<T> + Clone + 'static,
+        T: From<B> + 'static,
+    {
+        let b = use_state(self.get().into());
+        (
+            StateVarDi::new_use_into(*self, b),
+            StateVarDi::new_use_into(b, *self),
+        )
+    }
 }
+// #[macro_export]
+// macro_rules! to_vector_di {
+//     ( $( $element:expr ) , * ) => {
+//         {
+//             let mut v:im::Vector<emg_state::StateVar<emg_animation::Property>> = im::Vector::new();
+
+//             $(
+//                 let di =emg_state::StateVarDi::From( $element);
+//                 v.push_back(di.into());
+//             )*
+
+//             v
+//         }
+//     };
+// }
+pub struct StateVarDi<A, B> {
+    pub this: StateVar<A>,
+    pub similar: StateVar<B>,
+    update_fn: Box<dyn Fn(A, StateVar<B>)>,
+}
+impl<A, B, T> TryFrom<StateVarDi<A, B>> for StateVar<T>
+where
+    A: 'static,
+    B: 'static,
+    T: 'static,
+{
+    type Error = ();
+    fn try_from(di: StateVarDi<A, B>) -> Result<Self, Self::Error> {
+        if TypeId::of::<A>() == TypeId::of::<T>() {
+            let any: Box<dyn std::any::Any> = Box::new(di.this);
+            any.downcast::<Self>().map(|v| *v).map_err(|_| ())
+        } else if TypeId::of::<B>() == TypeId::of::<T>() {
+            let any: Box<dyn std::any::Any> = Box::new(di.similar);
+            any.downcast::<Self>().map(|v| *v).map_err(|_| ())
+        } else {
+            panic!("not match any type")
+        }
+    }
+}
+
+impl<A, B> StateVarDi<A, B>
+where
+    B: From<A> + 'static,
+    A: Clone + 'static,
+{
+    #[must_use]
+    pub fn new_use_into(this: StateVar<A>, similar: StateVar<B>) -> Self {
+        Self {
+            this,
+            similar,
+            update_fn: Box::new(|a, sv_b| sv_b.set(a.into())),
+        }
+    }
+}
+impl<A, B> StateVarDi<A, B>
+where
+    B: 'static,
+    A: Clone + 'static,
+{
+    #[must_use]
+    pub fn new(
+        this: StateVar<A>,
+        similar: StateVar<B>,
+        update_fn: Box<dyn Fn(A, StateVar<B>)>,
+    ) -> Self {
+        Self {
+            this,
+            similar,
+            update_fn,
+        }
+    }
+
+    pub fn set(&self, value: A) {
+        self.this.set(value.clone());
+        (self.update_fn)(value, self.similar);
+    }
+    #[must_use]
+    pub fn get(&self) -> A {
+        self.this.get()
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct StateAnchor<T>(Anchor<T>);
 

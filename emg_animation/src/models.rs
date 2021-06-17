@@ -166,16 +166,15 @@ pub enum Property {
     Path(Vector<PathCommand>),
     // Anchor(Rc<String>, StateAnchor<GenericSize>),
 }
-
+#[allow(clippy::fallible_impl_from)]
 impl From<CssWidth> for Property {
     fn from(v: CssWidth) -> Self {
         match v {
-            CssWidth::Auto => todo!(),
             CssWidth::Length(l) => Self::Prop(Rc::new("width".to_string()), l.into()),
             CssWidth::Percentage(p) => Self::Prop(Rc::new("width".to_string()), p.into()),
-            CssWidth::Initial => todo!(),
-            CssWidth::Inherit => todo!(),
-            CssWidth::StringValue(_) => todo!(),
+            CssWidth::Auto | CssWidth::Initial | CssWidth::Inherit | CssWidth::StringValue(_) => {
+                todo!()
+            }
         }
     }
 }
@@ -203,7 +202,6 @@ impl Property {
 }
 // propertyName : Property -> String
 
-#[allow(clippy::pub_enum_variant_names)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Step<Message>
 where
@@ -652,7 +650,7 @@ const VELOCITY_ERROR_MARGIN: Precision = 0.01;
 const PROGRESS_ERROR_MARGIN: Precision = 0.005;
 
 #[allow(clippy::match_same_arms)]
-fn position_error_margin(motion: &Motion) -> Precision {
+const fn position_error_margin(motion: &Motion) -> Precision {
     (match motion.unit {
         Unit::Px => 0.05,
         Unit::Pc => 0.005,

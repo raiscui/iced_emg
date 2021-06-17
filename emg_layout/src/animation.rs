@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-14 22:30:55
+ * @LastEditTime: 2021-06-16 22:41:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,6 +28,7 @@ use emg_animation::{
     props::warn_for_double_listed_properties,
     set_default_interpolation, Timing,
 };
+use seed_styles::CssWidth;
 
 use crate::{DictPathEiNodeSA, EmgEdgeItem, Layout};
 
@@ -43,6 +44,17 @@ type SAPropsMessageSteps2<Message> = StateAnchor<(
     Vector<Step<Message>>,
 )>;
 // ────────────────────────────────────────────────────────────────────────────────
+struct StateVarProperty(StateVar<Property>);
+
+impl<T> From<StateVar<T>> for StateVarProperty
+where
+    T: Clone + 'static,
+    Property: From<T>,
+{
+    fn from(sv: StateVar<T>) -> Self {
+        let di = sv.to_di_in_topo::<Property>();
+    }
+}
 #[derive(Debug, Copy, Clone)]
 struct AnimationInside<Message>
 where
@@ -242,7 +254,8 @@ where
                 })
                 .map(|(_, i)| i.clone())
         };
-        let props_cut = {
+
+        let props_cut: StateAnchor<Vector<Property>> = {
             let mut ct = sv_now.get();
             (&sa_timing, &props_init.watch())
                 .map(|t, i| (*t, i.clone()))
@@ -257,12 +270,27 @@ where
                 })
                 .map(|(_, i)| i.clone())
         };
+        // let props_cut = {
+        //     let mut ct = sv_now.get();
+        //     (&sa_timing, &props_self_cut)
+        //         .map(|t, i| (*t, i.clone()))
+        //         .cutoff(move |(timing, _)| {
+        //             let current = timing.current();
+        //             if current == ct {
+        //                 false
+        //             } else {
+        //                 ct = current;
+        //                 true
+        //             }
+        //         })
+        //         .map(|(_, i)| i.clone())
+        // };
 
         // let mut current_time = Duration::default();
 
         let revised: SAPropsMessageSteps2<Message> =
             (&sa_timing, &interruption_cut, &steps_cut, &props_cut).map(
-                move |timing,
+                move |timing: &Timing,
                       interruption: &StepTimeVector<Message>,
                       steps: &Vector<Step<Message>>,
                       props: &Vector<Property>| {
@@ -368,7 +396,6 @@ where
     }
 
     pub fn interrupt(&self, steps: Vector<Step<Message>>) {
-        //TODO use store
         self.inside
             .interruption
             .store_set_with_once(&self.store.borrow(), |interruption| {
@@ -404,20 +431,26 @@ where
 mod tests {
     extern crate test;
 
+    use std::path::Path;
     use std::time::Duration;
 
     use emg::edge_index_no_source;
+    use emg_animation::models::Property;
     use emg_animation::{interrupt, opacity, style, to, Tick};
+    use emg_core::into_vector;
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore,
-        StateAnchor,
+        StateAnchor, StateVar,
     };
     use im::vector;
+    use seed_styles as styles;
+    use styles::width;
+    use styles::{px, CssWidth};
 
     use crate::EmgEdgeItem;
 
     use super::AnimationEdge;
-    use tracing::{info, span, trace, trace_span, Level};
+    use tracing::Level;
 
     use tracing_flame::FlameLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -440,6 +473,7 @@ mod tests {
         // .expect("setting default subscriber failed");
     }
 
+    #[allow(dead_code)]
     fn setup_global_subscriber() -> impl Drop {
         std::env::set_var("RUST_LOG", "trace");
         std::env::set_var("RUST_LOG", "warn");
@@ -554,24 +588,24 @@ mod tests {
         a.interrupt(vector![
             to(vector![emg_animation::opacity(0.)]),
             to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
+            // to(vector![emg_animation::opacity(0.)]),
+            // to(vector![emg_animation::opacity(1.)]),
+            // to(vector![emg_animation::opacity(0.)]),
+            // to(vector![emg_animation::opacity(1.)]),
+            // to(vector![emg_animation::opacity(0.)]),
+            // to(vector![emg_animation::opacity(1.)]),
+            // to(vector![emg_animation::opacity(0.)]),
+            // to(vector![emg_animation::opacity(1.)]),
+            // to(vector![emg_animation::opacity(0.)]),
+            // to(vector![emg_animation::opacity(1.)]),
+            // to(vector![emg_animation::opacity(0.)]),
+            // to(vector![emg_animation::opacity(1.)]),
+            // to(vector![emg_animation::opacity(0.)]),
+            // to(vector![emg_animation::opacity(1.)]),
+            // to(vector![emg_animation::opacity(0.)]),
+            // to(vector![emg_animation::opacity(1.)]),
+            // to(vector![emg_animation::opacity(0.)]),
+            // to(vector![emg_animation::opacity(1.)]),
         ]);
 
         sv_now.store_set(storeref, Duration::from_millis(16));
@@ -696,5 +730,138 @@ mod tests {
 
             a.revised_props.get();
         }
+    }
+
+    #[test]
+    #[topo::nested]
+    fn test_layout_anima() {
+        // ! layout am
+        // let nn = _init();
+        let w: StateVar<CssWidth> = use_state(width(px(0)));
+        let w2p = w.to_di_in_topo::<Property>();
+
+        insta::with_settings!({snapshot_path => Path::new("./layout_am")}, {
+
+
+
+            // let span = trace_span!("am-test");
+            // let _guard = span.enter();
+            // trace!("fff");
+
+            let ei = edge_index_no_source("fff");
+            let source = use_state(ei.source_nix().as_ref().cloned());
+            let target = use_state(ei.target_nix().as_ref().cloned());
+            let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
+                source.watch(),
+                target.watch(),
+                StateAnchor::constant(Dict::default()),
+                1920,
+                1080,
+            );
+
+            let sv_now = use_state(Duration::ZERO);
+
+            let a: AnimationEdge<String, Message> =
+                // AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item, sv_now);
+                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item, sv_now);
+            // println!("a:{:#?}", &a);
+            insta::assert_debug_snapshot!("new", &a);
+            insta::assert_debug_snapshot!("new2", &a);
+            let new1 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new.snap")).unwrap();
+            let new2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new2.snap")).unwrap();
+            assert_eq!(new1.contents(),new2.contents());
+
+            assert_eq!(a.running.get(), false);
+            insta::assert_debug_snapshot!("get_running", &a);
+            // println!("now set interrupt");
+            a.interrupt(vector![
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))])
+            ]);
+            // println!("over interrupt");
+
+            insta::assert_debug_snapshot!("interrupt", &a);
+            // insta::assert_debug_snapshot!("interrupt2", &a);
+            // println!("over interrupt insta");
+
+            assert_eq!(a.running.get(), true);
+            // println!("over interrupt running.get()");
+            // a.update_animation();
+            // ────────────────────────────────────────────────────────────────────────────────
+
+            sv_now.set(Duration::from_millis(16));
+            // println!("set timing 16");
+            insta::assert_debug_snapshot!("set16", &a);
+
+            a.update_animation();
+            // println!("set timing 16-- update");
+
+            // println!("1**{:?}", a.inside.props.get());
+
+            insta::assert_debug_snapshot!("updated_16_0", &a);
+            // insta::assert_debug_snapshot!("updated_16_1", &a);
+            // println!("set timing 16-- insta");
+            // ────────────────────────────────────────────────────────────────────────────────
+            sv_now.set(Duration::from_millis(16));
+            // println!("set timing 16-2");
+
+            a.update_animation();
+
+            insta::assert_debug_snapshot!("updated_16_0-2", &a);
+            // insta::assert_debug_snapshot!("updated_16_1-2", &a);
+            // println!("set timing 16-- insta-2");
+            let u16 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0.snap")).unwrap();
+            let u16_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0-2.snap")).unwrap();
+            assert_eq!(u16.contents(),u16_2.contents());
+            // ─────────────────────────────────────────────────────────────────
+
+            sv_now.set(Duration::from_millis(33));
+            // println!("set timing 33");
+
+            // println!("....set 2 ");
+            insta::assert_debug_snapshot!("set33", &a);
+
+            a.update_animation();
+            insta::assert_debug_snapshot!("updated_33_0", &a);
+
+            // println!("set timing 33 -- update 1");
+
+            a.update_animation();
+            insta::assert_debug_snapshot!("updated_33_1", &a);
+
+            // println!("set timing 33 -- update 2");
+
+            // println!("2**{:?}", a.inside.props.get());
+
+            insta::assert_debug_snapshot!("snap_updated_33_0", &a);
+            // insta::assert_debug_snapshot!("snap_updated_33_1", &a);
+            // println!("set timing 33 -- insta  ");
+            let f33 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_33_1.snap")).unwrap();
+            let f33_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__snap_updated_33_0.snap")).unwrap();
+            assert_eq!(f33.contents(),f33_2.contents());
+
+            // sv_now.set(Duration::from_millis(2));
+            // a.update_animation();
+            // insta::assert_debug_snapshot!("updated_back_0", &a);
+            // insta::assert_debug_snapshot!("updated_back_1", &a);
+
+            for i in 3..100 {
+                sv_now.set(Duration::from_millis(i * 16));
+                // println!("in ------ i:{}", &i);
+                // a.timing.get();
+                a.update_animation();
+                // println!("3***{:?}", a.inside.props.get());
+                a.inside.props.get();
+            }
+            insta::assert_debug_snapshot!("updated_end_0", &a);
+            // insta::assert_debug_snapshot!("updated_end_1", &a);
+
+            // // println!("{:?}", a.revised_props.get());
+            // // state_store().borrow().engine_mut().stabilize();
+            // println!("end : {:?}", a.inside.props.get());
+            // println!("{:?}", a);
+
+            a.revised_props.get();
+        });
     }
 }
