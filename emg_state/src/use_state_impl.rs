@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-06-18 17:06:00
+ * @LastEditTime: 2021-06-18 17:29:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -146,6 +146,9 @@ impl GStateStore {
         }
 
         skip.borrow_mut().insert(*current_id);
+        if similar_fns.is_empty() {
+            return;
+        };
         similar_fns
             .iter()
             //TODO check performance
@@ -209,7 +212,7 @@ impl GStateStore {
 
         let key = self.id_to_key_map.get(current_id).copied();
         let secondarymap = self.get_mut_secondarymap::<T>();
-        let (var, fns) = match (key, secondarymap) {
+        let (_, fns) = match (key, secondarymap) {
             (Some(existing_key), Some(existing_secondary_map)) => existing_secondary_map
                 .get_mut(existing_key)
                 .expect("cannot get second map"),
