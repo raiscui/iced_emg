@@ -1,35 +1,45 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-06-17 08:56:33
+ * @LastEditTime: 2021-06-18 17:06:00
  * @LastEditors: Rais
  * @Description:
  */
 
+pub use anchors::singlethread::Anchor;
+pub use anchors::singlethread::Var;
 use anchors::{
     expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
-    singlethread::{Anchor, Engine, MultiAnchor, Var},
+    singlethread::{Engine, MultiAnchor},
 };
 use anymap::any::Any;
 
 use std::{
-    any::TypeId, cell::RefCell, clone::Clone, collections::HashMap, convert::TryFrom,
-    marker::PhantomData, rc::Rc,
+    cell::RefCell,
+    clone::Clone,
+    collections::{HashMap, HashSet},
+    marker::PhantomData,
+    rc::Rc,
 };
 use tracing::{trace, trace_span};
 // use delegate::delegate;
-use slotmap::{DefaultKey, DenseSlotMap, Key, SecondaryMap};
+use slotmap::{DefaultKey, Key, SlotMap, SparseSecondaryMap};
 
 thread_local! {
     static G_STATE_STORE: Rc<RefCell<GStateStore>> =Rc::new( RefCell::new(
         GStateStore::default()
     ));
 }
+
+// ────────────────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────────────────
+
 #[allow(clippy::module_name_repetitions)]
 pub struct GStateStore {
     anymap: anymap::Map<dyn Any>,
     id_to_key_map: HashMap<StorageKey, DefaultKey>,
-    primary_slotmap: DenseSlotMap<DefaultKey, StorageKey>,
+    primary_slotmap: SlotMap<DefaultKey, StorageKey>,
     engine: RefCell<Engine>,
 }
 
@@ -43,11 +53,13 @@ impl Default for GStateStore {
         Self {
             anymap: anymap::Map::new(),
             id_to_key_map: HashMap::new(),
-            primary_slotmap: DenseSlotMap::new(),
+            primary_slotmap: SlotMap::new(),
             engine: RefCell::new(Engine::new()),
         }
     }
 }
+
+type VarSecMap<T> = (Var<T>, HashMap<StorageKey, BoxSimilarFn<T>>);
 
 impl GStateStore {
     /// # Panics
@@ -87,24 +99,71 @@ impl GStateStore {
         }
     }
     #[must_use]
-    fn get_secondarymap<T: 'static>(&self) -> Option<&SecondaryMap<DefaultKey, Var<T>>> {
-        self.anymap.get::<SecondaryMap<DefaultKey, Var<T>>>()
+    fn get_secondarymap<T: 'static>(
+        &self,
+    ) -> Option<&SparseSecondaryMap<DefaultKey, VarSecMap<T>>> {
+        self.anymap
+            .get::<SparseSecondaryMap<DefaultKey, VarSecMap<T>>>()
     }
     fn get_mut_secondarymap<T: 'static>(
         &mut self,
-    ) -> Option<&mut SecondaryMap<DefaultKey, Var<T>>> {
-        self.anymap.get_mut::<SecondaryMap<DefaultKey, Var<T>>>()
+    ) -> Option<&mut SparseSecondaryMap<DefaultKey, VarSecMap<T>>> {
+        self.anymap
+            .get_mut::<SparseSecondaryMap<DefaultKey, VarSecMap<T>>>()
     }
+
     fn register_secondarymap<T: 'static>(&mut self) {
-        let sm: SecondaryMap<DefaultKey, Var<T>> = SecondaryMap::new();
+        let sm: SparseSecondaryMap<DefaultKey, VarSecMap<T>> = SparseSecondaryMap::new();
         self.anymap.insert(sm);
     }
 
-    fn set_state_with_key<T: 'static>(&self, data: T, current_id: &StorageKey) {
+    fn set_state_and_similar_with_key<T: std::clone::Clone + 'static>(
+        &self,
+        data: T,
+        current_id: &StorageKey,
+    ) {
         //unwrap or default to keep borrow checker happy
-        self.get_state_with_id::<T>(current_id)
-            .expect("set_state_with_key: can't set state that doesn't exist in this context!")
-            .set(data);
+        let (var, similar_fns) = self
+            .get_state_and_similar_with_id::<T>(current_id)
+            .expect("set_state_with_key: can't set state that doesn't exist in this context!");
+
+        start_set_var_and_similar(self, current_id, var, data, similar_fns);
+    }
+    fn set_in_similar_fn<T: std::clone::Clone + 'static>(
+        &self,
+        skip: &SkipKeySet,
+        data: T,
+        current_id: &StorageKey,
+    ) {
+        //unwrap or default to keep borrow checker happy
+        let (var, similar_fns) = self
+            .get_state_and_similar_with_id::<T>(current_id)
+            .expect("set_state_with_key: can't set state that doesn't exist in this context!");
+
+        if skip.borrow().contains(current_id) {
+            // println!(" skip contains current_id at set_in_similar_fn start");
+            return;
+        }
+
+        skip.borrow_mut().insert(*current_id);
+        similar_fns
+            .iter()
+            //TODO check performance
+            // .map(|(_, func)| func)
+            .filter_map(|(key, func)| {
+                if skip.borrow().contains(key) {
+                    println!("similar_fns has key in skip, it's loop !!",);
+                    None
+                } else {
+                    Some(func)
+                }
+            })
+            .for_each(|func| {
+                // let skip_clone = skip2.clone();
+                func(self, skip, data.clone());
+            });
+
+        var.set(data);
     }
     fn insert_var_with_key<T: 'static>(&mut self, var: Var<T>, current_id: &StorageKey) {
         //unwrap or default to keep borrow checker happy
@@ -118,22 +177,59 @@ impl GStateStore {
             let key = self.primary_slotmap.insert(*current_id);
             self.id_to_key_map.insert(*current_id, key);
             if let Some(sec_map) = self.get_mut_secondarymap::<T>() {
-                sec_map.insert(key, var);
+                sec_map.insert(key, (var, HashMap::new()));
             } else {
                 self.register_secondarymap::<T>();
-                self.get_mut_secondarymap::<T>().unwrap().insert(key, var);
+                self.get_mut_secondarymap::<T>()
+                    .unwrap()
+                    .insert(key, (var, HashMap::new()));
             }
         } else if let Some(existing_secondary_map) = self.get_mut_secondarymap::<T>() {
-            existing_secondary_map.insert(key, var);
+            existing_secondary_map.insert(key, (var, HashMap::new()));
         } else {
-            // key ! null  && not find
+            // key ! null  && T not find
             // self.register_secondarymap::<T>();
             // self.get_mut_secondarymap::<T>().unwrap().insert(key, var);
             panic!("panic current using find why here 2");
         }
     }
+    // fn get_similar_map<T: Clone + 'static>(
+    //     &mut self,
+    //     id: &StorageKey,
+    // ) -> Option<&HashMap<StorageKey, Box<dyn Fn(Vec<StorageKey>, T)>>> {
+    //     self.get_state_and_similar_with_id::<T>(id).map(|km| &km.1)
+    // }
+    fn insert_similar<T: Clone + 'static>(
+        &mut self,
+        current_id: &StorageKey,
+        similar_id: &StorageKey,
+        func: BoxSimilarFn<T>, //TODO add store
+    ) {
+        assert_ne!(current_id, similar_id);
 
-    fn get_state_with_id<T: 'static>(&self, current_id: &StorageKey) -> Option<&Var<T>> {
+        let key = self.id_to_key_map.get(current_id).copied();
+        let secondarymap = self.get_mut_secondarymap::<T>();
+        let (var, fns) = match (key, secondarymap) {
+            (Some(existing_key), Some(existing_secondary_map)) => existing_secondary_map
+                .get_mut(existing_key)
+                .expect("cannot get second map"),
+            (key, map) => panic!(
+                "something(key or map) is None: {} {}",
+                key.is_none(),
+                map.is_none()
+            ),
+        };
+        if fns.contains_key(similar_id) {
+            panic!("similar_fns already has this key");
+        }
+
+        fns.insert(*similar_id, func);
+    }
+
+    fn get_state_and_similar_with_id<T: 'static>(
+        &self,
+        current_id: &StorageKey,
+    ) -> Option<&VarSecMap<T>> {
         match (
             self.id_to_key_map.get(current_id),
             self.get_secondarymap::<T>(),
@@ -167,12 +263,37 @@ impl GStateStore {
         self.engine.borrow_mut()
     }
 }
+
+type SimilarFnsMap<T> = HashMap<StorageKey, BoxSimilarFn<T>>;
+
+fn similar_init<T: Clone + 'static>(
+    store: &GStateStore,
+    current_id: &StorageKey,
+    data: &T,
+    fns: &SimilarFnsMap<T>,
+) {
+    let mut new_set = HashSet::default();
+    new_set.insert(*current_id);
+    let skip = Rc::new(RefCell::new(new_set));
+    fns.values()
+        .for_each(|a_func| a_func(store, &skip, data.clone()));
+}
+
+fn start_set_var_and_similar<T: Clone + 'static>(
+    store: &GStateStore,
+    current_id: &StorageKey,
+    var: &anchors::expert::Var<T, Engine>,
+    data: T,
+    similar_fns_map: &SimilarFnsMap<T>,
+) {
+    similar_init(store, current_id, &data, similar_fns_map);
+    var.set(data);
+}
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[derive(PartialEq, Eq)]
 pub struct StateVar<T> {
     id: TopoKey,
-    has_similar: bool,
     _phantom_data: PhantomData<T>,
 }
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
@@ -201,7 +322,6 @@ impl<T> Clone for StateVar<T> {
     fn clone(&self) -> Self {
         Self {
             id: self.id,
-            has_similar: self.has_similar,
             _phantom_data: PhantomData::<T>,
         }
     }
@@ -216,9 +336,10 @@ where
         get_anchor_val_in_var_with_topo_id::<T>(self.id)
     }
     pub fn store_get(&self, store: &GStateStore) -> T {
-        let var_with_sa = store
-            .get_state_with_id::<StateAnchor<T>>(&StorageKey::TopoKey(self.id))
-            .expect("You are trying to get a var state that doesn't exist in this context!");
+        let var_with_sa = &store
+            .get_state_and_similar_with_id::<StateAnchor<T>>(&StorageKey::TopoKey(self.id))
+            .expect("You are trying to get a var state that doesn't exist in this context!")
+            .0;
         store.engine_get((*var_with_sa.get()).clone().anchor())
     }
     pub fn get_inner_anchor(&self) -> StateAnchor<T> {
@@ -237,45 +358,8 @@ where
     const fn new(id: TopoKey) -> Self {
         Self {
             id,
-            has_similar: false,
             _phantom_data: PhantomData,
         }
-    }
-
-    // stores a value of type T in a backing Store
-    pub fn set(&self, value: T)
-    // where
-    //     T: std::fmt::Debug,
-    {
-        // println!("set: {:?}", &value);
-        set_state_with_topo_id::<T>(value, self.id);
-    }
-    pub fn store_set(&self, store: &GStateStore, value: T) {
-        store.set_state_with_key::<T>(value, &StorageKey::TopoKey(self.id));
-    }
-
-    /// `set_with` Fn(&T) -> T
-    /// `G_STATE_STORE`  only use once to set, get.
-    pub fn set_with<F: Fn(&T) -> T>(&self, func: F) {
-        read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func(var.get().as_ref())));
-    }
-    pub fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
-        self.store_get_var_with(store, |var| {
-            var.set(func(var.get().as_ref()));
-        });
-    }
-
-    pub fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
-        read_var_with_topo_id::<_, T, ()>(self.id, |var| var.set(func_once(var.get().as_ref())));
-    }
-    pub fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F) {
-        let var = store
-            .get_state_with_id::<T>(&StorageKey::TopoKey(self.id))
-            .expect(
-            "fn store_set_with: You are trying to get a var state that doesn't exist in this context!",
-        );
-
-        var.set(func_once(var.get().as_ref()));
     }
 
     #[must_use]
@@ -285,7 +369,7 @@ where
 
     #[must_use]
     pub fn get_with<F: Fn(&T) -> R, R>(&self, func: F) -> R {
-        read_state_val_with_topo_id(self.id, func)
+        read_state_val_with_topo_id(self.id, |t, _| func(t))
     }
 
     #[must_use]
@@ -298,12 +382,13 @@ where
     }
 
     pub fn get_var_with<F: Fn(&Var<T>) -> R, R>(&self, func: F) -> R {
-        read_var_with_topo_id(self.id, func)
+        read_var_with_topo_id(self.id, |_, (v, _)| func(v))
     }
     pub fn store_get_var_with<F: Fn(&Var<T>) -> R, R>(&self, store: &GStateStore, func: F) -> R {
-        let var = store
-            .get_state_with_id::<T>(&StorageKey::TopoKey(self.id))
-            .expect("You are trying to get a var state that doesn't exist in this context!");
+        let var = &store
+            .get_state_and_similar_with_id::<T>(&StorageKey::TopoKey(self.id))
+            .expect("You are trying to get a var state that doesn't exist in this context!")
+            .0;
 
         func(var)
     }
@@ -338,25 +423,43 @@ where
 //     }
 // }
 
+// type SkipKeySet = Rc<RefCell<HashSet<StorageKey>>>;
+type SkipKeySet = RefCell<HashSet<StorageKey>>;
+
 pub trait CloneStateVar<T>
 where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
     fn store_get(&self, store: &GStateStore) -> T;
+    fn set(&self, value: T);
+    fn set_in_similar_fn(&self, store: &GStateStore, skip: &SkipKeySet, value: T);
+    fn store_set(&self, store: &GStateStore, value: T);
+    fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F);
+    fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
+    fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F);
+    fn set_with<F: Fn(&T) -> T>(&self, func: F);
     fn try_get(&self) -> Option<T>;
 
     fn update<F: FnOnce(&mut T)>(&self, func: F);
     fn store_update<F: FnOnce(&mut T)>(&self, store: &GStateStore, func: F);
 
-    fn to_di_in_topo<B>(&self) -> StateVarDi<T, B>
-    where
-        B: From<T> + Clone + 'static;
+    fn insert_similar(
+        &self,
+        similar_key: TopoKey,
+        func: impl Fn(&GStateStore, &SkipKeySet, T) + 'static,
+        init: bool,
+    );
 
-    fn to_bi_in_topo<B>(&self) -> (StateVarDi<T, B>, StateVarDi<B, T>)
-    where
-        B: From<T> + Clone + 'static,
-        T: From<B> + 'static;
+    fn build_similar_use_into_in_topo<B: Clone + From<T> + 'static>(&self) -> StateVar<B>;
+    fn build_bi_similar_use_into_in_topo<B: Clone + From<T> + Into<T> + 'static>(
+        &self,
+    ) -> StateVar<B>;
+
+    // fn to_bi_in_topo<B>(&self) -> (StateVarDi<T, B>, StateVarDi<B, T>)
+    // where
+    //     B: From<T> + Clone + 'static,
+    //     T: From<B> + 'static;
 }
 
 impl<T> CloneStateVar<T> for StateVar<T>
@@ -375,6 +478,55 @@ where
         self.store_get_rc(store).as_ref().clone()
     }
 
+    fn set(&self, value: T)
+    // where
+    //     T: std::fmt::Debug,
+    {
+        // println!("set: {:?}", &value);
+        set_state_and_similar_with_topo_id::<T>(value, self.id);
+    }
+
+    fn set_in_similar_fn(&self, store: &GStateStore, skip: &SkipKeySet, value: T) {
+        set_in_similar_fn(store, skip, value, self.id);
+    }
+
+    fn store_set(&self, store: &GStateStore, value: T) {
+        store.set_state_and_similar_with_key::<T>(value, &StorageKey::TopoKey(self.id));
+    }
+    fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
+        let (var, similar_fns) = &store
+            .get_state_and_similar_with_id::<T>(&StorageKey::TopoKey(self.id))
+            .expect("You are trying to get a var state that doesn't exist in this context!");
+
+        let data = func(var.get().as_ref());
+
+        start_set_var_and_similar(store, &StorageKey::TopoKey(self.id), var, data, similar_fns);
+    }
+
+    fn set_with<F: Fn(&T) -> T>(&self, func: F) {
+        read_var_with_topo_id::<_, T, ()>(self.id, |store, (var, similar_fns)| {
+            let data = func(var.get().as_ref());
+            start_set_var_and_similar(store, &StorageKey::TopoKey(self.id), var, data, similar_fns);
+        });
+    }
+    fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
+        read_var_with_topo_id::<_, T, ()>(self.id, |store, (var, similar_fns)| {
+            let data = func_once(var.get().as_ref());
+
+            start_set_var_and_similar(store, &StorageKey::TopoKey(self.id), var, data, similar_fns);
+        });
+    }
+
+    fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F) {
+        let (var,similar_fns) = store
+            .get_state_and_similar_with_id::<T>(&StorageKey::TopoKey(self.id))
+            .expect(
+            "fn store_set_with: You are trying to get a var state that doesn't exist in this context!",
+        );
+        let data = func_once(var.get().as_ref());
+
+        start_set_var_and_similar(store, &StorageKey::TopoKey(self.id), var, data, similar_fns);
+    }
     fn try_get(&self) -> Option<T> {
         clone_state_with_topo_id::<T>(self.id).map(|v| (*v.get()).clone())
     }
@@ -385,6 +537,8 @@ where
         //     func(&mut old);
         //     var.set(old);
         // })
+
+        //NOTE 'set_with_once' has similar update
         self.set_with_once(|v| {
             let mut old = v.clone();
             func(&mut old);
@@ -397,6 +551,7 @@ where
         //     func(&mut old);
         //     var.set(old);
         // })
+        //NOTE 'store_set_with_once' has similar update
         self.store_set_with_once(store, |v| {
             let mut old = v.clone();
             func(&mut old);
@@ -404,27 +559,76 @@ where
         });
     }
 
-    #[topo::nested]
-    fn to_di_in_topo<B>(&self) -> StateVarDi<T, B>
-    where
-        B: From<T> + Clone + 'static,
-    {
-        let b = use_state(self.get().into());
-        StateVarDi::new_use_into(*self, b)
+    // #[topo::nested]
+    // fn to_di_in_topo<B>(&self) -> StateVarDi<T, B>
+    // where
+    //     B: From<T> + Clone + 'static,
+    // {
+    //     let b = use_state(self.get().into());
+    //     StateVarDi::new_use_into(*self, b)
+    // }
+    // #[topo::nested]
+    // fn to_bi_in_topo<B>(&self) -> (StateVarDi<T, B>, StateVarDi<B, T>)
+    // where
+    //     B: From<T> + Clone + 'static,
+    //     T: From<B> + 'static,
+    // {
+    //     let b = use_state(self.get().into());
+    //     (
+    //         StateVarDi::new_use_into(*self, b),
+    //         StateVarDi::new_use_into(b, *self),
+    //     )
+    // }
+
+    //TODO 回环检测 , 当两个或者两个以上 有 di关系的 StateVar  set的时候 会再次互相调用set -回环
+    fn insert_similar(
+        &self,
+        similar_key: TopoKey,
+        func: impl Fn(&GStateStore, &SkipKeySet, T) + 'static,
+        init: bool,
+    ) {
+        insert_similar(
+            self,
+            &StorageKey::TopoKey(similar_key),
+            Box::new(func),
+            init,
+        );
     }
     #[topo::nested]
-    fn to_bi_in_topo<B>(&self) -> (StateVarDi<T, B>, StateVarDi<B, T>)
-    where
-        B: From<T> + Clone + 'static,
-        T: From<B> + 'static,
-    {
-        let b = use_state(self.get().into());
-        (
-            StateVarDi::new_use_into(*self, b),
-            StateVarDi::new_use_into(b, *self),
-        )
+    fn build_similar_use_into_in_topo<B: Clone + From<T> + 'static>(&self) -> StateVar<B> {
+        let v = self.get();
+        let b: StateVar<B> = use_state(v.into());
+        insert_similar(
+            self,
+            &StorageKey::TopoKey(b.id),
+            Box::new(move |store, skip, value| b.set_in_similar_fn(store, skip, value.into())),
+            false,
+        );
+        b
+    }
+    #[topo::nested]
+    fn build_bi_similar_use_into_in_topo<B: Clone + From<T> + Into<T> + 'static>(
+        &self,
+    ) -> StateVar<B> {
+        let v = self.get();
+        let b: StateVar<B> = use_state(v.into());
+        insert_similar(
+            self,
+            &StorageKey::TopoKey(b.id),
+            Box::new(move |store, skip, value| b.set_in_similar_fn(store, skip, value.into())),
+            false,
+        );
+        let this = *self;
+        insert_similar(
+            &b,
+            &StorageKey::TopoKey(self.id),
+            Box::new(move |store, skip, value| this.set_in_similar_fn(store, skip, value.into())),
+            false,
+        );
+        b
     }
 }
+
 // #[macro_export]
 // macro_rules! to_vector_di {
 //     ( $( $element:expr ) , * ) => {
@@ -440,72 +644,72 @@ where
 //         }
 //     };
 // }
-pub struct StateVarDi<A, B> {
-    pub this: StateVar<A>,
-    pub similar: StateVar<B>,
-    update_fn: Box<dyn Fn(A, StateVar<B>)>,
-}
-impl<A, B, T> TryFrom<StateVarDi<A, B>> for StateVar<T>
-where
-    A: 'static,
-    B: 'static,
-    T: 'static,
-{
-    type Error = ();
-    fn try_from(di: StateVarDi<A, B>) -> Result<Self, Self::Error> {
-        if TypeId::of::<A>() == TypeId::of::<T>() {
-            let any: Box<dyn std::any::Any> = Box::new(di.this);
-            any.downcast::<Self>().map(|v| *v).map_err(|_| ())
-        } else if TypeId::of::<B>() == TypeId::of::<T>() {
-            let any: Box<dyn std::any::Any> = Box::new(di.similar);
-            any.downcast::<Self>().map(|v| *v).map_err(|_| ())
-        } else {
-            panic!("not match any type")
-        }
-    }
-}
+// pub struct StateVarDi<A, B> {
+//     pub this: StateVar<A>,
+//     pub similar: StateVar<B>,
+//     update_fn: Box<dyn Fn(A, StateVar<B>)>,
+// }
+// impl<A, B, T> TryFrom<StateVarDi<A, B>> for StateVar<T>
+// where
+//     A: 'static,
+//     B: 'static,
+//     T: 'static,
+// {
+//     type Error = ();
+//     fn try_from(di: StateVarDi<A, B>) -> Result<Self, Self::Error> {
+//         if TypeId::of::<A>() == TypeId::of::<T>() {
+//             let any: Box<dyn std::any::Any> = Box::new(di.this);
+//             any.downcast::<Self>().map(|v| *v).map_err(|_| ())
+//         } else if TypeId::of::<B>() == TypeId::of::<T>() {
+//             let any: Box<dyn std::any::Any> = Box::new(di.similar);
+//             any.downcast::<Self>().map(|v| *v).map_err(|_| ())
+//         } else {
+//             panic!("not match any type")
+//         }
+//     }
+// }
 
-impl<A, B> StateVarDi<A, B>
-where
-    B: From<A> + 'static,
-    A: Clone + 'static,
-{
-    #[must_use]
-    pub fn new_use_into(this: StateVar<A>, similar: StateVar<B>) -> Self {
-        Self {
-            this,
-            similar,
-            update_fn: Box::new(|a, sv_b| sv_b.set(a.into())),
-        }
-    }
-}
-impl<A, B> StateVarDi<A, B>
-where
-    B: 'static,
-    A: Clone + 'static,
-{
-    #[must_use]
-    pub fn new(
-        this: StateVar<A>,
-        similar: StateVar<B>,
-        update_fn: Box<dyn Fn(A, StateVar<B>)>,
-    ) -> Self {
-        Self {
-            this,
-            similar,
-            update_fn,
-        }
-    }
+// impl<A, B> StateVarDi<A, B>
+// where
+//     B: Clone + From<A> + 'static,
+//     A: Clone + 'static,
+// {
+//     #[must_use]
+//     pub fn new_use_into(this: StateVar<A>, similar: StateVar<B>) -> Self {
+//         Self {
+//             this,
+//             similar,
+//             update_fn: Box::new(|a, sv_b| sv_b.set(a.into())),
+//         }
+//     }
+// }
+// impl<A, B> StateVarDi<A, B>
+// where
+//     B: 'static,
+//     A: Clone + 'static,
+// {
+//     #[must_use]
+//     pub fn new(
+//         this: StateVar<A>,
+//         similar: StateVar<B>,
+//         update_fn: Box<dyn Fn(A, StateVar<B>)>,
+//     ) -> Self {
+//         Self {
+//             this,
+//             similar,
+//             update_fn,
+//         }
+//     }
 
-    pub fn set(&self, value: A) {
-        self.this.set(value.clone());
-        (self.update_fn)(value, self.similar);
-    }
-    #[must_use]
-    pub fn get(&self) -> A {
-        self.this.get()
-    }
-}
+//     pub fn set(&self, value: A) {
+//         self.this.set(value.clone());
+//         (self.update_fn)(value, self.similar);
+//     }
+//     #[must_use]
+//     pub fn get(&self) -> A {
+//         self.this.get()
+//     }
+// }
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct StateAnchor<T>(Anchor<T>);
@@ -853,15 +1057,21 @@ impl_tuple_ext! {
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
-struct TopoKey {
+pub struct TopoKey {
     // pub ctx: Option<SlottedKey>,
     id: topo::CallId,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
-enum StorageKey {
+pub enum StorageKey {
     // SlottedKey(SlottedKey),
     TopoKey(TopoKey),
+}
+
+impl From<TopoKey> for StorageKey {
+    fn from(v: TopoKey) -> Self {
+        Self::TopoKey(v)
+    }
 }
 
 fn global_engine_get_anchor_val<O: Clone + 'static>(anchor: &Anchor<O>) -> O {
@@ -879,12 +1089,27 @@ fn state_exists_for_topo_id<T: 'static>(id: TopoKey) -> bool {
     })
 }
 /// Sets the state of type T keyed to the given `TopoId`
-fn set_state_with_topo_id<T: 'static>(data: T, current_id: TopoKey) {
+fn set_state_and_similar_with_topo_id<T: 'static + std::clone::Clone>(
+    data: T,
+    current_id: TopoKey,
+) {
     G_STATE_STORE.with(|g_state_store_refcell| {
         g_state_store_refcell
             .borrow()
-            .set_state_with_key::<T>(data, &StorageKey::TopoKey(current_id));
+            .set_state_and_similar_with_key::<T>(data, &StorageKey::TopoKey(current_id));
     });
+
+    // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
+}
+fn set_in_similar_fn<T: 'static + std::clone::Clone>(
+    store: &GStateStore,
+    skip: &SkipKeySet,
+    data: T,
+    current_id: TopoKey,
+) {
+    // G_STATE_STORE.with(|g_state_store_refcell| {
+    store.set_in_similar_fn::<T>(skip, data, &StorageKey::TopoKey(current_id));
+    // });
 
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
 }
@@ -902,12 +1127,16 @@ fn clone_state_with_topo_id<T: 'static>(id: TopoKey) -> Option<Var<T>> {
     G_STATE_STORE.with(|g_state_store_refcell| {
         g_state_store_refcell
             .borrow_mut()
-            .get_state_with_id::<T>(&StorageKey::TopoKey(id))
+            .get_state_and_similar_with_id::<T>(&StorageKey::TopoKey(id))
+            .map(|v| &v.0)
             .cloned()
     })
 }
 
-fn read_state_val_with_topo_id<F: FnOnce(&T) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
+fn read_state_val_with_topo_id<F: FnOnce(&T, &SimilarFnsMap<T>) -> R, T: 'static, R>(
+    id: TopoKey,
+    func: F,
+) -> R {
     // G_STATE_STORE.with(|g_state_store_refcell| {
     //     func(
     //         g_state_store_refcell
@@ -919,7 +1148,9 @@ fn read_state_val_with_topo_id<F: FnOnce(&T) -> R, T: 'static, R>(id: TopoKey, f
     //     )
     // })
 
-    read_var_with_topo_id::<_, T, R>(id, |var| func(var.get().as_ref()))
+    read_var_with_topo_id::<_, T, R>(id, |_, (var, similar_fns)| {
+        func(var.get().as_ref(), similar_fns)
+    })
 }
 // fn read_state_val_with_topo_id_old<F: FnOnce(&T) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
 //     let item = remove_state_with_topo_id::<T>(id)
@@ -933,22 +1164,57 @@ fn read_state_val_with_topo_id<F: FnOnce(&T) -> R, T: 'static, R>(id: TopoKey, f
 fn get_anchor_val_in_var_with_topo_id<T: 'static + std::clone::Clone>(id: TopoKey) -> T {
     G_STATE_STORE.with(|g_state_store_refcell| {
         let store = g_state_store_refcell.borrow();
-        let var_with_sa = store
-            .get_state_with_id::<StateAnchor<T>>(&StorageKey::TopoKey(id))
-            .expect("You are trying to get a var state that doesn't exist in this context!");
+        let var_with_sa = &store
+            .get_state_and_similar_with_id::<StateAnchor<T>>(&StorageKey::TopoKey(id))
+            .expect("You are trying to get a var state that doesn't exist in this context!")
+            .0;
         store.engine_get((*var_with_sa.get()).clone().anchor())
     })
 }
 
-fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
+fn read_var_with_topo_id<F: FnOnce(&GStateStore, &VarSecMap<T>) -> R, T: 'static, R>(
+    id: TopoKey,
+    func: F,
+) -> R {
     G_STATE_STORE.with(|g_state_store_refcell| {
         func(
+            &g_state_store_refcell.borrow(),
             g_state_store_refcell
                 .borrow()
-                .get_state_with_id::<T>(&StorageKey::TopoKey(id))
+                .get_state_and_similar_with_id::<T>(&StorageKey::TopoKey(id))
                 .expect("You are trying to get a var state that doesn't exist in this context!"),
         )
     })
+}
+
+type BoxSimilarFn<T> = Box<dyn Fn(&GStateStore, &SkipKeySet, T)>;
+
+fn insert_similar<T: 'static + std::clone::Clone>(
+    sv: &StateVar<T>,
+    similar_id: &StorageKey,
+    func: BoxSimilarFn<T>,
+    init: bool,
+) {
+    G_STATE_STORE.with(|g_state_store_refcell| {
+        g_state_store_refcell.borrow_mut().insert_similar(
+            &StorageKey::TopoKey(sv.id),
+            similar_id,
+            func,
+        );
+        if init {
+            let store = &g_state_store_refcell.borrow();
+            let (var, similar_fns) = store
+                .get_state_and_similar_with_id::<T>(&StorageKey::TopoKey(sv.id))
+                .expect("set_state_with_key: can't set state that doesn't exist in this context!");
+
+            similar_init(
+                store,
+                &StorageKey::TopoKey(sv.id),
+                &(*var.get()),
+                similar_fns,
+            );
+        }
+    });
 }
 
 pub fn state_store_with<F, R>(func: F) -> R
@@ -994,6 +1260,8 @@ where
     }
     StateVar::new(id)
 }
+
+// pub fn add_similar<T>(func:F)
 // use overloadf::overload;
 // #[overload]
 // pub fn xx<T>(d: Var<T>) {}
@@ -1007,6 +1275,69 @@ mod state_test {
 
     use super::*;
 
+    #[derive(Clone, Debug)]
+    struct TT(String);
+    impl From<i32> for TT {
+        fn from(v: i32) -> Self {
+            Self(format!("{:?}", v))
+        }
+    }
+    impl From<TT> for i32 {
+        fn from(v: TT) -> Self {
+            let s = v.0;
+            let i = s.parse::<i32>().unwrap();
+            i
+        }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn similar() {
+        let a = use_state(1);
+        let b = a.build_similar_use_into_in_topo::<TT>();
+        println!("init: a:{:?} b:{:?}", &a, &b);
+        a.set(2);
+        println!("a set 2 : a:{:?} b:{:?}", &a, &b);
+        assert_eq!(format!("{:?}", a.get()), b.get().0);
+        let c = a.build_bi_similar_use_into_in_topo::<TT>();
+        let d = c.build_similar_use_into_in_topo::<i32>();
+        println!("build c : a:{:?} b:{:?} c:{:?}", &a, &b, &c);
+        c.set(TT("3".to_string()));
+        println!("c set '3' : a:{:?} b:{:?} c:{:?}", &a, &b, &c);
+        a.set(9);
+        println!("a set 9: a:{:?} b:{:?} c:{:?}", &a, &b, &c);
+        assert_eq!(a.get(), d.get());
+    }
+    #[test]
+    #[wasm_bindgen_test]
+    fn similar2() {
+        let a = use_state(1);
+        let b = a.build_bi_similar_use_into_in_topo::<TT>();
+        let c = b.build_similar_use_into_in_topo::<i32>();
+        let d = b.build_similar_use_into_in_topo::<TT>();
+        d.insert_similar(
+            c.id.into(),
+            move |store, skip, value| {
+                c.set_in_similar_fn(store, skip, value.into());
+            },
+            true,
+        );
+        c.insert_similar(
+            a.id.into(),
+            move |store, skip, value| {
+                a.set_in_similar_fn(store, skip, value.into());
+            },
+            true,
+        );
+
+        println!("init: a:{:?} b:{:?} c:{:?} d:{:?}", &a, &b, &c, &d);
+
+        a.set(2);
+        println!(
+            "a set 2--------------: a:{:?} b:{:?} c:{:?} d:{:?}",
+            &a, &b, &c, &d
+        );
+    }
     #[test]
     #[wasm_bindgen_test]
     fn update() {

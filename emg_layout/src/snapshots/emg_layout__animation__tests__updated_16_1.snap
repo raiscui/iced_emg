@@ -41,34 +41,36 @@ AnimationEdge {
         interruption: StateVar(
             [],
         ),
-        props: StateVar(
-            [
-                Prop(
-                    "opacity",
-                    Motion {
-                        position: NotNan(
-                            0.95278155548,
-                        ),
-                        velocity: NotNan(
-                            -2.83322,
-                        ),
-                        target: NotNan(
-                            0.0,
-                        ),
-                        interpolation: Spring {
-                            stiffness: NotNan(
-                                170.0,
+        props: [
+            StateVarProperty(
+                StateVar(
+                    Prop(
+                        "opacity",
+                        Motion {
+                            position: NotNan(
+                                0.95278155548,
                             ),
-                            damping: NotNan(
-                                26.0,
+                            velocity: NotNan(
+                                -2.83322,
                             ),
+                            target: NotNan(
+                                0.0,
+                            ),
+                            interpolation: Spring {
+                                stiffness: NotNan(
+                                    170.0,
+                                ),
+                                damping: NotNan(
+                                    26.0,
+                                ),
+                            },
+                            unit: None,
+                            interpolation_override: None,
                         },
-                        unit: None,
-                        interpolation_override: None,
-                    },
+                    ),
                 ),
-            ],
-        ),
+            ),
+        ],
     },
     timing: StateAnchor(
         Timing {

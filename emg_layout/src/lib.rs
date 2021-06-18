@@ -30,7 +30,7 @@ use derive_more::Into;
 use emg_core::GenericSize;
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
-use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state};
+use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, };
 
 use im::Vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
@@ -95,7 +95,9 @@ impl ::core::ops::Add for GenericSizeAnchor {
 }
 // ────────────────────────────────────────────────────────────────────────────────
 pub auto trait NotStateAnchor {}
-impl<T> !NotStateAnchor for StateAnchor<T>{}
+impl<T> !NotStateAnchor for StateAnchor<T> {}
+
+// impl<T> NotStateAnchor for T{}
 
 impl<T> From<T> for GenericSizeAnchor
 where T : NotStateAnchor+ Into<GenericSize> + Clone+'static{

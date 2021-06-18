@@ -12,12 +12,14 @@ use crate::{init_motion, Debuggable};
 
 // use emg_debuggable::{dbg4, Debuggable};
 
+type EaseFnT = Rc<Debuggable<Box<dyn Fn(Precision) -> Precision>>>;
+
 #[derive(Clone, Debug)]
 pub struct Easing {
     pub progress: Precision,
     pub duration: Duration,
     pub start: NotNan<Precision>,
-    pub ease: Rc<Debuggable<dyn Fn(Precision) -> Precision>>,
+    pub ease: EaseFnT,
 }
 
 impl PartialEq for Easing {

@@ -6,12 +6,13 @@ use crate::{func::list_find_dup, models::Property};
 /*
  * @Author: Rais
  * @Date: 2021-06-02 12:40:24
- * @LastEditTime: 2021-06-02 12:52:04
+ * @LastEditTime: 2021-06-18 14:52:25
  * @LastEditors: Rais
  * @Description:
  */
 
-fn is_transformation(prop: &Property) -> bool {
+#[must_use]
+pub fn is_transformation(prop: &Property) -> bool {
     // List.member (propertyName prop)
     [
         "rotate",

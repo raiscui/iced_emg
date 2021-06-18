@@ -88,7 +88,7 @@ pub fn default_interpolation_by_property(prop: &Property) -> Interpolation {
             progress: 1.,
             start: NotNan::default(),
             duration,
-            ease: Rc::new(dbg4!(std::convert::identity::<f64>)),
+            ease: Rc::new(dbg4!(Box::new(std::convert::identity::<f64>))),
         })
     };
 
@@ -228,18 +228,18 @@ pub fn update<Message: std::clone::Clone + std::fmt::Debug>(
 
 // ────────────────────────────────────────────────────────────────────────────────
 #[derive(Clone)]
-pub struct Debuggable<T: ?Sized> {
+pub struct Debuggable<T> {
     text: &'static str,
     value: T,
 }
 
-impl<T: ?Sized> PartialEq for Debuggable<T> {
+impl<T> PartialEq for Debuggable<T> {
     fn eq(&self, other: &Self) -> bool {
         self.text.eq(other.text)
     }
 }
 
-impl<T: ?Sized> std::ops::Deref for Debuggable<T> {
+impl<T> std::ops::Deref for Debuggable<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -260,7 +260,7 @@ macro_rules! dbg4 {
 
 // Note: this type is unsized
 
-impl<T: ?Sized> fmt::Debug for Debuggable<T> {
+impl<T> fmt::Debug for Debuggable<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.text)
     }

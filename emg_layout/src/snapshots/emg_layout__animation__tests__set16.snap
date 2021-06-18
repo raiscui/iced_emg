@@ -73,34 +73,36 @@ AnimationEdge {
                 ),
             ],
         ),
-        props: StateVar(
-            [
-                Prop(
-                    "opacity",
-                    Motion {
-                        position: NotNan(
-                            1.0,
-                        ),
-                        velocity: NotNan(
-                            0.0,
-                        ),
-                        target: NotNan(
-                            1.0,
-                        ),
-                        interpolation: Spring {
-                            stiffness: NotNan(
-                                170.0,
+        props: [
+            StateVarProperty(
+                StateVar(
+                    Prop(
+                        "opacity",
+                        Motion {
+                            position: NotNan(
+                                1.0,
                             ),
-                            damping: NotNan(
-                                26.0,
+                            velocity: NotNan(
+                                0.0,
                             ),
+                            target: NotNan(
+                                1.0,
+                            ),
+                            interpolation: Spring {
+                                stiffness: NotNan(
+                                    170.0,
+                                ),
+                                damping: NotNan(
+                                    26.0,
+                                ),
+                            },
+                            unit: None,
+                            interpolation_override: None,
                         },
-                        unit: None,
-                        interpolation_override: None,
-                    },
+                    ),
                 ),
-            ],
-        ),
+            ),
+        ],
     },
     timing: StateAnchor(
         Timing {
