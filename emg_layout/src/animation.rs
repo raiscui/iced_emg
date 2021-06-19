@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-18 17:05:23
+ * @LastEditTime: 2021-06-19 21:45:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,11 +14,7 @@
  */
 // mod define;
 mod func;
-use std::{
-    cell::{Ref, RefCell},
-    rc::Rc,
-    time::Duration,
-};
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use emg_state::{
     state_store, topo, use_state, use_state_impl::Var, Anchor, CloneStateAnchor, CloneStateVar,
@@ -68,7 +64,7 @@ impl<T> NotStateVar for Debuggable<T> {}
 
 impl<T> From<StateVar<T>> for StateVarProperty
 where
-    T: Clone + 'static + From<Property>,
+    T: Clone + 'static + From<Property> + std::fmt::Debug,
     Property: From<T>,
 {
     #[topo::nested]
@@ -172,11 +168,12 @@ where
     // }
 
     fn set_timer(store: &GStateStore, sv_now: StateVar<Duration>) -> StateAnchor<Timing> {
-        // let mut timing = Timing::default();
+        let mut timing = Timing::default();
+        let mut opt_old_current: Option<Timing> = None;
         sv_now
             .store_watch(store)
-            // .map(move |now:&Duration|{
-            //     if timing.current() != *now{
+            // .map(move |now: &Duration| {
+            //     if timing.current() != *now {
             //         let dt_tmp = now.saturating_sub(timing.current());
             //         let dt = {
             //             if timing.current() == Duration::ZERO || dt_tmp.as_millis() > 34 {
@@ -193,15 +190,16 @@ where
             .map_mut(
                 Timing::default(),
                 move |timing: &mut Timing, now: &Duration| {
-                    let current = timing.current_mut();
-                    if now == current {
+                    let current = timing.current();
+                    if now == &current {
+                        // timing.set_dt(Duration::ZERO);
                         return false;
                     }
                     // • • • • •
 
-                    let dt_tmp = now.saturating_sub(*current);
+                    let dt_tmp = now.saturating_sub(current);
                     let dt = {
-                        if *current == Duration::ZERO || dt_tmp.as_millis() > 34 {
+                        if current.is_zero() || dt_tmp.as_millis() > 34 {
                             Duration::from_micros(16666)
                         } else {
                             dt_tmp
@@ -214,6 +212,15 @@ where
                     true
                 },
             )
+        // .cutoff(move |new_t| {
+        //     if let Some(old_t) = &opt_old_current {
+        //         if old_t == new_t {
+        //             return false;
+        //         }
+        //     }
+        //     opt_old_current = Some(*new_t);
+        //     true
+        // })
     }
 
     #[topo::nested]
@@ -266,76 +273,94 @@ where
             .map(|q, r| !q.is_empty() || !r.is_empty());
 
         let interruption_cut = {
-            let mut ct = sv_now.store_get(&store);
+            let mut opt_old_current: Option<Duration> = None;
+            let mut opt_old_interruption: Option<StepTimeVector<Message>> = None;
+            // interruption_init.store_watch(&store)
             (&sa_timing, &interruption_init.store_watch(&store))
                 .map(|t, i| (*t, i.clone()))
-                .cutoff(move |(timing, _)| {
-                    let current = timing.current();
-
-                    if current == ct {
-                        false
-                    } else {
-                        ct = current;
-                        true
+                .cutoff(move |(timing, new_interruption)| {
+                    let new_t = timing.current();
+                    if let Some(old_t) = opt_old_current {
+                        if old_t == new_t {
+                            return false;
+                        }
                     }
+
+                    // if let Some(old_interruption) = &opt_old_interruption {
+                    // if old_interruption == new_interruption {
+                    // return false;
+                    // }
+                    // }
+
+                    opt_old_current = Some(new_t);
+
+                    // opt_old_interruption = Some(new_interruption.clone());
+
+                    true
                 })
                 .map(|(_, i)| i.clone())
         };
 
         let steps_cut = {
-            let mut ct = sv_now.store_get(&store);
-            (&sa_timing, &steps_init.store_watch(&store))
-                .map(|t, i| (*t, i.clone()))
-                .cutoff(move |(timing, _)| {
-                    let current = timing.current();
+            steps_init.store_watch(&store)
+            // let mut opt_old_current: Option<Duration> = None;
+            // let mut opt_old_steps: Option<Vector<Step<Message>>> = None;
+            // (&sa_timing, &steps_init.store_watch(&store))
+            //     .map(|t, i| (*t, i.clone()))
+            //     .cutoff(move |(timing, new_steps)| {
+            //         let new_t = timing.current();
+            //         if let Some(old_t) = opt_old_current {
+            //             if old_t == new_t {
+            //                 return false;
+            //             }
+            //         }
 
-                    if current == ct {
-                        false
-                    } else {
-                        ct = current;
-                        true
-                    }
-                })
-                .map(|(_, i)| i.clone())
+            //         // if let Some(old_steps) = &opt_old_steps {
+            //         //     if old_steps == new_steps {
+            //         //         return false;
+            //         //     }
+            //         // }
+
+            //         opt_old_current = Some(new_t);
+            //         // opt_old_steps = Some(new_steps.clone());
+
+            //         true
+            //     })
+            //     .map(|(_, i)| i.clone())
         };
 
         let props_cut: StateAnchor<Vector<Property>> = {
-            let mut ct = sv_now.store_get(&store);
+            let mut opt_old_current: Option<Duration> = None;
+            let mut opt_old_props: Option<Vector<Property>> = None;
+
             let pa: StateAnchor<Vector<Property>> = props_init
                 .iter()
                 .map(|sv| sv.store_get_var_with(&store, Var::watch))
                 .collect::<Anchor<Vector<_>>>()
                 .into();
+            // pa
             (&sa_timing, &pa)
                 .map(|t, i| (*t, i.clone()))
-                .cutoff(move |(timing, _)| {
-                    let current = timing.current();
-                    if current == ct {
-                        false
-                    } else {
-                        ct = current;
-                        true
+                .cutoff(move |(timing, new_props)| {
+                    let new_t = timing.current();
+                    if let Some(old_t) = opt_old_current {
+                        if old_t == new_t {
+                            return false;
+                        }
                     }
+
+                    // if let Some(old_props) = &opt_old_props {
+                    //     if old_props == new_props {
+                    //         return false;
+                    //     }
+                    // }
+
+                    opt_old_current = Some(new_t);
+                    // opt_old_props = Some(new_props.clone());
+                    true
                 })
                 .map(|(_, i)| i.clone())
         };
-        // let props_cut = {
-        //     let mut ct = sv_now.get();
-        //     (&sa_timing, &props_self_cut)
-        //         .map(|t, i| (*t, i.clone()))
-        //         .cutoff(move |(timing, _)| {
-        //             let current = timing.current();
-        //             if current == ct {
-        //                 false
-        //             } else {
-        //                 ct = current;
-        //                 true
-        //             }
-        //         })
-        //         .map(|(_, i)| i.clone())
-        // };
-
-        // let mut current_time = Duration::default();
 
         let revised: SAPropsMessageSteps2<Message> =
             (&sa_timing, &interruption_cut, &steps_cut, &props_cut).map(
@@ -455,7 +480,7 @@ where
             });
     }
 
-    pub fn update_animation(&self) {
+    pub fn update(&self) {
         //
         // self.inside.props.get();
         // self.store.borrow().engine_mut().stabilize();
@@ -467,16 +492,19 @@ where
         let queued_interruptions = self.queued_interruptions.store_get(store_ref);
         let revised_steps = self.revised_steps.store_get(store_ref);
         let revised_props = self.revised_props.store_get(store_ref);
-        self.inside
-            .interruption
-            .store_set(store_ref, queued_interruptions);
-        self.inside.steps.store_set(store_ref, revised_steps);
+        // ─────────────────────────────────────────────────────────────────
 
         self.inside
             .props
             .iter()
             .zip(revised_props.into_iter())
             .for_each(|(sv, prop)| sv.store_set(store_ref, prop));
+
+        self.inside
+            .interruption
+            .store_set(store_ref, queued_interruptions);
+        self.inside.steps.store_set(store_ref, revised_steps);
+
         //TODO: cmd send message
     }
 }
@@ -496,12 +524,11 @@ mod tests {
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore,
         StateAnchor, StateVar,
     };
-    use im::{vector, Vector};
+    use im::vector;
     use seed_styles as styles;
     use styles::width;
     use styles::{px, CssWidth};
 
-    use crate::animation::StateVarProperty;
     use crate::EmgEdgeItem;
 
     use super::AnimationEdge;
@@ -601,10 +628,30 @@ mod tests {
                 to(vector![emg_animation::opacity(1.)]),
                 to(vector![emg_animation::opacity(0.)]),
                 to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
+                to(vector![emg_animation::opacity(0.)]),
+                to(vector![emg_animation::opacity(1.)]),
             ],
             am,
         );
-        for i in 1002..1500 {
+        for i in 1002..2000 {
             emg_animation::update(Tick(Duration::from_millis(i * 16)), am);
             let _e = am.get_position(0);
         }
@@ -664,10 +711,10 @@ mod tests {
         ]);
 
         sv_now.store_set(storeref, Duration::from_millis(16));
-        a.update_animation();
+        a.update();
         for i in 1002..1500 {
             sv_now.store_set(storeref, Duration::from_millis(i * 16));
-            a.update_animation();
+            a.update();
             a.inside.props[0].store_get(storeref);
         }
         a.revised_props.store_get(storeref);
@@ -722,13 +769,33 @@ mod tests {
             to(vector![emg_animation::opacity(1.)]),
             to(vector![emg_animation::opacity(0.)]),
             to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
+            to(vector![emg_animation::opacity(0.)]),
+            to(vector![emg_animation::opacity(1.)]),
         ]);
 
         sv_now.store_set(storeref, Duration::from_millis(16));
-        a.update_animation();
-        for i in 1002..1500 {
+        a.update();
+        for i in 1002..2000 {
             sv_now.store_set(storeref, Duration::from_millis(i * 16));
-            a.update_animation();
+            a.update();
             a.inside.props[0].store_get(storeref);
         }
         a.revised_props.store_get(storeref);
@@ -779,40 +846,39 @@ mod tests {
             // ────────────────────────────────────────────────────────────────────────────────
 
             sv_now.set(Duration::from_millis(16));
-            // println!("set timing 16");
             insta::assert_debug_snapshot!("set16", &a);
+            a.update();
+            // println!("set timing 16");
 
-            a.update_animation();
             // println!("set timing 16-- update");
 
             // println!("1**{:?}", a.inside.props.get());
 
-            insta::assert_debug_snapshot!("updated_16_0", &a);
-            insta::assert_debug_snapshot!("updated_16_1", &a);
+            insta::assert_debug_snapshot!("updated_16_a_0", &a);
+            insta::assert_debug_snapshot!("updated_16_a_1", &a);
             // println!("set timing 16-- insta");
             // ────────────────────────────────────────────────────────────────────────────────
             sv_now.set(Duration::from_millis(16));
+            a.update();
             // println!("set timing 16-2");
 
-            a.update_animation();
-
-            insta::assert_debug_snapshot!("updated_16_0-2", &a);
-            insta::assert_debug_snapshot!("updated_16_1-2", &a);
+            insta::assert_debug_snapshot!("updated_16_b_0", &a);
+            insta::assert_debug_snapshot!("updated_16_b_1", &a);
             // println!("set timing 16-- insta-2");
             // ─────────────────────────────────────────────────────────────────
 
             sv_now.set(Duration::from_millis(33));
+            insta::assert_debug_snapshot!("set33", &a);
+            a.update();
             // println!("set timing 33");
 
             // println!("....set 2 ");
-            insta::assert_debug_snapshot!("set33", &a);
 
-            a.update_animation();
             insta::assert_debug_snapshot!("updated_33_0", &a);
 
             // println!("set timing 33 -- update 1");
 
-            a.update_animation();
+            a.update();
             insta::assert_debug_snapshot!("updated_33_1", &a);
 
             // println!("set timing 33 -- update 2");
@@ -828,11 +894,11 @@ mod tests {
             // insta::assert_debug_snapshot!("updated_back_0", &a);
             // insta::assert_debug_snapshot!("updated_back_1", &a);
 
-            for i in 3..100 {
+            for i in 3..200 {
                 sv_now.set(Duration::from_millis(i * 16));
+                a.update();
                 // println!("in ------ i:{}", &i);
                 // a.timing.get();
-                a.update_animation();
                 // println!("3***{:?}", a.inside.props.get());
                 a.inside.props[0].get();
             }
@@ -853,11 +919,10 @@ mod tests {
     fn test_layout_anima() {
         // ! layout am
         // let nn = _init();
-        let w: StateVar<CssWidth> = use_state(width(px(0)));
-        let w2p = w.build_similar_use_into_in_topo::<Property>();
 
         insta::with_settings!({snapshot_path => Path::new("./layout_am")}, {
 
+            let css_w: StateVar<CssWidth> = use_state(width(px(1)));
 
 
             // let span = trace_span!("am-test");
@@ -879,7 +944,7 @@ mod tests {
 
             let a: AnimationEdge<String, Message> =
                 // AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item, sv_now);
-                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item, sv_now);
+                AnimationEdge::new_in_topo(into_vector![css_w], edge_item, sv_now);
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
             insta::assert_debug_snapshot!("new2", &a);
@@ -909,7 +974,7 @@ mod tests {
             // println!("set timing 16");
             insta::assert_debug_snapshot!("set16", &a);
 
-            a.update_animation();
+            a.update();
             // println!("set timing 16-- update");
 
             // println!("1**{:?}", a.inside.props.get());
@@ -921,7 +986,7 @@ mod tests {
             sv_now.set(Duration::from_millis(16));
             // println!("set timing 16-2");
 
-            a.update_animation();
+            a.update();
 
             insta::assert_debug_snapshot!("updated_16_0-2", &a);
             // insta::assert_debug_snapshot!("updated_16_1-2", &a);
@@ -937,12 +1002,12 @@ mod tests {
             // println!("....set 2 ");
             insta::assert_debug_snapshot!("set33", &a);
 
-            a.update_animation();
+            a.update();
             insta::assert_debug_snapshot!("updated_33_0", &a);
 
             // println!("set timing 33 -- update 1");
 
-            a.update_animation();
+            a.update();
             insta::assert_debug_snapshot!("updated_33_1", &a);
 
             // println!("set timing 33 -- update 2");
@@ -961,13 +1026,20 @@ mod tests {
             // insta::assert_debug_snapshot!("updated_back_0", &a);
             // insta::assert_debug_snapshot!("updated_back_1", &a);
 
-            for i in 3..100 {
+            for i in 3..200 {
+                if i == 50{
+                    println!(" 50-> : current width:{}",&css_w);
+                    css_w.set(width(px(20)));
+
+                }
                 sv_now.set(Duration::from_millis(i * 16));
+
+
                 // println!("in ------ i:{}", &i);
-                // a.timing.get();
-                a.update_animation();
-                // println!("3***{:?}", a.inside.props.get());
-                a.inside.props[0].get();
+                // a.timing.get();´ß
+                a.update();
+                println!("***-- {:?}",CssWidth::from( a.inside.props[0].get()));
+                //  a.inside.props[0].get();
             }
             insta::assert_debug_snapshot!("updated_end_0", &a);
             // insta::assert_debug_snapshot!("updated_end_1", &a);
@@ -978,6 +1050,19 @@ mod tests {
             // println!("{:?}", a);
 
             a.revised_props.get();
+            // ─────────────────────────────────────────────────────────────────
+
+            css_w.set(width(px(20)));
+            insta::assert_debug_snapshot!("end_set1", &a);
+            sv_now.set(sv_now.get() + Duration::from_millis(16));
+            insta::assert_debug_snapshot!("end_set2-settime", &a);
+            a.update();
+            insta::assert_debug_snapshot!("end_set3-update", &a);
+
+
+
+
+
         });
     }
 }

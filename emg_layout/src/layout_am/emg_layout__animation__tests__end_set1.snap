@@ -18,13 +18,13 @@ AnimationEdge {
                         "width",
                         Motion {
                             position: NotNan(
-                                1.0,
+                                20.0,
                             ),
                             velocity: NotNan(
                                 0.0,
                             ),
                             target: NotNan(
-                                1.0,
+                                20.0,
                             ),
                             interpolation: Spring {
                                 stiffness: NotNan(

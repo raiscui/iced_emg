@@ -6,9 +6,7 @@ expression: "&a"
 AnimationEdge {
     inside: AnimationInside {
         steps: StateVar(
-            [
-                _Step,
-            ],
+            [],
         ),
         interruption: StateVar(
             [],
@@ -20,10 +18,10 @@ AnimationEdge {
                         "opacity",
                         Motion {
                             position: NotNan(
-                                0.9984870140457791,
+                                1.0,
                             ),
                             velocity: NotNan(
-                                0.01456647065794588,
+                                0.0,
                             ),
                             target: NotNan(
                                 1.0,
@@ -46,20 +44,18 @@ AnimationEdge {
     },
     timing: StateAnchor(
         Timing {
-            current: 1.584s,
-            dt: 16ms,
+            current: 3.184s,
+            dt: 16.666ms,
         },
     ),
     running: StateAnchor(
-        true,
+        false,
     ),
     queued_interruptions: StateAnchor(
         [],
     ),
     revised_steps: StateAnchor(
-        [
-            _Step,
-        ],
+        [],
     ),
     revised_props: StateAnchor(
         [
@@ -67,10 +63,10 @@ AnimationEdge {
                 "opacity",
                 Motion {
                     position: NotNan(
-                        0.9984870140457791,
+                        1.0,
                     ),
                     velocity: NotNan(
-                        0.01456647065794588,
+                        0.0,
                     ),
                     target: NotNan(
                         1.0,
