@@ -19,6 +19,8 @@ derive_more = "0.99"
 tracing = { version="^0.1" }
 emg_core = { path="../emg_core" }
 
+ahash = "0.7.4"
+rustc-hash = "1.1.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

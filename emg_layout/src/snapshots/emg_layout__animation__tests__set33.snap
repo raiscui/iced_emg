@@ -48,10 +48,10 @@ AnimationEdge {
                         "opacity",
                         Motion {
                             position: NotNan(
-                                0.95278155548,
+                                0.8790954727392676,
                             ),
                             velocity: NotNan(
-                                -2.83322,
+                                -4.334475455337199,
                             ),
                             target: NotNan(
                                 0.0,

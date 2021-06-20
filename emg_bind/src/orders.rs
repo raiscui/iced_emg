@@ -1,10 +1,12 @@
 use crate::Orders;
 use emg_animation::Tick;
-use fxhash::FxBuildHasher;
+// use fxhash::FxBuildHasher;
+use rustc_hash::FxHasher as CustomHasher;
+
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-05-31 17:08:50
+ * @LastEditTime: 2021-06-20 11:31:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,12 +18,14 @@ use crate::map_callback_return_to_option_ms;
 
 use std::{
     cell::{Cell, RefCell},
+    hash::BuildHasherDefault,
     rc::Rc,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
 // type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
-type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
+//TODO check AHasher better of string key?
+type FxIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<CustomHasher>>;
 
 // ────────────────────────────────────────────────────────────────────────────────
 // pub struct HashClosure<TickMsg, Message> {

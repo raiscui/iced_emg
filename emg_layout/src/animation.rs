@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-19 21:45:55
+ * @LastEditTime: 2021-06-20 21:38:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,8 +17,10 @@ mod func;
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use emg_state::{
-    state_store, topo, use_state, use_state_impl::Var, Anchor, CloneStateAnchor, CloneStateVar,
-    GStateStore, StateAnchor, StateMultiAnchor, StateVar,
+    state_store, topo, use_state,
+    use_state_impl::{TopoKey, Var},
+    Anchor, CloneStateAnchor, CloneStateVar, GStateStore, SkipKeyCollection, StateAnchor,
+    StateMultiAnchor, StateVar, StorageKey,
 };
 use im::{vector, Vector};
 
@@ -245,6 +247,7 @@ where
         let store = rc_store2.borrow();
 
         let sa_timing = Self::set_timer(&store, sv_now);
+
         // let sa_timing_real = Self::set_timer(sv_now);
         // let sa_timing = {
         //     let mut saved_current_time = sv_now.get();
@@ -452,7 +455,7 @@ where
         //     .engine_mut()
         //     .mark_observed(timing_ob.anchor());
         // ─────────────────────────────────────────────────────────────────
-        Self {
+        let an = Self {
             inside: sv_inside,
             timing: sa_timing,
             running: sa_running,
@@ -466,7 +469,22 @@ where
             // timing_ob,
             // processed_interruptions: sa_processed_interruptions,
             // revised,
-        }
+        };
+        let update_id = TopoKey::new(topo::call(topo::CallId::current));
+
+        let anima_clone = an.clone();
+        drop(store);
+
+        sv_now.insert_after_fn(
+            update_id,
+            move |store, skip, v| {
+                println!("call update after set timing {:?}", v);
+                anima_clone.update_in_callback(store, skip);
+            },
+            false,
+        );
+
+        an
     }
 
     pub fn interrupt(&self, steps: Vector<Step<Message>>) {
@@ -480,6 +498,34 @@ where
             });
     }
 
+    pub fn update_in_callback(&self, store: &GStateStore, skip: &SkipKeyCollection) {
+        //
+        // self.inside.props.get();
+        // self.store.borrow().engine_mut().stabilize();
+        if !self.running.store_get(store) {
+            return;
+        }
+
+        let queued_interruptions = self.queued_interruptions.store_get(store);
+        let revised_steps = self.revised_steps.store_get(store);
+        let revised_props = self.revised_props.store_get(store);
+        // ─────────────────────────────────────────────────────────────────
+
+        self.inside
+            .props
+            .iter()
+            .zip(revised_props.into_iter())
+            .for_each(|(sv, prop)| sv.set_in_callback(store, skip, prop));
+
+        self.inside
+            .interruption
+            .set_in_callback(store, skip, queued_interruptions);
+        self.inside
+            .steps
+            .set_in_callback(store, skip, revised_steps);
+
+        //TODO: cmd send message
+    }
     pub fn update(&self) {
         //
         // self.inside.props.get();
@@ -711,10 +757,10 @@ mod tests {
         ]);
 
         sv_now.store_set(storeref, Duration::from_millis(16));
-        a.update();
+        // a.update();
         for i in 1002..1500 {
             sv_now.store_set(storeref, Duration::from_millis(i * 16));
-            a.update();
+            // a.update();
             a.inside.props[0].store_get(storeref);
         }
         a.revised_props.store_get(storeref);
@@ -792,10 +838,10 @@ mod tests {
         ]);
 
         sv_now.store_set(storeref, Duration::from_millis(16));
-        a.update();
+        // a.update();
         for i in 1002..2000 {
             sv_now.store_set(storeref, Duration::from_millis(i * 16));
-            a.update();
+            // a.update();
             a.inside.props[0].store_get(storeref);
         }
         a.revised_props.store_get(storeref);
@@ -847,7 +893,7 @@ mod tests {
 
             sv_now.set(Duration::from_millis(16));
             insta::assert_debug_snapshot!("set16", &a);
-            a.update();
+            // a.update();
             // println!("set timing 16");
 
             // println!("set timing 16-- update");
@@ -859,7 +905,7 @@ mod tests {
             // println!("set timing 16-- insta");
             // ────────────────────────────────────────────────────────────────────────────────
             sv_now.set(Duration::from_millis(16));
-            a.update();
+            // a.update();
             // println!("set timing 16-2");
 
             insta::assert_debug_snapshot!("updated_16_b_0", &a);
@@ -869,7 +915,7 @@ mod tests {
 
             sv_now.set(Duration::from_millis(33));
             insta::assert_debug_snapshot!("set33", &a);
-            a.update();
+            // a.update();
             // println!("set timing 33");
 
             // println!("....set 2 ");
@@ -878,7 +924,7 @@ mod tests {
 
             // println!("set timing 33 -- update 1");
 
-            a.update();
+            // a.update();
             insta::assert_debug_snapshot!("updated_33_1", &a);
 
             // println!("set timing 33 -- update 2");
@@ -896,7 +942,7 @@ mod tests {
 
             for i in 3..200 {
                 sv_now.set(Duration::from_millis(i * 16));
-                a.update();
+                // a.update();
                 // println!("in ------ i:{}", &i);
                 // a.timing.get();
                 // println!("3***{:?}", a.inside.props.get());
@@ -974,7 +1020,7 @@ mod tests {
             // println!("set timing 16");
             insta::assert_debug_snapshot!("set16", &a);
 
-            a.update();
+            // a.update();
             // println!("set timing 16-- update");
 
             // println!("1**{:?}", a.inside.props.get());
@@ -986,7 +1032,7 @@ mod tests {
             sv_now.set(Duration::from_millis(16));
             // println!("set timing 16-2");
 
-            a.update();
+            // a.update();
 
             insta::assert_debug_snapshot!("updated_16_0-2", &a);
             // insta::assert_debug_snapshot!("updated_16_1-2", &a);
@@ -1002,12 +1048,12 @@ mod tests {
             // println!("....set 2 ");
             insta::assert_debug_snapshot!("set33", &a);
 
-            a.update();
+            // a.update();
             insta::assert_debug_snapshot!("updated_33_0", &a);
 
             // println!("set timing 33 -- update 1");
 
-            a.update();
+            // a.update();
             insta::assert_debug_snapshot!("updated_33_1", &a);
 
             // println!("set timing 33 -- update 2");
@@ -1037,7 +1083,7 @@ mod tests {
 
                 // println!("in ------ i:{}", &i);
                 // a.timing.get();´ß
-                a.update();
+                // a.update();
                 println!("***-- {:?}",CssWidth::from( a.inside.props[0].get()));
                 //  a.inside.props[0].get();
             }
@@ -1056,7 +1102,7 @@ mod tests {
             insta::assert_debug_snapshot!("end_set1", &a);
             sv_now.set(sv_now.get() + Duration::from_millis(16));
             insta::assert_debug_snapshot!("end_set2-settime", &a);
-            a.update();
+            // a.update();
             insta::assert_debug_snapshot!("end_set3-update", &a);
 
 
