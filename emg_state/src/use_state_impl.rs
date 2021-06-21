@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-06-21 10:46:03
+ * @LastEditTime: 2021-06-21 13:14:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -32,8 +32,8 @@ thread_local! {
 //TODO build benchmark for AHash FxHash
 // use ahash::AHashMap as HashMap;
 // use ahash::AHasher as CustomHasher;
-use ahash::AHasher;
-use rustc_hash::FxHashMap as HashMap;
+use indexmap::IndexMap as HashMap;
+// use rustc_hash::FxHashMap as HashMap;
 use rustc_hash::FxHasher as CustomHasher;
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -128,14 +128,17 @@ impl GStateStore {
 
         start_set_var_and_before_after(self, current_id, var, data, before_fns, after_fns);
     }
-    fn set_in_callback<T: std::clone::Clone + 'static + std::fmt::Debug>(
+    fn set_in_callback<T: Clone + 'static + std::fmt::Debug>(
         &self,
         skip: &SkipKeyCollection,
-        data: T,
+        data: &T,
         current_id: &StorageKey,
     ) {
         if skip.borrow().contains(current_id) {
-            // println!(" skip contains current_id at set_in_similar_fn start");
+            // println!(
+            //     "===skip contains current_id at set_in_similar_fn start -> data:{:?}",
+            //     data
+            // );
             return;
         }
         skip.borrow_mut().push(*current_id);
@@ -161,10 +164,10 @@ impl GStateStore {
                 })
                 .for_each(|func| {
                     // let skip_clone = skip2.clone();
-                    func(self, skip, data.clone());
+                    func(self, skip, data);
                 });
         }
-        debug!("in callbacks ,bf_fns called, then --> var set :{:?}", &data);
+        debug!("in callbacks ,bf_fns called, then --> var set :{:?}", data);
         // ─────────────────────────────────────────────────────────────────
 
         var.set(data.clone());
@@ -181,7 +184,7 @@ impl GStateStore {
                     }
                 })
                 .for_each(|func| {
-                    func(self, skip, data.clone());
+                    func(self, skip, data);
                 });
         }
     }
@@ -243,7 +246,7 @@ impl GStateStore {
     /// # Panics
     ///
     /// Will panic if HashMap<StorageKey, Box<dyn Fn(&GStateStore, &RefCell<Vec<StorageKey, Global>>, T)> has `callback_id`
-    pub fn insert_before_fn<T: Clone + 'static>(
+    pub fn insert_before_fn<T: 'static>(
         &mut self,
         current_id: &StorageKey,
         before_fn_id: &StorageKey,
@@ -274,7 +277,7 @@ impl GStateStore {
     /// # Panics
     ///
     /// Will panic if fns already has `func`
-    pub fn insert_after_fn<T: Clone + 'static>(
+    pub fn insert_after_fn<T: 'static>(
         &mut self,
         current_id: &StorageKey,
         after_fn_id: &StorageKey,
@@ -342,7 +345,7 @@ impl GStateStore {
 
 type SynCallFnsMap<T> = HashMap<StorageKey, BoxSynCallFn<T>>;
 
-fn before_fns_run<T: Clone + 'static>(
+fn before_fns_run<T: 'static>(
     store: &GStateStore,
     current_id: &StorageKey,
     data: &T,
@@ -352,11 +355,10 @@ fn before_fns_run<T: Clone + 'static>(
     // new_set.insert(*current_id);
     let key_collection = vec![*current_id];
     let skip = RefCell::new(key_collection);
-    fns.values()
-        .for_each(|bf_func| bf_func(store, &skip, data.clone()));
+    fns.values().for_each(|bf_func| bf_func(store, &skip, data));
     skip
 }
-fn after_fns_run<T: Clone + 'static>(
+fn after_fns_run<T: 'static>(
     store: &GStateStore,
     skip: &RefCell<Vec<StorageKey>>,
     data: &T,
@@ -364,8 +366,7 @@ fn after_fns_run<T: Clone + 'static>(
 ) {
     // let mut new_set = HashSet::default();
     // new_set.insert(*current_id);
-    fns.values()
-        .for_each(|af_func| af_func(store, skip, data.clone()));
+    fns.values().for_each(|af_func| af_func(store, skip, data));
 }
 
 fn start_set_var_and_before_after<T: Clone + 'static>(
@@ -494,6 +495,12 @@ where
         // self.get_var_with(|v| StateAnchor(v.watch()))
         self.store_get_var_with(store, |v| StateAnchor(v.watch()))
     }
+    pub fn set_in_callback(&self, store: &GStateStore, skip: &SkipKeyCollection, value: &T)
+    where
+        T: Clone + std::fmt::Debug,
+    {
+        set_in_callback(store, skip, value, self.id);
+    }
 }
 
 // impl<T> From<anchors::expert::Anchor<T, anchors::singlethread::Engine>> for StateAnchor<T> {
@@ -515,7 +522,6 @@ where
 //     }
 // }
 
-// type SkipKeySet = Rc<RefCell<HashSet<StorageKey>>>;
 pub type SkipKeyCollection = RefCell<Vec<StorageKey>>;
 
 pub trait CloneStateVar<T>
@@ -525,9 +531,9 @@ where
     fn get(&self) -> T;
     fn store_get(&self, store: &GStateStore) -> T;
     fn set(&self, value: T);
-    fn set_in_callback(&self, store: &GStateStore, skip: &SkipKeyCollection, value: T)
-    where
-        T: std::fmt::Debug;
+    // fn set_in_callback(&self, store: &GStateStore, skip: &SkipKeyCollection, value: &T)
+    // where
+    //     T: std::fmt::Debug;
     fn store_set(&self, store: &GStateStore, value: T);
     fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F);
     fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
@@ -541,14 +547,14 @@ where
     fn insert_before_fn(
         &self,
         before_fn_key: TopoKey,
-        func: impl Fn(&GStateStore, &SkipKeyCollection, T) + 'static,
+        func: impl Fn(&GStateStore, &SkipKeyCollection, &T) + 'static,
         init: bool,
     );
 
     fn insert_after_fn(
         &self,
         callback_key: TopoKey,
-        func: impl Fn(&GStateStore, &SkipKeyCollection, T) + 'static,
+        func: impl Fn(&GStateStore, &SkipKeyCollection, &T) + 'static,
         init: bool,
     );
     fn build_similar_use_into_in_topo<B: Clone + From<T> + 'static + std::fmt::Debug>(
@@ -590,12 +596,7 @@ where
         set_state_and_run_cb_with_topo_id::<T>(value, self.id);
     }
 
-    fn set_in_callback(&self, store: &GStateStore, skip: &SkipKeyCollection, value: T)
-    where
-        T: std::fmt::Debug,
-    {
-        set_in_callback(store, skip, value, self.id);
-    }
+    //TODO use illicit @set replace set_in_callback
 
     fn store_set(&self, store: &GStateStore, value: T) {
         store.get_state_use_key_and_start_set_run_cb::<T>(value, &StorageKey::TopoKey(self.id));
@@ -725,7 +726,7 @@ where
     fn insert_before_fn(
         &self,
         callback_key: TopoKey,
-        func: impl Fn(&GStateStore, &SkipKeyCollection, T) + 'static,
+        func: impl Fn(&GStateStore, &SkipKeyCollection, &T) + 'static,
         init: bool,
     ) {
         insert_before_fn(
@@ -738,7 +739,7 @@ where
     fn insert_after_fn(
         &self,
         callback_key: TopoKey,
-        func: impl Fn(&GStateStore, &SkipKeyCollection, T) + 'static,
+        func: impl Fn(&GStateStore, &SkipKeyCollection, &T) + 'static,
         init: bool,
     ) {
         insert_after_fn(
@@ -757,7 +758,9 @@ where
         insert_before_fn(
             self,
             &StorageKey::TopoKey(b.id),
-            Box::new(move |store, skip, value| b.set_in_callback(store, skip, value.into())),
+            Box::new(move |store, skip, value| {
+                b.set_in_callback(store, skip, &(*value).clone().into());
+            }),
             false,
         );
         b
@@ -774,14 +777,18 @@ where
         insert_before_fn(
             self,
             &StorageKey::TopoKey(b.id),
-            Box::new(move |store, skip, value| b.set_in_callback(store, skip, value.into())),
+            Box::new(move |store, skip, value| {
+                b.set_in_callback(store, skip, &(*value).clone().into());
+            }),
             false,
         );
         let this = *self;
         insert_before_fn(
             &b,
             &StorageKey::TopoKey(self.id),
-            Box::new(move |store, skip, value| this.set_in_callback(store, skip, value.into())),
+            Box::new(move |store, skip, value| {
+                this.set_in_callback(store, skip, &(*value).clone().into());
+            }),
             false,
         );
         b
@@ -1264,10 +1271,10 @@ fn set_state_and_run_cb_with_topo_id<T: 'static + std::clone::Clone>(data: T, cu
 
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
 }
-fn set_in_callback<T: 'static + std::clone::Clone + std::fmt::Debug>(
+fn set_in_callback<T: 'static + std::fmt::Debug + std::clone::Clone>(
     store: &GStateStore,
     skip: &SkipKeyCollection,
-    data: T,
+    data: &T,
     current_id: TopoKey,
 ) {
     // G_STATE_STORE.with(|g_state_store_refcell| {
@@ -1357,7 +1364,7 @@ fn read_var_with_topo_id<F: FnOnce(&GStateStore, &VarSimMap<T>) -> R, T: 'static
     })
 }
 
-type BoxSynCallFn<T> = Box<dyn Fn(&GStateStore, &SkipKeyCollection, T)>;
+type BoxSynCallFn<T> = Box<dyn Fn(&GStateStore, &SkipKeyCollection, &T)>;
 
 fn insert_before_fn<T: 'static + std::clone::Clone>(
     sv: &StateVar<T>,
@@ -1368,21 +1375,19 @@ fn insert_before_fn<T: 'static + std::clone::Clone>(
     G_STATE_STORE.with(|g_state_store_refcell| {
         if init {
             let store = &g_state_store_refcell.borrow();
-            let (var, _, _) = store
+            let (var, _before_fns, _) = store
                 .get_state_and_bf_af_use_id::<T>(&StorageKey::TopoKey(sv.id))
                 .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 
             let key_collection = vec![StorageKey::TopoKey(sv.id)];
             let skip = RefCell::new(key_collection);
 
-            func(store, &skip, (*var.get()).clone());
-
-            // before_fns_run(
-            //     store,
-            //     &StorageKey::TopoKey(sv.id),
-            //     &(*var.get()),
-            //     before_fns,
-            // );
+            func(store, &skip, &*var.get());
+            // let v = &(*var.get());
+            // before_fns_run(store, &StorageKey::TopoKey(sv.id), v, before_fns);
+            // if v.clone() != (*var.get()).clone() {
+            //     panic!("not same");
+            // }
         }
 
         g_state_store_refcell.borrow_mut().insert_before_fn(
@@ -1408,7 +1413,7 @@ fn insert_after_fn<T: 'static + std::clone::Clone>(
             let key_collection = vec![StorageKey::TopoKey(sv.id)];
             let skip = RefCell::new(key_collection);
 
-            func(store, &skip, (*var.get()).clone());
+            func(store, &skip, &*var.get());
 
             // after_fns_run(store, &skip, &(*var.get()), after_fns);
         }
@@ -1549,7 +1554,7 @@ mod state_test {
         d.insert_before_fn(
             c.id.into(),
             move |store, skip, value| {
-                c.set_in_callback(store, skip, value.into());
+                c.set_in_callback(store, skip, &(*value).into());
             },
             true,
         );
@@ -1558,21 +1563,23 @@ mod state_test {
         c.insert_before_fn(
             a.id.into(),
             move |store, skip, value| {
-                a.set_in_callback(store, skip, value.into());
+                println!("c -> before_fns 1 -> set a:{:?}", &value);
+
+                a.set_in_callback(store, skip, &value);
             },
             true,
         );
         let update_id2 = TopoKey::new(topo::call(topo::CallId::current));
 
         //NOTE same a set_in_callback will ignored at second times
-        // c.insert_before_fn(
-        //     update_id2.into(),
-        //     move |store, skip, value| {
-        //         println!("c -> before_fns -> set a:{:?}", &value);
-        //         a.set_in_callback(store, skip, (value + 1).into());
-        //     },
-        //     true,
-        // );
+        c.insert_before_fn(
+            update_id2.into(),
+            move |store, skip, value| {
+                println!("c -> before_fns 2 -> set a:{:?}", value + 1);
+                a.set_in_callback(store, skip, &(value + 1).into());
+            },
+            true,
+        );
         let e = use_state(11);
         c.insert_after_fn(
             e.id.into(),

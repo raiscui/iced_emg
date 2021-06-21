@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-21 09:15:06
+ * @LastEditTime: 2021-06-21 13:15:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,6 @@
  */
 // mod define;
 mod func;
-use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use emg_state::{
     state_store, topo, use_state,
@@ -527,13 +526,13 @@ where
         self.inside
             .props
             .iter()
-            .zip(revised.2.into_iter())
+            .zip(revised.2.iter())
             .for_each(|(sv, prop)| sv.set_in_callback(store, skip, prop));
 
         self.inside
             .interruption
-            .set_in_callback(store, skip, revised.0);
-        self.inside.steps.set_in_callback(store, skip, revised.1);
+            .set_in_callback(store, skip, &revised.0);
+        self.inside.steps.set_in_callback(store, skip, &revised.1);
 
         //TODO: cmd send message
     }

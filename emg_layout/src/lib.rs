@@ -284,10 +284,10 @@ impl Layout
 
     }
 
-    /// Get a reference to the layout's w.
-    pub fn width(&self) -> &StateVar<CssWidth> {
-        self.w.into()
-    }
+    // Get a reference to the layout's w.
+    // pub fn width(&self) -> &StateVar<CssWidth> {
+    //     self.w.into()
+    // }
 }
 impl Copy for Layout 
 {
