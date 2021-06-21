@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-06-15 08:16:26
+ * @LastEditTime: 2021-06-17 14:32:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@ use std::{any::Any, panic::Location};
 
 use emg_refresh::{RefreshFor, RefreshUseFor, RefreshUseNoWarper, RefreshWhoNoWarper};
 
-use emg_state::{StateAnchor, StateVar};
+use emg_state::{CloneStateVar, StateAnchor, StateVar};
 pub use seed_styles as styles;
 use styles::{CssHeight, CssValueTrait, CssWidth, UpdateStyle};
 use tracing::{debug, trace_span, warn};

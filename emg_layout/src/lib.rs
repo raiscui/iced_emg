@@ -30,16 +30,13 @@ use derive_more::Into;
 use emg_core::GenericSize;
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
-use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state};
+use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, };
 
 use im::Vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;
-use styles::{
-     px, s, CssTransform, CssValueTrait, Style,
-    UpdateStyle,
-};
+use styles::{CssTransform, CssValueTrait, CssWidth, Style, UpdateStyle, px, s};
 // use styles::Percent;
 // use styles::ExactLength;
 // use styles::CssWidth;
@@ -95,10 +92,14 @@ impl ::core::ops::Add for GenericSizeAnchor {
 }
 // ────────────────────────────────────────────────────────────────────────────────
 pub auto trait NotStateAnchor {}
-impl<T> !NotStateAnchor for StateAnchor<T>{}
+impl<T> !NotStateAnchor for StateAnchor<T> {}
+pub auto trait NotStateVar {}
+impl<T> !NotStateVar for StateVar<T> {}
+
+// impl<T> NotStateAnchor for T{}
 
 impl<T> From<T> for GenericSizeAnchor
-where T : NotStateAnchor+ Into<GenericSize> + Clone+'static{
+where T : NotStateAnchor+NotStateVar+ Into<GenericSize> + Clone+'static{
      fn from(v: T) -> Self {
        Self(StateAnchor::constant( v.into()))
     }
@@ -109,6 +110,13 @@ where T :  Into<GenericSize> + Clone+'static{
     fn from(v: StateAnchor<T>) -> Self {
         
         Self(v.map(|x|x.clone().into()))
+    }
+}
+impl<T> From<StateVar<T>> for GenericSizeAnchor
+where T :  Into<GenericSize> + Clone+'static{
+    fn from(v: StateVar<T>) -> Self {
+        
+        Self(v.watch().map(|x|x.clone().into()))
     }
 }
 
@@ -284,6 +292,8 @@ impl Layout
         self.h.store_set(store, h.into());
 
     }
+
+
 }
 impl Copy for Layout 
 {

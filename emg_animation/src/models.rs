@@ -12,12 +12,14 @@ use crate::{init_motion, Debuggable};
 
 // use emg_debuggable::{dbg4, Debuggable};
 
+type EaseFnT = Rc<Debuggable<Box<dyn Fn(Precision) -> Precision>>>;
+
 #[derive(Clone, Debug)]
 pub struct Easing {
     pub progress: Precision,
     pub duration: Duration,
     pub start: NotNan<Precision>,
-    pub ease: Rc<Debuggable<dyn Fn(Precision) -> Precision>>,
+    pub ease: EaseFnT,
 }
 
 impl PartialEq for Easing {
@@ -76,9 +78,21 @@ impl From<ExactLength> for Motion {
         init_motion(v.value, v.unit)
     }
 }
+#[allow(clippy::fallible_impl_from)]
+impl From<Motion> for ExactLength {
+    fn from(v: Motion) -> Self {
+        match v.unit {
+            Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::None => Self {
+                unit: v.unit,
+                value: v.position,
+            },
+            Unit::Vw | Unit::Vh | Unit::Pc => todo!(),
+        }
+    }
+}
 impl From<Percent> for Motion {
     fn from(v: Percent) -> Self {
-        init_motion(v.0, Unit::None)
+        init_motion(v.0, Unit::Pc)
     }
 }
 
@@ -175,6 +189,27 @@ impl From<CssWidth> for Property {
             CssWidth::Auto | CssWidth::Initial | CssWidth::Inherit | CssWidth::StringValue(_) => {
                 todo!()
             }
+        }
+    }
+}
+
+#[allow(clippy::fallible_impl_from)]
+impl From<Property> for CssWidth {
+    fn from(v: Property) -> Self {
+        match v {
+            Property::Prop(name, m) => {
+                if name.as_str() == "width"
+                    && matches!(
+                        m.unit,
+                        Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::None
+                    )
+                {
+                    ExactLength::from(m).into()
+                } else {
+                    panic!("propertyName is not width");
+                }
+            }
+            _ => panic!("Property can't convert to CssWidth "),
         }
     }
 }

@@ -41,7 +41,80 @@ AnimationEdge {
         interruption: StateVar(
             [],
         ),
-        props: StateVar(
+        props: [
+            StateVarProperty(
+                StateVar(
+                    Prop(
+                        "width",
+                        Motion {
+                            position: NotNan(
+                                0.8790954727392676,
+                            ),
+                            velocity: NotNan(
+                                -4.334475455337199,
+                            ),
+                            target: NotNan(
+                                0.0,
+                            ),
+                            interpolation: Spring {
+                                stiffness: NotNan(
+                                    170.0,
+                                ),
+                                damping: NotNan(
+                                    26.0,
+                                ),
+                            },
+                            unit: Px,
+                            interpolation_override: None,
+                        },
+                    ),
+                ),
+            ),
+        ],
+    },
+    timing: StateAnchor(
+        Timing {
+            current: 33ms,
+            dt: 17ms,
+        },
+    ),
+    running: StateAnchor(
+        true,
+    ),
+    revised: StateAnchor(
+        (
+            [],
+            [
+                _Step,
+                To(
+                    [
+                        Prop(
+                            "width",
+                            Motion {
+                                position: NotNan(
+                                    1.0,
+                                ),
+                                velocity: NotNan(
+                                    0.0,
+                                ),
+                                target: NotNan(
+                                    1.0,
+                                ),
+                                interpolation: Spring {
+                                    stiffness: NotNan(
+                                        170.0,
+                                    ),
+                                    damping: NotNan(
+                                        26.0,
+                                    ),
+                                },
+                                unit: Px,
+                                interpolation_override: None,
+                            },
+                        ),
+                    ],
+                ),
+            ],
             [
                 Prop(
                     "width",
@@ -68,82 +141,7 @@ AnimationEdge {
                     },
                 ),
             ],
+            [],
         ),
-    },
-    timing: StateAnchor(
-        Timing {
-            current: 33ms,
-            dt: 17ms,
-        },
-    ),
-    running: StateAnchor(
-        true,
-    ),
-    queued_interruptions: StateAnchor(
-        [],
-    ),
-    revised_steps: StateAnchor(
-        [
-            _Step,
-            To(
-                [
-                    Prop(
-                        "width",
-                        Motion {
-                            position: NotNan(
-                                1.0,
-                            ),
-                            velocity: NotNan(
-                                0.0,
-                            ),
-                            target: NotNan(
-                                1.0,
-                            ),
-                            interpolation: Spring {
-                                stiffness: NotNan(
-                                    170.0,
-                                ),
-                                damping: NotNan(
-                                    26.0,
-                                ),
-                            },
-                            unit: Px,
-                            interpolation_override: None,
-                        },
-                    ),
-                ],
-            ),
-        ],
-    ),
-    revised_props: StateAnchor(
-        [
-            Prop(
-                "width",
-                Motion {
-                    position: NotNan(
-                        0.8790954727392676,
-                    ),
-                    velocity: NotNan(
-                        -4.334475455337199,
-                    ),
-                    target: NotNan(
-                        0.0,
-                    ),
-                    interpolation: Spring {
-                        stiffness: NotNan(
-                            170.0,
-                        ),
-                        damping: NotNan(
-                            26.0,
-                        ),
-                    },
-                    unit: Px,
-                    interpolation_override: None,
-                },
-            ),
-        ],
-    ),
-    send_messages: StateAnchor(
-        [],
     ),
 }

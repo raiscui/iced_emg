@@ -15,16 +15,16 @@ AnimationEdge {
             StateVarProperty(
                 StateVar(
                     Prop(
-                        "opacity",
+                        "width",
                         Motion {
                             position: NotNan(
-                                1.0,
+                                20.0,
                             ),
                             velocity: NotNan(
                                 0.0,
                             ),
                             target: NotNan(
-                                1.0,
+                                20.0,
                             ),
                             interpolation: Spring {
                                 stiffness: NotNan(
@@ -34,7 +34,7 @@ AnimationEdge {
                                     26.0,
                                 ),
                             },
-                            unit: None,
+                            unit: Px,
                             interpolation_override: None,
                         },
                     ),
@@ -57,7 +57,7 @@ AnimationEdge {
             [],
             [
                 Prop(
-                    "opacity",
+                    "width",
                     Motion {
                         position: NotNan(
                             1.0,
@@ -76,7 +76,7 @@ AnimationEdge {
                                 26.0,
                             ),
                         },
-                        unit: None,
+                        unit: Px,
                         interpolation_override: None,
                     },
                 ),

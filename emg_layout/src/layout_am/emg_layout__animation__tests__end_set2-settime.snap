@@ -15,16 +15,16 @@ AnimationEdge {
             StateVarProperty(
                 StateVar(
                     Prop(
-                        "opacity",
+                        "width",
                         Motion {
                             position: NotNan(
-                                1.0,
+                                20.0,
                             ),
                             velocity: NotNan(
                                 0.0,
                             ),
                             target: NotNan(
-                                1.0,
+                                20.0,
                             ),
                             interpolation: Spring {
                                 stiffness: NotNan(
@@ -34,7 +34,7 @@ AnimationEdge {
                                     26.0,
                                 ),
                             },
-                            unit: None,
+                            unit: Px,
                             interpolation_override: None,
                         },
                     ),
@@ -44,8 +44,8 @@ AnimationEdge {
     },
     timing: StateAnchor(
         Timing {
-            current: 3.184s,
-            dt: 16.666ms,
+            current: 3.2s,
+            dt: 16ms,
         },
     ),
     running: StateAnchor(
@@ -57,16 +57,16 @@ AnimationEdge {
             [],
             [
                 Prop(
-                    "opacity",
+                    "width",
                     Motion {
                         position: NotNan(
-                            1.0,
+                            20.0,
                         ),
                         velocity: NotNan(
                             0.0,
                         ),
                         target: NotNan(
-                            1.0,
+                            20.0,
                         ),
                         interpolation: Spring {
                             stiffness: NotNan(
@@ -76,7 +76,7 @@ AnimationEdge {
                                 26.0,
                             ),
                         },
-                        unit: None,
+                        unit: Px,
                         interpolation_override: None,
                     },
                 ),
