@@ -36,10 +36,7 @@ use im::Vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;
-use styles::{
-     px, s, CssTransform, CssValueTrait, Style,
-    UpdateStyle,
-};
+use styles::{CssTransform, CssValueTrait, CssWidth, Style, UpdateStyle, px, s};
 // use styles::Percent;
 // use styles::ExactLength;
 // use styles::CssWidth;
@@ -285,6 +282,11 @@ impl Layout
     pub fn store_set_h(&self, store: &GStateStore,h:impl Into<GenericSizeAnchor>) {
         self.h.store_set(store, h.into());
 
+    }
+
+    /// Get a reference to the layout's w.
+    pub fn width(&self) -> &StateVar<CssWidth> {
+        self.w.into()
     }
 }
 impl Copy for Layout 

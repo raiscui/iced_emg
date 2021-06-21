@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-21 09:10:51
+ * @LastEditTime: 2021-06-21 09:15:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -733,7 +733,7 @@ mod tests {
             let edge_item1 = edge_item.clone();
             let sv_now = use_state(Duration::ZERO);
             let mut a: AnimationEdge<String, Message> =
-                AnimationEdge::new_in_topo(into_vector![opacity(1.)], edge_item1, sv_now);
+                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item1, sv_now);
             black_box(less_am_run(&state_store().borrow(), &mut a, &sv_now));
         });
     }
@@ -744,8 +744,8 @@ mod tests {
         sv_now: &emg_state::StateVar<Duration>,
     ) {
         a.interrupt(vector![
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
             // to(vector![emg_animation::opacity(0.)]),
             // to(vector![emg_animation::opacity(1.)]),
             // to(vector![emg_animation::opacity(0.)]),
@@ -794,7 +794,7 @@ mod tests {
             let edge_item1 = edge_item.clone();
             let sv_now = use_state(Duration::ZERO);
             let mut a: AnimationEdge<String, Message> =
-                AnimationEdge::new_in_topo(into_vector![opacity(1.)], edge_item1, sv_now);
+                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item1, sv_now);
             black_box(many_am_run(&state_store().borrow(), &mut a, &sv_now));
         });
     }
@@ -805,46 +805,46 @@ mod tests {
         sv_now: &emg_state::StateVar<Duration>,
     ) {
         a.interrupt(vector![
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
-            to(vector![emg_animation::opacity(0.)]),
-            to(vector![emg_animation::opacity(1.)]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
         ]);
 
         sv_now.store_set(storeref, Duration::from_millis(16));

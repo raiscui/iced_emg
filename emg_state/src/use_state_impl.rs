@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-06-20 21:35:43
+ * @LastEditTime: 2021-06-21 10:46:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -134,17 +134,17 @@ impl GStateStore {
         data: T,
         current_id: &StorageKey,
     ) {
+        if skip.borrow().contains(current_id) {
+            // println!(" skip contains current_id at set_in_similar_fn start");
+            return;
+        }
+        skip.borrow_mut().push(*current_id);
+
         //unwrap or default to keep borrow checker happy
         let (var, before_fns, after_fns) = self
             .get_state_and_bf_af_use_id::<T>(current_id)
             .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 
-        if skip.borrow().contains(current_id) {
-            // println!(" skip contains current_id at set_in_similar_fn start");
-            return;
-        }
-
-        skip.borrow_mut().push(*current_id);
         //
         if !before_fns.is_empty() {
             before_fns
@@ -270,6 +270,10 @@ impl GStateStore {
 
         fns.insert(*before_fn_id, func);
     }
+
+    /// # Panics
+    ///
+    /// Will panic if fns already has `func`
     pub fn insert_after_fn<T: Clone + 'static>(
         &mut self,
         current_id: &StorageKey,
@@ -1549,6 +1553,8 @@ mod state_test {
             },
             true,
         );
+        let update_id = TopoKey::new(topo::call(topo::CallId::current));
+
         c.insert_before_fn(
             a.id.into(),
             move |store, skip, value| {
@@ -1556,6 +1562,17 @@ mod state_test {
             },
             true,
         );
+        let update_id2 = TopoKey::new(topo::call(topo::CallId::current));
+
+        //NOTE same a set_in_callback will ignored at second times
+        // c.insert_before_fn(
+        //     update_id2.into(),
+        //     move |store, skip, value| {
+        //         println!("c -> before_fns -> set a:{:?}", &value);
+        //         a.set_in_callback(store, skip, (value + 1).into());
+        //     },
+        //     true,
+        // );
         let e = use_state(11);
         c.insert_after_fn(
             e.id.into(),
