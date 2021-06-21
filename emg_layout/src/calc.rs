@@ -2,7 +2,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-06-15 22:21:06
+ * @LastEditTime: 2021-06-21 15:09:11
  * @LastEditors: Rais
 * @Description:
 */
@@ -20,7 +20,7 @@ use tracing::{ trace,trace_span};
 #[track_caller]
 pub fn layout_calculating<Ix>(
     id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
-    path_edgedata: &EdgeData,
+    path_edgedata: &EdgeData,//parent
     layout: &Layout,
 ) -> LayoutCalculated 
 where 

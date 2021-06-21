@@ -751,6 +751,7 @@ fn path_with_ed_node_builder<Ix>(
     ped: &EdgeData,
      layout: &Layout,
       path: &EPath<Ix>, 
+      
       path_styles: StateVar<Dict<EPath<Ix>, Style>>,
       other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>, LayoutCalculated, StateAnchor<String>) 
 where
@@ -920,6 +921,8 @@ pub fn css<
 mod tests {
     #![allow(clippy::too_many_lines)]
     use crate::*;
+    extern crate test;
+
 
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_refresh::RefreshUseFor;
@@ -931,6 +934,7 @@ mod tests {
 
     use tracing_flame::FlameLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    use test::{black_box, Bencher};
 
     fn setup_global_subscriber() -> impl Drop {
         std::env::set_var("RUST_LOG", "trace");
@@ -1091,7 +1095,295 @@ mod tests {
             info!("..=========================================================");
         }
     }
+    #[bench]
+    #[topo::nested]
+    fn it_works_bench(b: &mut Bencher){
+        b.iter(|| {
+           black_box( it_works_for_bench());
+        });
+    }
     #[test]
+    fn it_works_for_bench() {
+           
+
+            info!("--------------------=====================================");
+            // vec![ CssWidth::from(px(100))].up
+            info!("=========================================================");
+
+            // let cc = Affine3<f64>::identity();
+            let _ff = s().width(pc(11)).bg_color(hsl(40,70,30));
+            let css_width = width(px(100));
+            let css_height = h(px(100));
+
+            let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
+
+            let root_e_source =use_state( None);
+            let root_e_target = use_state(Some(node_index("root")));
+            let mut root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(EdgeIndex::new(None,Some(node_index("root"))), Edge::new(root_e_source, root_e_target, root_e.clone()));
+                nd
+            });
+
+
+
+            let e1_source =use_state( Some(node_index("root")));
+            let e1_target = use_state(Some(node_index("1")));
+            let mut e1 = EmgEdgeItem::new_in_topo(
+                    e1_source.watch(),
+                    e1_target.watch(),
+                e_dict_sv.watch(),
+                (px(10).into(), px(10).into()), 
+                (pc(100).into(), pc(100).into(), pc(100).into()), 
+                (pc(50).into(), pc(20).into(), pc(20).into()),
+            );
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(edge_index("root","1"), Edge::new(e1_source, e1_target, e1.clone()));
+                nd
+            });
+
+            let e2_source =use_state( Some(node_index("1")));
+            let e2_target = use_state(Some(node_index("2")));
+            let mut e2 = EmgEdgeItem::new_in_topo(
+                e2_source.watch(),
+                    e2_target.watch(),
+                  e_dict_sv.watch(),
+            (px(10).into(), px(10).into()), 
+            (pc(100).into(), pc(100).into(), pc(100).into()), 
+            (pc(50).into(), pc(20).into(), pc(20).into()),
+            );
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(edge_index("1","2"), Edge::new(e2_source, e2_target, e2.clone()));
+                nd
+            });
+          
+
+
+            // debug!("refresh_use before {}", &ec);
+            let _span = span!(Level::TRACE, "debug print e1");
+            _span.in_scope(|| {
+                trace!("refresh_use before {}", &e1);
+            });
+            info!("l1 =========================================================");
+
+            assert_eq!(
+                e1.node
+                    .get()
+                    .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Translation3::<f64>::new(950.0, 206.0, 0.)
+            );
+
+
+            let xx = vec![css_width];
+            // let xx = vec![css(css_width)];
+
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+            root_e.refresh_use(&xx);
+
+            // trace!("refresh_use after css_width {}", &root_e);
+            trace!("refresh_use after css_width {}", &e1);
+            info!("=========================================================");
+
+            // root_e.refresh_use(&Css(css_height.clone()));
+            let tempcss= use_state(css_height);
+            root_e.refresh_use(&tempcss);
+            assert_eq!(
+                e1.node
+                    .get()
+                    .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Translation3::<f64>::new(40., 10., 0.)
+            );
+            info!("=========================================================");
+            tempcss.set(h(px(1111)));
+            assert_ne!(
+                e1.node
+                    .get()
+                    .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Translation3::<f64>::new(40., 10., 0.)
+            );
+            tempcss.set(h(px(100)));
+            assert_eq!(
+                e1.node
+                    .get()
+                    .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Translation3::<f64>::new(40., 10., 0.)
+            );
+
+            info!("=========================================================");
+
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            assert_eq!(
+                e1.node
+                    .get()
+                    .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .size
+                    .get(),
+                Vector2::<f64>::new(12., 10.)
+            );
+            info!("=========================================================");
+            assert_eq!(
+                e1.node.get().get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .styles_string
+                .get() ,
+            "width: 12px;\nheight: 10px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,10,0,1);\n"
+            );
+            trace!("refresh_use after {}", &e1);
+            info!("=========================================================");
+
+            trace!("refresh_use after {}", &e2);
+            info!("l1351 =========================================================");
+            e2.refresh_use(&Css(CssHeight::from(px(50))));
+            assert_eq!(
+                e2.node
+                    .get()
+                    .get(&EPath(vector![
+                        edge_index_no_source("root"),
+                        edge_index("root", "1"),
+                        edge_index("1", "2")
+                    ]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
+                Translation3::<f64>::new(-4.0, -48.0, 0.0)
+            );
+            e2.set_size(px(100), px(100));
+            assert_eq!(
+                e2.node
+                    .get()
+                    .get(&EPath(vector![
+                        edge_index_no_source("root"),
+                        edge_index("root", "1"),
+                        edge_index("1", "2")
+                    ]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .calculated
+                    .size
+                    .get(),
+                    Vector2::<f64>::new(100.0, 100.0)
+            );
+            let _span1 = span!(Level::TRACE, "debug print 1");
+            _span1.in_scope(|| {
+                trace!("refresh_use after {}", &e2);
+            });
+
+            let _span2 = span!(Level::TRACE, "debug print 2");
+            _span2.in_scope(|| {
+                trace!("refresh_use after2 {}", &e2);
+            });
+            info!("=========================================================");
+            e2.refresh_use(&Css(CssHeight::from(px(150))));
+
+            trace!("refresh_use after {:#?}", &e2);
+            info!("..=========================================================");
+            trace!(
+                "{}",
+                e2.node
+                    .get()
+                    .get(&EPath(vector![
+                        edge_index_no_source( "root"),
+                        edge_index("root", "1"),
+                        edge_index("1", "2")
+                    ]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .styles_string
+                    .get(),
+            );
+            info!("..=========================================================");
+    }
     fn it_works() {
         let _xx = setup_global_subscriber();
         {
