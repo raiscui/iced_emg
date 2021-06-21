@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-20 21:38:56
+ * @LastEditTime: 2021-06-21 08:39:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -277,7 +277,7 @@ where
 
         let interruption_cut = {
             let mut opt_old_current: Option<Duration> = None;
-            let mut opt_old_interruption: Option<StepTimeVector<Message>> = None;
+            // let mut opt_old_interruption: Option<StepTimeVector<Message>> = None;
             // interruption_init.store_watch(&store)
             (&sa_timing, &interruption_init.store_watch(&store))
                 .map(|t, i| (*t, i.clone()))
@@ -290,9 +290,10 @@ where
                     }
 
                     // if let Some(old_interruption) = &opt_old_interruption {
-                    // if old_interruption == new_interruption {
-                    // return false;
-                    // }
+                    //     // if old_interruption.ptr_eq(new_interruption) {
+                    //     if old_interruption == new_interruption {
+                    //         return false;
+                    //     }
                     // }
 
                     opt_old_current = Some(new_t);
@@ -318,14 +319,14 @@ where
             //             }
             //         }
 
-            //         // if let Some(old_steps) = &opt_old_steps {
-            //         //     if old_steps == new_steps {
-            //         //         return false;
-            //         //     }
-            //         // }
+            //         if let Some(old_steps) = &opt_old_steps {
+            //             if old_steps == new_steps {
+            //                 return false;
+            //             }
+            //         }
 
             //         opt_old_current = Some(new_t);
-            //         // opt_old_steps = Some(new_steps.clone());
+            //         opt_old_steps = Some(new_steps.clone());
 
             //         true
             //     })
@@ -334,7 +335,7 @@ where
 
         let props_cut: StateAnchor<Vector<Property>> = {
             let mut opt_old_current: Option<Duration> = None;
-            let mut opt_old_props: Option<Vector<Property>> = None;
+            // let mut opt_old_props: Option<Vector<Property>> = None;
 
             let pa: StateAnchor<Vector<Property>> = props_init
                 .iter()
@@ -344,7 +345,7 @@ where
             // pa
             (&sa_timing, &pa)
                 .map(|t, i| (*t, i.clone()))
-                .cutoff(move |(timing, new_props)| {
+                .cutoff(move |(timing, _new_props)| {
                     let new_t = timing.current();
                     if let Some(old_t) = opt_old_current {
                         if old_t == new_t {
@@ -563,7 +564,6 @@ mod tests {
     use std::time::Duration;
 
     use emg::edge_index_no_source;
-    use emg_animation::models::Property;
     use emg_animation::{interrupt, opacity, style, to, Tick};
     use emg_core::into_vector;
     use emg_state::{
