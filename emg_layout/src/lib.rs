@@ -93,11 +93,13 @@ impl ::core::ops::Add for GenericSizeAnchor {
 // ────────────────────────────────────────────────────────────────────────────────
 pub auto trait NotStateAnchor {}
 impl<T> !NotStateAnchor for StateAnchor<T> {}
+pub auto trait NotStateVar {}
+impl<T> !NotStateVar for StateVar<T> {}
 
 // impl<T> NotStateAnchor for T{}
 
 impl<T> From<T> for GenericSizeAnchor
-where T : NotStateAnchor+ Into<GenericSize> + Clone+'static{
+where T : NotStateAnchor+NotStateVar+ Into<GenericSize> + Clone+'static{
      fn from(v: T) -> Self {
        Self(StateAnchor::constant( v.into()))
     }
@@ -108,6 +110,13 @@ where T :  Into<GenericSize> + Clone+'static{
     fn from(v: StateAnchor<T>) -> Self {
         
         Self(v.map(|x|x.clone().into()))
+    }
+}
+impl<T> From<StateVar<T>> for GenericSizeAnchor
+where T :  Into<GenericSize> + Clone+'static{
+    fn from(v: StateVar<T>) -> Self {
+        
+        Self(v.watch().map(|x|x.clone().into()))
     }
 }
 
@@ -284,10 +293,7 @@ impl Layout
 
     }
 
-    // Get a reference to the layout's w.
-    // pub fn width(&self) -> &StateVar<CssWidth> {
-    //     self.w.into()
-    // }
+
 }
 impl Copy for Layout 
 {

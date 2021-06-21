@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-21 13:15:51
+ * @LastEditTime: 2021-06-21 14:29:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,6 +14,8 @@
  */
 // mod define;
 mod func;
+
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use emg_state::{
     state_store, topo, use_state,
@@ -574,7 +576,7 @@ mod tests {
 
     use emg::edge_index_no_source;
     use emg_animation::{interrupt, opacity, style, to, Tick};
-    use emg_core::into_vector;
+    use emg_core::{into_vector, GenericSize};
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore,
         StateAnchor, StateVar,
@@ -987,13 +989,17 @@ mod tests {
             let ei = edge_index_no_source("fff");
             let source = use_state(ei.source_nix().as_ref().cloned());
             let target = use_state(ei.target_nix().as_ref().cloned());
-            let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
+            let edge_item: EmgEdgeItem<String> = EmgEdgeItem::new_in_topo(
                 source.watch(),
                 target.watch(),
                 StateAnchor::constant(Dict::default()),
-                1920,
-                1080,
+                (css_w.into(), px(1).into()),
+                (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into()),
+                (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into())
             );
+            let ew = edge_item.layout.w;
+
+
 
             let sv_now = use_state(Duration::ZERO);
 
@@ -1093,7 +1099,9 @@ mod tests {
                 // println!("in ------ i:{}", &i);
                 // a.timing.get();´ß
                 // a.update();
-                println!("***-- {:?}",CssWidth::from( a.inside.props[0].get()));
+
+                println!("***-- {:?} | css_width:{:?}",CssWidth::from( a.inside.props[0].get()),ew);
+
                 //  a.inside.props[0].get();
             }
             insta::assert_debug_snapshot!("updated_end_0", &a);
