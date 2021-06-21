@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-21 08:39:26
+ * @LastEditTime: 2021-06-21 09:10:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -42,9 +42,9 @@ type SAPropsMessageSteps<Message> =
 #[allow(dead_code)]
 type SAPropsMessageSteps2<Message> = StateAnchor<(
     StepTimeVector<Message>,
+    Vector<Step<Message>>,
     Vector<Property>,
     Vector<Message>,
-    Vector<Step<Message>>,
 )>;
 // ────────────────────────────────────────────────────────────────────────────────
 #[derive(Copy, Clone, Debug)]
@@ -123,13 +123,13 @@ where
     store: Rc<RefCell<GStateStore>>,
     edge_nodes: DictPathEiNodeSA<Ix>,
     layout: Layout,
-    queued_interruptions: StateAnchor<StepTimeVector<Message>>,
-    revised_steps: StateAnchor<Vector<Step<Message>>>,
-    revised_props: StateAnchor<Vector<Property>>,
-    send_messages: StateAnchor<Vector<Message>>,
+    // queued_interruptions: StateAnchor<StepTimeVector<Message>>,
+    // revised_steps: StateAnchor<Vector<Step<Message>>>,
+    // revised_props: StateAnchor<Vector<Property>>,
+    // send_messages: StateAnchor<Vector<Message>>,
     // timing_ob: StateAnchor<()>,
     // processed_interruptions: StateAnchor<(StepTimeVector<Message>, StepTimeVector<Message>)>,
-    // revised: SAPropsMessageSteps<Message>,
+    revised: SAPropsMessageSteps2<Message>,
 }
 
 impl<Ix, Message> std::fmt::Debug for AnimationEdge<Ix, Message>
@@ -142,10 +142,11 @@ where
             .field("inside", &self.inside)
             .field("timing", &self.timing)
             .field("running", &self.running)
-            .field("queued_interruptions", &self.queued_interruptions)
-            .field("revised_steps", &self.revised_steps)
-            .field("revised_props", &self.revised_props)
-            .field("send_messages", &self.send_messages)
+            .field("revised", &self.revised)
+            // .field("queued_interruptions", &self.queued_interruptions)
+            // .field("revised_steps", &self.revised_steps)
+            // .field("revised_props", &self.revised_props)
+            // .field("send_messages", &self.send_messages)
             .finish()
     }
 }
@@ -275,13 +276,24 @@ where
         )
             .map(|q, r| !q.is_empty() || !r.is_empty());
 
-        let interruption_cut = {
+        let i_p_cut = {
             let mut opt_old_current: Option<Duration> = None;
             // let mut opt_old_interruption: Option<StepTimeVector<Message>> = None;
             // interruption_init.store_watch(&store)
-            (&sa_timing, &interruption_init.store_watch(&store))
-                .map(|t, i| (*t, i.clone()))
-                .cutoff(move |(timing, new_interruption)| {
+            let pa: StateAnchor<Vector<Property>> = props_init
+                .iter()
+                .map(|sv| sv.store_get_var_with(&store, Var::watch))
+                .collect::<Anchor<Vector<_>>>()
+                .into();
+
+            (
+                &sa_timing,
+                &interruption_init.store_watch(&store),
+                // &steps_init.store_watch(&store),
+                &pa,
+            )
+                .map(|t, i, p| (*t, i.clone(), p.clone()))
+                .cutoff(move |(timing, _, _)| {
                     let new_t = timing.current();
                     if let Some(old_t) = opt_old_current {
                         if old_t == new_t {
@@ -302,76 +314,75 @@ where
 
                     true
                 })
-                .map(|(_, i)| i.clone())
+                .map(|(_, i, p)| (i.clone(), p.clone()))
         };
 
-        let steps_cut = {
-            steps_init.store_watch(&store)
-            // let mut opt_old_current: Option<Duration> = None;
-            // let mut opt_old_steps: Option<Vector<Step<Message>>> = None;
-            // (&sa_timing, &steps_init.store_watch(&store))
-            //     .map(|t, i| (*t, i.clone()))
-            //     .cutoff(move |(timing, new_steps)| {
-            //         let new_t = timing.current();
-            //         if let Some(old_t) = opt_old_current {
-            //             if old_t == new_t {
-            //                 return false;
-            //             }
-            //         }
+        // let steps_cut = {
+        //     steps_init.store_watch(&store)
+        //     // let mut opt_old_current: Option<Duration> = None;
+        //     // let mut opt_old_steps: Option<Vector<Step<Message>>> = None;
+        //     // (&sa_timing, &steps_init.store_watch(&store))
+        //     //     .map(|t, i| (*t, i.clone()))
+        //     //     .cutoff(move |(timing, new_steps)| {
+        //     //         let new_t = timing.current();
+        //     //         if let Some(old_t) = opt_old_current {
+        //     //             if old_t == new_t {
+        //     //                 return false;
+        //     //             }
+        //     //         }
 
-            //         if let Some(old_steps) = &opt_old_steps {
-            //             if old_steps == new_steps {
-            //                 return false;
-            //             }
-            //         }
+        //     //         if let Some(old_steps) = &opt_old_steps {
+        //     //             if old_steps == new_steps {
+        //     //                 return false;
+        //     //             }
+        //     //         }
 
-            //         opt_old_current = Some(new_t);
-            //         opt_old_steps = Some(new_steps.clone());
+        //     //         opt_old_current = Some(new_t);
+        //     //         opt_old_steps = Some(new_steps.clone());
 
-            //         true
-            //     })
-            //     .map(|(_, i)| i.clone())
-        };
+        //     //         true
+        //     //     })
+        //     //     .map(|(_, i)| i.clone())
+        // };
 
-        let props_cut: StateAnchor<Vector<Property>> = {
-            let mut opt_old_current: Option<Duration> = None;
-            // let mut opt_old_props: Option<Vector<Property>> = None;
+        // let props_cut: StateAnchor<Vector<Property>> = {
+        //     let mut opt_old_current: Option<Duration> = None;
+        //     // let mut opt_old_props: Option<Vector<Property>> = None;
 
-            let pa: StateAnchor<Vector<Property>> = props_init
-                .iter()
-                .map(|sv| sv.store_get_var_with(&store, Var::watch))
-                .collect::<Anchor<Vector<_>>>()
-                .into();
-            // pa
-            (&sa_timing, &pa)
-                .map(|t, i| (*t, i.clone()))
-                .cutoff(move |(timing, _new_props)| {
-                    let new_t = timing.current();
-                    if let Some(old_t) = opt_old_current {
-                        if old_t == new_t {
-                            return false;
-                        }
-                    }
+        //     let pa: StateAnchor<Vector<Property>> = props_init
+        //         .iter()
+        //         .map(|sv| sv.store_get_var_with(&store, Var::watch))
+        //         .collect::<Anchor<Vector<_>>>()
+        //         .into();
+        //     // pa
+        //     (&sa_timing, &pa)
+        //         .map(|t, i| (*t, i.clone()))
+        //         .cutoff(move |(timing, _new_props)| {
+        //             let new_t = timing.current();
+        //             if let Some(old_t) = opt_old_current {
+        //                 if old_t == new_t {
+        //                     return false;
+        //                 }
+        //             }
 
-                    // if let Some(old_props) = &opt_old_props {
-                    //     if old_props == new_props {
-                    //         return false;
-                    //     }
-                    // }
+        //             // if let Some(old_props) = &opt_old_props {
+        //             //     if old_props == new_props {
+        //             //         return false;
+        //             //     }
+        //             // }
 
-                    opt_old_current = Some(new_t);
-                    // opt_old_props = Some(new_props.clone());
-                    true
-                })
-                .map(|(_, i)| i.clone())
-        };
+        //             opt_old_current = Some(new_t);
+        //             // opt_old_props = Some(new_props.clone());
+        //             true
+        //         })
+        //         .map(|(_, i)| i.clone())
+        // };
 
         let revised: SAPropsMessageSteps2<Message> =
-            (&sa_timing, &interruption_cut, &steps_cut, &props_cut).map(
+            (&sa_timing, &i_p_cut, &steps_init.store_watch(&store)).map(
                 move |timing: &Timing,
-                      interruption: &StepTimeVector<Message>,
-                      steps: &Vector<Step<Message>>,
-                      props: &Vector<Property>| {
+                      (interruption, props): &(StepTimeVector<Message>, Vector<Property>),
+                      steps: &Vector<Step<Message>>| {
                     //----------------------------------
                     let (mut ready_interruption, queued_interruptions): (
                         StepTimeVector<Message>,
@@ -409,17 +420,17 @@ where
                         resolve_steps(new_props, new_steps, timing.dt());
                     (
                         queued_interruptions,
+                        revised_steps,
                         revised_props,
                         sent_messages,
-                        revised_steps,
                     )
                 },
             );
 
-        let sa_queued_interruptions = revised.map(|x| x.0.clone());
-        let sa_revised_props = revised.map(|x| x.1.clone());
-        let sa_revised_steps = revised.map(|x| x.3.clone());
-        let sa_message = revised.map(|x| x.2.clone());
+        // let sa_queued_interruptions = revised.map(|x| x.0.clone());
+        // let sa_revised_steps = revised.map(|x| x.1.clone());
+        // let sa_revised_props = revised.map(|x| x.2.clone());
+        // let sa_message = revised.map(|x| x.3.clone());
 
         // ─────────────────────────────────────────────────────────────────
 
@@ -463,13 +474,13 @@ where
             store: rc_store,
             edge_nodes: edge.node.clone(), //TODO: 如果是 针对一个特别 Path的动画,那么需要 输入 特别路径Path
             layout: edge.layout,
-            queued_interruptions: sa_queued_interruptions,
-            revised_props: sa_revised_props,
-            revised_steps: sa_revised_steps,
-            send_messages: sa_message,
+            // queued_interruptions: sa_queued_interruptions,
+            // revised_props: sa_revised_props,
+            // revised_steps: sa_revised_steps,
+            // send_messages: sa_message,
             // timing_ob,
             // processed_interruptions: sa_processed_interruptions,
-            // revised,
+            revised,
         };
         let update_id = TopoKey::new(topo::call(topo::CallId::current));
 
@@ -507,23 +518,22 @@ where
             return;
         }
 
-        let queued_interruptions = self.queued_interruptions.store_get(store);
-        let revised_steps = self.revised_steps.store_get(store);
-        let revised_props = self.revised_props.store_get(store);
+        // let queued_interruptions = self.queued_interruptions.store_get(store);
+        // let revised_steps = self.revised_steps.store_get(store);
+        // let revised_props = self.revised_props.store_get(store);
+        let revised = self.revised.store_get(store);
         // ─────────────────────────────────────────────────────────────────
 
         self.inside
             .props
             .iter()
-            .zip(revised_props.into_iter())
+            .zip(revised.2.into_iter())
             .for_each(|(sv, prop)| sv.set_in_callback(store, skip, prop));
 
         self.inside
             .interruption
-            .set_in_callback(store, skip, queued_interruptions);
-        self.inside
-            .steps
-            .set_in_callback(store, skip, revised_steps);
+            .set_in_callback(store, skip, revised.0);
+        self.inside.steps.set_in_callback(store, skip, revised.1);
 
         //TODO: cmd send message
     }
@@ -536,21 +546,21 @@ where
             return;
         }
 
-        let queued_interruptions = self.queued_interruptions.store_get(store_ref);
-        let revised_steps = self.revised_steps.store_get(store_ref);
-        let revised_props = self.revised_props.store_get(store_ref);
+        // let queued_interruptions = self.queued_interruptions.store_get(store_ref);
+        // let revised_steps = self.revised_steps.store_get(store_ref);
+        // let revised_props = self.revised_props.store_get(store_ref);
+        let revised = self.revised.store_get(store_ref);
+
         // ─────────────────────────────────────────────────────────────────
 
         self.inside
             .props
             .iter()
-            .zip(revised_props.into_iter())
+            .zip(revised.2.into_iter())
             .for_each(|(sv, prop)| sv.store_set(store_ref, prop));
 
-        self.inside
-            .interruption
-            .store_set(store_ref, queued_interruptions);
-        self.inside.steps.store_set(store_ref, revised_steps);
+        self.inside.interruption.store_set(store_ref, revised.0);
+        self.inside.steps.store_set(store_ref, revised.1);
 
         //TODO: cmd send message
     }
@@ -763,7 +773,7 @@ mod tests {
             // a.update();
             a.inside.props[0].store_get(storeref);
         }
-        a.revised_props.store_get(storeref);
+        a.inside.props[0].store_get(storeref);
     }
     #[bench]
     #[topo::nested]
@@ -844,7 +854,7 @@ mod tests {
             // a.update();
             a.inside.props[0].store_get(storeref);
         }
-        a.revised_props.store_get(storeref);
+        a.inside.props[0].store_get(storeref);
     }
 
     #[test]
@@ -956,7 +966,7 @@ mod tests {
             // println!("end : {:?}", a.inside.props.get());
             // println!("{:?}", a);
 
-            a.revised_props.get();
+            a.inside.props[0].get();
         }
     }
 
@@ -1094,8 +1104,7 @@ mod tests {
             // // state_store().borrow().engine_mut().stabilize();
             // println!("end : {:?}", a.inside.props.get());
             // println!("{:?}", a);
-
-            a.revised_props.get();
+            // a.inside.props[0].get();
             // ─────────────────────────────────────────────────────────────────
 
             css_w.set(width(px(20)));

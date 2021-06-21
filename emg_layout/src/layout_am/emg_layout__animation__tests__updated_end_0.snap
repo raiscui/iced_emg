@@ -51,41 +51,37 @@ AnimationEdge {
     running: StateAnchor(
         false,
     ),
-    queued_interruptions: StateAnchor(
-        [],
-    ),
-    revised_steps: StateAnchor(
-        [],
-    ),
-    revised_props: StateAnchor(
-        [
-            Prop(
-                "width",
-                Motion {
-                    position: NotNan(
-                        1.0,
-                    ),
-                    velocity: NotNan(
-                        0.0,
-                    ),
-                    target: NotNan(
-                        1.0,
-                    ),
-                    interpolation: Spring {
-                        stiffness: NotNan(
-                            170.0,
+    revised: StateAnchor(
+        (
+            [],
+            [],
+            [
+                Prop(
+                    "width",
+                    Motion {
+                        position: NotNan(
+                            1.0,
                         ),
-                        damping: NotNan(
-                            26.0,
+                        velocity: NotNan(
+                            0.0,
                         ),
+                        target: NotNan(
+                            1.0,
+                        ),
+                        interpolation: Spring {
+                            stiffness: NotNan(
+                                170.0,
+                            ),
+                            damping: NotNan(
+                                26.0,
+                            ),
+                        },
+                        unit: Px,
+                        interpolation_override: None,
                     },
-                    unit: Px,
-                    interpolation_override: None,
-                },
-            ),
-        ],
-    ),
-    send_messages: StateAnchor(
-        [],
+                ),
+            ],
+            [],
+        ),
     ),
 }
