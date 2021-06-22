@@ -1,11 +1,10 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-05-26 15:08:45
+ * @LastEditTime: 2021-06-13 12:16:55
  * @LastEditors: Rais
  * @Description:
  */
-use std::borrow::Borrow;
 
 use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
 use emg::{edge_index_no_source, Edge, EdgeIndex};
@@ -142,7 +141,7 @@ where
         w: T,
         h: T,
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
-        self.node_connect_eix(&ei).ok_or("node insert eix fails")?;
+        self.nodes_connect_eix(&ei).ok_or("node insert eix fails")?;
         let source = use_state(ei.source_nix().as_ref().cloned());
         let target = use_state(ei.target_nix().as_ref().cloned());
         let edge_item = EmgEdgeItem::default_with_wh_in_topo(
@@ -166,7 +165,7 @@ where
         origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
         align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
-        self.node_connect_eix(&ei).ok_or("node insert eix fails")?;
+        self.nodes_connect_eix(&ei).ok_or("node insert eix fails")?;
 
         let source = use_state(ei.source_nix().as_ref().cloned());
         let target = use_state(ei.target_nix().as_ref().cloned());
@@ -188,7 +187,7 @@ where
         &mut self,
         ei: EdgeIndex<Self::Ix>,
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
-        self.node_connect_eix(&ei).ok_or("node insert eix fails")?;
+        self.nodes_connect_eix(&ei).ok_or("node insert eix fails")?;
 
         let source = use_state(ei.source_nix().as_ref().cloned());
         let target = use_state(ei.target_nix().as_ref().cloned());
@@ -206,7 +205,7 @@ where
     //  where
     // Message: Clone + std::fmt::Debug,
     {
-        match tree_layer.borrow() {
+        match tree_layer {
             GTreeBuilderElement::Layer(root_id, edge_refreshers, children_list) => {
                 let _span = trace_span!("=> handle_root [layer] ",%root_id).entered();
                 trace!("{:?}==>{:#?}", &root_id, &children_list);
@@ -236,7 +235,7 @@ where
     #[topo::nested]
     fn handle_children_in_topo(&mut self, tree_layer: &'_ GTreeBuilderElement<'a, Message>) {
         let parent_nix = &*illicit::expect::<NodeIndex<Self::Ix>>();
-        match tree_layer.borrow() {
+        match tree_layer {
             //
             GTreeBuilderElement::Layer(id, edge_refreshers, children_list) => {
                 let _span =

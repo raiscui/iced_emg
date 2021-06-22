@@ -1,14 +1,15 @@
+
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-05-26 08:29:42
+ * @LastEditTime: 2021-06-21 17:13:41
  * @LastEditors: Rais
 * @Description:
 */
-use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4};
+use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, PathVarMap};
 
 use emg::EdgeIndex;
-use emg_state::{ StateMultiAnchor,StateAnchor,StateVar};
+use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo, use_state};
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
 use styles::{px, s, CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, };
@@ -16,11 +17,12 @@ use tracing::{ trace,trace_span};
 
 // ────────────────────────────────────────────────────────────────────────────────
     
-#[track_caller]
+// #[track_caller]
+#[topo::nested]
 pub fn layout_calculating<Ix>(
     id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
-    path_edgedata: &EdgeData,
-    layout: &Layout<Ix>,
+    path_edgedata: &EdgeData,//parent
+    layout: StateAnchor<Layout>,
 ) -> LayoutCalculated 
 where 
     Ix: 'static + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default + std::cmp::Ord+ std::fmt::Display 
@@ -30,14 +32,21 @@ where
     
             let EdgeData{
                 calculated: p_calculated,
-                styles_string: _
+                
+                ..
             }=path_edgedata;
             // ─────────────────────────────────────────────────────────────────
 
             let p_calc_size_sa = &p_calculated.size;
             // ─────────────────────────────────────────────────────────────────
+            let w = layout.then(|l:&Layout|l.w.watch().into());
+            let h = layout.then(|l:&Layout|l.h.watch().into());
+            let origin_x = layout.then(|l:&Layout|l.origin_x.watch().into());
+            let origin_y = layout.then(|l:&Layout|l.origin_y.watch().into());
+            let align_x = layout.then(|l:&Layout|l.align_x.watch().into());
+            let align_y = layout.then(|l:&Layout|l.align_y.watch().into());
 
-            let calculated_size = (p_calc_size_sa, &layout.w.watch(),&layout.h.watch()).then(
+            let calculated_size = (p_calc_size_sa, &w,&h).then(
                  move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor,sa_h:&GenericSizeAnchor| {
                     // let sa_w = sa_w1.clone().into_inner();        
                     // let sa_h = sa_h1.clone().into_inner();    
@@ -64,7 +73,7 @@ where
                 },
             );
 
-            let calculated_origin = (&calculated_size, &layout.origin_x.watch(),&layout.origin_y.watch()).then(
+            let calculated_origin = (&calculated_size, &origin_x,&origin_y).then(
                 move |calc_size: &Vector2<f64>, origin_x: &GenericSizeAnchor,origin_y: &GenericSizeAnchor| {
 
       
@@ -81,7 +90,7 @@ where
                 },
             );
 
-            let calculated_align:StateAnchor<Translation3<f64>> = (p_calc_size_sa, &layout.align_x.watch(), &layout.align_y.watch()).then(
+            let calculated_align:StateAnchor<Translation3<f64>> = (p_calc_size_sa, &align_x, &align_y).then(
                 move |p_calc_size: &Vector2<f64>, align_x: &GenericSizeAnchor, align_y: &GenericSizeAnchor| {
                     let p_calc_size= *p_calc_size;
                     let _enter = trace_span!( 
@@ -152,9 +161,9 @@ fn calculation_w(p_calc_size: &Vector2<f64>, w: &GenericSize) -> f64 {
     trace!("calculation_w");
     match w {
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
+            let v = ex_l.value();
             match ex_l.unit {
-                styles::Unit::Px => v,
+                styles::Unit::Px |styles::Unit::None => v,
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -162,15 +171,29 @@ fn calculation_w(p_calc_size: &Vector2<f64>, w: &GenericSize) -> f64 {
                 | styles::Unit::Vh => {
                     todo!()
                 }
+                styles::Unit::Pc => unreachable!(),
+                
             }
         }
         GenericSize::Percentage(pc) => p_calc_size.x * pc.value()*0.01,
+        
         GenericSize::Auto
         | GenericSize::Initial
         | GenericSize::Inherit
         | GenericSize::StringValue(_) => {
             todo!()
         }
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                     calculation_w(p_calc_size, a)*b.into_inner()
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                    calculation_w(p_calc_size, a)+ calculation_w(p_calc_size,b)
+
+                },
+            }
+        },
     }
 
 
@@ -179,12 +202,11 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
     trace!("calculation_h");
     
     match h {
-        GenericSize::Percentage(pc) => p_calc_size.x * pc.value()*0.01,
+        GenericSize::Percentage(pc) => p_calc_size.y * pc.value()*0.01,
 
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px => v,
+                styles::Unit::Px |  styles::Unit::None => ex_l.value(),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -192,6 +214,8 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
                 | styles::Unit::Vh => {
                     todo!()
                 }
+                styles::Unit::Pc => unreachable!(),
+              
             }
         }
         GenericSize::Auto
@@ -200,6 +224,17 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
         | GenericSize::StringValue(_) => {
             todo!()
         }
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                    calculation_h(p_calc_size, a)*b.into_inner()
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                      calculation_h(p_calc_size, a)+ calculation_h(p_calc_size,b)
+
+                },
+            }
+        },
     }
 
 }
@@ -208,11 +243,16 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
 fn calculation_align(p_calc_size: &Vector2<f64>, align_x: &GenericSize,align_y: &GenericSize) -> Translation3<f64> {
     trace!("calculation_align");
 
-    let trans_x = match align_x {
+    calculation_align_x(p_calc_size, align_x) * calculation_align_y(p_calc_size, align_y)
+}
+
+fn calculation_align_x(p_calc_size: &Vector2<f64>, align_x: &GenericSize) -> Translation3<f64> {
+    trace!("calculation_align");
+
+     match align_x {
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px => Translation3::<f64>::new(v, 0., 0.),
+                styles::Unit::Px|  styles::Unit::None  => Translation3::<f64>::new(ex_l.value(), 0., 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -220,6 +260,8 @@ fn calculation_align(p_calc_size: &Vector2<f64>, align_x: &GenericSize,align_y: 
                 | styles::Unit::Vh => {
                     todo!()
                 }
+                styles::Unit::Pc => unreachable!(),
+              
             }
         }
         GenericSize::Percentage(pc) => Translation3::<f64>::new(p_calc_size.x * pc.value()*0.01, 0., 0.),
@@ -229,12 +271,32 @@ fn calculation_align(p_calc_size: &Vector2<f64>, align_x: &GenericSize,align_y: 
         | GenericSize::StringValue(_) => {
             todo!()
         }
-    };
-    let trans_y = match align_y {
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+
+                    // let scaling = nalgebra::Similarity3::from_scaling(b.into_inner());
+                    let mut x = calculation_align_x(p_calc_size,a) ;
+                    x.vector.scale_mut(b.into_inner());
+                    x
+                    
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                      calculation_align_x(p_calc_size, a)* calculation_align_x(p_calc_size,b)
+                }
+            }
+        },
+    }
+}
+fn calculation_align_y(p_calc_size: &Vector2<f64>, align_y: &GenericSize) -> Translation3<f64> {
+    trace!("calculation_align");
+
+    
+    match align_y {
         GenericSize::Length(ex_l) => {
             let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px => Translation3::<f64>::new(0., v, 0.),
+                styles::Unit::Px |styles::Unit::None => Translation3::<f64>::new(0., v, 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -242,6 +304,7 @@ fn calculation_align(p_calc_size: &Vector2<f64>, align_x: &GenericSize,align_y: 
                 | styles::Unit::Vh => {
                     todo!()
                 }
+                styles::Unit::Pc => unreachable!(),
             }
         }
         GenericSize::Percentage(pc) => Translation3::<f64>::new(0., p_calc_size.y * pc.value()*0.01, 0.),
@@ -251,18 +314,34 @@ fn calculation_align(p_calc_size: &Vector2<f64>, align_x: &GenericSize,align_y: 
         | GenericSize::StringValue(_) => {
             todo!()
         }
-    };
-    trans_x * trans_y
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                  
+                    let mut v = calculation_align_y(p_calc_size,a) ;
+                    v.vector.scale_mut(b.into_inner());
+                    v
+
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                    calculation_align_y(p_calc_size, a) * calculation_align_y(p_calc_size,b)
+                }
+            }
+        },
+    }
 }
 
 pub fn calculation_origin(calc_size: &Vector2<f64>, origin_x: &GenericSize,origin_y: &GenericSize) -> Translation3<f64> {
     trace!("calculation_origin");
+    calculation_origin_x(calc_size, origin_x) * calculation_origin_y(calc_size, origin_y)
+}
+pub fn calculation_origin_x(calc_size: &Vector2<f64>, origin_x: &GenericSize) -> Translation3<f64> {
+    trace!("calculation_origin");
 
-    let trans_x = match origin_x {
+     match origin_x {
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px => Translation3::<f64>::new(-v, 0., 0.),
+                styles::Unit::Px | styles::Unit::None  => Translation3::<f64>::new(-ex_l.value(), 0., 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -270,6 +349,7 @@ pub fn calculation_origin(calc_size: &Vector2<f64>, origin_x: &GenericSize,origi
                 | styles::Unit::Vh => {
                     todo!()
                 }
+                styles::Unit::Pc => unreachable!(),
             }
         }
         GenericSize::Percentage(pc) => Translation3::<f64>::new(-(calc_size.x * pc.value()*0.01), 0., 0.),
@@ -279,12 +359,30 @@ pub fn calculation_origin(calc_size: &Vector2<f64>, origin_x: &GenericSize,origi
         | GenericSize::StringValue(_) => {
             todo!()
         }
-    };
-    let trans_y = match origin_y {
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                 
+                    let mut v = calculation_origin_x(calc_size,a) ;
+                    v.vector.scale_mut(b.into_inner());
+                    v
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                    calculation_origin_x(calc_size, a) * calculation_origin_x(calc_size,b)
+                }
+            }
+        },
+    }
+}
+pub fn calculation_origin_y(calc_size: &Vector2<f64>, origin_y: &GenericSize) -> Translation3<f64> {
+    trace!("calculation_origin");
+
+    
+     match origin_y {
         GenericSize::Length(ex_l) => {
-            let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px => Translation3::<f64>::new(0., -v, 0.),
+                
+                styles::Unit::Px|styles::Unit::None => Translation3::<f64>::new(0., -ex_l.value(), 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -292,6 +390,7 @@ pub fn calculation_origin(calc_size: &Vector2<f64>, origin_x: &GenericSize,origi
                 | styles::Unit::Vh => {
                     todo!()
                 }
+                styles::Unit::Pc => unreachable!(),
             }
         }
         GenericSize::Percentage(pc) => Translation3::<f64>::new(0., -(calc_size.y * pc.value()*0.01), 0.),
@@ -301,6 +400,17 @@ pub fn calculation_origin(calc_size: &Vector2<f64>, origin_x: &GenericSize,origi
         | GenericSize::StringValue(_) => {
             todo!()
         }
-    };
-    trans_x * trans_y
+        GenericSize::Calculation(calc_op) => {
+            match calc_op.as_ref() {
+                emg_core::CalcOp::Mul { a, b } => {
+                    let mut v = calculation_origin_y(calc_size,a) ;
+                    v.vector.scale_mut(b.into_inner());
+                    v
+                },
+                emg_core::CalcOp::Add { a, b } => {
+                    calculation_origin_y(calc_size, a) * calculation_origin_y(calc_size,b)
+                }
+            }
+        },
+    }
 }

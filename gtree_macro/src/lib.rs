@@ -97,7 +97,7 @@ impl Parse for AtList {
 
             if input.peek(Token![=]) {
                 if !input.peek2(Ident::peek_any) {
-                    panic!("should not use Rust keyword ")
+                    panic!("should not use Rust keyword ");
                 }
                 // println!("is id");
 
@@ -149,7 +149,7 @@ impl ToTokens for Edge {
         quote_spanned!(
             bracket_token.span=> vec![#(Box::new(#content_iter)),*]
         )
-        .to_tokens(tokens)
+        .to_tokens(tokens);
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ impl AtSetup for GTreeClosure {
                     self.id = id;
                 }
                 At::Edge(_) => {
-                    panic!("closure can't have any edge")
+                    panic!("closure can't have any edge");
                 }
             }
         }
@@ -196,7 +196,7 @@ impl ToTokens for GTreeClosure {
         quote_spanned!(
             closure.span()=> GTreeBuilderElement::Cl(#id_token,#closure)
         )
-        .to_tokens(tokens)
+        .to_tokens(tokens);
     }
 }
 
@@ -217,7 +217,7 @@ impl AtSetup for GOnEvent {
                     self.id = id;
                 }
                 At::Edge(_) => {
-                    panic!("On:Event can't have any edge")
+                    panic!("On:Event can't have any edge");
                 }
             }
         }
@@ -255,7 +255,7 @@ impl ToTokens for GOnEvent {
         } else {
             panic!("event callback argument size is must empty or three")
         };
-        token.to_tokens(tokens)
+        token.to_tokens(tokens);
 
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
         // quote!(GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
@@ -282,7 +282,7 @@ impl AtSetup for GRefresher {
                     self.id = id;
                 }
                 At::Edge(_) => {
-                    panic!("@RefreshUse can't have any edge")
+                    panic!("@RefreshUse can't have any edge");
                 }
             }
         }
@@ -337,7 +337,7 @@ impl ToTokens for GRefresher {
 
         // let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::RefreshUse(#id_token,Rc::new(#kws::new(#closure_token))) );
 
-        kw_token.to_tokens(tokens)
+        kw_token.to_tokens(tokens);
         // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
         // quote!(GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
     }
@@ -423,7 +423,7 @@ impl ToTokens for GTreeSurface {
 
         // Tree GElementTree
         quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token))
-            .to_tokens(tokens)
+            .to_tokens(tokens);
     }
 }
 
@@ -485,7 +485,7 @@ impl ToTokens for GTreeMacroElement {
 
         match_any!( self ,
             Self::GL(x)|Self::GS(x)|Self::RT(x)|Self::GC(x)|Self::OnEvent(x) => x.to_tokens(tokens)
-        )
+        );
     }
 }
 trait AtSetup {
@@ -585,7 +585,7 @@ impl ToTokens for GTreeLayerStruct {
         // let brace_op_token = quote_spanned! {children.span()=>vec![#children_token]};
 
         quote!(#g_tree_builder_element_layer_token(#id_token,#edge_token,#children_token))
-            .to_tokens(tokens)
+            .to_tokens(tokens);
         // quote!(GTreeBuilderElement::#layer(String::from(#id),vec![#(#children_iter),*])).to_tokens(tokens)
     }
 }
@@ -656,7 +656,7 @@ impl ToTokens for Gtree {
 
 
         }};
-        token.to_tokens(tokens)
+        token.to_tokens(tokens);
     }
 }
 
@@ -863,10 +863,10 @@ mod tests {
                                         |tick| {
                                             Message::Event(Event::OnAnimationFrame(tick))
                                         }
-                                    );
+                                    )
 
                                   
-                                    None
+                                    
                                         }
                     ]
                 ],

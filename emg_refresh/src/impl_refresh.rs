@@ -3,7 +3,7 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-05-26 16:41:26
+ * @LastEditTime: 2021-06-13 15:42:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -39,6 +39,7 @@ impl<Use> !RefreshUseNoWarper for Vec<Box<Use>> {}
 impl<Use> !RefreshUseNoWarper for Rc<Use> {}
 impl<Use> !RefreshUseNoWarper for StateVar<Use> {}
 impl<Use> !RefreshUseNoWarper for StateAnchor<Use> {}
+impl<Use> !RefreshWhoNoWarper for StateAnchor<Use> {}
 impl<'a, Use> !RefreshUseNoWarper for RefresherFor<'a, Use> {}
 impl<'a, Use> !RefreshUseNoWarper for Refresher<'a, Use> {}
 // ────────────────────────────────────────────────────────────────────────────────
@@ -98,7 +99,7 @@ where
 
 impl<Who, Use> RefreshFor<StateVar<Who>> for Use
 where
-    Who: RefreshWhoNoWarper + Clone + 'static,
+    Who: RefreshWhoNoWarper + Clone + 'static + std::fmt::Debug,
     Use: RefreshUseNoWarper + RefreshFor<Who>,
 {
     fn refresh_for(&self, who: &mut StateVar<Who>) {
@@ -116,7 +117,11 @@ where
     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static,
 {
     default fn refresh_for(&self, who: &mut Who) {
-        warn!("who Refresh use StateVar");
+        warn!(
+            "who:{:?} Refresh use StateVar:{:?}",
+            &std::any::type_name::<Who>(),
+            &std::any::type_name::<Use>()
+        );
 
         who.refresh_use(&self.get());
     }
@@ -125,7 +130,7 @@ where
 
 impl<Who, Use> RefreshFor<StateVar<Who>> for StateVar<Use>
 where
-    Who: RefreshWhoNoWarper + Clone + 'static,
+    Who: RefreshWhoNoWarper + Clone + 'static + std::fmt::Debug,
     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static,
 {
     fn refresh_for(&self, who: &mut StateVar<Who>) {
@@ -166,7 +171,7 @@ where
 
 impl<Who, Use> RefreshFor<StateVar<Who>> for StateAnchor<Use>
 where
-    Who: RefreshWhoNoWarper + Clone + 'static,
+    Who: RefreshWhoNoWarper + Clone + 'static + std::fmt::Debug,
     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static + std::fmt::Debug,
 {
     fn refresh_for(&self, who: &mut StateVar<Who>) {
@@ -178,7 +183,7 @@ where
 }
 impl<Who, Use> RefreshFor<StateVar<Who>> for Vec<Rc<StateAnchor<Use>>>
 where
-    Who: RefreshWhoNoWarper + Clone + 'static,
+    Who: RefreshWhoNoWarper + Clone + 'static + std::fmt::Debug,
     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static + std::fmt::Debug,
 {
     fn refresh_for(&self, who: &mut StateVar<Who>) {
@@ -192,7 +197,7 @@ where
 }
 impl<Who> RefreshFor<StateVar<Who>> for Vec<Box<(dyn RefreshFor<Who> + 'static)>>
 where
-    Who: RefreshWhoNoWarper + Clone + 'static,
+    Who: RefreshWhoNoWarper + Clone + 'static + std::fmt::Debug,
 {
     fn refresh_for(&self, who: &mut StateVar<Who>) {
         for sa in self {
@@ -205,7 +210,7 @@ where
 }
 impl<Who, Use> RefreshFor<StateVar<Who>> for Vec<Box<Use>>
 where
-    Who: RefreshWhoNoWarper + Clone + 'static,
+    Who: RefreshWhoNoWarper + Clone + 'static + std::fmt::Debug,
     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static + std::fmt::Debug,
 {
     fn refresh_for(&self, who: &mut StateVar<Who>) {
@@ -220,7 +225,7 @@ where
 
 impl<Who, Use> RefreshFor<StateVar<Who>> for Vec<Box<StateAnchor<Use>>>
 where
-    Who: RefreshWhoNoWarper + Clone + 'static,
+    Who: RefreshWhoNoWarper + Clone + 'static + std::fmt::Debug,
     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static + std::fmt::Debug,
 {
     fn refresh_for(&self, who: &mut StateVar<Who>) {

@@ -1,11 +1,12 @@
 use std::rc::Rc;
 
 use im::vector;
+use seed_styles::Unit;
 
 /*
  * @Author: Rais
  * @Date: 2021-05-10 15:31:40
- * @LastEditTime: 2021-05-18 22:41:41
+ * @LastEditTime: 2021-06-14 21:40:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,6 +20,7 @@ pub struct Color {
 }
 
 impl Color {
+    #[must_use]
     pub const fn new(red: u8, green: u8, blue: u8, alpha: f64) -> Self {
         Self {
             red,
@@ -41,10 +43,10 @@ fn custom_color(
     Property::Color(
         Rc::new(name),
         vector![
-            init_motion(f64::from(red), "".to_string()),
-            init_motion(f64::from(green), "".to_string()),
-            init_motion(f64::from(blue), "".to_string()),
-            init_motion(alpha, "".to_string()),
+            init_motion(f64::from(red), Unit::None),
+            init_motion(f64::from(green), Unit::None),
+            init_motion(f64::from(blue), Unit::None),
+            init_motion(alpha, Unit::None),
         ],
     )
 }
