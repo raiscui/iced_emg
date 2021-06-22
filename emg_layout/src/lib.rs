@@ -20,7 +20,7 @@
 // #![feature(trivial_bounds)]
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
-use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, hash::Hash, rc::Rc};
+use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc};
 
 use calc::layout_calculating;
 use derive_more::Display;
@@ -116,7 +116,8 @@ impl<T> From<StateVar<T>> for GenericSizeAnchor
 where T :  Into<GenericSize> + Clone+'static{
     fn from(v: StateVar<T>) -> Self {
         
-        Self(v.watch().map(|x|x.clone().into()))
+        // Self(v.watch().map(|x|x.clone().into()))
+        Self(v.get_var_with(|v|v.watch().map(|x|x.clone().into()).into()))
     }
 }
 
@@ -334,6 +335,24 @@ where
         write!(f, "Dict {{\n{}\n}}", indented(&sv))
     }
 }
+struct PathVarMapDisplay<K, V>(PathVarMap<K, V>) where K: std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default;
+
+impl<K, V> std::fmt::Display for PathVarMapDisplay<K, V>
+where
+    K: std::fmt::Display + Ord,
+    V: std::fmt::Display,
+     K: std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let sv: String = self
+            .0
+            .iter()
+            .map(|(k, v)| format!("{} :\n{}\n,\n", k, indented(v)))
+            .fold(String::default(), |acc, v| format!("{}{}", acc, v));
+
+        write!(f, "PathVarMap {{\n{}\n}}", indented(&sv))
+    }
+}
 #[derive(Display, Debug, Clone, PartialEq)]
 #[display(
     fmt = "{{\nsize:\n{},\norigin:\n{},align:\n{},\ncoordinates_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
@@ -416,7 +435,7 @@ where
     T: UpdateStyle<T>,
 {
     fn update_style(self, style: &mut Style) {
-        self.into().update_style(style)
+        self.into().update_style(style);
     }
 }
 
@@ -467,6 +486,10 @@ where
 }
 
 pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
+// use ahash::AHasher as CustomHasher;
+use rustc_hash::FxHasher as CustomHasher;
+
+type PathVarMap<Ix,T> = HashMap<EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
 #[derive(Clone, Debug)]
 pub struct EmgEdgeItem<Ix>
 where
@@ -477,7 +500,8 @@ where
     pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,// dyn by Edge(source_nix , target_nix)
     pub paths:DictPathEiNodeSA<Ix>, // with parent self
     pub layout: Layout,
-    path_styles: StateVar<Dict<EPath<Ix>, Style>>, //TODO check use
+    path_styles: StateVar<PathVarMap<Ix, Style>>, //TODO check use
+    path_layouts:StateVar<PathVarMap<Ix, Layout>>,
 
     pub other_styles: StateVar<Style>,
     // no self  first try
@@ -514,7 +538,7 @@ impl<
             indented(&self.id),
             indented(DictDisplay(self.paths.get())),
             indented(&self.layout),
-            indented(DictDisplay(self.path_styles.get())),
+            indented(PathVarMapDisplay(self.path_styles.get())),
             indented(&self.other_styles),
             indented(DictDisplay(self.node.get())),
         );
@@ -564,6 +588,15 @@ impl<Ix> EmgEdgeItem<Ix>
 where
     Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display,
 {
+
+    pub fn build_path_layout(&self,func:impl FnOnce(Layout)->(EPath<Ix>, Layout)){
+        let (path,layout)   = func(self.layout);
+        self.path_layouts.set_with_once(move|pls_map|{
+            let mut new_pls_map = pls_map.clone();
+            new_pls_map.insert(path, layout);
+            new_pls_map
+        } );
+    }
   
 
     #[topo::nested]
@@ -632,8 +665,10 @@ where
             align_y: use_state(align.1),
             align_z: use_state(align.2),
         };
-        let path_styles= use_state(Dict::unit(EPath::<Ix>::default(), s()));
-
+        // let path_styles= use_state(Dict::unit(EPath::<Ix>::default(), s()));
+        let path_styles:StateVar<PathVarMap<Ix, Style>> = use_state(PathVarMap::default());
+        let path_layouts:StateVar<PathVarMap<Ix, Layout>> = use_state(PathVarMap::default());
+      
 
         let other_styles_sv = use_state(s());
 
@@ -715,8 +750,9 @@ where
                         
                        
                     let (opt_p_calculated,layout_calculated,styles_string) =  match path_edge_item_node {
-                        EdgeItemNode::Empty => path_ein_empty_node_builder(&layout, path_styles, other_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &layout, path, path_styles, other_styles_sv),
+                        //NOTE 上一级节点: empty => 此节点是root
+                        EdgeItemNode::Empty => path_ein_empty_node_builder(&layout, path,path_layouts,path_styles, other_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &layout, path,path_layouts, path_styles, other_styles_sv),
                         EdgeItemNode::String(_)  => {
                             todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
@@ -738,6 +774,7 @@ where
             paths,
             layout,
             path_styles,
+            path_layouts,
             other_styles: other_styles_sv,
             node,
             store:state_store()
@@ -751,22 +788,35 @@ fn path_with_ed_node_builder<Ix>(
     ped: &EdgeData,
      layout: &Layout,
       path: &EPath<Ix>, 
-      
-      path_styles: StateVar<Dict<EPath<Ix>, Style>>,
+      path_layouts:StateVar<PathVarMap<Ix, Layout>>,
+      path_styles: StateVar<PathVarMap<Ix, Style>>,
       other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>, LayoutCalculated, StateAnchor<String>) 
 where
-Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord +std::fmt::Display+'static
+Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord +std::fmt::Display+'static+ std::fmt::Debug
 {
+    // println!("run path_with_ed_node_builder ******************************************************************");
+
+
     let p_calculated = ped.calculated.clone();
-    let layout_calculated = layout_calculating(id_sv, ped, layout);
-    let p = path.clone();
+    let path_clone = path.clone();
+    let path_clone2 = path.clone();
+    let layout_c = *layout;
+    //TODO use Dict anchor Collection
+    let path_layout:StateAnchor<Layout> = path_layouts.watch().map(move|pls_map:&PathVarMap<Ix, Layout>|{
+        // println!("--> id: {:?}", &id_sv);
+        trace!("--> find path_layout in path_with_ed_node_builder------------------- len:{}",pls_map.len());
+        // println!("--> layout:{:?}",pls_map.get(&path_clone));
+        *pls_map.get(&path_clone).unwrap_or(&layout_c)
+    });
+    let layout_calculated = layout_calculating(id_sv, ped, path_layout);
+    // let p = path.clone();
     let this_path_style_string_sa: StateAnchor<Option<String>> = 
                         path_styles
                         .watch()
-                        .map(move |d: &Dict<EPath<Ix>, Style>| {
+                        .map(move|d: &PathVarMap<Ix, Style>| {
                             let _g = trace_span!( "[  this_path_style_string_sa recalculation ]:layout.path_styles change ").entered();
     
-                            d.get(&p).map(seed_styles::Style::render)
+                            d.get(&path_clone2).map(seed_styles::Style::render)
                         });
     let styles_string = (
                         &this_path_style_string_sa,
@@ -793,12 +843,37 @@ Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
     (Some(p_calculated),layout_calculated,styles_string)
 }
 
-fn path_ein_empty_node_builder<Ix:'static>(layout: &Layout,path_styles:StateVar<Dict<EPath<Ix>, Style>>, other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>,LayoutCalculated, StateAnchor<String>)
+fn path_ein_empty_node_builder<Ix:'static>(
+    layout: &Layout,
+    path: &EPath<Ix>, 
+    path_layouts:StateVar<PathVarMap<Ix, Layout>>,
+    path_styles:StateVar<PathVarMap<Ix, Style>>, other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>,LayoutCalculated, StateAnchor<String>)
  where 
     Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
     {
+        // println!("run path_ein_empty_node_builder ******************************************************************");
+
+        // ─────────────────────────────────────────────────────────────────
+        let layout_c = *layout;
+        let path_clone = path.clone();
+        let path_layout:StateAnchor<Layout> = path_layouts.watch().map(move|pls_map:&PathVarMap<Ix, Layout>|{
+            // println!("--> id: {:?}", &id_sv);
+            trace!("--> find path_layout--in root ----------------- len:{}",pls_map.len());
+            // println!("--> layout:{:?}",pls_map.get(&path_clone));
+            debug_assert!(pls_map.len()<=1_usize);
+            
+            *pls_map.get(&path_clone).unwrap_or(&layout_c)
+        });
+        let w = path_layout.then(|l:&Layout|l.w.watch().into());
+        let h = path_layout.then(|l:&Layout|l.h.watch().into());
+        // let origin_x = path_layout.then(|l:&Layout|l.origin_x.watch().into());
+        // let origin_y = path_layout.then(|l:&Layout|l.origin_y.watch().into());
+        // let align_x = path_layout.then(|l:&Layout|l.align_x.watch().into());
+        // let align_y = path_layout.then(|l:&Layout|l.align_y.watch().into());
+        // ─────────────────────────────────────────────────────────────────
+
         //TODO 如果没有parent 那么 parent 就是 screen w h
-    let calculated_size:StateAnchor<Vector2<f64>> = (&layout.w.watch(),&layout.h.watch()).then(|sa_w: &GenericSizeAnchor,sa_h: &GenericSizeAnchor| {
+    let calculated_size:StateAnchor<Vector2<f64>> = (&w,&h).then(|sa_w: &GenericSizeAnchor,sa_h: &GenericSizeAnchor| {
             (&**sa_w,&**sa_h).map(|w:&GenericSize,h:&GenericSize|->Vector2<f64>{
                 //TODO check editor display error 
                 Vector2::<f64>::from_vec(vec![w.get_length_value(), h.get_length_value()])
@@ -806,6 +881,8 @@ fn path_ein_empty_node_builder<Ix:'static>(layout: &Layout,path_styles:StateVar<
             }).into()    
             
         });
+
+        //TODO 审视是否要自定义定位
     let calculated_origin = StateAnchor::constant(Translation3::<f64>::identity());
     let calculated_align = StateAnchor::constant(Translation3::<f64>::identity());
     let coordinates_trans = StateAnchor::constant(Translation3::<f64>::identity());
@@ -836,7 +913,7 @@ fn path_ein_empty_node_builder<Ix:'static>(layout: &Layout,path_styles:StateVar<
             &other_styles_sv.watch(),
         )
         .map(
-            move |path_styles: &Dict<EPath<Ix>,Style>, loc_styles: &Style, other_styles: &Style| {
+            move |path_styles: &PathVarMap<Ix,Style>, loc_styles: &Style, other_styles: &Style| {
                 let _enter = span!(Level::TRACE,
                         "-> [ROOT styles ] recalculation..(&other_styles_watch, &loc_styles).map ",
                         )
@@ -1091,7 +1168,11 @@ mod tests {
                 .unwrap()
                 .styles_string
                 .get(),
-            );
+            ); 
+            insta::assert_debug_snapshot!("loc-root_e", &root_e);
+            insta::assert_debug_snapshot!("loc-e1", &e1);
+            insta::assert_debug_snapshot!("loc-e2", &e2);
+            
             info!("..=========================================================");
         }
     }
@@ -1102,7 +1183,7 @@ mod tests {
            black_box( it_works_for_bench());
         });
     }
-    #[test]
+    
     fn it_works_for_bench() {
            
 
@@ -1384,6 +1465,8 @@ mod tests {
             );
             info!("..=========================================================");
     }
+
+    #[test]
     fn it_works() {
         let _xx = setup_global_subscriber();
         {
@@ -1525,6 +1608,13 @@ mod tests {
             );
             info!("=========================================================");
             tempcss.set(h(px(1111)));
+            let ff =  e1.node
+            .get()
+            .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+            .and_then(EdgeItemNode::as_edge_data)
+                    .unwrap()
+                    .styles_string
+                    .get();
             assert_ne!(
                 e1.node
                     .get()
@@ -1666,6 +1756,9 @@ mod tests {
                     .styles_string
                     .get(),
             );
+            insta::assert_debug_snapshot!("it_works-root_e", &root_e);
+            insta::assert_debug_snapshot!("it_works-e1", &e1);
+            insta::assert_debug_snapshot!("it_works-e2", &e2);
             info!("..=========================================================");
         }
     }

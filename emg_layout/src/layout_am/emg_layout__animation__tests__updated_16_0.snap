@@ -48,10 +48,10 @@ AnimationEdge {
                         "width",
                         Motion {
                             position: NotNan(
-                                0.95278155548,
+                                94.32537399252,
                             ),
                             velocity: NotNan(
-                                -2.83322,
+                                -280.48878,
                             ),
                             target: NotNan(
                                 0.0,
@@ -120,10 +120,10 @@ AnimationEdge {
                     "width",
                     Motion {
                         position: NotNan(
-                            0.95278155548,
+                            94.32537399252,
                         ),
                         velocity: NotNan(
-                            -2.83322,
+                            -280.48878,
                         ),
                         target: NotNan(
                             0.0,

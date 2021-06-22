@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-21 14:29:04
+ * @LastEditTime: 2021-06-22 12:05:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,7 +12,7 @@
  * @LastEditors: Rais
  * @Description:
  */
-// mod define;
+mod define;
 mod func;
 
 use std::{cell::RefCell, rc::Rc, time::Duration};
@@ -32,9 +32,9 @@ use emg_animation::{
 };
 use seed_styles::CssWidth;
 
-use crate::{DictPathEiNodeSA, EmgEdgeItem, Layout};
+use crate::{DictPathEiNodeSA, EPath, EmgEdgeItem, Layout};
 
-use self::func::props::warn_for_double_listed_properties;
+use self::{define::StateVarProperty, func::props::warn_for_double_listed_properties};
 
 // ────────────────────────────────────────────────────────────────────────────────
 #[allow(dead_code)]
@@ -48,42 +48,7 @@ type SAPropsMessageSteps2<Message> = StateAnchor<(
     Vector<Message>,
 )>;
 // ────────────────────────────────────────────────────────────────────────────────
-#[derive(Copy, Clone, Debug)]
-pub struct StateVarProperty(StateVar<Property>);
 
-impl std::ops::Deref for StateVarProperty {
-    type Target = StateVar<Property>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-pub auto trait NotStateVar {}
-impl<T> !NotStateVar for StateVar<T> {}
-
-impl<T> NotStateVar for Debuggable<T> {}
-// impl NotStateVar for Debuggable<dyn Fn(Precision) -> Precision> {}
-
-impl<T> From<StateVar<T>> for StateVarProperty
-where
-    T: Clone + 'static + From<Property> + std::fmt::Debug,
-    Property: From<T>,
-{
-    #[topo::nested]
-    fn from(sv: StateVar<T>) -> Self {
-        Self(sv.build_bi_similar_use_into_in_topo::<Property>())
-    }
-}
-impl<T> From<T> for StateVarProperty
-where
-    T: NotStateVar + Clone + 'static + Into<Property>,
-{
-    #[topo::nested]
-    fn from(v: T) -> Self {
-        Self(use_state(v.into()))
-    }
-}
 #[derive(Debug, Clone)]
 struct AnimationInside<Message>
 where
@@ -123,7 +88,6 @@ where
     pub(crate) running: StateAnchor<bool>,
     store: Rc<RefCell<GStateStore>>,
     edge_nodes: DictPathEiNodeSA<Ix>,
-    layout: Layout,
     // queued_interruptions: StateAnchor<StepTimeVector<Message>>,
     // revised_steps: StateAnchor<Vector<Step<Message>>>,
     // revised_props: StateAnchor<Vector<Property>>,
@@ -172,8 +136,8 @@ where
     // }
 
     fn set_timer(store: &GStateStore, sv_now: StateVar<Duration>) -> StateAnchor<Timing> {
-        let mut timing = Timing::default();
-        let mut opt_old_current: Option<Timing> = None;
+        // let mut timing = Timing::default();
+        // let mut opt_old_current: Option<Timing> = None;
         sv_now
             .store_watch(store)
             // .map(move |now: &Duration| {
@@ -232,17 +196,43 @@ where
         props: Vector<StateVarProperty>,
         edge: EmgEdgeItem<Ix>,
         sv_now: StateVar<Duration>,
+        for_path: Option<EPath<Ix>>,
     ) -> Self
     where
         Message: Clone + std::fmt::Debug + 'static + PartialEq,
-        Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
+        Ix: Clone + std::hash::Hash + Eq + Default + Ord + std::fmt::Display + 'static,
     {
         let rc_store = state_store();
         let rc_store2 = rc_store.clone();
 
+        // ─────────────────────────────────────────────────────────────────
+
+        if let Some(p) = for_path {
+            // let props_clone = props.clone();
+            // ─────────────────────────────────────────────────────────────────
+
+            edge.build_path_layout(|mut l| {
+                // • • • • •
+
+                props.iter().for_each(|svp| {
+                    let name = svp.get_with(|v| v.name().to_string());
+                    match name.as_str() {
+                        "width" => l.w = (*svp).into(),
+                        _ => {
+                            unimplemented!("not implemented....")
+                        }
+                    }
+                });
+                // • • • • •
+
+                (p, l)
+            });
+        }
         {
             warn_for_double_listed_properties(&rc_store2.borrow(), &props);
         }
+
+        // ─────────────────────────────────────────────────────────────────
 
         let sv_inside: AnimationInside<Message> = AnimationInside::<Message>::new_in_topo(props);
 
@@ -474,7 +464,6 @@ where
             running: sa_running,
             store: rc_store,
             edge_nodes: edge.node.clone(), //TODO: 如果是 针对一个特别 Path的动画,那么需要 输入 特别路径Path
-            layout: edge.layout,
             // queued_interruptions: sa_queued_interruptions,
             // revised_props: sa_revised_props,
             // revised_steps: sa_revised_steps,
@@ -491,7 +480,7 @@ where
         sv_now.insert_after_fn(
             update_id,
             move |store, skip, v| {
-                println!("call update after set timing {:?}", v);
+                // println!("call update after set timing {:?}", v);
                 anima_clone.update_in_callback(store, skip);
             },
             false,
@@ -574,7 +563,7 @@ mod tests {
     use std::path::Path;
     use std::time::Duration;
 
-    use emg::edge_index_no_source;
+    use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
     use emg_animation::{interrupt, opacity, style, to, Tick};
     use emg_core::{into_vector, GenericSize};
     use emg_state::{
@@ -583,13 +572,13 @@ mod tests {
     };
     use im::vector;
     use seed_styles as styles;
-    use styles::width;
+    use styles::{pc, width};
     use styles::{px, CssWidth};
 
-    use crate::EmgEdgeItem;
+    use crate::{EPath, EdgeItemNode, EmgEdgeItem, GraphEdgesDict};
 
     use super::AnimationEdge;
-    use tracing::Level;
+    use tracing::{debug, Level};
 
     use tracing_flame::FlameLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -605,7 +594,7 @@ mod tests {
                     | tracing_subscriber::fmt::format::FmtSpan::ENTER
                     | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
             )
-            .with_max_level(Level::TRACE)
+            .with_max_level(Level::DEBUG)
             .try_init();
 
         // tracing::subscriber::set_global_default(subscriber)
@@ -734,7 +723,7 @@ mod tests {
             let edge_item1 = edge_item.clone();
             let sv_now = use_state(Duration::ZERO);
             let mut a: AnimationEdge<String, Message> =
-                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item1, sv_now);
+                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item1, sv_now, None);
             black_box(less_am_run(&state_store().borrow(), &mut a, &sv_now));
         });
     }
@@ -795,7 +784,7 @@ mod tests {
             let edge_item1 = edge_item.clone();
             let sv_now = use_state(Duration::ZERO);
             let mut a: AnimationEdge<String, Message> =
-                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item1, sv_now);
+                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item1, sv_now, None);
             black_box(many_am_run(&state_store().borrow(), &mut a, &sv_now));
         });
     }
@@ -880,7 +869,7 @@ mod tests {
 
             let sv_now = use_state(Duration::ZERO);
             let a: AnimationEdge<String, Message> =
-                AnimationEdge::new_in_topo(into_vector![opacity(1.)], edge_item, sv_now);
+                AnimationEdge::new_in_topo(into_vector![opacity(1.)], edge_item, sv_now, None);
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
             insta::assert_debug_snapshot!("new2", &a);
@@ -975,7 +964,7 @@ mod tests {
     #[topo::nested]
     fn test_layout_anima() {
         // ! layout am
-        // let nn = _init();
+        let nn = _init();
 
         insta::with_settings!({snapshot_path => Path::new("./layout_am")}, {
 
@@ -986,26 +975,72 @@ mod tests {
             // let _guard = span.enter();
             // trace!("fff");
 
-            let ei = edge_index_no_source("fff");
-            let source = use_state(ei.source_nix().as_ref().cloned());
-            let target = use_state(ei.target_nix().as_ref().cloned());
-            let edge_item: EmgEdgeItem<String> = EmgEdgeItem::new_in_topo(
-                source.watch(),
-                target.watch(),
-                StateAnchor::constant(Dict::default()),
-                (css_w.into(), px(1).into()),
-                (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into()),
-                (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into())
-            );
-            let ew = edge_item.layout.w;
+            let e_dict_sv:StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+
+
+            let root_e_source =use_state( None);
+            let root_e_target = use_state(Some(node_index("root")));
+            let mut root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
+                nd
+            });
+
+
+            // let e1_source =use_state( Some(node_index("root")));
+            // let e1_target = use_state(Some(node_index("1")));
+            // let e1 = EmgEdgeItem::new_in_topo(
+            //         e1_source.watch(),
+            //         e1_target.watch(),
+            //     e_dict_sv.watch(),
+            //     (px(50).into(), px(50).into()),
+            //      (pc(0).into(), pc(0).into(), pc(0).into()),
+            //       (pc(50).into(), pc(50).into(), pc(50).into()),
+            // );
+
+            // e_dict_sv.set_with(|d|{
+            //     let mut nd = d .clone();
+            //     nd.insert(edge_index("root","1"), Edge::new(e1_source, e1_target, e1.clone()));
+            //     nd
+            // });
+
+
+
+            // ─────────────────────────────────────────────────────────────────
+
+            let ew = root_e.layout.w;
+            // debug!("e->{}",&e1);
+            insta::assert_debug_snapshot!("layout-am-edge", &root_e);
+
+
+            css_w.set(width(px(99)));
+            insta::assert_debug_snapshot!("layout-am-edge-set99", &root_e);
+            let edge_style_string_sa = root_e
+                    .node
+                    .get()
+                    .get(&EPath(vector![edge_index_no_source("root")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                            .unwrap()
+                            .styles_string.clone();
+                            // .get();
+            // let edge_style_string_sa = e1
+            //         .node
+            //         .get()
+            //         .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+            //         .and_then(EdgeItemNode::as_edge_data)
+            //                 .unwrap()
+            //                 .styles_string.clone();
+            //                 // .get();
+
 
 
 
             let sv_now = use_state(Duration::ZERO);
 
             let a: AnimationEdge<String, Message> =
-                // AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item, sv_now);
-                AnimationEdge::new_in_topo(into_vector![css_w], edge_item, sv_now);
+                // AnimationEdge::new_in_topo(into_vector![width(px(1))], e1, sv_now);
+                AnimationEdge::new_in_topo(into_vector![css_w], root_e.clone(), sv_now, Some(EPath(vector![edge_index_no_source("root")])));
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
             insta::assert_debug_snapshot!("new2", &a);
@@ -1041,6 +1076,7 @@ mod tests {
             // println!("1**{:?}", a.inside.props.get());
 
             insta::assert_debug_snapshot!("updated_16_0", &a);
+            insta::assert_debug_snapshot!("updated_16_0-edge", &root_e);
             // insta::assert_debug_snapshot!("updated_16_1", &a);
             // println!("set timing 16-- insta");
             // ────────────────────────────────────────────────────────────────────────────────
@@ -1065,6 +1101,7 @@ mod tests {
 
             // a.update();
             insta::assert_debug_snapshot!("updated_33_0", &a);
+            insta::assert_debug_snapshot!("updated_33_0-edge", &root_e);
 
             // println!("set timing 33 -- update 1");
 
@@ -1088,6 +1125,7 @@ mod tests {
             // insta::assert_debug_snapshot!("updated_back_1", &a);
 
             for i in 3..200 {
+                println!("===========================================================");
                 if i == 50{
                     println!(" 50-> : current width:{}",&css_w);
                     css_w.set(width(px(20)));
@@ -1100,7 +1138,210 @@ mod tests {
                 // a.timing.get();´ß
                 // a.update();
 
-                println!("***-- {:?} | css_width:{:?}",CssWidth::from( a.inside.props[0].get()),ew);
+                println!("***-- {:?} | \new:-> {:?}, \n style:-> {:?}",CssWidth::from( a.inside.props[0].get()),ew,edge_style_string_sa);
+
+                println!("===========================================================");
+
+                //  a.inside.props[0].get();
+            }
+            insta::assert_debug_snapshot!("updated_end_0", &a);
+            // insta::assert_debug_snapshot!("updated_end_1", &a);
+
+            // // println!("{:?}", a.revised_props.get());
+            // // state_store().borrow().engine_mut().stabilize();
+            // println!("end : {:?}", a.inside.props.get());
+            // println!("{:?}", a);
+            // a.inside.props[0].get();
+            // ─────────────────────────────────────────────────────────────────
+
+            css_w.set(width(px(20)));
+            insta::assert_debug_snapshot!("end_set1", &a);
+            sv_now.set(sv_now.get() + Duration::from_millis(16));
+            insta::assert_debug_snapshot!("end_set2-settime", &a);
+            // a.update();
+            insta::assert_debug_snapshot!("end_set3-update", &a);
+
+
+
+
+
+        });
+    }
+
+    #[test]
+    #[topo::nested]
+    fn test_layout_children_anima() {
+        // ! layout am
+        let nn = _init();
+
+        insta::with_settings!({snapshot_path => Path::new("./layout_children_am")}, {
+
+            let css_w: StateVar<CssWidth> = use_state(width(px(1)));
+
+
+            // let span = trace_span!("am-test");
+            // let _guard = span.enter();
+            // trace!("fff");
+
+            let e_dict_sv:StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+
+
+            let root_e_source =use_state( None);
+            let root_e_target = use_state(Some(node_index("root")));
+            let root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
+                nd
+            });
+
+
+            let e1_source =use_state( Some(node_index("root")));
+            let e1_target = use_state(Some(node_index("1")));
+            let e1 = EmgEdgeItem::new_in_topo(
+                    e1_source.watch(),
+                    e1_target.watch(),
+                e_dict_sv.watch(),
+                (px(50).into(), px(50).into()),
+                 (pc(0).into(), pc(0).into(), pc(0).into()),
+                  (pc(50).into(), pc(50).into(), pc(50).into()),
+            );
+
+            e_dict_sv.set_with(|d|{
+                let mut nd = d .clone();
+                nd.insert(edge_index("root","1"), Edge::new(e1_source, e1_target, e1.clone()));
+                nd
+            });
+
+
+
+            // ─────────────────────────────────────────────────────────────────
+
+            let ew = root_e.layout.w;
+            // debug!("e->{}",&e1);
+            insta::assert_debug_snapshot!("layout-am-edge", &e1);
+
+
+            css_w.set(width(px(99)));
+            insta::assert_debug_snapshot!("layout-am-edge-set99", &e1);
+
+            let edge_style_string_sa = e1
+                    .node
+                    .get()
+                    .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+                    .and_then(EdgeItemNode::as_edge_data)
+                            .unwrap()
+                            .styles_string.clone();
+            //                 // .get();
+
+
+
+
+            let sv_now = use_state(Duration::ZERO);
+
+            let a: AnimationEdge<String, Message> =
+                // AnimationEdge::new_in_topo(into_vector![width(px(1))], e1, sv_now);
+                AnimationEdge::new_in_topo(into_vector![css_w], e1.clone(), sv_now, Some(EPath(vector![edge_index_no_source("root"),edge_index("root","1")])));
+            // println!("a:{:#?}", &a);
+            insta::assert_debug_snapshot!("new", &a);
+            insta::assert_debug_snapshot!("new2", &a);
+            let new1 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new.snap")).unwrap();
+            let new2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new2.snap")).unwrap();
+            assert_eq!(new1.contents(),new2.contents());
+
+            assert_eq!(a.running.get(), false);
+            insta::assert_debug_snapshot!("get_running", &a);
+            // println!("now set interrupt");
+            a.interrupt(vector![
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))])
+            ]);
+            // println!("over interrupt");
+
+            insta::assert_debug_snapshot!("interrupt", &a);
+            // insta::assert_debug_snapshot!("interrupt2", &a);
+            // println!("over interrupt insta");
+
+            assert_eq!(a.running.get(), true);
+            // println!("over interrupt running.get()");
+            // a.update_animation();
+            // ────────────────────────────────────────────────────────────────────────────────
+
+            sv_now.set(Duration::from_millis(16));
+            // println!("set timing 16");
+            insta::assert_debug_snapshot!("set16", &a);
+
+            // a.update();
+            // println!("set timing 16-- update");
+
+            // println!("1**{:?}", a.inside.props.get());
+
+            insta::assert_debug_snapshot!("updated_16_0", &a);
+            insta::assert_debug_snapshot!("updated_16_0-edge", &e1);
+            // insta::assert_debug_snapshot!("updated_16_1", &a);
+            // println!("set timing 16-- insta");
+            // ────────────────────────────────────────────────────────────────────────────────
+            sv_now.set(Duration::from_millis(16));
+            // println!("set timing 16-2");
+
+            // a.update();
+
+            insta::assert_debug_snapshot!("updated_16_0-2", &a);
+            // insta::assert_debug_snapshot!("updated_16_1-2", &a);
+            // println!("set timing 16-- insta-2");
+            let u16 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0.snap")).unwrap();
+            let u16_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0-2.snap")).unwrap();
+            assert_eq!(u16.contents(),u16_2.contents());
+            // ─────────────────────────────────────────────────────────────────
+
+            sv_now.set(Duration::from_millis(33));
+            // println!("set timing 33");
+
+            // println!("....set 2 ");
+            insta::assert_debug_snapshot!("set33", &a);
+
+            // a.update();
+            insta::assert_debug_snapshot!("updated_33_0", &a);
+            insta::assert_debug_snapshot!("updated_33_0-edge", &e1);
+
+            // println!("set timing 33 -- update 1");
+
+            // a.update();
+            insta::assert_debug_snapshot!("updated_33_1", &a);
+
+            // println!("set timing 33 -- update 2");
+
+            // println!("2**{:?}", a.inside.props.get());
+
+            insta::assert_debug_snapshot!("snap_updated_33_0", &a);
+            // insta::assert_debug_snapshot!("snap_updated_33_1", &a);
+            // println!("set timing 33 -- insta  ");
+            let f33 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_33_1.snap")).unwrap();
+            let f33_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__snap_updated_33_0.snap")).unwrap();
+            assert_eq!(f33.contents(),f33_2.contents());
+
+            // sv_now.set(Duration::from_millis(2));
+            // a.update_animation();
+            // insta::assert_debug_snapshot!("updated_back_0", &a);
+            // insta::assert_debug_snapshot!("updated_back_1", &a);
+
+            for i in 3..200 {
+                println!("===========================================================");
+                if i == 50{
+                    println!(" 50-> : current width:{}",&css_w);
+                    css_w.set(width(px(20)));
+
+                }
+                sv_now.set(Duration::from_millis(i * 16));
+
+
+                // println!("in ------ i:{}", &i);
+                // a.timing.get();´ß
+                // a.update();
+
+                println!("***-- {:?} | \new:-> {:?}, \n style:-> {:?}",CssWidth::from( a.inside.props[0].get()),ew,edge_style_string_sa);
+
+                println!("===========================================================");
 
                 //  a.inside.props[0].get();
             }

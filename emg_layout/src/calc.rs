@@ -2,14 +2,14 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-06-21 15:09:11
+ * @LastEditTime: 2021-06-21 17:13:41
  * @LastEditors: Rais
 * @Description:
 */
-use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4};
+use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, PathVarMap};
 
 use emg::EdgeIndex;
-use emg_state::{ StateMultiAnchor,StateAnchor,StateVar};
+use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo, use_state};
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
 use styles::{px, s, CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, };
@@ -17,11 +17,12 @@ use tracing::{ trace,trace_span};
 
 // ────────────────────────────────────────────────────────────────────────────────
     
-#[track_caller]
+// #[track_caller]
+#[topo::nested]
 pub fn layout_calculating<Ix>(
     id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
     path_edgedata: &EdgeData,//parent
-    layout: &Layout,
+    layout: StateAnchor<Layout>,
 ) -> LayoutCalculated 
 where 
     Ix: 'static + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default + std::cmp::Ord+ std::fmt::Display 
@@ -38,8 +39,14 @@ where
 
             let p_calc_size_sa = &p_calculated.size;
             // ─────────────────────────────────────────────────────────────────
+            let w = layout.then(|l:&Layout|l.w.watch().into());
+            let h = layout.then(|l:&Layout|l.h.watch().into());
+            let origin_x = layout.then(|l:&Layout|l.origin_x.watch().into());
+            let origin_y = layout.then(|l:&Layout|l.origin_y.watch().into());
+            let align_x = layout.then(|l:&Layout|l.align_x.watch().into());
+            let align_y = layout.then(|l:&Layout|l.align_y.watch().into());
 
-            let calculated_size = (p_calc_size_sa, &layout.w.watch(),&layout.h.watch()).then(
+            let calculated_size = (p_calc_size_sa, &w,&h).then(
                  move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor,sa_h:&GenericSizeAnchor| {
                     // let sa_w = sa_w1.clone().into_inner();        
                     // let sa_h = sa_h1.clone().into_inner();    
@@ -66,7 +73,7 @@ where
                 },
             );
 
-            let calculated_origin = (&calculated_size, &layout.origin_x.watch(),&layout.origin_y.watch()).then(
+            let calculated_origin = (&calculated_size, &origin_x,&origin_y).then(
                 move |calc_size: &Vector2<f64>, origin_x: &GenericSizeAnchor,origin_y: &GenericSizeAnchor| {
 
       
@@ -83,7 +90,7 @@ where
                 },
             );
 
-            let calculated_align:StateAnchor<Translation3<f64>> = (p_calc_size_sa, &layout.align_x.watch(), &layout.align_y.watch()).then(
+            let calculated_align:StateAnchor<Translation3<f64>> = (p_calc_size_sa, &align_x, &align_y).then(
                 move |p_calc_size: &Vector2<f64>, align_x: &GenericSizeAnchor, align_y: &GenericSizeAnchor| {
                     let p_calc_size= *p_calc_size;
                     let _enter = trace_span!( 
