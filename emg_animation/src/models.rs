@@ -1,6 +1,6 @@
 pub mod color;
 pub mod opacity;
-use emg_core::measures::Unit;
+use emg_core::{measures::Unit, GenericSize};
 use im::{vector, Vector};
 use iter_fixed::IntoIteratorFixed;
 use ordered_float::NotNan;
@@ -180,6 +180,8 @@ pub enum Property {
     Path(Vector<PathCommand>),
     // Anchor(Rc<String>, StateAnchor<GenericSize>),
 }
+
+//TODO need implement
 #[allow(clippy::fallible_impl_from)]
 impl From<CssWidth> for Property {
     fn from(v: CssWidth) -> Self {
@@ -197,6 +199,28 @@ impl From<CssWidth> for Property {
 impl From<Property> for CssWidth {
     fn from(v: Property) -> Self {
         match v {
+            //TODO need implement
+            Property::Prop(name, m) => {
+                if name.as_str() == "width"
+                    && matches!(
+                        m.unit,
+                        Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::None
+                    )
+                {
+                    ExactLength::from(m).into()
+                } else {
+                    panic!("propertyName is not width");
+                }
+            }
+            _ => panic!("Property can't convert to CssWidth "),
+        }
+    }
+}
+#[allow(clippy::fallible_impl_from)]
+impl From<Property> for GenericSize {
+    fn from(v: Property) -> Self {
+        match v {
+            //TODO need implement
             Property::Prop(name, m) => {
                 if name.as_str() == "width"
                     && matches!(

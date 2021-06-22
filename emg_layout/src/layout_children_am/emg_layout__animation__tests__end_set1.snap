@@ -18,13 +18,13 @@ AnimationEdge {
                         "width",
                         Motion {
                             position: NotNan(
-                                99.0,
+                                20.0,
                             ),
                             velocity: NotNan(
                                 0.0,
                             ),
                             target: NotNan(
-                                99.0,
+                                20.0,
                             ),
                             interpolation: Spring {
                                 stiffness: NotNan(
@@ -44,8 +44,8 @@ AnimationEdge {
     },
     timing: StateAnchor(
         Timing {
-            current: 0ns,
-            dt: 0ns,
+            current: 3.184s,
+            dt: 16.666ms,
         },
     ),
     running: StateAnchor(
@@ -60,13 +60,13 @@ AnimationEdge {
                     "width",
                     Motion {
                         position: NotNan(
-                            99.0,
+                            1.0,
                         ),
                         velocity: NotNan(
                             0.0,
                         ),
                         target: NotNan(
-                            99.0,
+                            1.0,
                         ),
                         interpolation: Spring {
                             stiffness: NotNan(
