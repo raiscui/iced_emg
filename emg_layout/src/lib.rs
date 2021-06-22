@@ -489,6 +489,8 @@ pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
 // use ahash::AHasher as CustomHasher;
 use rustc_hash::FxHasher as CustomHasher;
 
+// type PathVarMap<Ix,T> = Dict<EPath<Ix>,T>;
+// type PathVarMap<Ix,T> = indexmap::IndexMap <EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
 type PathVarMap<Ix,T> = HashMap<EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
 #[derive(Clone, Debug)]
 pub struct EmgEdgeItem<Ix>
