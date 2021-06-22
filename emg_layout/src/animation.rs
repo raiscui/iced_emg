@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-22 12:05:22
+ * @LastEditTime: 2021-06-22 14:34:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -209,14 +209,17 @@ where
 
         if let Some(p) = for_path {
             // let props_clone = props.clone();
+            let store = rc_store2.borrow();
             // ─────────────────────────────────────────────────────────────────
 
             edge.build_path_layout(|mut l| {
                 // • • • • •
 
                 props.iter().for_each(|svp| {
-                    let name = svp.get_with(|v| v.name().to_string());
-                    match name.as_str() {
+                    // let name = svp.store_get_rc(&*store).name();
+                    match svp.store_get_rc(&*store).name() {
+                        //.to_string();
+                        // match name {
                         "width" => l.w = (*svp).into(),
                         _ => {
                             unimplemented!("not implemented....")
@@ -229,6 +232,7 @@ where
             });
         }
         {
+            //TODO 这里对 props get操作了很多次 包括上面svp.get_with
             warn_for_double_listed_properties(&rc_store2.borrow(), &props);
         }
 
