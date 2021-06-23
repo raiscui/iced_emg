@@ -113,37 +113,4 @@ AnimationEdge {
     running: StateAnchor(
         true,
     ),
-    revised: StateAnchor(
-        (
-            [],
-            [],
-            [
-                Prop(
-                    "width",
-                    Motion {
-                        position: NotNan(
-                            99.0,
-                        ),
-                        velocity: NotNan(
-                            0.0,
-                        ),
-                        target: NotNan(
-                            99.0,
-                        ),
-                        interpolation: Spring {
-                            stiffness: NotNan(
-                                170.0,
-                            ),
-                            damping: NotNan(
-                                26.0,
-                            ),
-                        },
-                        unit: Px,
-                        interpolation_override: None,
-                    },
-                ),
-            ],
-            [],
-        ),
-    ),
 }

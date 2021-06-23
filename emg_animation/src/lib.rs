@@ -85,7 +85,7 @@ pub fn default_interpolation_by_property(prop: &Property) -> Interpolation {
     // -- This is analogous to the spring starting at rest.
     let linear = |duration: Duration| {
         Easing(Easing {
-            progress: 1.,
+            progress: NotNan::new(1.).unwrap(),
             start: NotNan::default(),
             duration,
             ease: Rc::new(dbg4!(Box::new(std::convert::identity::<f64>))),
@@ -232,7 +232,7 @@ pub struct Debuggable<T> {
     text: &'static str,
     value: T,
 }
-
+impl<T> Eq for Debuggable<T> {}
 impl<T> PartialEq for Debuggable<T> {
     fn eq(&self, other: &Self) -> bool {
         self.text.eq(other.text)

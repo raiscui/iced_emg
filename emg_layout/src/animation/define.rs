@@ -4,7 +4,7 @@ use emg_state::{topo, use_state, CloneStateVar, StateVar};
 
 use crate::GenericSizeAnchor;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct StateVarProperty(StateVar<Property>);
 
 impl std::ops::Deref for StateVarProperty {
@@ -42,6 +42,7 @@ where
 }
 
 impl From<StateVarProperty> for StateVar<GenericSizeAnchor> {
+    #[topo::nested]
     fn from(sv: StateVarProperty) -> Self {
         use_state(
             //

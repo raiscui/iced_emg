@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-06-17 14:32:04
+ * @LastEditTime: 2021-06-23 09:39:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,8 +17,8 @@ use tracing::{debug, trace_span, warn};
 
 use crate::{
     add_values::{AlignX, AlignY, OriginX, OriginY},
-    animation::AnimationEdge,
-    Css, EmgEdgeItem,
+    animation::AnimationE,
+    Css, EPath, EmgEdgeItem,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -201,7 +201,7 @@ where
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-impl<Ix, Message> RefreshFor<EmgEdgeItem<Ix>> for AnimationEdge<Ix, Message>
+impl<Ix, Message> RefreshFor<EmgEdgeItem<Ix>> for (EPath<Ix>, AnimationE<Message>)
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
     Message: Clone + std::fmt::Debug + PartialEq,

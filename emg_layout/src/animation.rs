@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-22 14:34:23
+ * @LastEditTime: 2021-06-23 18:20:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,7 @@
 mod define;
 mod func;
 
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{cell::RefCell, panic::Location, rc::Rc, time::Duration};
 
 use emg_state::{
     state_store, topo, use_state,
@@ -31,8 +31,9 @@ use emg_animation::{
     set_default_interpolation, Debuggable, Timing,
 };
 use seed_styles::CssWidth;
+use tracing::{debug, warn};
 
-use crate::{DictPathEiNodeSA, EPath, EmgEdgeItem, Layout};
+use crate::{EPath, EmgEdgeItem, GenericSizeAnchor, Layout};
 
 use self::{define::StateVarProperty, func::props::warn_for_double_listed_properties};
 
@@ -75,39 +76,150 @@ where
         }
     }
 }
+thread_local! {
+    static G_CLOCK: StateVar<Duration> = use_state(Duration::ZERO);
+}
+#[must_use]
+pub fn global_clock() -> StateVar<Duration> {
+    G_CLOCK.with(|c| *c)
+}
+// pub struct AnimaBuilder<Ix, Message>
+// where
+//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
+//     Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
+// {
+//     props: Vector<StateVarProperty>,
+//     sv_now: Option<StateVar<Duration>>,
+
+//     edge_path: Option<(EmgEdgeItem<Ix>, EPath<Ix>)>,
+//     anima: Option<AnimationE<Ix, Message>>,
+// }
+
+// impl<Ix, Message> std::ops::Deref for AnimaBuilder<Ix, Message>
+// where
+//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
+//     Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
+// {
+//     type Target = AnimationE<Ix, Message>;
+
+//     fn deref(&self) -> &Self::Target {
+//         let anima = self
+//             .anima
+//             .as_ref()
+//             .expect("can not deref where not call self.finish()");
+//         anima
+//     }
+// }
+
+// impl<Ix, Message> AnimaBuilder<Ix, Message>
+// where
+//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
+//     Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static + std::fmt::Display,
+// {
+//     #[must_use]
+//     pub fn new(props: Vector<StateVarProperty>) -> Self {
+//         Self {
+//             props,
+//             sv_now: None,
+//             edge_path: None,
+//             anima: None,
+//         }
+//     }
+//     pub fn set_edge_path(&mut self, edge: EmgEdgeItem<Ix>, path: EPath<Ix>) -> &mut Self {
+//         self.edge_path = Some((edge, path));
+//         self
+//     }
+
+//     /// Set the animation edge control's sv now.
+//     pub fn set_sv_now(&mut self, sv_now: StateVar<Duration>) -> &mut Self {
+//         self.sv_now = Some(sv_now);
+//         self
+//     }
+//     pub fn finish(&mut self) -> &Self {
+//         {
+//             match self.sv_now {
+//                 Some(sv_now) => {
+//                     self.anima = Some(AnimationE::new_in_topo(
+//                         self.props.clone(),
+//                         sv_now,
+//                         self.edge_path.clone(),
+//                     ));
+//                 }
+//                 None => {
+//                     panic!("cannot finish without set -> sv_now");
+//                 }
+//             }
+//         }
+//         &*self
+//     }
+// }
+//TODO for the path macro: [path =>[xx],path=>[xxx]]
+#[macro_export]
+macro_rules! anima {
+    ( $( $element:expr ) , * ) => {
+        {
+            let mut v = im::Vector::new();
+
+            $(
+                v.push_back($element.into());
+            )*
+
+            $crate::AnimationE::new_in_topo(v)
+        }
+    };
+}
+// @ use for refresh_for  表示 要关联到 单一路径节点 ────────────────────────────────────────────────────────────────────────────────
+
+pub struct AnimaForPath<Message>(pub AnimationE<Message>)
+where
+    Message: Clone + std::fmt::Debug + 'static + PartialEq;
+
+impl<Message> std::ops::Deref for AnimaForPath<Message>
+where
+    Message: Clone + std::fmt::Debug + 'static + PartialEq,
+{
+    type Target = AnimationE<Message>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
-pub struct AnimationEdge<Ix, Message>
+pub struct AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-    Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
+    // Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
 {
+    // sv_now: StateVar<Duration>,
     inside: AnimationInside<Message>,
     timing: StateAnchor<Timing>,
     pub(crate) running: StateAnchor<bool>,
-    store: Rc<RefCell<GStateStore>>,
-    edge_nodes: DictPathEiNodeSA<Ix>,
+    // store: Rc<RefCell<GStateStore>>,
+    // edge: Option<EmgEdgeItem<Ix>>,
     // queued_interruptions: StateAnchor<StepTimeVector<Message>>,
     // revised_steps: StateAnchor<Vector<Step<Message>>>,
     // revised_props: StateAnchor<Vector<Property>>,
     // send_messages: StateAnchor<Vector<Message>>,
     // timing_ob: StateAnchor<()>,
     // processed_interruptions: StateAnchor<(StepTimeVector<Message>, StepTimeVector<Message>)>,
-    revised: SAPropsMessageSteps2<Message>,
+    // revised: SAPropsMessageSteps2<Message>,
+    id: TopoKey,
 }
 
-impl<Ix, Message> std::fmt::Debug for AnimationEdge<Ix, Message>
+impl<Message> std::fmt::Debug for AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-    Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
+    // Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AnimationEdge")
             .field("inside", &self.inside)
             .field("timing", &self.timing)
             .field("running", &self.running)
-            .field("revised", &self.revised)
+            // .field("revised", &self.revised)
             // .field("queued_interruptions", &self.queued_interruptions)
             // .field("revised_steps", &self.revised_steps)
             // .field("revised_props", &self.revised_props)
@@ -116,10 +228,10 @@ where
     }
 }
 
-impl<Ix, Message> AnimationEdge<Ix, Message>
+impl<Message> AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-    Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
+    // Ix: Clone + std::hash::Hash + Eq + Default + Ord + std::fmt::Display + 'static,
 {
     /// # Panics
     ///
@@ -135,11 +247,11 @@ where
     //     })
     // }
 
-    fn set_timer(store: &GStateStore, sv_now: StateVar<Duration>) -> StateAnchor<Timing> {
+    fn set_timer(sv_now: StateVar<Duration>) -> StateAnchor<Timing> {
         // let mut timing = Timing::default();
         // let mut opt_old_current: Option<Timing> = None;
         sv_now
-            .store_watch(store)
+            .watch()
             // .map(move |now: &Duration| {
             //     if timing.current() != *now {
             //         let dt_tmp = now.saturating_sub(timing.current());
@@ -180,84 +292,121 @@ where
                     true
                 },
             )
-        // .cutoff(move |new_t| {
-        //     if let Some(old_t) = &opt_old_current {
-        //         if old_t == new_t {
-        //             return false;
-        //         }
-        //     }
-        //     opt_old_current = Some(*new_t);
-        //     true
-        // })
     }
 
-    #[topo::nested]
+    ////////
+    /// # Panics
+    ///
+    /// Will panic when unimplemented
+    /// # Errors
+    ///
+    /// Will return `Err` if `self.edge` is None
+    /// permission to read it.
+    pub fn effecting_edge_path<Ix>(&self, edge: &EmgEdgeItem<Ix>, for_path: EPath<Ix>)
+    where
+        Ix: Clone + std::hash::Hash + Eq + Default + Ord + std::fmt::Display + 'static,
+    {
+        edge.build_path_layout(|mut l| {
+            // • • • • •
+
+            self.inside.props.iter().for_each(|svp| {
+                let name = svp.get().name().to_string();
+                // let name = svp.store_get_rc(&*store).name().to_string();
+                match name.as_str() {
+                    "width" => l.w = (*svp).into(),
+                    _ => {
+                        unimplemented!("not implemented....")
+                    }
+                }
+            });
+            // • • • • •
+
+            (for_path, l)
+        });
+    }
+    // pub fn effecting_path(self, for_path: EPath<Ix>) -> Result<Self, String> {
+    //     self.edge
+    //         .as_ref()
+    //         .ok_or_else(|| "cannot effecting_path where self.edge is None .".to_string())?
+    //         .build_path_layout(|mut l| {
+    //             // • • • • •
+
+    //             self.inside.props.iter().for_each(|svp| {
+    //                 let name = svp.get().name().to_string();
+    //                 // let name = svp.store_get_rc(&*store).name().to_string();
+    //                 match name.as_str() {
+    //                     "width" => l.w = (*svp).into(),
+    //                     _ => {
+    //                         unimplemented!("not implemented....")
+    //                     }
+    //                 }
+    //             });
+    //             // • • • • •
+
+    //             (for_path, l)
+    //         });
+    //     Ok(self)
+    // }
+    #[allow(clippy::too_many_lines)]
+    #[track_caller]
+    // #[topo::nested]
+    #[must_use]
     pub fn new_in_topo(
         props: Vector<StateVarProperty>,
-        edge: EmgEdgeItem<Ix>,
-        sv_now: StateVar<Duration>,
-        for_path: Option<EPath<Ix>>,
+        // sv_now: StateVar<Duration>,
+        // edge_path: Option<(EmgEdgeItem<Ix>, EPath<Ix>)>,
     ) -> Self
     where
         Message: Clone + std::fmt::Debug + 'static + PartialEq,
-        Ix: Clone + std::hash::Hash + Eq + Default + Ord + std::fmt::Display + 'static,
+        // Ix: Clone + std::hash::Hash + Eq + Default + Ord + std::fmt::Display + 'static,
     {
-        let rc_store = state_store();
-        let rc_store2 = rc_store.clone();
+        let sv_now = global_clock();
+        // let sv_now = use_state(Duration::ZERO);
+
+        // let rc_store = state_store();
+        // let rc_store2 = rc_store;
 
         // ─────────────────────────────────────────────────────────────────
 
-        if let Some(p) = for_path {
-            // let props_clone = props.clone();
-            let store = rc_store2.borrow();
-            // ─────────────────────────────────────────────────────────────────
+        // let edge = if let Some((edge, p)) = edge_path {
+        //     // let props_clone = props.clone();
+        //     let store = rc_store2.clone();
+        //     // ─────────────────────────────────────────────────────────────────
+        //     // let layout_var: StateVar<GenericSizeAnchor> = props.iter().
+        //     edge.build_path_layout(|mut l| {
+        //         // • • • • •
 
-            edge.build_path_layout(|mut l| {
-                // • • • • •
+        //         props.iter().for_each(|svp| {
+        //             // let name = svp.get().name().to_string();
+        //             let name = svp.store_get_rc(&store.borrow()).name().to_string();
+        //             match name.as_str() {
+        //                 "width" => l.w = (*svp).into(),
+        //                 _ => {
+        //                     unimplemented!("not implemented....")
+        //                 }
+        //             }
+        //         });
+        //         // • • • • •
 
-                props.iter().for_each(|svp| {
-                    // let name = svp.store_get_rc(&*store).name();
-                    match svp.store_get_rc(&*store).name() {
-                        //.to_string();
-                        // match name {
-                        "width" => l.w = (*svp).into(),
-                        _ => {
-                            unimplemented!("not implemented....")
-                        }
-                    }
-                });
-                // • • • • •
+        //         (p, l)
+        //     });
+        //     Some(edge)
+        // } else {
+        //     None
+        // };
 
-                (p, l)
-            });
-        }
         {
             //TODO 这里对 props get操作了很多次 包括上面svp.get_with
-            warn_for_double_listed_properties(&rc_store2.borrow(), &props);
+            warn_for_double_listed_properties(&props);
         }
 
         // ─────────────────────────────────────────────────────────────────
 
         let sv_inside: AnimationInside<Message> = AnimationInside::<Message>::new_in_topo(props);
 
-        let store = rc_store2.borrow();
+        // let store = rc_store2.borrow();
 
-        let sa_timing = Self::set_timer(&store, sv_now);
-
-        // let sa_timing_real = Self::set_timer(sv_now);
-        // let sa_timing = {
-        //     let mut saved_current_time = sv_now.get();
-
-        //     sa_timing_real.cutoff(move |timing: &Timing| {
-        //         let current = timing.current();
-        //         if current == saved_current_time {
-        //             false
-        //         } else {
-        //             saved_current_time = current;
-        //             true
-        //         }
-        //     })
-        // };
+        let sa_timing = Self::set_timer(sv_now);
 
         let AnimationInside {
             interruption: interruption_init,
@@ -265,25 +414,20 @@ where
             props: props_init,
         } = sv_inside.clone();
 
-        let sa_running = (
-            &interruption_init.store_watch(&store),
-            &steps_init.store_watch(&store),
-        )
-            .map(|q, r| !q.is_empty() || !r.is_empty());
-
         let i_p_cut = {
             let mut opt_old_current: Option<Duration> = None;
             // let mut opt_old_interruption: Option<StepTimeVector<Message>> = None;
             // interruption_init.store_watch(&store)
             let pa: StateAnchor<Vector<Property>> = props_init
                 .iter()
-                .map(|sv| sv.store_get_var_with(&store, Var::watch))
+                .map(|sv| sv.get_var_with(Var::watch))
+                // .map(|sv| sv.store_get_var_with(&store, Var::watch))
                 .collect::<Anchor<Vector<_>>>()
                 .into();
 
             (
                 &sa_timing,
-                &interruption_init.store_watch(&store),
+                &interruption_init.watch(),
                 // &steps_init.store_watch(&store),
                 &pa,
             )
@@ -312,69 +456,8 @@ where
                 .map(|(_, i, p)| (i.clone(), p.clone()))
         };
 
-        // let steps_cut = {
-        //     steps_init.store_watch(&store)
-        //     // let mut opt_old_current: Option<Duration> = None;
-        //     // let mut opt_old_steps: Option<Vector<Step<Message>>> = None;
-        //     // (&sa_timing, &steps_init.store_watch(&store))
-        //     //     .map(|t, i| (*t, i.clone()))
-        //     //     .cutoff(move |(timing, new_steps)| {
-        //     //         let new_t = timing.current();
-        //     //         if let Some(old_t) = opt_old_current {
-        //     //             if old_t == new_t {
-        //     //                 return false;
-        //     //             }
-        //     //         }
-
-        //     //         if let Some(old_steps) = &opt_old_steps {
-        //     //             if old_steps == new_steps {
-        //     //                 return false;
-        //     //             }
-        //     //         }
-
-        //     //         opt_old_current = Some(new_t);
-        //     //         opt_old_steps = Some(new_steps.clone());
-
-        //     //         true
-        //     //     })
-        //     //     .map(|(_, i)| i.clone())
-        // };
-
-        // let props_cut: StateAnchor<Vector<Property>> = {
-        //     let mut opt_old_current: Option<Duration> = None;
-        //     // let mut opt_old_props: Option<Vector<Property>> = None;
-
-        //     let pa: StateAnchor<Vector<Property>> = props_init
-        //         .iter()
-        //         .map(|sv| sv.store_get_var_with(&store, Var::watch))
-        //         .collect::<Anchor<Vector<_>>>()
-        //         .into();
-        //     // pa
-        //     (&sa_timing, &pa)
-        //         .map(|t, i| (*t, i.clone()))
-        //         .cutoff(move |(timing, _new_props)| {
-        //             let new_t = timing.current();
-        //             if let Some(old_t) = opt_old_current {
-        //                 if old_t == new_t {
-        //                     return false;
-        //                 }
-        //             }
-
-        //             // if let Some(old_props) = &opt_old_props {
-        //             //     if old_props == new_props {
-        //             //         return false;
-        //             //     }
-        //             // }
-
-        //             opt_old_current = Some(new_t);
-        //             // opt_old_props = Some(new_props.clone());
-        //             true
-        //         })
-        //         .map(|(_, i)| i.clone())
-        // };
-
-        let revised: SAPropsMessageSteps2<Message> =
-            (&sa_timing, &i_p_cut, &steps_init.store_watch(&store)).map(
+        let revised: SAPropsMessageSteps2<Message> = (&sa_timing, &i_p_cut, &steps_init.watch())
+            .map(
                 move |timing: &Timing,
                       (interruption, props): &(StepTimeVector<Message>, Vector<Property>),
                       steps: &Vector<Step<Message>>| {
@@ -422,39 +505,8 @@ where
                 },
             );
 
-        // let sa_queued_interruptions = revised.map(|x| x.0.clone());
-        // let sa_revised_steps = revised.map(|x| x.1.clone());
-        // let sa_revised_props = revised.map(|x| x.2.clone());
-        // let sa_message = revised.map(|x| x.3.clone());
-
-        // ─────────────────────────────────────────────────────────────────
-
-        // let sa_queued_interruptions_clone = sa_queued_interruptions.clone();
-        // let sa_revised_steps_clone = sa_revised_steps.clone();
-        // let sa_revised_props_clone = sa_revised_props.clone();
-        // let mut updated_time = Duration::default();
         // ────────────────────────────────────────────────────────────────────────────────
 
-        // let timing_ob =
-        // // sa_timing.then(move |_| {
-        //     (
-        //         // &sa_queued_interruptions_clone,
-        //         // &sa_revised_steps_clone,
-        //         // &sa_revised_props_clone,
-        //         &sa_queued_interruptions,
-        //         &sa_revised_steps,
-        //         &sa_revised_props,
-        //     )
-        //         .map(move |queued_interruptions, revised_steps, revised_props| {
-        //             println!("timing change!");
-
-        //             interruption_og.set(queued_interruptions.clone());
-        //             steps_og.set(revised_steps.clone());
-        //             props_og.set(revised_props.clone());
-        //         })
-        //         ;
-        // // .into()
-        // // });
         // // ─────────────────────────────────────────────────────────────────
 
         // state_store()
@@ -462,104 +514,149 @@ where
         //     .engine_mut()
         //     .mark_observed(timing_ob.anchor());
         // ─────────────────────────────────────────────────────────────────
+        let line_id = Location::caller();
+        debug!("======= line_id:{:?}", line_id);
+
+        let id = TopoKey::new(topo::call_in_slot(line_id, topo::CallId::current));
+
+        let sa_running = (&interruption_init.watch(), &steps_init.watch())
+            .map(|q, r| !q.is_empty() || !r.is_empty());
+
+        // state_store()
+        //     .borrow()
+        //     .engine_mut()
+        //     .mark_unobserved(sa_running.anchor());
+
+        let sa_running_clone = sa_running.clone();
+
+        sv_now
+            .insert_after_fn(
+                id,
+                move |skip, _| {
+                    // println!("call update after set timing {:?}", v);
+                    warn!("run after_fn_id:{:?}", id);
+                    // anima_clone.update_in_callback(skip);
+                    if !sa_running_clone.get() {
+                        return;
+                    }
+                    let revised_value = revised.get();
+                    props_init
+                        .iter()
+                        .zip(revised_value.2.iter())
+                        .for_each(|(sv, prop)| sv.set_in_callback(skip, prop));
+                    interruption_init.set_in_callback(skip, &revised_value.0);
+                    steps_init.set_in_callback(skip, &revised_value.1);
+                },
+                false,
+            )
+            .ok();
+
         let an = Self {
+            // sv_now,
             inside: sv_inside,
             timing: sa_timing,
             running: sa_running,
-            store: rc_store,
-            edge_nodes: edge.node.clone(), //TODO: 如果是 针对一个特别 Path的动画,那么需要 输入 特别路径Path
+            // store: rc_store,
+            // edge,
             // queued_interruptions: sa_queued_interruptions,
             // revised_props: sa_revised_props,
             // revised_steps: sa_revised_steps,
             // send_messages: sa_message,
             // timing_ob,
             // processed_interruptions: sa_processed_interruptions,
-            revised,
+            // revised,
+            id,
         };
-        let update_id = TopoKey::new(topo::call(topo::CallId::current));
+        // let update_id = TopoKey::new(topo::call(topo::CallId::current));
+        warn!("update_id:{:?}", id);
 
-        let anima_clone = an.clone();
-        drop(store);
+        // let mut anima_clone = an.clone();
+        // anima_clone.id = None;
 
-        sv_now.insert_after_fn(
-            update_id,
-            move |store, skip, v| {
-                // println!("call update after set timing {:?}", v);
-                anima_clone.update_in_callback(store, skip);
-            },
-            false,
-        );
+        // drop(store);
 
         an
     }
 
     pub fn interrupt(&self, steps: Vector<Step<Message>>) {
-        self.inside
-            .interruption
-            .store_set_with_once(&self.store.borrow(), |interruption| {
-                let mut new_interruption = interruption.clone();
-                let xx = extract_initial_wait(steps);
-                new_interruption.push_front(xx);
-                new_interruption
-            });
+        self.inside.interruption.set_with_once(|interruption| {
+            let mut new_interruption = interruption.clone();
+            let xx = extract_initial_wait(steps);
+            new_interruption.push_front(xx);
+            new_interruption
+        });
     }
 
-    pub fn update_in_callback(&self, store: &GStateStore, skip: &SkipKeyCollection) {
-        //
-        // self.inside.props.get();
-        // self.store.borrow().engine_mut().stabilize();
-        if !self.running.store_get(store) {
-            return;
-        }
+    // pub fn update_in_callback(&self, skip: &SkipKeyCollection) {
+    //     //
+    //     // self.inside.props.get();
+    //     // self.store.borrow().engine_mut().stabilize();
+    //     // let store = &self.store.borrow();
+    //     let running = self.running.get();
+    //     if !running {
+    //         return;
+    //     }
 
-        // let queued_interruptions = self.queued_interruptions.store_get(store);
-        // let revised_steps = self.revised_steps.store_get(store);
-        // let revised_props = self.revised_props.store_get(store);
-        let revised = self.revised.store_get(store);
-        // ─────────────────────────────────────────────────────────────────
+    //     // let queued_interruptions = self.queued_interruptions.store_get(store);
+    //     // let revised_steps = self.revised_steps.store_get(store);
+    //     // let revised_props = self.revised_props.store_get(store);
+    //     let revised = self.revised.get();
+    //     // ─────────────────────────────────────────────────────────────────
 
-        self.inside
-            .props
-            .iter()
-            .zip(revised.2.iter())
-            .for_each(|(sv, prop)| sv.set_in_callback(store, skip, prop));
+    //     self.inside
+    //         .props
+    //         .iter()
+    //         .zip(revised.2.iter())
+    //         .for_each(|(sv, prop)| sv.set_in_callback(skip, prop));
 
-        self.inside
-            .interruption
-            .set_in_callback(store, skip, &revised.0);
-        self.inside.steps.set_in_callback(store, skip, &revised.1);
+    //     self.inside.interruption.set_in_callback(skip, &revised.0);
+    //     self.inside.steps.set_in_callback(skip, &revised.1);
 
-        //TODO: cmd send message
-    }
-    pub fn update(&self) {
-        //
-        // self.inside.props.get();
-        // self.store.borrow().engine_mut().stabilize();
-        let store_ref = &self.store.borrow();
-        if !self.running.store_get(store_ref) {
-            return;
-        }
+    //     //TODO: cmd send message
+    // }
+    // pub fn update(&self) {
+    //     //
+    //     // self.inside.props.get();
+    //     // self.store.borrow().engine_mut().stabilize();
+    //     let store_ref = &self.store.borrow();
+    //     if !self.running.store_get(store_ref) {
+    //         return;
+    //     }
 
-        // let queued_interruptions = self.queued_interruptions.store_get(store_ref);
-        // let revised_steps = self.revised_steps.store_get(store_ref);
-        // let revised_props = self.revised_props.store_get(store_ref);
-        let revised = self.revised.store_get(store_ref);
+    //     // let queued_interruptions = self.queued_interruptions.store_get(store_ref);
+    //     // let revised_steps = self.revised_steps.store_get(store_ref);
+    //     // let revised_props = self.revised_props.store_get(store_ref);
+    //     let revised = self.revised.store_get(store_ref);
 
-        // ─────────────────────────────────────────────────────────────────
+    //     // ─────────────────────────────────────────────────────────────────
 
-        self.inside
-            .props
-            .iter()
-            .zip(revised.2.into_iter())
-            .for_each(|(sv, prop)| sv.store_set(store_ref, prop));
+    //     self.inside
+    //         .props
+    //         .iter()
+    //         .zip(revised.2.into_iter())
+    //         .for_each(|(sv, prop)| sv.store_set(store_ref, prop));
 
-        self.inside.interruption.store_set(store_ref, revised.0);
-        self.inside.steps.store_set(store_ref, revised.1);
+    //     self.inside.interruption.store_set(store_ref, revised.0);
+    //     self.inside.steps.store_set(store_ref, revised.1);
 
-        //TODO: cmd send message
-    }
+    //     //TODO: cmd send message
+    // }
 }
 
+// impl<Message> Drop for AnimationE<Message>
+// where
+//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
+// {
+//     fn drop(&mut self) {
+//         debug!("===============Dropping  AnimationE");
+//         // let clock = global_clock();
+//         // if let Some(id) = self.id {
+//         //     G_CLOCK.with(|clock| {
+//         //         clock.remove_after_fn(id);
+//         //     });
+//         // }
+//     }
+// }
 #[cfg(test)]
 mod tests {
     extern crate test;
@@ -569,7 +666,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
     use emg_animation::{interrupt, opacity, style, to, Tick};
-    use emg_core::{into_vector, GenericSize};
+    use emg_core::into_vector;
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore,
         StateAnchor, StateVar,
@@ -579,10 +676,11 @@ mod tests {
     use styles::{pc, width};
     use styles::{px, CssWidth};
 
+    use crate::animation::global_clock;
     use crate::{EPath, EdgeItemNode, EmgEdgeItem, GraphEdgesDict};
 
-    use super::AnimationEdge;
-    use tracing::{debug, Level};
+    use super::AnimationE;
+    use tracing::{debug, warn, Level};
 
     use tracing_flame::FlameLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -712,90 +810,28 @@ mod tests {
     #[topo::nested]
 
     fn bench_less_state_am(b: &mut Bencher) {
-        let ei = edge_index_no_source("fff");
-        let source = use_state(ei.source_nix().as_ref().cloned());
-        let target = use_state(ei.target_nix().as_ref().cloned());
-        let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
-            source.watch(),
-            target.watch(),
-            StateAnchor::constant(Dict::default()),
-            1920,
-            1080,
-        );
+        // let ei = edge_index_no_source("fff");
+        // let source = use_state(ei.source_nix().as_ref().cloned());
+        // let target = use_state(ei.target_nix().as_ref().cloned());
+        // let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
+        //     source.watch(),
+        //     target.watch(),
+        //     StateAnchor::constant(Dict::default()),
+        //     1920,
+        //     1080,
+        // );
+        let sv_now = global_clock();
 
         b.iter(move || {
-            let edge_item1 = edge_item.clone();
-            let sv_now = use_state(Duration::ZERO);
-            let mut a: AnimationEdge<String, Message> =
-                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item1, sv_now, None);
-            black_box(less_am_run(&state_store().borrow(), &mut a, &sv_now));
+            // let edge_item1 = edge_item.clone();
+            let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(1))]);
+            black_box(less_am_run(&state_store().borrow(), &a, &sv_now));
         });
     }
 
     fn less_am_run(
         storeref: &GStateStore,
-        a: &mut AnimationEdge<String, Message>,
-        sv_now: &emg_state::StateVar<Duration>,
-    ) {
-        a.interrupt(vector![
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            // to(vector![emg_animation::opacity(0.)]),
-            // to(vector![emg_animation::opacity(1.)]),
-            // to(vector![emg_animation::opacity(0.)]),
-            // to(vector![emg_animation::opacity(1.)]),
-            // to(vector![emg_animation::opacity(0.)]),
-            // to(vector![emg_animation::opacity(1.)]),
-            // to(vector![emg_animation::opacity(0.)]),
-            // to(vector![emg_animation::opacity(1.)]),
-            // to(vector![emg_animation::opacity(0.)]),
-            // to(vector![emg_animation::opacity(1.)]),
-            // to(vector![emg_animation::opacity(0.)]),
-            // to(vector![emg_animation::opacity(1.)]),
-            // to(vector![emg_animation::opacity(0.)]),
-            // to(vector![emg_animation::opacity(1.)]),
-            // to(vector![emg_animation::opacity(0.)]),
-            // to(vector![emg_animation::opacity(1.)]),
-            // to(vector![emg_animation::opacity(0.)]),
-            // to(vector![emg_animation::opacity(1.)]),
-        ]);
-
-        sv_now.store_set(storeref, Duration::from_millis(16));
-        // a.update();
-        for i in 1002..1500 {
-            sv_now.store_set(storeref, Duration::from_millis(i * 16));
-            // a.update();
-            a.inside.props[0].store_get(storeref);
-        }
-        a.inside.props[0].store_get(storeref);
-    }
-    #[bench]
-    #[topo::nested]
-
-    fn bench_many_state_am(b: &mut Bencher) {
-        let ei = edge_index_no_source("fff");
-        let source = use_state(ei.source_nix().as_ref().cloned());
-        let target = use_state(ei.target_nix().as_ref().cloned());
-        let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
-            source.watch(),
-            target.watch(),
-            StateAnchor::constant(Dict::default()),
-            1920,
-            1080,
-        );
-
-        b.iter(move || {
-            let edge_item1 = edge_item.clone();
-            let sv_now = use_state(Duration::ZERO);
-            let mut a: AnimationEdge<String, Message> =
-                AnimationEdge::new_in_topo(into_vector![width(px(1))], edge_item1, sv_now, None);
-            black_box(many_am_run(&state_store().borrow(), &mut a, &sv_now));
-        });
-    }
-
-    fn many_am_run(
-        storeref: &GStateStore,
-        a: &mut AnimationEdge<String, Message>,
+        a: &AnimationE<Message>,
         sv_now: &emg_state::StateVar<Duration>,
     ) {
         a.interrupt(vector![
@@ -850,30 +886,137 @@ mod tests {
         }
         a.inside.props[0].store_get(storeref);
     }
+    #[bench]
+    #[topo::nested]
+
+    fn bench_many_state_am(b: &mut Bencher) {
+        // let ei = edge_index_no_source("fff");
+        // let source = use_state(ei.source_nix().as_ref().cloned());
+        // let target = use_state(ei.target_nix().as_ref().cloned());
+        // let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
+        //     source.watch(),
+        //     target.watch(),
+        //     StateAnchor::constant(Dict::default()),
+        //     1920,
+        //     1080,
+        // );
+        // let sv_now = use_state(Duration::ZERO);
+        let sv_now = global_clock();
+
+        b.iter(move || {
+            // let edge_item1 = edge_item.clone();
+
+            let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(1))]);
+            // AnimationE::new_in_topo(into_vector![width(px(1))], sv_now);
+            black_box(many_am_run(&a, &sv_now));
+        });
+    }
+    #[test]
+    #[topo::nested]
+    fn many() {
+        let _g = _init();
+
+        // let sv_now = use_state(Duration::ZERO);
+        let sv_now = global_clock();
+        for i in 0..4 {
+            // let edge_item1 = edge_item.clone();
+
+            debug!("===================================main loop :{}", i);
+            let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(1))]);
+            black_box(many_am_run(&a, &sv_now));
+        }
+    }
+
+    fn many_am_run(
+        // storeref: &GStateStore,
+        a: &AnimationE<Message>,
+        sv_now: &emg_state::StateVar<Duration>,
+    ) {
+        a.interrupt(vector![
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+        ]);
+        warn!("set time ---------------------------------------------------- 16");
+        sv_now.set(Duration::from_millis(16));
+        // sv_now.store_set(storeref, Duration::from_millis(16));
+        // a.update();
+        // for i in 1002..1004 {
+        for i in 1002..2000 {
+            warn!(
+                "in loop: set time ---------------------------------------------------- loop:{}",
+                &i
+            );
+
+            sv_now.set(Duration::from_millis(i * 16));
+            // sv_now.store_set(storeref, Duration::from_millis(i * 16));
+            // a.update();
+            // a.inside.props[0].store_get(storeref);
+            a.inside.props[0].get();
+        }
+        a.inside.props[0].get();
+        // a.inside.props[0].store_get(storeref);
+    }
 
     #[test]
     #[topo::nested]
-    fn test_animation_edge_in_topo() {
+    fn test_animation_in_topo() {
         // let nn = _init();
         {
             // let span = trace_span!("am-test");
             // let _guard = span.enter();
             // trace!("fff");
 
-            let ei = edge_index_no_source("fff");
-            let source = use_state(ei.source_nix().as_ref().cloned());
-            let target = use_state(ei.target_nix().as_ref().cloned());
-            let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
-                source.watch(),
-                target.watch(),
-                StateAnchor::constant(Dict::default()),
-                1920,
-                1080,
-            );
+            // let ei = edge_index_no_source("fff");
+            // let source = use_state(ei.source_nix().as_ref().cloned());
+            // let target = use_state(ei.target_nix().as_ref().cloned());
+            // let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
+            //     source.watch(),
+            //     target.watch(),
+            //     StateAnchor::constant(Dict::default()),
+            //     1920,
+            //     1080,
+            // );
 
-            let sv_now = use_state(Duration::ZERO);
-            let a: AnimationEdge<String, Message> =
-                AnimationEdge::new_in_topo(into_vector![opacity(1.)], edge_item, sv_now, None);
+            let sv_now = global_clock();
+            let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![opacity(1.)]);
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
             insta::assert_debug_snapshot!("new2", &a);
@@ -974,23 +1117,20 @@ mod tests {
 
             let css_w: StateVar<CssWidth> = use_state(width(px(1)));
 
-
             // let span = trace_span!("am-test");
             // let _guard = span.enter();
             // trace!("fff");
 
             let e_dict_sv:StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
 
-
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
-            let mut root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            let  root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
                 nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
                 nd
             });
-
 
             // let e1_source =use_state( Some(node_index("root")));
             // let e1_target = use_state(Some(node_index("1")));
@@ -1009,17 +1149,14 @@ mod tests {
             //     nd
             // });
 
-
-
             // ─────────────────────────────────────────────────────────────────
 
             let ew = root_e.layout.w;
             // debug!("e->{}",&e1);
             insta::assert_debug_snapshot!("layout-am-edge", &root_e);
 
-
             css_w.set(width(px(99)));
-            insta::assert_debug_snapshot!("layout-am-edge-set99", &root_e);
+
             let edge_style_string_sa = root_e
                     .node
                     .get()
@@ -1037,14 +1174,12 @@ mod tests {
             //                 .styles_string.clone();
             //                 // .get();
 
+            let sv_now = global_clock();
 
-
-
-            let sv_now = use_state(Duration::ZERO);
-
-            let a: AnimationEdge<String, Message> =
+            let a: AnimationE< Message> =
                 // AnimationEdge::new_in_topo(into_vector![width(px(1))], e1, sv_now);
-                AnimationEdge::new_in_topo(into_vector![css_w], root_e.clone(), sv_now, Some(EPath(vector![edge_index_no_source("root")])));
+                AnimationE::new_in_topo(into_vector![css_w]);
+                a.effecting_edge_path( &root_e,EPath(vector![edge_index_no_source("root")]));
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
             insta::assert_debug_snapshot!("new2", &a);
@@ -1137,7 +1272,6 @@ mod tests {
                 }
                 sv_now.set(Duration::from_millis(i * 16));
 
-
                 // println!("in ------ i:{}", &i);
                 // a.timing.get();´ß
                 // a.update();
@@ -1165,11 +1299,30 @@ mod tests {
             // a.update();
             insta::assert_debug_snapshot!("end_set3-update", &a);
 
-
-
-
-
         });
+    }
+    #[test]
+    fn anima_macro() {
+        let css_w: StateVar<CssWidth> = use_state(width(px(1)));
+        let a: AnimationE<Message> = anima![css_w];
+
+        let sv_now = global_clock();
+
+        let e_dict_sv: StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+        let root_e_source = use_state(None);
+        let root_e_target = use_state(Some(node_index("root")));
+        let root_e = EmgEdgeItem::default_with_wh_in_topo(
+            root_e_source.watch(),
+            root_e_target.watch(),
+            e_dict_sv.watch(),
+            1920,
+            1080,
+        );
+        a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
+        a.interrupt(vector![
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))])
+        ]);
     }
 
     #[test]
@@ -1182,13 +1335,11 @@ mod tests {
 
             let css_w: StateVar<CssWidth> = use_state(width(px(1)));
 
-
             // let span = trace_span!("am-test");
             // let _guard = span.enter();
             // trace!("fff");
 
             let e_dict_sv:StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
-
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
@@ -1198,7 +1349,6 @@ mod tests {
                 nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
                 nd
             });
-
 
             let e1_source =use_state( Some(node_index("root")));
             let e1_target = use_state(Some(node_index("1")));
@@ -1217,17 +1367,13 @@ mod tests {
                 nd
             });
 
-
-
             // ─────────────────────────────────────────────────────────────────
 
             let ew = root_e.layout.w;
             // debug!("e->{}",&e1);
             insta::assert_debug_snapshot!("layout-am-edge", &e1);
 
-
             css_w.set(width(px(99)));
-            insta::assert_debug_snapshot!("layout-am-edge-set99", &e1);
 
             let edge_style_string_sa = e1
                     .node
@@ -1238,14 +1384,13 @@ mod tests {
                             .styles_string.clone();
             //                 // .get();
 
+            let sv_now = global_clock();
 
-
-
-            let sv_now = use_state(Duration::ZERO);
-
-            let a: AnimationEdge<String, Message> =
+            let a: AnimationE< Message> =
                 // AnimationEdge::new_in_topo(into_vector![width(px(1))], e1, sv_now);
-                AnimationEdge::new_in_topo(into_vector![css_w], e1.clone(), sv_now, Some(EPath(vector![edge_index_no_source("root"),edge_index("root","1")])));
+                AnimationE::new_in_topo(into_vector![css_w]);
+                a.effecting_edge_path(&e1,EPath(vector![edge_index_no_source("root"),edge_index("root","1")]));
+
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
             insta::assert_debug_snapshot!("new2", &a);
@@ -1338,7 +1483,6 @@ mod tests {
                 }
                 sv_now.set(Duration::from_millis(i * 16));
 
-
                 // println!("in ------ i:{}", &i);
                 // a.timing.get();´ß
                 // a.update();
@@ -1365,10 +1509,6 @@ mod tests {
             insta::assert_debug_snapshot!("end_set2-settime", &a);
             // a.update();
             insta::assert_debug_snapshot!("end_set3-update", &a);
-
-
-
-
 
         });
     }

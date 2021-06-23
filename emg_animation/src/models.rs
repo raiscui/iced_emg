@@ -14,9 +14,9 @@ use crate::{init_motion, Debuggable};
 
 type EaseFnT = Rc<Debuggable<Box<dyn Fn(Precision) -> Precision>>>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq)]
 pub struct Easing {
-    pub progress: Precision,
+    pub progress: NotNan<Precision>,
     pub duration: Duration,
     pub start: NotNan<Precision>,
     pub ease: EaseFnT,
@@ -52,7 +52,7 @@ impl PartialEq for Easing {
 // 1秒(s) ＝1000毫秒(ms)
 // 1毫秒(ms)＝1000微秒(us)
 // 1微秒 micro (us)＝1000纳秒(ns)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Interpolation {
     Spring {
         stiffness: NotNan<Precision>,
@@ -64,7 +64,7 @@ pub enum Interpolation {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Motion {
     pub(crate) position: NotNan<Precision>,
     pub(crate) velocity: NotNan<Precision>,
@@ -109,20 +109,20 @@ impl Motion {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CubicCurveMotion {
     control1: Vector<Motion>,
     control2: Vector<Motion>,
     point: Vector<Motion>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QuadraticCurveMotion {
     control: Vector<Motion>,
     point: Vector<Motion>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArcMotion {
     x: Motion,
     y: Motion,
@@ -131,7 +131,7 @@ pub struct ArcMotion {
     end_angle: Motion,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PathCommand {
     Move(Vector<Motion>),
     MoveTo(Vector<Motion>),
@@ -154,7 +154,7 @@ pub enum PathCommand {
     Close,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ShadowMotion {
     offset_x: Motion,
     offset_y: Motion,
@@ -166,7 +166,7 @@ pub struct ShadowMotion {
     alpha: Motion,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Property {
     Exact(Rc<String>, String),
     Color(Rc<String>, Vector<Motion>),
@@ -1043,8 +1043,9 @@ fn step_interpolation(dt: Duration, mut motion: Motion) -> Motion {
                 start,
             } = easing;
 
-            let new_progress =
-                (dt.div_duration_f64(duration) + (progress as f64)).min(1.) as Precision;
+            let new_progress = (progress + dt.div_duration_f64(duration))
+                .into_inner()
+                .min(1.);
             // let eased = ease(new_progress);
             let eased = (**ease)(new_progress);
 
@@ -1066,14 +1067,14 @@ fn step_interpolation(dt: Duration, mut motion: Motion) -> Motion {
 
             if has_interpolation_override {
                 motion.interpolation_override = Some(Interpolation::Easing(Easing {
-                    progress: new_progress,
+                    progress: NotNan::new(new_progress).unwrap(),
                     duration,
                     ease,
                     start,
                 }));
             } else {
                 motion.interpolation = Interpolation::Easing(Easing {
-                    progress: new_progress,
+                    progress: NotNan::new(new_progress).unwrap(),
                     duration,
                     ease,
                     start,
@@ -1191,7 +1192,7 @@ fn set_target(override_interpolation: bool, current: Property, new_target: Prope
                 if let Interpolation::Easing(mut ease) = new_motion.interpolation {
                     new_motion.target = target_motion.position;
                     ease.start = new_motion.position;
-                    ease.progress = 0.;
+                    ease.progress = NotNan::default();
                     new_motion.interpolation = Interpolation::Easing(ease);
                     new_motion
                 } else {
@@ -1203,7 +1204,7 @@ fn set_target(override_interpolation: bool, current: Property, new_target: Prope
                 if let Interpolation::Easing(ease) = override_interpolation {
                     new_motion.target = target_motion.position;
                     ease.start = new_motion.position;
-                    ease.progress = 0.;
+                    ease.progress = NotNan::default();
                     new_motion.interpolation_override = Some(Interpolation::Easing(ease.clone()));
                     new_motion
                 } else {

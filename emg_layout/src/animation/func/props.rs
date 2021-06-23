@@ -6,11 +6,11 @@ use tracing::error;
 
 use crate::animation::StateVarProperty;
 
-pub fn warn_for_double_listed_properties(store: &GStateStore, props: &Vector<StateVarProperty>) {
+pub fn warn_for_double_listed_properties(props: &Vector<StateVarProperty>) {
     let mut names = props
         .iter()
         .filter_map(|prop| {
-            let p = prop.store_get(store);
+            let p = prop.get();
             if is_transformation(&p) {
                 None
             } else {

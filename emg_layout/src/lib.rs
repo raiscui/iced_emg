@@ -53,7 +53,7 @@ mod calc;
 mod impl_refresh;
 pub mod animation;
 pub mod add_values;
-
+pub use animation::AnimationE;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
