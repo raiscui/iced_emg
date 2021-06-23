@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-23 18:20:39
+ * @LastEditTime: 2021-06-23 19:17:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -413,6 +413,8 @@ where
             steps: steps_init,
             props: props_init,
         } = sv_inside.clone();
+
+        debug!("||@@@@@@@@@@@@@@@@@@@@ step id:{:#?}", &steps_init.id());
 
         let i_p_cut = {
             let mut opt_old_current: Option<Duration> = None;
