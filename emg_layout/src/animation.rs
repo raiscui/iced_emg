@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-23 19:17:38
+ * @LastEditTime: 2021-06-23 19:29:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -524,6 +524,14 @@ where
         let sa_running = (&interruption_init.watch(), &steps_init.watch())
             .map(|q, r| !q.is_empty() || !r.is_empty());
 
+        // state_store()
+        //     .borrow()
+        //     .engine_mut()
+        //     .mark_observed(sa_timing.anchor());
+        // state_store()
+        //     .borrow()
+        //     .engine_mut()
+        //     .mark_observed(revised.anchor());
         // state_store()
         //     .borrow()
         //     .engine_mut()
@@ -1325,6 +1333,14 @@ mod tests {
             to(into_vector![width(px(0))]),
             to(into_vector![width(px(1))])
         ]);
+        for i in 1..200 {
+            sv_now.set(Duration::from_millis(i * 16));
+            // a.update();
+            // println!("in ------ i:{}", &i);
+            // a.timing.get();
+            println!("**{:?}", a.inside.props[0].get());
+            a.inside.props[0].get();
+        }
     }
 
     #[test]
