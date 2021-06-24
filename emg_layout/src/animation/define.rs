@@ -1,6 +1,7 @@
 use emg_animation::{models::Property, Debuggable};
 use emg_core::GenericSize;
 use emg_state::{topo, use_state, CloneStateVar, StateVar};
+use tracing::trace;
 
 use crate::GenericSizeAnchor;
 
@@ -28,6 +29,7 @@ where
 {
     #[topo::nested]
     fn from(sv: StateVar<T>) -> Self {
+        trace!("StateVar to StateVarProperty");
         Self(sv.build_bi_similar_use_into_in_topo::<Property>())
     }
 }
@@ -37,6 +39,8 @@ where
 {
     #[topo::nested]
     fn from(v: T) -> Self {
+        trace!("{} to StateVarProperty", &std::any::type_name::<T>());
+
         Self(use_state(v.into()))
     }
 }
@@ -44,6 +48,8 @@ where
 impl From<StateVarProperty> for StateVar<GenericSizeAnchor> {
     #[topo::nested]
     fn from(sv: StateVarProperty) -> Self {
+        trace!("StateVarProperty to StateVar<GenericSizeAnchor>");
+
         use_state(
             //
             GenericSizeAnchor(sv.get_var_with(|v| v.watch().map(|p| p.clone().into()).into())),

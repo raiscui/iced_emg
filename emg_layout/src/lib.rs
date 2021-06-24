@@ -376,7 +376,7 @@ pub struct LayoutCalculated {
 pub struct EdgeData {
     calculated: LayoutCalculated,
     styles_string: StateAnchor<String>, 
-    opt_p_calculated:Option<LayoutCalculated>,
+    opt_p_calculated:Option<LayoutCalculated>,//TODO check need ? use for what?
     // matrix: M4Data,
                                         // transforms_am: Transforms,
                                         // animations:

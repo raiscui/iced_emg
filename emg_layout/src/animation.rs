@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-23 21:40:01
+ * @LastEditTime: 2021-06-24 15:41:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -164,7 +164,7 @@ macro_rules! anima {
                 v.push_back($element.into());
             )*
 
-            $crate::AnimationE::new_in_topo(v)
+            $crate::topo::call(||$crate::AnimationE::new_in_topo(v))
         }
     };
 }
@@ -348,8 +348,8 @@ where
     //     Ok(self)
     // }
     #[allow(clippy::too_many_lines)]
-    #[track_caller]
-    // #[topo::nested]
+    // #[track_caller]
+    #[topo::nested]
     #[must_use]
     pub fn new_in_topo(
         props: Vector<StateVarProperty>,
@@ -517,9 +517,12 @@ where
         //     .mark_observed(timing_ob.anchor());
         // ─────────────────────────────────────────────────────────────────
         let line_id = Location::caller();
-        debug!("======= line_id:{:?}", line_id);
-
-        let id = TopoKey::new(topo::call_in_slot(line_id, topo::CallId::current));
+        // let id = TopoKey::new(topo::call_in_slot(line_id, topo::CallId::current));
+        let id = TopoKey::new(topo::CallId::current());
+        // let id = TopoKey::new(topo::call(topo::CallId::current));
+        // let const_id = || topo::root(topo::CallId::current);
+        // let id = TopoKey::new(const_id());
+        debug!("=======|||||||||||||||||||||||--> topo id:{:?}", &id);
 
         let sa_running = (&interruption_init.watch(), &steps_init.watch())
             .map(|q, r| !q.is_empty() || !r.is_empty());
@@ -544,7 +547,8 @@ where
                 id,
                 move |skip, _| {
                     // println!("call update after set timing {:?}", v);
-                    warn!("run after_fn_id:{:?}", id);
+                    debug!("====||||||||||||--> [insert_after_fn] -> topo id:{:?}", &id);
+
                     // anima_clone.update_in_callback(skip);
                     if !sa_running_clone.get() {
                         return;
@@ -559,7 +563,8 @@ where
                 },
                 false,
             )
-            .ok();
+            // .ok();
+            .expect("find same id already in after_fn map");
 
         let an = Self {
             // sv_now,
@@ -596,77 +601,21 @@ where
             new_interruption
         });
     }
-
-    // pub fn update_in_callback(&self, skip: &SkipKeyCollection) {
-    //     //
-    //     // self.inside.props.get();
-    //     // self.store.borrow().engine_mut().stabilize();
-    //     // let store = &self.store.borrow();
-    //     let running = self.running.get();
-    //     if !running {
-    //         return;
-    //     }
-
-    //     // let queued_interruptions = self.queued_interruptions.store_get(store);
-    //     // let revised_steps = self.revised_steps.store_get(store);
-    //     // let revised_props = self.revised_props.store_get(store);
-    //     let revised = self.revised.get();
-    //     // ─────────────────────────────────────────────────────────────────
-
-    //     self.inside
-    //         .props
-    //         .iter()
-    //         .zip(revised.2.iter())
-    //         .for_each(|(sv, prop)| sv.set_in_callback(skip, prop));
-
-    //     self.inside.interruption.set_in_callback(skip, &revised.0);
-    //     self.inside.steps.set_in_callback(skip, &revised.1);
-
-    //     //TODO: cmd send message
-    // }
-    // pub fn update(&self) {
-    //     //
-    //     // self.inside.props.get();
-    //     // self.store.borrow().engine_mut().stabilize();
-    //     let store_ref = &self.store.borrow();
-    //     if !self.running.store_get(store_ref) {
-    //         return;
-    //     }
-
-    //     // let queued_interruptions = self.queued_interruptions.store_get(store_ref);
-    //     // let revised_steps = self.revised_steps.store_get(store_ref);
-    //     // let revised_props = self.revised_props.store_get(store_ref);
-    //     let revised = self.revised.store_get(store_ref);
-
-    //     // ─────────────────────────────────────────────────────────────────
-
-    //     self.inside
-    //         .props
-    //         .iter()
-    //         .zip(revised.2.into_iter())
-    //         .for_each(|(sv, prop)| sv.store_set(store_ref, prop));
-
-    //     self.inside.interruption.store_set(store_ref, revised.0);
-    //     self.inside.steps.store_set(store_ref, revised.1);
-
-    //     //TODO: cmd send message
-    // }
 }
 
-// impl<Message> Drop for AnimationE<Message>
-// where
-//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-// {
-//     fn drop(&mut self) {
-//         debug!("===============Dropping  AnimationE");
-//         // let clock = global_clock();
-//         // if let Some(id) = self.id {
-//         //     G_CLOCK.with(|clock| {
-//         //         clock.remove_after_fn(id);
-//         //     });
-//         // }
-//     }
-// }
+impl<Message> Drop for AnimationE<Message>
+where
+    Message: Clone + std::fmt::Debug + 'static + PartialEq,
+{
+    fn drop(&mut self) {
+        debug!("===============Dropping  AnimationE");
+        // let clock = global_clock();
+        G_CLOCK.with(|clock| {
+            // self.running = StateAnchor::constant(false);
+            clock.remove_after_fn(self.id);
+        });
+    }
+}
 #[cfg(test)]
 mod tests {
     extern crate test;
@@ -675,6 +624,7 @@ mod tests {
     use std::time::Duration;
 
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
+    use emg_animation::models::Property;
     use emg_animation::{interrupt, opacity, style, to, Tick};
     use emg_core::into_vector;
     use emg_state::{
@@ -753,59 +703,38 @@ mod tests {
     #[bench]
     fn bench_nom_am(b: &mut Bencher) {
         b.iter(|| {
-            let mut am = style::<Message>(vector![opacity(1.)]);
+            let mut am = style::<Message>(into_vector![width(px(1))]);
             black_box(nom_am_run(&mut am));
         });
     }
     #[test]
     fn nom_am() {
-        let mut am = style::<Message>(vector![opacity(1.)]);
+        let mut am = style::<Message>(into_vector![width(px(1))]);
         nom_am_run(&mut am);
     }
 
     fn nom_am_run(am: &mut emg_animation::models::Animation<Message>) {
         interrupt(
             vector![
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)]),
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))]),
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))]),
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))]),
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))]),
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))]),
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))]),
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))]),
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))]),
+                to(into_vector![width(px(0))]),
+                to(into_vector![width(px(1))]),
+                to(into_vector![width(px(0))]),
             ],
             am,
         );
@@ -833,6 +762,8 @@ mod tests {
         let sv_now = global_clock();
 
         b.iter(move || {
+            sv_now.set(Duration::from_millis(0));
+
             // let edge_item1 = edge_item.clone();
             let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(1))]);
             black_box(less_am_run(&state_store().borrow(), &a, &sv_now));
@@ -846,7 +777,7 @@ mod tests {
     ) {
         a.interrupt(vector![
             to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
+            to(into_vector![width(px(1))]),
             // to(into_vector![width(px(0))]),
             // to(into_vector![width(px(1))]),
             // to(into_vector![width(px(0))]),
@@ -914,6 +845,7 @@ mod tests {
         let sv_now = global_clock();
 
         b.iter(move || {
+            sv_now.set(Duration::from_millis(0));
             // let edge_item1 = edge_item.clone();
 
             let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(1))]);
@@ -921,6 +853,7 @@ mod tests {
             black_box(many_am_run(&a, &sv_now));
         });
     }
+
     #[test]
     #[topo::nested]
     fn many() {
@@ -928,13 +861,88 @@ mod tests {
 
         // let sv_now = use_state(Duration::ZERO);
         let sv_now = global_clock();
+        sv_now.set(Duration::from_millis(0));
+
+        debug!("===================================main loop ");
+        let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(2))]);
+        a.interrupt(vector![to(into_vector![width(px(0))]),]);
+
+        debug!("===================================main loop--2 ");
+
+        let b: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(99))]);
+        b.interrupt(vector![to(into_vector![width(px(888))]),]);
+        sv_now.set(Duration::from_millis(16));
+        debug!("a====:\n {:#?}", a.inside.props[0].get());
+        debug!("b====:\n {:#?}", b.inside.props[0].get());
+        sv_now.set(Duration::from_millis(33));
+        debug!("a 33====:\n {:#?}", a.inside.props[0].get());
+        debug!("b 33====:\n {:#?}", b.inside.props[0].get());
+        insta::assert_debug_snapshot!("many-33-a", &a);
+        insta::assert_debug_snapshot!("many-33-b", &b);
+    }
+
+    #[test]
+    #[topo::nested]
+    fn many_for() {
+        let _g = _init();
+
+        // let sv_now = use_state(Duration::ZERO);
+        let sv_now = global_clock();
         for i in 0..4 {
             // let edge_item1 = edge_item.clone();
+            sv_now.set(Duration::from_millis(0));
 
             debug!("===================================main loop :{}", i);
             let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(1))]);
-            black_box(many_am_run(&a, &sv_now));
+            black_box(many_am_run_for_test(&a, &sv_now));
         }
+    }
+
+    fn many_am_run_for_test(
+        // storeref: &GStateStore,
+        a: &AnimationE<Message>,
+        sv_now: &emg_state::StateVar<Duration>,
+    ) {
+        a.interrupt(vector![
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+        ]);
+        warn!("set time ---------------------------------------------------- 16");
+        sv_now.set(Duration::from_millis(16));
+        // sv_now.store_set(storeref, Duration::from_millis(16));
+        // a.update();
+        // for i in 1002..1004 {
+        for i in 1..5 {
+            warn!(
+                "in loop: set time ---------------------------------------------------- loop:{}",
+                &i
+            );
+
+            sv_now.set(Duration::from_millis(i * 16));
+            // sv_now.store_set(storeref, Duration::from_millis(i * 16));
+            // a.update();
+            // a.inside.props[0].store_get(storeref);
+            a.inside.props[0].get();
+        }
+        a.inside.props[0].get();
+        // a.inside.props[0].store_get(storeref);
     }
 
     fn many_am_run(
@@ -962,61 +970,6 @@ mod tests {
             to(into_vector![width(px(0))]),
             to(into_vector![width(px(1))]),
             to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
         ]);
         warn!("set time ---------------------------------------------------- 16");
         sv_now.set(Duration::from_millis(16));
@@ -1035,7 +988,7 @@ mod tests {
             // a.inside.props[0].store_get(storeref);
             a.inside.props[0].get();
         }
-        a.inside.props[0].get();
+        assert_eq!(a.inside.props[0].get(), Property::from(width(px(0))));
         // a.inside.props[0].store_get(storeref);
     }
 
@@ -1060,6 +1013,8 @@ mod tests {
             // );
 
             let sv_now = global_clock();
+            sv_now.set(Duration::from_millis(0));
+
             let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![opacity(1.)]);
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
@@ -1219,6 +1174,7 @@ mod tests {
             //                 // .get();
 
             let sv_now = global_clock();
+            sv_now.set(Duration::from_millis(0));
 
             let a: AnimationE< Message> =
                 // AnimationEdge::new_in_topo(into_vector![width(px(1))], e1, sv_now);
@@ -1345,12 +1301,44 @@ mod tests {
 
         });
     }
+
+    #[bench]
+    #[topo::nested]
+
+    fn anima_macro_bench(b: &mut Bencher) {
+        b.iter(move || {
+            black_box(anima_macro_for_bench());
+        });
+    }
+
     #[test]
-    fn anima_macro() {
+    #[topo::nested]
+    fn anima_macro_for_bench_2_test() {
+        let _g = _init();
+
+        anima_macro_for_bench();
+        global_clock().set(Duration::from_millis(0));
+
+        anima_macro_for_bench();
+    }
+    #[test]
+    #[topo::nested]
+    fn anima_macro_for_2_test() {
+        let _g = _init();
+
+        anima_macro();
+        global_clock().set(Duration::from_millis(0));
+
+        anima_macro();
+    }
+    #[test]
+    #[topo::nested]
+    fn anima_macro_for_bench() {
+        // let _g = _init();
+        let sv_now = global_clock();
+        sv_now.set(Duration::from_millis(0));
         let css_w: StateVar<CssWidth> = use_state(width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
-
-        let sv_now = global_clock();
 
         let e_dict_sv: StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
         let root_e_source = use_state(None);
@@ -1365,14 +1353,68 @@ mod tests {
         a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
         a.interrupt(vector![
             to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))])
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+            to(into_vector![width(px(0))]),
         ]);
-        for i in 1..200 {
+        for i in 1..1000 {
             sv_now.set(Duration::from_millis(i * 16));
+            a.inside.props[0].get();
+        }
+    }
+    #[test]
+    #[topo::nested]
+    fn anima_macro() {
+        let _g = _init();
+        let sv_now = global_clock();
+        sv_now.set(Duration::from_millis(0));
+
+        let css_w: StateVar<CssWidth> = use_state(width(px(1)));
+        let a: AnimationE<Message> = anima![css_w];
+        insta::assert_debug_snapshot!("anima_macro_init", &a);
+
+        let e_dict_sv: StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+        let root_e_source = use_state(None);
+        let root_e_target = use_state(Some(node_index("root")));
+        let root_e = EmgEdgeItem::default_with_wh_in_topo(
+            root_e_source.watch(),
+            root_e_target.watch(),
+            e_dict_sv.watch(),
+            1920,
+            1080,
+        );
+        a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
+        a.interrupt(vector![
+            to(into_vector![width(px(0))]),
+            to(into_vector![width(px(1))]),
+        ]);
+        insta::assert_debug_snapshot!("anima_macro_interrupt", &a);
+
+        for i in 1..100 {
+            sv_now.set(Duration::from_millis(i * 16));
+            if i == 1 {
+                insta::assert_debug_snapshot!("anima_macro_16", &a);
+                insta::assert_debug_snapshot!("anima_macro_16_edge", &root_e);
+            }
             // a.update();
             // println!("in ------ i:{}", &i);
             // a.timing.get();
-            println!("**{:?}", a.inside.props[0].get());
+            debug!("**{:?}", a.inside.props[0].get());
             a.inside.props[0].get();
         }
     }
@@ -1437,6 +1479,7 @@ mod tests {
             //                 // .get();
 
             let sv_now = global_clock();
+            sv_now.set(Duration::from_millis(0));
 
             let a: AnimationE< Message> =
                 // AnimationEdge::new_in_topo(into_vector![width(px(1))], e1, sv_now);

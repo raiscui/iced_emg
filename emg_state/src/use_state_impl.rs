@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-06-23 18:05:45
+ * @LastEditTime: 2021-06-24 15:43:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,6 +17,7 @@ use tracing::debug;
 use tracing::warn;
 
 use std::hash::BuildHasherDefault;
+use std::panic::Location;
 // use im::HashMap;
 use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
@@ -1549,7 +1550,10 @@ where
     if !state_exists_for_topo_id::<T>(id) {
         insert_var_with_topo_id::<T>(Var::new(data), id);
     } else {
-        panic!("this is checker:  already settled state");
+        panic!(
+            "this is checker:  already settled state ->{}",
+            &std::any::type_name::<T>()
+        );
     }
     StateVar::new(id)
 }
