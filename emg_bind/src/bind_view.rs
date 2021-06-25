@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-05-26 17:27:46
+ * @LastEditTime: 2021-06-25 13:07:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,10 +12,12 @@ pub use emg::NodeIndex;
 use emg::{edge_index_no_source, im::vector, Outgoing};
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshUseFor;
+use std::ops::DerefMut;
 use std::{
     convert::{TryFrom, TryInto},
     hash::Hash,
 };
+use tracing::debug;
 use tracing::{error, instrument, trace, trace_span, warn};
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -73,7 +75,10 @@ where
         // edge_for_cix: &Edge<Self::E, Self::Ix>,
         // current_node: &RefCell<GElement<'a, Message>>,
     ) -> GElement<'a, Message> {
+        // debug!("run here 01");
+        //TODO has no drop clone for AnimationE inside,need bumpalo do drop
         let mut current_node_clone = self.get_node_weight_use_ix(cix).unwrap().clone(); //TODO cache
+                                                                                        // debug!("run here 01.1");
 
         let mut children_s = self.children_to_elements(edges, cix, paths);
 
@@ -95,11 +100,15 @@ where
                     trace!("NodeBuilderWidget::<Message>::try_from  OK");
                     node_builder_widget.set_id(format!("{:?}", cix));
 
-                    let ei = &edges.get(paths.back().unwrap()).unwrap().item;
+                    let ei = &edges.get(paths.last().unwrap()).unwrap().item;
 
                     let store = self.store();
-                    let ed = ei.store_edge_data(&store, paths).unwrap();
-                    let edge_styles = ed.store_styles_string(&store);
+
+                    let edge_styles = {
+                        let ed = ei.store_edge_data_with(&store, paths, |ed| ed.unwrap().clone());
+                        ed.store_styles_string(&store)
+                    };
+
                     trace!("styles---------------> {}", &edge_styles);
 
                     node_builder_widget.add_styles_string(edge_styles.as_str());
@@ -137,7 +146,7 @@ where
 
                 opt_this_child_nix.map(|this_child_nix| {
                     let mut new_paths = paths.clone();
-                    new_paths.set_with(|ev| ev.push_back(eix.clone()));
+                    new_paths.push_back(eix.clone());
 
                     self.gelement_refresh_and_comb(edges, this_child_nix.index(), &new_paths)
                 })

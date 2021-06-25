@@ -52,6 +52,8 @@ tracing = { version="^0.1" }
 indexmap = "1.6.2"
 rustc-hash = "1.1.0"
 
+emg_core = { path="../emg_core" }
+
 
 # emg_debuggable = { path = "../emg_debuggable" }
 # stream_throttle ={ version = "0.4.0",default-features = false, features = ["timer-futures-timer"], path = "../../stream-throttle"}

@@ -1,5 +1,5 @@
 ---
-source: emg_layout/src/animation.rs
+source: emg_layout/src/impl_refresh.rs
 expression: "&root_e"
 
 ---
@@ -152,7 +152,7 @@ EmgEdgeItem {
                                 ExactLength {
                                     unit: Px,
                                     value: NotNan(
-                                        94.32537399252,
+                                        87.0304518011875,
                                     ),
                                 },
                             ),
@@ -294,7 +294,7 @@ EmgEdgeItem {
                         size: StateAnchor(
                             Matrix {
                                 data: [
-                                    94.32537399252,
+                                    87.0304518011875,
                                     1080.0,
                                 ],
                             },
@@ -365,7 +365,7 @@ EmgEdgeItem {
                                             ExactLength {
                                                 unit: Px,
                                                 value: NotNan(
-                                                    94.32537399252,
+                                                    87.0304518011875,
                                                 ),
                                             },
                                         ),
@@ -404,7 +404,7 @@ EmgEdgeItem {
                         ),
                     },
                     styles_string: StateAnchor(
-                        "width: 94.32537399252px;\nheight: 1080px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n",
+                        "width: 87.0304518011875px;\nheight: 1080px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n",
                     ),
                     opt_p_calculated: None,
                 },

@@ -1,22 +1,25 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-06-23 18:05:45
+ * @LastEditTime: 2021-06-25 12:42:02
  * @LastEditors: Rais
  * @Description:
  */
 
 pub use anchors::singlethread::Anchor;
+pub use anchors::singlethread::Engine;
 pub use anchors::singlethread::Var;
 use anchors::{
     expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
-    singlethread::{Engine, MultiAnchor},
+    singlethread::MultiAnchor,
 };
 use anymap::any::Any;
 use tracing::debug;
 use tracing::warn;
 
 use std::hash::BuildHasherDefault;
+use std::ops::DerefMut;
+use std::panic::Location;
 // use im::HashMap;
 use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
@@ -94,6 +97,56 @@ impl GStateStore {
                 e.get(anchor)
             },
         )
+    }
+    fn engine_get_with<O: Clone + 'static, F: FnOnce(&O) -> R, R>(
+        &self,
+        anchor: &Anchor<O>,
+        func: F,
+    ) -> R {
+        trace!("engine_get_with: {}", &std::any::type_name::<O>());
+        let _g = trace_span!(
+            "-> engine_get_with",
+            "type: {}",
+            &std::any::type_name::<O>()
+        )
+        .entered();
+
+        self.engine.try_borrow_mut().map_or_else(
+            |err| {
+                panic!(
+                    "can't borrow_mut engine err: {} , for anchor type: {}",
+                    &err,
+                    &std::any::type_name::<O>()
+                )
+            },
+            |mut e| {
+                let _gg = trace_span!(
+                    "-> engine_get_with:engine borrow_muted , now getting.. ",
+                    "type: {}",
+                    &std::any::type_name::<O>()
+                )
+                .entered();
+
+                e.get_with(anchor, func)
+            },
+        )
+    }
+    fn engine_get_with2<O: Clone + 'static, F: FnOnce(&O) -> R, R>(
+        engine: &mut Engine,
+        anchor: &Anchor<O>,
+        func: F,
+    ) -> R {
+        trace!("engine_get: {}", &std::any::type_name::<O>());
+        let _g = trace_span!("-> enging_get", "type: {}", &std::any::type_name::<O>()).entered();
+
+        let _gg = trace_span!(
+            "-> engine_get_with2 now getting.. ",
+            "type: {}",
+            &std::any::type_name::<O>()
+        )
+        .entered();
+
+        engine.get_with(anchor, func)
     }
 
     fn state_exists_with_id<T: 'static>(&self, id: StorageKey) -> bool {
@@ -993,6 +1046,8 @@ where
 {
     fn get(&self) -> T;
     fn store_get(&self, store: &GStateStore) -> T;
+    fn store_get_with<F: FnOnce(&T) -> R, R>(&self, store: &GStateStore, func: F) -> R;
+    fn engine_get_with<F: FnOnce(&T) -> R, R>(&self, engine: &mut Engine, func: F) -> R;
 }
 impl<T> CloneStateAnchor<T> for StateAnchor<T>
 where
@@ -1003,6 +1058,12 @@ where
     }
     fn store_get(&self, store: &GStateStore) -> T {
         store.engine_get(&self.0)
+    }
+    fn store_get_with<F: FnOnce(&T) -> R, R>(&self, store: &GStateStore, func: F) -> R {
+        store.engine_get_with(&self.0, func)
+    }
+    fn engine_get_with<F: FnOnce(&T) -> R, R>(&self, engine: &mut Engine, func: F) -> R {
+        GStateStore::engine_get_with2(engine, &self.0, func)
     }
 }
 
@@ -1549,7 +1610,10 @@ where
     if !state_exists_for_topo_id::<T>(id) {
         insert_var_with_topo_id::<T>(Var::new(data), id);
     } else {
-        panic!("this is checker:  already settled state");
+        panic!(
+            "this is checker:  already settled state ->{}",
+            &std::any::type_name::<T>()
+        );
     }
     StateVar::new(id)
 }

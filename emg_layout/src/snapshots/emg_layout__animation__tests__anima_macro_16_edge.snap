@@ -152,7 +152,7 @@ EmgEdgeItem {
                                 ExactLength {
                                     unit: Px,
                                     value: NotNan(
-                                        94.32537399252,
+                                        0.95278155548,
                                     ),
                                 },
                             ),
@@ -294,7 +294,7 @@ EmgEdgeItem {
                         size: StateAnchor(
                             Matrix {
                                 data: [
-                                    94.32537399252,
+                                    0.95278155548,
                                     1080.0,
                                 ],
                             },
@@ -365,7 +365,7 @@ EmgEdgeItem {
                                             ExactLength {
                                                 unit: Px,
                                                 value: NotNan(
-                                                    94.32537399252,
+                                                    0.95278155548,
                                                 ),
                                             },
                                         ),
@@ -404,7 +404,7 @@ EmgEdgeItem {
                         ),
                     },
                     styles_string: StateAnchor(
-                        "width: 94.32537399252px;\nheight: 1080px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n",
+                        "width: 0.95278155548px;\nheight: 1080px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n",
                     ),
                     opt_p_calculated: None,
                 },

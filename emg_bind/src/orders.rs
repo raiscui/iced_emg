@@ -1,18 +1,21 @@
 use crate::Orders;
 use emg_animation::Tick;
 // use fxhash::FxBuildHasher;
+
+use emg_layout::animation::{global_anima_running_sa, global_clock};
+use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 use rustc_hash::FxHasher as CustomHasher;
 
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-06-20 11:31:09
+ * @LastEditTime: 2021-06-25 10:42:40
  * @LastEditors: Rais
  * @Description:
  */
 use iced_web::{dodrio::VdomWeak, Bus};
 use indexmap::IndexMap;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::map_callback_return_to_option_ms;
 
@@ -20,6 +23,7 @@ use std::{
     cell::{Cell, RefCell},
     hash::BuildHasherDefault,
     rc::Rc,
+    time::Duration,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -126,7 +130,8 @@ pub(crate) struct OrdersData<Message, TickMsg> {
     // pub scheduled_render_handle: RefCell<Option<util::RequestAnimationFrameHandle>>,
     pub after_next_render_callbacks:
         RefCell<FxIndexMap<String, Box<dyn FnOnce(TickMsg) -> Option<Message>>>>,
-    // pub render_info: Cell<Option<TickMsg>>,
+    now: StateVar<Duration>,
+    am_running: StateAnchor<bool>, // pub render_info: Cell<Option<TickMsg>>,
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -166,14 +171,21 @@ impl<Message> OrdersContainer<Message>
                 // scheduled_render_handle: RefCell::new(None),
                 after_next_render_callbacks: RefCell::new(FxIndexMap::with_capacity_and_hasher(
                     1,
-                    FxBuildHasher::default(),
+                    BuildHasherDefault::<CustomHasher>::default(),
                 )),
+                now: global_clock(),
+                am_running:global_anima_running_sa()
+                //
                 // render_info: Cell::new(None),
             }),
             bus,
             re_render_msg: Rc::new(RefCell::new(None)),
             vdom: Rc::new(RefCell::new(None)),
         }
+    }
+
+    fn has_anima_running(&self) -> bool {
+        self.data.am_running.get()
     }
 }
 
@@ -195,20 +207,31 @@ where
     //     self.publish(msg);
     // }
 
+    fn schedule_render<MsU>(&self) -> Option<MsU> {
+        debug!("in orders::schedule_render");
+        self.vdom
+            .borrow()
+            .as_ref()
+            .unwrap()
+            .schedule_render_with_orders(self.clone());
+        None
+    }
+
     fn schedule_render_then<MsU: 'static, F: FnOnce<(Tick,), Output = MsU> + 'static>(
         &self,
         task_name: &'static str,
         // debuggable_callback: Debuggable<F>,
         cb: F,
     ) -> Option<MsU> {
-        self.after_next_render(task_name, cb)
-            .vdom
-            .borrow()
-            .as_ref()
-            .unwrap()
-            // .weak()
-            .schedule_render_with_orders(self.clone());
-        None
+        self.after_next_render(task_name, cb);
+        self.schedule_render()
+        // .vdom
+        // .borrow()
+        // .as_ref()
+        // .unwrap()
+        // // .weak()
+        // .schedule_render_with_orders(self.clone());
+        // None
     }
 
     fn publish(&self, msg: Message) {
@@ -217,11 +240,12 @@ where
     fn reset_render(&self) {
         self.should_render.set(ShouldRender::Render);
     }
+
+    fn set_clock(&self, now: Duration) {
+        self.data.now.set(now);
+    }
+
     fn process_after_render_queue(&self, new_render_timestamp: f64) {
-        if self.data.after_next_render_callbacks.borrow().is_empty() {
-            return;
-        }
-        let tick = Tick::new(new_render_timestamp);
         // let mut queue: VecDeque<Effect<Message>> = self
         //     .data
         //     .after_next_render_callbacks
@@ -232,21 +256,37 @@ where
         //     // )
         //     .map(|callback| Effect::TriggeredHandler(Box::new(move || callback(tick))))
         //     .collect();
-        let len = self.data.after_next_render_callbacks.borrow().len();
-        debug!("len after_next_render_callbacks: {:?} ", &len);
 
-        self.data
-            .after_next_render_callbacks
-            .replace(FxIndexMap::with_capacity_and_hasher(
-                len + 1,
-                FxBuildHasher::default(),
-            ))
-            .into_iter()
-            //TODO:  for_each or just once?
-            .for_each(|(task_name, callback)| {
-                debug!("after_next_render_callbacks: {:?}", task_name);
-                self.process_queue_message(callback(tick));
-            });
+        if !self.data.after_next_render_callbacks.borrow().is_empty() {
+            // ─────────────────────────────────────────────────────────────────
+            let tick = Tick::new(new_render_timestamp);
+
+            let len = self.data.after_next_render_callbacks.borrow().len();
+            debug!("len after_next_render_callbacks: {:?} ", &len);
+
+            self.data
+                .after_next_render_callbacks
+                .replace(FxIndexMap::with_capacity_and_hasher(
+                    len + 1,
+                    BuildHasherDefault::<CustomHasher>::default(),
+                ))
+                .into_iter()
+                //TODO:  for_each or just once?
+                .for_each(|(task_name, callback)| {
+                    debug!("after_next_render_callbacks: {:?}", task_name);
+                    self.process_queue_message(callback(tick));
+                });
+        }
+
+        if self.has_anima_running() {
+            debug!("has_anima_running , re render....");
+            self.vdom
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .schedule_render_with_orders(self.clone());
+        }
+
         // debug!(
         //     "process_after_render_queue: end, after_next_render_callbacks list:{:?}",
         //     self.data.after_next_render_callbacks.borrow().len()
@@ -389,6 +429,7 @@ where
     //     Rc::new(identity)
     // }
 
+    /// add callback->msg, runing at when next rendered run done;
     fn after_next_render<MsU: 'static, F: FnOnce(Tick) -> MsU + 'static>(
         &self,
         task_name: &'static str,
