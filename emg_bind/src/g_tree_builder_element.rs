@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-06-13 12:16:55
+ * @LastEditTime: 2021-06-25 11:43:36
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
-use emg::{edge_index_no_source, Edge, EdgeIndex};
-use emg_layout::{EmgEdgeItem, GenericSizeAnchor};
+use emg::{edge_index_no_source, im::vector, Edge, EdgeIndex};
+use emg_layout::{EPath, EmgEdgeItem, GenericSizeAnchor};
 use emg_refresh::{RefreshFor, RefreshUseFor};
 use emg_state::{topo, use_state};
 use std::rc::Rc;
@@ -217,14 +217,21 @@ where
                     //TODO: bind browser w h.
                     .setup_wh_edge_in_topo(edge_index_no_source(root_id.clone()), 1920, 1080)
                     .unwrap();
-                root_ei.refresh_use(edge_refreshers);
 
-                illicit::Layer::new().offer(nix.clone()).enter(|| {
-                    assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
-                    trace!("{:?}", *illicit::expect::<NodeIndex<Self::Ix>>());
-                    children_list
-                        .iter()
-                        .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                let path = EPath::<Self::Ix>::new(vector![edge_index_no_source(root_id.clone())]);
+
+                illicit::Layer::new().offer(path.clone()).enter(|| {
+                    debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path);
+
+                    root_ei.refresh_use(edge_refreshers);
+
+                    illicit::Layer::new().offer(nix.clone()).enter(|| {
+                        assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
+                        trace!("{:?}", *illicit::expect::<NodeIndex<Self::Ix>>());
+                        children_list
+                            .iter()
+                            .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                    });
                 });
             }
             _ => {
@@ -249,21 +256,27 @@ where
                 let mut ei = self
                     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix.clone()))
                     .unwrap();
-                ei.refresh_use(edge_refreshers);
 
-                // next
-                #[cfg(debug_assertions)]
-                illicit::Layer::new().offer(nix.clone()).enter(|| {
-                    assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
-                    children_list
-                        .iter()
-                        .for_each(|child_layer| self.handle_children_in_topo(child_layer));
-                });
-                #[cfg(not(debug_assertions))]
-                illicit::Layer::new().offer(nix).enter(|| {
-                    children_list
-                        .iter()
-                        .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                let path = (&*illicit::expect::<EPath<Self::Ix>>()).add_build(nix.clone());
+
+                illicit::Layer::new().offer(path.clone()).enter(|| {
+                    debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
+                    ei.refresh_use(edge_refreshers);
+
+                    // next
+                    #[cfg(debug_assertions)]
+                    illicit::Layer::new().offer(nix.clone()).enter(|| {
+                        assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
+                        children_list
+                            .iter()
+                            .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                    });
+                    #[cfg(not(debug_assertions))]
+                    illicit::Layer::new().offer(nix).enter(|| {
+                        children_list
+                            .iter()
+                            .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                    });
                 });
             }
 
@@ -293,21 +306,27 @@ where
                 let mut ei = self
                     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix.clone()))
                     .unwrap();
-                ei.refresh_use(edge_refreshers);
 
-                //next
-                #[cfg(debug_assertions)]
-                illicit::Layer::new().offer(nix.clone()).enter(|| {
-                    assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
-                    refreshers
-                        .iter()
-                        .for_each(|child_layer| self.handle_children_in_topo(child_layer));
-                });
-                #[cfg(not(debug_assertions))]
-                illicit::Layer::new().offer(nix).enter(|| {
-                    refreshers
-                        .iter()
-                        .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                let path = (&*illicit::expect::<EPath<Self::Ix>>()).add_build(nix.clone());
+
+                illicit::Layer::new().offer(path.clone()).enter(|| {
+                    debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
+                    ei.refresh_use(edge_refreshers);
+
+                    //next
+                    #[cfg(debug_assertions)]
+                    illicit::Layer::new().offer(nix.clone()).enter(|| {
+                        assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
+                        refreshers
+                            .iter()
+                            .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                    });
+                    #[cfg(not(debug_assertions))]
+                    illicit::Layer::new().offer(nix).enter(|| {
+                        refreshers
+                            .iter()
+                            .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                    });
                 });
             }
 

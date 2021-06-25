@@ -2,12 +2,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-05-21 16:22:18
+ * @LastEditTime: 2021-06-24 17:46:47
  * @LastEditors: Rais
  * @Description:
  */
 
-use tracing::{debug, debug_span, trace, trace_span};
+use tracing::{debug, debug_span, trace_span};
 
 use crate::{orders::OrdersContainer, GTreeBuilderElement, GTreeBuilderFn, GraphType};
 use emg_orders::Orders;
@@ -114,7 +114,7 @@ pub trait Application {
             Self::Executor::new().expect("Create executor"),
             sender.clone(),
         );
-        let mut orders = OrdersContainer::<Self::Message>::new(Bus::new(sender.clone()));
+        let orders = OrdersContainer::<Self::Message>::new(Bus::new(sender.clone()));
 
         let (app, command) = runtime.enter(|| Self::new(flags.flags, &orders));
 

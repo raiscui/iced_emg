@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 //TODO Tick 脱库
 use emg_animation::Tick;
 
@@ -15,6 +17,7 @@ pub trait Orders<Message>: Clone {
     // fn re_render(&self);
     // fn set_re_render_msg(&self, msg: Message) -> &Self;
 
+    fn schedule_render<MsU>(&self) -> Option<MsU>;
     fn schedule_render_then<MsU: 'static, F: FnOnce(Tick) -> MsU + 'static>(
         &self,
         task_name: &'static str,
@@ -24,6 +27,7 @@ pub trait Orders<Message>: Clone {
     fn publish(&self, msg: Message);
     fn reset_render(&self);
     // fn process_after_render_queue(&self);
+    fn set_clock(&self, now: Duration);
     fn process_after_render_queue(&self, new_render_timestamp: f64);
 
     // fn process_effect_queue(&self);

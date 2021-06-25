@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-24 15:41:24
+ * @LastEditTime: 2021-06-25 11:09:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,12 @@
 mod define;
 mod func;
 
-use std::{cell::RefCell, panic::Location, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    panic::Location,
+    rc::Rc,
+    time::Duration,
+};
 
 use emg_state::{
     state_store, topo, use_state,
@@ -31,7 +36,7 @@ use emg_animation::{
     set_default_interpolation, Debuggable, Timing,
 };
 use seed_styles::CssWidth;
-use tracing::{debug, warn};
+use tracing::{debug, trace, warn};
 
 use crate::{EPath, EmgEdgeItem, GenericSizeAnchor, Layout};
 
@@ -79,115 +84,79 @@ where
 thread_local! {
     static G_CLOCK: StateVar<Duration> = use_state(Duration::ZERO);
 }
+
+thread_local! {
+    static G_ANIMA_RUNNING_STORE: StateVar<Vector<Anchor<bool>>> = use_state(vector![]);
+}
+thread_local! {
+    static G_AM_RUNING: StateAnchor<bool> = global_anima_running_build();
+}
+pub fn global_anima_running_add(running: &StateAnchor<bool>) {
+    G_ANIMA_RUNNING_STORE.with(|sv| sv.update(|v| v.push_back(running.get_anchor())));
+}
+
+#[must_use]
+pub fn global_anima_running_sa() -> StateAnchor<bool> {
+    G_AM_RUNING.with(std::clone::Clone::clone)
+}
+#[must_use]
+pub fn global_anima_running() -> bool {
+    G_AM_RUNING.with(|running| running.get())
+}
+#[must_use]
+pub fn global_anima_running_build() -> StateAnchor<bool> {
+    let watch: Anchor<Vector<bool>> = G_ANIMA_RUNNING_STORE.with(|am| {
+        am.watch().anchor().then(|v: &Vector<Anchor<bool>>| {
+            v.clone().into_iter().collect::<Anchor<Vector<bool>>>()
+        })
+    });
+    watch.map(|list: &Vector<bool>| list.contains(&true)).into()
+}
 #[must_use]
 pub fn global_clock() -> StateVar<Duration> {
     G_CLOCK.with(|c| *c)
 }
-// pub struct AnimaBuilder<Ix, Message>
-// where
-//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-//     Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
-// {
-//     props: Vector<StateVarProperty>,
-//     sv_now: Option<StateVar<Duration>>,
+pub fn global_clock_set(now: Duration) {
+    G_CLOCK.with(|c| c.set(now));
+}
 
-//     edge_path: Option<(EmgEdgeItem<Ix>, EPath<Ix>)>,
-//     anima: Option<AnimationE<Ix, Message>>,
-// }
+// ────────────────────────────────────────────────────────────────────────────────
 
-// impl<Ix, Message> std::ops::Deref for AnimaBuilder<Ix, Message>
-// where
-//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-//     Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
-// {
-//     type Target = AnimationE<Ix, Message>;
-
-//     fn deref(&self) -> &Self::Target {
-//         let anima = self
-//             .anima
-//             .as_ref()
-//             .expect("can not deref where not call self.finish()");
-//         anima
-//     }
-// }
-
-// impl<Ix, Message> AnimaBuilder<Ix, Message>
-// where
-//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-//     Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static + std::fmt::Display,
-// {
-//     #[must_use]
-//     pub fn new(props: Vector<StateVarProperty>) -> Self {
-//         Self {
-//             props,
-//             sv_now: None,
-//             edge_path: None,
-//             anima: None,
-//         }
-//     }
-//     pub fn set_edge_path(&mut self, edge: EmgEdgeItem<Ix>, path: EPath<Ix>) -> &mut Self {
-//         self.edge_path = Some((edge, path));
-//         self
-//     }
-
-//     /// Set the animation edge control's sv now.
-//     pub fn set_sv_now(&mut self, sv_now: StateVar<Duration>) -> &mut Self {
-//         self.sv_now = Some(sv_now);
-//         self
-//     }
-//     pub fn finish(&mut self) -> &Self {
-//         {
-//             match self.sv_now {
-//                 Some(sv_now) => {
-//                     self.anima = Some(AnimationE::new_in_topo(
-//                         self.props.clone(),
-//                         sv_now,
-//                         self.edge_path.clone(),
-//                     ));
-//                 }
-//                 None => {
-//                     panic!("cannot finish without set -> sv_now");
-//                 }
-//             }
-//         }
-//         &*self
-//     }
-// }
 //TODO for the path macro: [path =>[xx],path=>[xxx]]
 #[macro_export]
 macro_rules! anima {
     ( $( $element:expr ) , * ) => {
         {
-            let mut v = im::Vector::new();
+            let mut v = $crate::Vector::new();
 
             $(
                 v.push_back($element.into());
             )*
 
-            $crate::topo::call(||$crate::AnimationE::new_in_topo(v))
+            $crate::AnimationE::new_in_topo(v)
+            // $crate::topo::call(||$crate::AnimationE::new_in_topo(v))
         }
     };
 }
-// @ use for refresh_for  表示 要关联到 单一路径节点 ────────────────────────────────────────────────────────────────────────────────
+// // @ use for refresh_for  表示 要关联到 单一路径节点 ────────────────────────────────────────────────────────────────────────────────
 
-pub struct AnimaForPath<Message>(pub AnimationE<Message>)
-where
-    Message: Clone + std::fmt::Debug + 'static + PartialEq;
+// pub struct AnimaForPath<Message>(pub AnimationE<Message>)
+// where
+//     Message: Clone + std::fmt::Debug + 'static + PartialEq;
 
-impl<Message> std::ops::Deref for AnimaForPath<Message>
-where
-    Message: Clone + std::fmt::Debug + 'static + PartialEq,
-{
-    type Target = AnimationE<Message>;
+// impl<Message> std::ops::Deref for AnimaForPath<Message>
+// where
+//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
+// {
+//     type Target = AnimationE<Message>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone)]
 pub struct AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
@@ -207,6 +176,24 @@ where
     // processed_interruptions: StateAnchor<(StepTimeVector<Message>, StepTimeVector<Message>)>,
     // revised: SAPropsMessageSteps2<Message>,
     id: TopoKey,
+    ref_count: Rc<Cell<usize>>,
+}
+
+impl<Message> Clone for AnimationE<Message>
+where
+    Message: Clone + std::fmt::Debug + 'static + PartialEq,
+{
+    fn clone(&self) -> Self {
+        debug!("animation clone :{}", self.ref_count.get());
+        self.ref_count.set(self.ref_count.get() + 1);
+        Self {
+            inside: self.inside.clone(),
+            timing: self.timing.clone(),
+            running: self.running.clone(),
+            id: self.id,
+            ref_count: self.ref_count.clone(),
+        }
+    }
 }
 
 impl<Message> std::fmt::Debug for AnimationE<Message>
@@ -414,7 +401,7 @@ where
             props: props_init,
         } = sv_inside.clone();
 
-        debug!("||@@@@@@@@@@@@@@@@@@@@ step id:{:#?}", &steps_init.id());
+        trace!("||@@@@@@@@@@@@@@@@@@@@ step id:{:#?}", &steps_init.id());
 
         let i_p_cut = {
             let mut opt_old_current: Option<Duration> = None;
@@ -516,13 +503,13 @@ where
         //     .engine_mut()
         //     .mark_observed(timing_ob.anchor());
         // ─────────────────────────────────────────────────────────────────
-        let line_id = Location::caller();
+        // let line_id = Location::caller();
         // let id = TopoKey::new(topo::call_in_slot(line_id, topo::CallId::current));
         let id = TopoKey::new(topo::CallId::current());
         // let id = TopoKey::new(topo::call(topo::CallId::current));
         // let const_id = || topo::root(topo::CallId::current);
         // let id = TopoKey::new(const_id());
-        debug!("=======|||||||||||||||||||||||--> topo id:{:?}", &id);
+        trace!("=======|||||||||||||||||||||||--> topo id:{:?}", &id);
 
         let sa_running = (&interruption_init.watch(), &steps_init.watch())
             .map(|q, r| !q.is_empty() || !r.is_empty());
@@ -539,7 +526,7 @@ where
         //     .borrow()
         //     .engine_mut()
         //     .mark_unobserved(sa_running.anchor());
-
+        global_anima_running_add(&sa_running);
         let sa_running_clone = sa_running.clone();
 
         sv_now
@@ -547,12 +534,15 @@ where
                 id,
                 move |skip, _| {
                     // println!("call update after set timing {:?}", v);
-                    debug!("====||||||||||||--> [insert_after_fn] -> topo id:{:?}", &id);
+                    debug!("====[insert_after_fn] calling --> topo id:{:?}", &id);
 
                     // anima_clone.update_in_callback(skip);
                     if !sa_running_clone.get() {
+                        debug!("not running , return");
                         return;
                     }
+                    debug!("after callback running ");
+
                     let revised_value = revised.get();
                     props_init
                         .iter()
@@ -566,7 +556,14 @@ where
             // .ok();
             .expect("find same id already in after_fn map");
 
-        let an = Self {
+        // let update_id = TopoKey::new(topo::call(topo::CallId::current));
+
+        // let mut anima_clone = an.clone();
+        // anima_clone.id = None;
+
+        // drop(store);
+
+        Self {
             // sv_now,
             inside: sv_inside,
             timing: sa_timing,
@@ -581,16 +578,8 @@ where
             // processed_interruptions: sa_processed_interruptions,
             // revised,
             id,
-        };
-        // let update_id = TopoKey::new(topo::call(topo::CallId::current));
-        warn!("update_id:{:?}", id);
-
-        // let mut anima_clone = an.clone();
-        // anima_clone.id = None;
-
-        // drop(store);
-
-        an
+            ref_count: Rc::new(Cell::new(1)),
+        }
     }
 
     pub fn interrupt(&self, steps: Vector<Step<Message>>) {
@@ -608,12 +597,19 @@ where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
 {
     fn drop(&mut self) {
-        debug!("===============Dropping  AnimationE");
+        let count = self.ref_count.get();
+        debug!("===============in Dropping  AnimationE count:{}", &count);
+
+        if count <= 1 {
+            G_CLOCK.with(|clock| {
+                // self.running = StateAnchor::constant(false);
+                clock.remove_after_fn(self.id);
+            });
+        } else {
+            self.ref_count.set(count - 1);
+            debug!("===============after count:{}", &self.ref_count.get());
+        }
         // let clock = global_clock();
-        G_CLOCK.with(|clock| {
-            // self.running = StateAnchor::constant(false);
-            clock.remove_after_fn(self.id);
-        });
     }
 }
 #[cfg(test)]

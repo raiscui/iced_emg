@@ -30,9 +30,8 @@ use derive_more::Into;
 use emg_core::GenericSize;
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
-use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, };
-
-use im::Vector;
+use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
+pub use im::Vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;
@@ -389,6 +388,9 @@ impl EdgeData {
     #[must_use] pub fn store_styles_string(&self,store: &GStateStore) -> String {
         self.styles_string.store_get(store)
     }
+    #[must_use] pub fn engine_styles_string(&self,engine: &mut Engine) -> String {
+        engine.get(self.styles_string.anchor())
+    }
 }
 
 impl Eq for EdgeData {}
@@ -442,29 +444,31 @@ where
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug, Default)]
 pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(Vector<EdgeIndex<Ix>>);
 
+impl<Ix: Clone + Hash + Eq + PartialEq + Default> std::ops::Deref for EPath<Ix> {
+    type Target = Vector<EdgeIndex<Ix>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl<Ix: Clone + Hash + Eq + PartialEq + Default> std::ops::DerefMut for EPath<Ix> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
     #[must_use] pub fn new(vec:Vector<EdgeIndex<Ix>>)->Self{
         Self(vec)
     }
 
-    #[must_use] pub fn back(&self)->Option< &EdgeIndex<Ix>>{
-        self.0.back()
-    }
 
-    #[must_use] pub fn get(&self)->&Vector<EdgeIndex<Ix>>{
-        &self.0
-    }
-
-    pub fn get_mut(&mut self)-> &mut Vector<EdgeIndex<Ix>>{
-        &mut self.0
-    }
-
-    pub fn set(&mut self,vec:Vector<EdgeIndex<Ix>>){
-        self.0 = vec; 
-    }
-
-    pub fn set_with<T:FnMut(&mut Vector<EdgeIndex<Ix>>)>(&mut self,mut func:T){
-         func( &mut self.0);
+    pub fn add_build(&self, target_nix:NodeIndex<Ix>)-> Self {
+        let last = self.last().and_then(|e|e.target_nix().as_ref());
+        let mut new_e = self.clone();
+        new_e.push_back(EdgeIndex::new(last.cloned(),target_nix));
+        new_e
+        
     }
 }
 
@@ -576,11 +580,29 @@ where
             .and_then(EdgeItemNode::as_edge_data).cloned()
     }
 
-    #[must_use]
-    pub fn store_edge_data(&self,store:&GStateStore, key: &EPath<Ix>) -> Option<EdgeData> {
-        self.node.store_get(store)
+    // #[must_use]
+    // pub fn store_edge_data(&self,store:&GStateStore, key: &EPath<Ix>) -> Option<EdgeData> {
+    //     self.node.store_get(store)
+    //         .get(key)
+    //         .and_then(EdgeItemNode::as_edge_data).cloned()
+            
+    // }
+    pub fn store_edge_data_with<F: FnOnce(Option<&EdgeData>)->R,R>(&self,store:&GStateStore, key: &EPath<Ix>,func:F) -> R {
+        self.node.store_get_with(store,|o|{
+           func(o
             .get(key)
-            .and_then(EdgeItemNode::as_edge_data).cloned()
+            .and_then(EdgeItemNode::as_edge_data) )
+        })
+       
+            
+    }
+    pub fn engine_edge_data_with<F: FnOnce(Option<&EdgeData>)->R,R>(&self,engine:&mut Engine, key: &EPath<Ix>,func:F) -> R {
+        self.node.engine_get_with(engine,|o|{
+           func(o
+            .get(key)
+            .and_then(EdgeItemNode::as_edge_data) )
+        })
+       
             
     }
    
