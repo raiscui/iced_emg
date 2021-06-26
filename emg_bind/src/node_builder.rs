@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-05-26 17:30:38
+ * @LastEditTime: 2021-06-26 15:00:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,6 +24,8 @@ use crate::runtime::{
 };
 use emg::im::Vector;
 use iced::Element;
+// ────────────────────────────────────────────────────────────────────────────────
+use bumpalo::boxed::Box;
 
 pub trait NodeBuilder<Message> // where
 // Message: 'static,
@@ -46,47 +48,48 @@ pub trait NodeBuilder<Message> // where
 // dyn_clone::clone_trait_object!(EventCallbackClone);
 
 // ────────────────────────────────────────────────────────────────────────────────
+pub type EventCbClone<Message> =
+    Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>;
+// pub trait EventCbClone<Message>:
+//     Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>
+// {
+//     fn clone_box(&self) -> Box<dyn EventCbClone<Message>>;
+// }
 
-pub trait EventCbClone<Message>:
-    Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>
-{
-    fn clone_box(&self) -> Box<dyn EventCbClone<Message>>;
-}
+// impl<Message, T> EventCbClone<Message> for T
+// where
+//     T: 'static + Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message> + Clone,
+// {
+//     fn clone_box(&self) -> Box<dyn EventCbClone<Message>> {
+//         Box::new(self.clone())
+//     }
+// }
 
-impl<Message, T> EventCbClone<Message> for T
-where
-    T: 'static + Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message> + Clone,
-{
-    fn clone_box(&self) -> Box<dyn EventCbClone<Message>> {
-        Box::new(self.clone())
-    }
-}
-
-impl<Message> Clone for Box<dyn EventCbClone<Message>> {
-    fn clone(&self) -> Self {
-        (**self).clone_box()
-    }
-}
+// impl<Message> Clone for Box<dyn EventCbClone<Message>> {
+//     fn clone(&self) -> Self {
+//         (**self).clone_box()
+//     }
+// }
 // ────────────────────────────────────────────────────────────────────────────────
+pub type EventMessageCbClone<Message> = Fn() -> Message;
+// pub trait EventMessageCbClone<Message>: Fn() -> Message {
+//     fn clone_box(&self) -> Box<dyn EventMessageCbClone<Message>>;
+// }
 
-pub trait EventMessageCbClone<Message>: Fn() -> Message {
-    fn clone_box(&self) -> Box<dyn EventMessageCbClone<Message>>;
-}
+// impl<Message, T> EventMessageCbClone<Message> for T
+// where
+//     T: 'static + Fn() -> Message + Clone,
+// {
+//     fn clone_box(&self) -> Box<dyn EventMessageCbClone<Message>> {
+//         Box::new(self.clone())
+//     }
+// }
 
-impl<Message, T> EventMessageCbClone<Message> for T
-where
-    T: 'static + Fn() -> Message + Clone,
-{
-    fn clone_box(&self) -> Box<dyn EventMessageCbClone<Message>> {
-        Box::new(self.clone())
-    }
-}
-
-impl<Message> Clone for Box<dyn EventMessageCbClone<Message>> {
-    fn clone(&self) -> Self {
-        (**self).clone_box()
-    }
-}
+// impl<Message> Clone for Box<dyn EventMessageCbClone<Message>> {
+//     fn clone(&self) -> Self {
+//         (**self).clone_box()
+//     }
+// }
 // ────────────────────────────────────────────────────────────────────────────────
 
 // pub struct EventCallbackCloneStatic<T>(T)
@@ -104,20 +107,26 @@ impl<Message> Clone for Box<dyn EventMessageCbClone<Message>> {
 type EventNameString = String;
 
 #[derive(Clone)]
-pub struct EventCallback<Message>(EventNameString, Box<dyn EventCbClone<Message>>);
+pub struct EventCallback<Message>(
+    EventNameString,
+    Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>,
+);
 
 impl<Message> EventCallback<Message> {
     #[must_use]
-    pub fn new(name: EventNameString, cb: Box<dyn EventCbClone<Message>>) -> Self {
+    pub fn new(
+        name: EventNameString,
+        cb: Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>,
+    ) -> Self {
         Self(name, cb)
     }
 }
 
 #[derive(Clone)]
-pub struct EventMessage<Message>(EventNameString, Box<dyn EventMessageCbClone<Message>>);
+pub struct EventMessage<Message>(EventNameString, Rc<dyn Fn() -> Message>);
 impl<Message> EventMessage<Message> {
     #[must_use]
-    pub fn new(name: EventNameString, message: Box<dyn EventMessageCbClone<Message>>) -> Self {
+    pub fn new(name: EventNameString, message: Rc<dyn Fn() -> Message>) -> Self {
         Self(name, message)
     }
 }

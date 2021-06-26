@@ -249,9 +249,9 @@ impl ToTokens for GOnEvent {
         let id_token = id.get(format!("Event-{}", event_name).as_str());
 
         let token = if closure.inputs.is_empty() {
-            quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(String::from(#event_name),Box::new(#closure)).into()) )
+            quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(String::from(#event_name),Rc::new(#closure)).into()) )
         } else if closure.inputs.len() == 3 {
-            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new(String::from(#event_name),Box::new(#closure)).into()) )
+            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new(String::from(#event_name),Rc::new(#closure)).into()) )
         } else {
             panic!("event callback argument size is must empty or three")
         };
