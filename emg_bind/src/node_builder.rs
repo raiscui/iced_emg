@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-06-28 12:43:02
+ * @LastEditTime: 2021-06-28 15:17:59
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,11 +16,14 @@ use derive_more::From;
 
 use std::rc::Rc;
 
-use crate::runtime::{
-    dodrio::{
-        self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
+use crate::{
+    map_callback_return_to_option_ms, map_fn_callback_return_to_option_ms,
+    runtime::{
+        dodrio::{
+            self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
+        },
+        Bus, Css, Widget,
     },
-    Bus, Css, Widget,
 };
 use emg::im::Vector;
 use iced::Element;
@@ -48,8 +51,7 @@ pub trait NodeBuilder<Message> // where
 // dyn_clone::clone_trait_object!(EventCallbackClone);
 
 // ────────────────────────────────────────────────────────────────────────────────
-pub type EventCbClone<Message> =
-    Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>;
+
 // pub trait EventCbClone<Message>:
 //     Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>
 // {
@@ -71,7 +73,6 @@ pub type EventCbClone<Message> =
 //     }
 // }
 // ────────────────────────────────────────────────────────────────────────────────
-pub type EventMessageCbClone<Message> = Fn() -> Message;
 // pub trait EventMessageCbClone<Message>: Fn() -> Message {
 //     fn clone_box(&self) -> Box<dyn EventMessageCbClone<Message>>;
 // }
@@ -123,11 +124,22 @@ impl<Message> EventCallback<Message> {
 }
 
 #[derive(Clone)]
-pub struct EventMessage<Message>(EventNameString, Rc<dyn Fn() -> Message>);
-impl<Message> EventMessage<Message> {
+pub struct EventMessage<Message>(EventNameString, Rc<dyn Fn() -> Option<Message>>);
+impl<Message> EventMessage<Message>
+where
+    Message: 'static,
+{
     #[must_use]
-    pub fn new(name: EventNameString, message: Rc<dyn Fn() -> Message>) -> Self {
-        Self(name, message)
+    pub fn new<MsU: 'static, F: Fn() -> MsU + 'static>(name: EventNameString, cb: F) -> Self {
+        let rc_callback = map_fn_callback_return_to_option_ms!(
+            dyn Fn() -> Option<Message>,
+            (),
+            cb,
+            "Callback can return only Msg, Option<Msg> or ()!",
+            Rc
+        );
+
+        Self(name, rc_callback)
     }
 }
 #[derive(Clone, From)]
@@ -276,14 +288,15 @@ where
                         use dodrio::bumpalo::collections::String;
                         String::from_str_in(event.as_str(), bump).into_bump_str()
                     };
-                    // let event_bus = bus.clone();
 
                     element_builder = element_builder.on(
                         event_bump_string,
                         move |_root: &mut dyn RootRender,
                               _vdom: VdomWeak,
                               _event: web_sys::Event| {
-                            event_bus.publish(msg_fn());
+                            if let Some(msg) = msg_fn() {
+                                event_bus.publish(msg);
+                            }
                         },
                     );
                 }

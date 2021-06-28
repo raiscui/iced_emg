@@ -100,6 +100,32 @@ macro_rules! map_callback_return_to_option_ms {
         }
     }};
 }
+#[macro_export]
+macro_rules! map_fn_callback_return_to_option_ms {
+    ($cb_type:ty,( $( $value:ident ) , * ), $callback:expr, $panic_text:literal, $output_type:tt) => {{
+        let t_type = std::any::TypeId::of::<MsU>();
+        if t_type == std::any::TypeId::of::<Message>() {
+            $output_type::new(move |$($value),*| {
+                (&mut Some($callback.call(($($value),*))) as &mut dyn std::any::Any)
+                    .downcast_mut::<Option<Message>>()
+                    .and_then(Option::take)
+            })
+        } else if t_type == std::any::TypeId::of::<Option<Message>>() {
+            $output_type::new(move |$($value),*| {
+                (&mut $callback.call(($($value),*)) as &mut dyn std::any::Any)
+                    .downcast_mut::<Option<Message>>()
+                    .and_then(Option::take)
+            })
+        } else if t_type == std::any::TypeId::of::<()>() {
+            $output_type::new(move |$($value),*| {
+                $callback.call(($($value),*));
+                None
+            }) as $output_type<$cb_type>
+        } else {
+            panic!($panic_text);
+        }
+    }};
+}
 #[cfg(test)]
 mod tests {
     #[test]
