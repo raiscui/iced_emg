@@ -22,8 +22,10 @@ EmgEdgeItem {
                         size: StateAnchor(
                             Matrix {
                                 data: [
-                                    12.0,
-                                    10.0,
+                                    [
+                                        12.0,
+                                        10.0,
+                                    ],
                                 ],
                             },
                         ),
@@ -31,9 +33,11 @@ EmgEdgeItem {
                             Translation {
                                 vector: Matrix {
                                     data: [
-                                        -12.0,
-                                        -10.0,
-                                        0.0,
+                                        [
+                                            -12.0,
+                                            -10.0,
+                                            0.0,
+                                        ],
                                     ],
                                 },
                             },
@@ -42,9 +46,11 @@ EmgEdgeItem {
                             Translation {
                                 vector: Matrix {
                                     data: [
-                                        50.0,
-                                        20.0,
-                                        0.0,
+                                        [
+                                            50.0,
+                                            20.0,
+                                            0.0,
+                                        ],
                                     ],
                                 },
                             },
@@ -53,9 +59,11 @@ EmgEdgeItem {
                             Translation {
                                 vector: Matrix {
                                     data: [
-                                        38.0,
-                                        10.0,
-                                        0.0,
+                                        [
+                                            38.0,
+                                            10.0,
+                                            0.0,
+                                        ],
                                     ],
                                 },
                             },
@@ -64,22 +72,30 @@ EmgEdgeItem {
                             Mat4(
                                 Matrix {
                                     data: [
-                                        1.0,
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        1.0,
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        1.0,
-                                        0.0,
-                                        38.0,
-                                        10.0,
-                                        0.0,
-                                        1.0,
+                                        [
+                                            1.0,
+                                            0.0,
+                                            0.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            0.0,
+                                            1.0,
+                                            0.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            0.0,
+                                            0.0,
+                                            1.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            38.0,
+                                            10.0,
+                                            0.0,
+                                            1.0,
+                                        ],
                                     ],
                                 },
                             ),
@@ -139,8 +155,10 @@ EmgEdgeItem {
                             size: StateAnchor(
                                 Matrix {
                                     data: [
-                                        100.0,
-                                        100.0,
+                                        [
+                                            100.0,
+                                            100.0,
+                                        ],
                                     ],
                                 },
                             ),
@@ -148,9 +166,11 @@ EmgEdgeItem {
                                 Translation {
                                     vector: Matrix {
                                         data: [
-                                            0.0,
-                                            0.0,
-                                            0.0,
+                                            [
+                                                0.0,
+                                                0.0,
+                                                0.0,
+                                            ],
                                         ],
                                     },
                                 },
@@ -159,9 +179,11 @@ EmgEdgeItem {
                                 Translation {
                                     vector: Matrix {
                                         data: [
-                                            0.0,
-                                            0.0,
-                                            0.0,
+                                            [
+                                                0.0,
+                                                0.0,
+                                                0.0,
+                                            ],
                                         ],
                                     },
                                 },
@@ -170,9 +192,11 @@ EmgEdgeItem {
                                 Translation {
                                     vector: Matrix {
                                         data: [
-                                            0.0,
-                                            0.0,
-                                            0.0,
+                                            [
+                                                0.0,
+                                                0.0,
+                                                0.0,
+                                            ],
                                         ],
                                     },
                                 },
@@ -181,22 +205,30 @@ EmgEdgeItem {
                                 Mat4(
                                     Matrix {
                                         data: [
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            1.0,
+                                            [
+                                                1.0,
+                                                0.0,
+                                                0.0,
+                                                0.0,
+                                            ],
+                                            [
+                                                0.0,
+                                                1.0,
+                                                0.0,
+                                                0.0,
+                                            ],
+                                            [
+                                                0.0,
+                                                0.0,
+                                                1.0,
+                                                0.0,
+                                            ],
+                                            [
+                                                0.0,
+                                                0.0,
+                                                0.0,
+                                                1.0,
+                                            ],
                                         ],
                                     },
                                 ),
@@ -232,10 +264,10 @@ EmgEdgeItem {
                                         },
                                     ],
                                     updated_at: [
-                                        "emg_layout/src/lib.rs:923:13",
-                                        "emg_layout/src/lib.rs:923:17",
-                                        "emg_layout/src/lib.rs:923:31",
-                                        "emg_layout/src/lib.rs:923:45",
+                                        "emg_layout/src/lib.rs:936:13",
+                                        "emg_layout/src/lib.rs:936:17",
+                                        "emg_layout/src/lib.rs:936:31",
+                                        "emg_layout/src/lib.rs:936:45",
                                     ],
                                     pseudo: None,
                                     media: None,
@@ -377,7 +409,7 @@ EmgEdgeItem {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:697:41",
+                "emg_layout/src/lib.rs:710:41",
             ],
             pseudo: None,
             media: None,
@@ -403,8 +435,10 @@ EmgEdgeItem {
                         size: StateAnchor(
                             Matrix {
                                 data: [
-                                    100.0,
-                                    150.0,
+                                    [
+                                        100.0,
+                                        150.0,
+                                    ],
                                 ],
                             },
                         ),
@@ -412,9 +446,11 @@ EmgEdgeItem {
                             Translation {
                                 vector: Matrix {
                                     data: [
-                                        -100.0,
-                                        -150.0,
-                                        0.0,
+                                        [
+                                            -100.0,
+                                            -150.0,
+                                            0.0,
+                                        ],
                                     ],
                                 },
                             },
@@ -423,9 +459,11 @@ EmgEdgeItem {
                             Translation {
                                 vector: Matrix {
                                     data: [
-                                        6.0,
-                                        2.0,
-                                        0.0,
+                                        [
+                                            6.0,
+                                            2.0,
+                                            0.0,
+                                        ],
                                     ],
                                 },
                             },
@@ -434,9 +472,11 @@ EmgEdgeItem {
                             Translation {
                                 vector: Matrix {
                                     data: [
-                                        -94.0,
-                                        -148.0,
-                                        0.0,
+                                        [
+                                            -94.0,
+                                            -148.0,
+                                            0.0,
+                                        ],
                                     ],
                                 },
                             },
@@ -445,22 +485,30 @@ EmgEdgeItem {
                             Mat4(
                                 Matrix {
                                     data: [
-                                        1.0,
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        1.0,
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        1.0,
-                                        0.0,
-                                        -94.0,
-                                        -148.0,
-                                        0.0,
-                                        1.0,
+                                        [
+                                            1.0,
+                                            0.0,
+                                            0.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            0.0,
+                                            1.0,
+                                            0.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            0.0,
+                                            0.0,
+                                            1.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            -94.0,
+                                            -148.0,
+                                            0.0,
+                                            1.0,
+                                        ],
                                     ],
                                 },
                             ),
@@ -520,8 +568,10 @@ EmgEdgeItem {
                             size: StateAnchor(
                                 Matrix {
                                     data: [
-                                        12.0,
-                                        10.0,
+                                        [
+                                            12.0,
+                                            10.0,
+                                        ],
                                     ],
                                 },
                             ),
@@ -529,9 +579,11 @@ EmgEdgeItem {
                                 Translation {
                                     vector: Matrix {
                                         data: [
-                                            -12.0,
-                                            -10.0,
-                                            0.0,
+                                            [
+                                                -12.0,
+                                                -10.0,
+                                                0.0,
+                                            ],
                                         ],
                                     },
                                 },
@@ -540,9 +592,11 @@ EmgEdgeItem {
                                 Translation {
                                     vector: Matrix {
                                         data: [
-                                            50.0,
-                                            20.0,
-                                            0.0,
+                                            [
+                                                50.0,
+                                                20.0,
+                                                0.0,
+                                            ],
                                         ],
                                     },
                                 },
@@ -551,9 +605,11 @@ EmgEdgeItem {
                                 Translation {
                                     vector: Matrix {
                                         data: [
-                                            38.0,
-                                            10.0,
-                                            0.0,
+                                            [
+                                                38.0,
+                                                10.0,
+                                                0.0,
+                                            ],
                                         ],
                                     },
                                 },
@@ -562,22 +618,30 @@ EmgEdgeItem {
                                 Mat4(
                                     Matrix {
                                         data: [
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                            38.0,
-                                            10.0,
-                                            0.0,
-                                            1.0,
+                                            [
+                                                1.0,
+                                                0.0,
+                                                0.0,
+                                                0.0,
+                                            ],
+                                            [
+                                                0.0,
+                                                1.0,
+                                                0.0,
+                                                0.0,
+                                            ],
+                                            [
+                                                0.0,
+                                                0.0,
+                                                1.0,
+                                                0.0,
+                                            ],
+                                            [
+                                                38.0,
+                                                10.0,
+                                                0.0,
+                                                1.0,
+                                            ],
                                         ],
                                     },
                                 ),

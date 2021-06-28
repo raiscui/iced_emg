@@ -243,7 +243,7 @@ impl Property {
     pub fn name(&self) -> Rc<String> {
         use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
 
-        let name = match self {
+        match self {
             Exact(name, ..)
             | Color(name, ..)
             | Shadow(name, ..)
@@ -253,11 +253,10 @@ impl Property {
             | Prop4(name, ..)
             | Angle(name, ..) => name.clone(),
 
-            Points(_) => Rc::new("points".to_string()),
+            Points(_point) => Rc::new("points".to_string()),
 
-            Path(_) => Rc::new("points".to_string()),
-        };
-        name
+            Path(_path) => Rc::new("points".to_string()),
+        }
     }
 }
 // propertyName : Property -> String
