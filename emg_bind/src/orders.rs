@@ -12,7 +12,7 @@ use rustc_hash::FxHasher as CustomHasher;
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-06-28 11:37:28
+ * @LastEditTime: 2021-06-28 14:21:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -218,7 +218,7 @@ where
     //     self.publish(msg);
     // }
 
-    fn observe_root_size(&self, cb: Box<dyn Fn(f64, f64)>) -> &Self {
+    fn observe_root_size<F: Fn(f64, f64) + 'static>(&self, cb: F) -> &Self {
         let sv_width = self.data.width;
         let sv_height = self.data.height;
         // ─────────────────────────────────────────────────────────────────
@@ -230,12 +230,12 @@ where
         let orders = self.clone();
         // ─────────────────────────────────────────────────────────────────
         // let re_render_timeout: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
-
         let callback = Box::new(move |width: f64, height: f64| {
             let store = rc_store.borrow();
             debug!("resize : will set w h {} {}", &width, &height);
             sv_width.store_set(&store, width);
             sv_height.store_set(&store, height);
+
             cb(width, height);
 
             // if re_render_timeout.borrow().is_some() {

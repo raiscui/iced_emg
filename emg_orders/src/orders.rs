@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 
 //TODO Tick 脱库
 use emg_animation::Tick;
@@ -32,7 +32,7 @@ pub trait Orders<Message>: Clone {
 
     // fn process_effect_queue(&self);
     fn process_queue_message(&self, message: Option<Message>);
-    fn observe_root_size(&self, opt_callback: Box<dyn Fn(f64, f64)>) -> &Self;
+    fn observe_root_size<F: Fn(f64, f64) + 'static>(&self, cb: F) -> &Self;
     // ────────────────────────────────────────────────────────────────────────────────
 
     // /// Automatically map message type. It allows you to pass `Orders` into child module.
