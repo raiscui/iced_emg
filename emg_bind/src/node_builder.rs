@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-06-28 11:55:46
+ * @LastEditTime: 2021-06-28 12:43:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -176,6 +176,7 @@ pub struct NodeBuilderWidget<'a, Message> {
     widget: Rc<dyn NodeBuilder<Message> + 'a>,
     //TODO use vec deque
     event_callbacks: Vector<EventNode<Message>>,
+    // event_callbacks: Vector<EventNode<Message>>,
     layout_str: String,
 }
 
@@ -246,6 +247,7 @@ where
         //     bumpalo::collections::Vec::from_iter_in(self.event_callbacks.iter().cloned(), bump);
         // TODO: `self.event_callbacks`   use take replace the clone
         let mut event_nodes = self.event_callbacks.clone();
+        // let mut event_nodes = bumpalo::boxed::Box::new_in(self.event_callbacks.clone(), &bump);
 
         while let Some(event_node) = event_nodes.pop_front() {
             // let aa = collections::String::from_str_in(event.as_str(), bump);

@@ -11,15 +11,15 @@ split-debuginfo = "unpacked"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-tracing = { version = "^0.1" }
+tracing = { version="^0.1" }
 im = "15.0.0"
-iter_fixed = "0.2.0"
+iter_fixed = "0.2.1"
 # emg_orders = { path = "../emg_orders"}
 # emg_debuggable = { path = "../emg_debuggable" }
-emg_state = { path = "../emg_state" }
-emg_core = { path = "../emg_core" }
-seed_styles = { path = "../../styles_hooks/seed_styles" }
+emg_state = { path="../emg_state" }
+emg_core = { path="../emg_core" }
+seed_styles = { path="../../styles_hooks/seed_styles" }
 ordered-float = "2.5.1"
 
 [dev-dependencies]
-insta = { version = "1.7.1" }
+insta = { version="1.7.1" }

@@ -12,8 +12,8 @@ split-debuginfo = "unpacked"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-nalgebra = "0.25.4"
-# nalgebra = "0.27.1"
+# nalgebra = "0.25.4"
+nalgebra = "0.27.1"
 derive_more = "0.99"
 seed_styles = { path="../../styles_hooks/seed_styles" }
 seed_style_macros = { path="../../styles_hooks/seed_styles/seed_style_macros" }
@@ -37,7 +37,7 @@ emg_core = { path="../emg_core" }
 
 rustc-hash = "1.1.0"
 ahash = "0.7.4"
-indexmap = "1.6.2"
+indexmap = "1.6"
 
 illicit = "1.1.2"
 

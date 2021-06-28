@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-28 09:03:36
+ * @LastEditTime: 2021-06-28 12:41:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -184,7 +184,7 @@ where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
 {
     fn clone(&self) -> Self {
-        debug!("animation clone :{}", self.ref_count.get());
+        debug!("in animation clone, count:{}", self.ref_count.get());
         self.ref_count.set(self.ref_count.get() + 1);
         Self {
             inside: self.inside.clone(),
@@ -526,7 +526,12 @@ where
         // state_store()
         //     .borrow()
         //     .engine_mut()
+
         //     .mark_unobserved(sa_running.anchor());
+
+        // ─────────────────────────────────────────────────────────────────
+
+        //TODO need remove when self drop
         global_anima_running_add(&sa_running);
         let sa_running_clone = sa_running.clone();
 
