@@ -1,5 +1,6 @@
 mod func;
 pub mod measures;
+use measures::Unit;
 use measures::{px, ExactLength, Percent};
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -49,6 +50,15 @@ pub enum GenericSize {
     Calculation(Box<CalcOp<GenericSize>>),
 }
 
+impl From<f64> for GenericSize {
+    fn from(v: f64) -> Self {
+        Self::Length(ExactLength {
+            unit: Unit::None,
+            value: NotNan::new(v).unwrap(),
+        })
+    }
+}
+
 impl ::core::ops::Mul<f64> for GenericSize {
     type Output = GenericSize;
     fn mul(self, rhs: f64) -> GenericSize {
@@ -66,7 +76,7 @@ impl GenericSize {
     #[must_use]
     pub fn get_length_value(&self) -> f64 {
         self.try_get_length_value()
-            .expect("directly get length value failed, expected Length Px struct")
+            .expect("directly get length value failed, expected Length Px or None struct")
     }
 
     /// # Errors

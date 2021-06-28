@@ -6,7 +6,7 @@ use crate::{func::list_find_dup, models::Property};
 /*
  * @Author: Rais
  * @Date: 2021-06-02 12:40:24
- * @LastEditTime: 2021-06-18 14:52:25
+ * @LastEditTime: 2021-06-26 16:12:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,7 +25,7 @@ pub fn is_transformation(prop: &Property) -> bool {
         "scale",
         "scale3d",
     ]
-    .contains(&prop.name())
+    .contains(&prop.name().as_str())
 }
 
 pub fn warn_for_double_listed_properties(props: &Vector<Property>) {

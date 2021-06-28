@@ -1,14 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-06-25 11:43:36
+ * @LastEditTime: 2021-06-27 00:29:29
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
 use emg::{edge_index_no_source, im::vector, Edge, EdgeIndex};
-use emg_layout::{EPath, EmgEdgeItem, GenericSizeAnchor};
+use emg_core::GenericSize;
+use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
 use emg_refresh::{RefreshFor, RefreshUseFor};
 use emg_state::{topo, use_state};
 use std::rc::Rc;
@@ -213,9 +214,25 @@ where
 
                 let nix = self.insert_node(root_id.clone(), Layer::new(root_id).into());
 
+                let width = global_width();
+                let height = global_height();
                 let mut root_ei = self
                     //TODO: bind browser w h.
-                    .setup_wh_edge_in_topo(edge_index_no_source(root_id.clone()), 1920, 1080)
+                    .setup_edge_in_topo(
+                        edge_index_no_source(root_id.clone()),
+                        (width.into(), height.into()),
+                        (
+                            GenericSize::default().into(),
+                            GenericSize::default().into(),
+                            GenericSize::default().into(),
+                        ),
+                        (
+                            GenericSize::default().into(),
+                            GenericSize::default().into(),
+                            GenericSize::default().into(),
+                        ),
+                    )
+                    // .setup_wh_edge_in_topo(edge_index_no_source(root_id.clone()), 1920, 1080)
                     .unwrap();
 
                 let path = EPath::<Self::Ix>::new(vector![edge_index_no_source(root_id.clone())]);

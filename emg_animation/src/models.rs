@@ -240,10 +240,10 @@ impl From<Property> for GenericSize {
 
 impl Property {
     #[must_use]
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> Rc<String> {
         use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
 
-        match self {
+        let name = match self {
             Exact(name, ..)
             | Color(name, ..)
             | Shadow(name, ..)
@@ -251,12 +251,13 @@ impl Property {
             | Prop2(name, ..)
             | Prop3(name, ..)
             | Prop4(name, ..)
-            | Angle(name, ..) => name,
+            | Angle(name, ..) => name.clone(),
 
-            Points(_) => "points",
+            Points(_) => Rc::new("points".to_string()),
 
-            Path(_) => "path",
-        }
+            Path(_) => Rc::new("points".to_string()),
+        };
+        name
     }
 }
 // propertyName : Property -> String
@@ -693,7 +694,7 @@ where
     }
 }
 fn replace_props(props: Vector<Property>, replacements: &Vector<Property>) -> Vector<Property> {
-    let replacement_names: Vec<&str> = replacements.iter().map(Property::name).collect();
+    let replacement_names: Vec<Rc<String>> = replacements.iter().map(Property::name).collect();
     let removed = props
         .into_iter()
         .filter(|prop| replacement_names.contains(&prop.name()));

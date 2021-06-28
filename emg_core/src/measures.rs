@@ -34,7 +34,7 @@ impl ::core::ops::Add for ExactLength {
 
 impl ExactLength {
     pub fn try_get_number(&self) -> Result<f64, &Self> {
-        if matches!(self.unit, Unit::Px) {
+        if matches!(self.unit, Unit::Px | Unit::None) {
             Ok(self.value.into_inner())
         } else {
             Err(self)

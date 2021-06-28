@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-06-25 13:07:02
+ * @LastEditTime: 2021-06-27 22:18:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -52,7 +52,7 @@ pub trait GraphView<'a, Message> {
     where
         <Self as GraphView<'a, Message>>::Ix: Clone + Hash + Eq + Ord + Default;
 
-    fn view(&self, ix: Self::Ix) -> Element<'a, Message>;
+    fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<'a, Message>;
     // fn global_view(ix: Self::Ix) -> Element<'a, Message>;
 }
 
@@ -154,15 +154,17 @@ where
             .collect() //TODO use iter
     }
 
-    #[instrument(skip(self))]
-    fn view(&self, cix: Self::Ix) -> Element<'a, Message> {
-        let _g = trace_span!("ffffffffffffffffffffffff", ?cix);
-        let edges = self.raw_edges().store_get_rc(&self.store());
-        let paths: EPath<Self::Ix> = EPath::new(vector![edge_index_no_source(cix.clone())]);
-        // TODO add store in gelement_refresh_and_comb
-        self.gelement_refresh_and_comb(&edges, &cix, &paths)
-            .try_into()
-            .unwrap()
+    fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<'a, Message> {
+        let cix = into_ix.into();
+        let _g = trace_span!("graph view-", ?cix);
+        {
+            let edges = self.raw_edges().store_get_rc(&self.store());
+            let paths: EPath<Self::Ix> = EPath::new(vector![edge_index_no_source(cix.clone())]);
+            // TODO add store in gelement_refresh_and_comb
+            self.gelement_refresh_and_comb(&edges, &cix, &paths)
+                .try_into()
+                .unwrap()
+        }
     }
 
     // fn global_view(cix: Self::Ix) -> Element<'a, Message> {

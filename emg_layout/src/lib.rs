@@ -55,8 +55,20 @@ pub mod add_values;
 pub use animation::AnimationE;
 
 // ────────────────────────────────────────────────────────────────────────────────
+thread_local! {
+    static G_WIDTH: StateVar<f64> = use_state(0.);
+}
+pub fn global_width() -> StateVar<f64> {
+    G_WIDTH.with(|sv| *sv)
+}
+thread_local! {
+    static G_HEIGHT: StateVar<f64> = use_state(0.);
+}
+pub fn global_height() -> StateVar<f64> {
+    G_HEIGHT.with(|sv| *sv)
+}
 
-
+// ────────────────────────────────────────────────────────────────────────────────
 
 #[derive(Display, Debug, PartialEq, PartialOrd, Copy, Clone, From, Into)]
 struct Mat4(Matrix4<f64>);
@@ -574,6 +586,7 @@ where
     #[cfg(test)]
     #[must_use]
     fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
+      
         self.node
             .get()
             .get(key)

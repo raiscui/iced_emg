@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-06-25 11:09:05
+ * @LastEditTime: 2021-06-28 09:03:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -297,7 +297,8 @@ where
             // • • • • •
 
             self.inside.props.iter().for_each(|svp| {
-                let name = svp.get().name().to_string();
+                // let name = svp.get().name().to_string();
+                let name = svp.get_with(|p| p.name());
                 // let name = svp.store_get_rc(&*store).name().to_string();
                 match name.as_str() {
                     "width" => l.w = (*svp).into(),
@@ -578,7 +579,7 @@ where
             // processed_interruptions: sa_processed_interruptions,
             // revised,
             id,
-            ref_count: Rc::new(Cell::new(1)),
+            ref_count: Rc::new(Cell::new(1)), //start with 1
         }
     }
 

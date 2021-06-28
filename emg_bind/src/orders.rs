@@ -1,21 +1,27 @@
-use crate::Orders;
+use crate::{window::observe_size, Orders};
 use emg_animation::Tick;
 // use fxhash::FxBuildHasher;
 
-use emg_layout::animation::{global_anima_running_sa, global_clock};
-use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
+use emg_layout::{
+    animation::{global_anima_running_sa, global_clock},
+    global_height, global_width,
+};
+use emg_state::{state_store, CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 use rustc_hash::FxHasher as CustomHasher;
 
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-06-25 10:42:40
+ * @LastEditTime: 2021-06-28 11:37:28
  * @LastEditors: Rais
  * @Description:
  */
 use iced_web::{dodrio::VdomWeak, Bus};
 use indexmap::IndexMap;
 use tracing::{debug, warn};
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::IdleRequestOptions;
 
 use crate::map_callback_return_to_option_ms;
 
@@ -132,6 +138,8 @@ pub(crate) struct OrdersData<Message, TickMsg> {
         RefCell<FxIndexMap<String, Box<dyn FnOnce(TickMsg) -> Option<Message>>>>,
     now: StateVar<Duration>,
     am_running: StateAnchor<bool>, // pub render_info: Cell<Option<TickMsg>>,
+    width: StateVar<f64>,
+    height: StateVar<f64>,
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -174,7 +182,10 @@ impl<Message> OrdersContainer<Message>
                     BuildHasherDefault::<CustomHasher>::default(),
                 )),
                 now: global_clock(),
-                am_running:global_anima_running_sa()
+                am_running:global_anima_running_sa(),
+                width:global_width(),
+                height:global_height()
+
                 //
                 // render_info: Cell::new(None),
             }),
@@ -207,6 +218,59 @@ where
     //     self.publish(msg);
     // }
 
+    fn observe_root_size(&self, cb: Box<dyn Fn(f64, f64)>) -> &Self {
+        let sv_width = self.data.width;
+        let sv_height = self.data.height;
+        // ─────────────────────────────────────────────────────────────────
+
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let body = document.body().unwrap();
+        let rc_store = state_store();
+        let orders = self.clone();
+        // ─────────────────────────────────────────────────────────────────
+        // let re_render_timeout: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
+
+        let callback = Box::new(move |width: f64, height: f64| {
+            let store = rc_store.borrow();
+            debug!("resize : will set w h {} {}", &width, &height);
+            sv_width.store_set(&store, width);
+            sv_height.store_set(&store, height);
+            cb(width, height);
+
+            // if re_render_timeout.borrow().is_some() {
+            //     warn!("==r idle fn working, should not running again");
+            //     return;
+            // }
+
+            // re_render_timeout.borrow_mut().replace(1);
+            // let re_render_timeout2 = re_render_timeout.clone();
+
+            // idle_callback();
+
+            orders
+                // .after_next_render("reset idle timeout", move |_| {
+                //     let _droppable = re_render_timeout2.borrow_mut().take();
+                // })
+                .vdom
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .schedule_render_with_orders(orders.clone());
+        });
+
+        let closure = Closure::wrap(callback as Box<dyn FnMut(f64, f64)>);
+        // *idle_cb.borrow_mut() = Some(closure);
+        let closure_as_js_value = closure.as_ref().clone();
+
+        unsafe {
+            observe_size(&body, &closure_as_js_value);
+        }
+        closure.forget();
+
+        self
+    }
+
     fn schedule_render<MsU>(&self) -> Option<MsU> {
         debug!("in orders::schedule_render");
         self.vdom
@@ -221,9 +285,9 @@ where
         &self,
         task_name: &'static str,
         // debuggable_callback: Debuggable<F>,
-        cb: F,
+        after_render_cb: F,
     ) -> Option<MsU> {
-        self.after_next_render(task_name, cb);
+        self.after_next_render(task_name, after_render_cb);
         self.schedule_render()
         // .vdom
         // .borrow()

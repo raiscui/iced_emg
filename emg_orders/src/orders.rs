@@ -22,7 +22,7 @@ pub trait Orders<Message>: Clone {
         &self,
         task_name: &'static str,
         // debuggable_callback: Debuggable<F>,
-        cb: F,
+        after_render_cb: F,
     ) -> Option<MsU>;
     fn publish(&self, msg: Message);
     fn reset_render(&self);
@@ -32,6 +32,7 @@ pub trait Orders<Message>: Clone {
 
     // fn process_effect_queue(&self);
     fn process_queue_message(&self, message: Option<Message>);
+    fn observe_root_size(&self, opt_callback: Box<dyn Fn(f64, f64)>) -> &Self;
     // ────────────────────────────────────────────────────────────────────────────────
 
     // /// Automatically map message type. It allows you to pass `Orders` into child module.

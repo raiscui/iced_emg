@@ -14,7 +14,7 @@ pub fn warn_for_double_listed_properties(props: &Vector<StateVarProperty>) {
             if is_transformation(&p) {
                 None
             } else {
-                Some(p.name().to_string())
+                Some(p.name())
             }
         })
         .collect::<Vec<_>>();
