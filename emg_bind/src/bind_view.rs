@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-06-27 22:18:13
+ * @LastEditTime: 2021-07-01 09:48:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,13 +12,11 @@ pub use emg::NodeIndex;
 use emg::{edge_index_no_source, im::vector, Outgoing};
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshUseFor;
-use std::ops::DerefMut;
 use std::{
     convert::{TryFrom, TryInto},
     hash::Hash,
 };
-use tracing::debug;
-use tracing::{error, instrument, trace, trace_span, warn};
+use tracing::{instrument, trace, trace_span};
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub type N<'a, Message> = GElement<'a, Message>;

@@ -1,14 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-06-24 12:08:28
+ * @LastEditTime: 2021-07-01 09:46:42
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg_refresh::{RefreshFor, RefreshUseFor, RefreshUseNoWarper, RefreshWhoNoWarper};
-use std::marker::PhantomData;
-use std::ops::Deref;
 use std::{any::Any, panic::Location};
 
 use emg_state::{CloneStateVar, StateAnchor, StateVar};
@@ -372,10 +370,9 @@ mod refresh_test {
     use emg::node_index;
     use emg_animation::to;
     use emg_core::into_vector;
-    use emg_refresh::RefreshFor;
     use emg_refresh::RefreshUseFor;
     use emg_state::CloneStateVar;
-    use emg_state::{use_state, Dict, StateAnchor, StateVar};
+    use emg_state::{use_state, Dict, StateVar};
     use im::vector;
     use seed_styles as styles;
     use seed_styles::CssWidth;

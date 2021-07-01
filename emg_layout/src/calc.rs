@@ -2,11 +2,11 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-06-21 17:13:41
+ * @LastEditTime: 2021-07-01 09:46:59
  * @LastEditors: Rais
 * @Description:
 */
-use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, PathVarMap};
+use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4};
 
 use emg::EdgeIndex;
 use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo, use_state};

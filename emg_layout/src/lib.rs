@@ -58,13 +58,13 @@ pub use animation::AnimationE;
 thread_local! {
     static G_WIDTH: StateVar<f64> = use_state(0.);
 }
-pub fn global_width() -> StateVar<f64> {
+#[must_use] pub fn global_width() -> StateVar<f64> {
     G_WIDTH.with(|sv| *sv)
 }
 thread_local! {
     static G_HEIGHT: StateVar<f64> = use_state(0.);
 }
-pub fn global_height() -> StateVar<f64> {
+#[must_use] pub fn global_height() -> StateVar<f64> {
     G_HEIGHT.with(|sv| *sv)
 }
 
@@ -1040,7 +1040,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_refresh::RefreshUseFor;
-    use emg_state::{StateVar, state_store};
+    use emg_state::{StateVar};
     use im::vector;
  
     use styles::{CssBackgroundColorTrait,CssWidth, CssHeight, h, hsl, pc, width};
@@ -1645,7 +1645,7 @@ mod tests {
             );
             info!("=========================================================");
             tempcss.set(h(px(1111)));
-            let ff =  e1.node
+            let _ff =  e1.node
             .get()
             .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
             .and_then(EdgeItemNode::as_edge_data)
