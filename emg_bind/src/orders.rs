@@ -12,7 +12,7 @@ use rustc_hash::FxHasher as CustomHasher;
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-06-28 15:14:46
+ * @LastEditTime: 2021-06-30 19:40:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -271,7 +271,7 @@ where
         self
     }
 
-    fn schedule_render<MsU>(&self) -> Option<MsU> {
+    fn schedule_render(&self) -> Option<Message> {
         debug!("in orders::schedule_render");
         self.vdom
             .borrow()
@@ -286,7 +286,7 @@ where
         task_name: &'static str,
         // debuggable_callback: Debuggable<F>,
         after_render_cb: F,
-    ) -> Option<MsU> {
+    ) -> Option<Message> {
         self.after_next_render(task_name, after_render_cb);
         self.schedule_render()
         // .vdom
