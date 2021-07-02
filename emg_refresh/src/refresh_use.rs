@@ -84,6 +84,7 @@ mod updater_test1 {
         b.refresh_for(&mut f);
         let rca = Rc::new(a.clone());
         let rc_b_string = Rc::new(b);
+
         f.refresh_use(&a);
         f.refresh_use(rca.as_ref());
         f.refresh_use(rca.as_ref());

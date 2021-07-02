@@ -37,7 +37,7 @@ emg_core = { path="../emg_core" }
 
 rustc-hash = "1.1.0"
 ahash = "0.7.4"
-indexmap = "1.6"
+indexmap = "1.7"
 
 illicit = "1.1.2"
 

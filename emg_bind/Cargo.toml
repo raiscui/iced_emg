@@ -49,7 +49,7 @@ delegate = "0.5.2"
 
 tracing = { version="^0.1" }
 
-indexmap = "1.6.2"
+indexmap = "1.7"
 rustc-hash = "1.1.0"
 
 emg_core = { path="../emg_core" }
