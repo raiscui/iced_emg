@@ -2,16 +2,12 @@
 //!
 //! A [`Button`] has some local [`State`].
 
-use emg_refresh::{RefreshFor, RefreshWhoNoWarper};
 pub use iced_style::button::{Style, StyleSheet};
 
-use crate::{
-    runtime::{
-        css,
-        dodrio::{self, bumpalo},
-        Background, Bus, Css, Element, Length, Widget,
-    },
-    Gid,
+use crate::runtime::{
+    css,
+    dodrio::{self, bumpalo},
+    Background, Bus, Css, Element, Length, Widget,
 };
 
 /// A generic widget that produces a message when pressed.

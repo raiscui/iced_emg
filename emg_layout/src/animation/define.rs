@@ -1,5 +1,4 @@
 use emg_animation::{models::Property, Debuggable};
-use emg_core::GenericSize;
 use emg_state::{topo, use_state, CloneStateVar, StateVar};
 use tracing::trace;
 

@@ -34,7 +34,7 @@ impl ::core::ops::Add for ExactLength {
 
 impl ExactLength {
     pub fn try_get_number(&self) -> Result<f64, &Self> {
-        if matches!(self.unit, Unit::Px | Unit::None) {
+        if matches!(self.unit, Unit::Px | Unit::Empty) {
             Ok(self.value.into_inner())
         } else {
             Err(self)
@@ -56,7 +56,7 @@ pub enum Unit {
     Vw,
     Vh,
     Pc,
-    None,
+    Empty,
 }
 
 pub fn px<T: Into<f64>>(val: T) -> ExactLength {
@@ -111,7 +111,7 @@ impl std::fmt::Display for ExactLength {
             Unit::Vw => write!(f, "{}vw", self.value),
             Unit::Vh => write!(f, "{}vh", self.value),
 
-            Unit::None => write!(f, "{}", self.value),
+            Unit::Empty => write!(f, "{}", self.value),
             Unit::Pc => unreachable!(),
         }
     }

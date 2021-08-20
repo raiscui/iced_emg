@@ -1,17 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-07-01 09:44:41
+ * @LastEditTime: 2021-08-20 13:14:19
  * @LastEditors: Rais
  * @Description:
  */
-/*
- * @Author: Rais
- * @Date: 2021-05-27 12:42:24
- * @LastEditTime: 2021-05-28 11:37:46
- * @LastEditors: Rais
- * @Description:
- */
+
 mod define;
 mod func;
 
@@ -686,7 +680,7 @@ mod tests {
             .try_init();
         _guard
     }
-
+    #[allow(dead_code)]
     #[derive(Debug, Clone, PartialEq)]
     enum Message {
         A,

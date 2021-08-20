@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-05-19 19:07:08
+ * @LastEditTime: 2021-08-18 19:15:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -26,7 +26,7 @@ where
             (_gel, _g_event_callback @ Event_(_)) => {
                 // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
                 // .refresh_use(g_event_callback)
-                panic!("should never directly use event_callback for GElement")
+                panic!("should never directly use event_callback for GElement");
             }
 
             //其他任何 el 刷新, 包括 el=refresher
@@ -47,7 +47,7 @@ where
                 panic!(
                     "refresh for ( Refresher_ ) use ( {} ) is not supported",
                     any_not_refresher
-                )
+                );
             }
 
             // @ any not match ─────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ where
                 panic!(
                     "refresh for ( {} ) use ( {} ) - that is not supported",
                     not_layer_or_refresher, b
-                )
+                );
             }
         }
     }
@@ -142,7 +142,7 @@ where
                 panic!(
                     "refresh for ( {} ) use ( {} ) - that is not supported",
                     "not_node_builder_widget", any
-                )
+                );
             }
         }
     }

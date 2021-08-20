@@ -12,5 +12,5 @@ use crate::custom;
 // opacity : Float -> Animation.Model.Property
 #[must_use]
 pub fn opacity(val: f64) -> super::Property {
-    custom("opacity".to_string(), val, Unit::None)
+    custom("opacity".to_string(), val, Unit::Empty)
 }

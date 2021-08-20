@@ -116,7 +116,7 @@ impl Recipe<Hasher, (crate::event::Event, event::Status)> for WindowEventRecipe 
         }) as Box<dyn FnMut()>));
         // ─────────────────────────────────────────────────────────────────
 
-        let mut idle_opt = IdleRequestOptions::new();
+        let idle_opt = IdleRequestOptions::new();
         // idle_opt.timeout(66);
 
         let on_resize = Box::new(move || {

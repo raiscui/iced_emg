@@ -53,7 +53,7 @@ pub enum GenericSize {
 impl From<f64> for GenericSize {
     fn from(v: f64) -> Self {
         Self::Length(ExactLength {
-            unit: Unit::None,
+            unit: Unit::Empty,
             value: NotNan::new(v).unwrap(),
         })
     }

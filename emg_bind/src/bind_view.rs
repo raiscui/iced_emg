@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-07-01 09:48:09
+ * @LastEditTime: 2021-08-18 19:15:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -88,7 +88,7 @@ where
         // TODO: cache.    use edge type?
         for child in children_s {
             //  TODO use COW
-            current_node_clone.refresh_use(&child)
+            current_node_clone.refresh_use(&child);
         }
 
         match NodeBuilderWidget::<Message>::try_from(current_node_clone) {
@@ -114,7 +114,7 @@ where
                     if !event_callbacks.is_empty() {
                         for event_callback in event_callbacks {
                             //TODO maybe just directly push event
-                            node_builder_widget.refresh_use(&event_callback)
+                            node_builder_widget.refresh_use(&event_callback);
                         }
                     }
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-06-28 08:53:13
+ * @LastEditTime: 2021-08-20 17:05:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,11 +15,8 @@ use anchors::{
 };
 use anymap::any::Any;
 use tracing::debug;
-use tracing::warn;
 
 use std::hash::BuildHasherDefault;
-use std::ops::DerefMut;
-use std::panic::Location;
 // use im::HashMap;
 use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
@@ -596,6 +593,7 @@ where
         // self.get_var_with(|v| StateAnchor(v.watch()))
         self.store_get_var_with(store, |v| StateAnchor(v.watch()))
     }
+    /// # set, but in the callback fn scope
     pub fn set_in_callback(&self, skip: &SkipKeyCollection, value: &T)
     where
         T: Clone + std::fmt::Debug,
@@ -656,6 +654,7 @@ where
         init: bool,
     ) -> Result<(), String>;
 
+    /// # 插入 修改后执行function
     /// # Errors
     ///
     /// ### skip(err) or insert(ok)
@@ -1624,6 +1623,7 @@ where
 // pub fn xx<T>(d: Var<T>) {}
 // #[overload]
 // pub fn xx<T>(dd: Anchor<T>) {}
+#[allow(unused)]
 #[cfg(test)]
 #[allow(unused_variables)]
 mod state_test {

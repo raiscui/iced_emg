@@ -2,7 +2,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-06-26 17:39:46
+ * @LastEditTime: 2021-08-20 15:57:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -88,6 +88,7 @@ pub trait Application {
         Subscription::none()
     }
 
+    /// Build dom GTreeBuilderElement, will callonce at `run`
     fn tree_build<'a>(
         this: Rc<RefCell<Self>>,
         orders: impl Orders<Self::Message> + 'static,

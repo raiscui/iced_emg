@@ -1,4 +1,4 @@
-use crate::{map_fn_callback_return_to_option_ms, window::observe_size, Orders};
+use crate::{window::observe_size, Orders};
 use emg_animation::Tick;
 // use fxhash::FxBuildHasher;
 
@@ -12,16 +12,14 @@ use rustc_hash::FxHasher as CustomHasher;
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-06-30 19:40:42
+ * @LastEditTime: 2021-08-18 19:22:48
  * @LastEditors: Rais
  * @Description:
  */
 use iced_web::{dodrio::VdomWeak, Bus};
 use indexmap::IndexMap;
-use tracing::{debug, warn};
+use tracing::debug;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use web_sys::IdleRequestOptions;
 
 use crate::map_callback_return_to_option_ms;
 
@@ -90,12 +88,14 @@ type FxIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<CustomHasher>>;
 //     }
 // }
 
+#[allow(dead_code)]
 pub enum ShouldRender {
     Render,
     ForceRenderNow,
     Skip,
 }
 
+#[allow(dead_code)]
 pub enum Effect<Message> {
     Msg(Option<Message>),
     // Notification(Notification),
@@ -263,9 +263,7 @@ where
         // *idle_cb.borrow_mut() = Some(closure);
         let closure_as_js_value = closure.as_ref().clone();
 
-        unsafe {
-            observe_size(&body, &closure_as_js_value);
-        }
+        observe_size(&body, &closure_as_js_value);
         closure.forget();
 
         self

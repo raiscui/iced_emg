@@ -1,19 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-10 18:06:08
- * @LastEditTime: 2021-05-12 13:00:40
+ * @LastEditTime: 2021-08-20 12:53:05
  * @LastEditors: Rais
  * @Description:
  */
 
 // use std::{path::PathBuf, rc::Rc};
 
-use std::{
-    cell::{Cell, RefCell},
-    convert::FloatToInt,
-    rc::Rc,
-    time::Duration,
-};
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use crate::{event, subscription::Recipe, Hasher};
 
@@ -23,7 +18,7 @@ use iced_futures::BoxStream;
 use tracing::{debug_span, error, trace, trace_span, warn};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::IdleRequestOptions;
+// use web_sys::IdleRequestOptions;
 
 pub struct RafEventRecipe {
     // sender: UnboundedSender<(Event, event::Status)>,

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-06-27 00:29:29
+ * @LastEditTime: 2021-08-18 19:15:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -252,7 +252,7 @@ where
                 });
             }
             _ => {
-                panic!("not allow this , first element must layer ")
+                panic!("not allow this , first element must layer ");
             }
         };
     }

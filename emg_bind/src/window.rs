@@ -1,3 +1,5 @@
+#![allow(clippy::module_name_repetitions)]
+
 //! dom window
 mod event;
 mod observe;

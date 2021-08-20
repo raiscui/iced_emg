@@ -29,7 +29,7 @@ mod g_tree_builder_element;
 // mod graph_store;
 mod animation;
 mod bind_view;
-mod gid;
+// mod gid;
 mod graph_layout;
 mod impl_refresh;
 mod layer;
@@ -39,7 +39,7 @@ mod sandbox;
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
-pub use gid::Gid;
+// pub use gid::Gid;
 pub use runtime::Hasher;
 pub mod event;
 pub mod subscription;

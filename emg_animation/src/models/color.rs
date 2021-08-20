@@ -43,10 +43,10 @@ fn custom_color(
     Property::Color(
         Rc::new(name),
         vector![
-            init_motion(f64::from(red), Unit::None),
-            init_motion(f64::from(green), Unit::None),
-            init_motion(f64::from(blue), Unit::None),
-            init_motion(alpha, Unit::None),
+            init_motion(f64::from(red), Unit::Empty),
+            init_motion(f64::from(green), Unit::Empty),
+            init_motion(f64::from(blue), Unit::Empty),
+            init_motion(alpha, Unit::Empty),
         ],
     )
 }

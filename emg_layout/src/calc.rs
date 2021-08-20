@@ -2,14 +2,14 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-07-01 09:46:59
+ * @LastEditTime: 2021-08-20 12:46:39
  * @LastEditors: Rais
 * @Description:
 */
 use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4};
 
 use emg::EdgeIndex;
-use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo, use_state};
+use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo};
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
 use styles::{px, s, CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, };
@@ -163,7 +163,7 @@ fn calculation_w(p_calc_size: &Vector2<f64>, w: &GenericSize) -> f64 {
         GenericSize::Length(ex_l) => {
             let v = ex_l.value();
             match ex_l.unit {
-                styles::Unit::Px |styles::Unit::None => v,
+                styles::Unit::Px |styles::Unit::Empty => v,
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -206,7 +206,7 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
 
         GenericSize::Length(ex_l) => {
             match ex_l.unit {
-                styles::Unit::Px |  styles::Unit::None => ex_l.value(),
+                styles::Unit::Px |  styles::Unit::Empty => ex_l.value(),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -252,7 +252,7 @@ fn calculation_align_x(p_calc_size: &Vector2<f64>, align_x: &GenericSize) -> Tra
      match align_x {
         GenericSize::Length(ex_l) => {
             match ex_l.unit {
-                styles::Unit::Px|  styles::Unit::None  => Translation3::<f64>::new(ex_l.value(), 0., 0.),
+                styles::Unit::Px|  styles::Unit::Empty  => Translation3::<f64>::new(ex_l.value(), 0., 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -296,7 +296,7 @@ fn calculation_align_y(p_calc_size: &Vector2<f64>, align_y: &GenericSize) -> Tra
         GenericSize::Length(ex_l) => {
             let v = ex_l.value.into_inner();
             match ex_l.unit {
-                styles::Unit::Px |styles::Unit::None => Translation3::<f64>::new(0., v, 0.),
+                styles::Unit::Px |styles::Unit::Empty => Translation3::<f64>::new(0., v, 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -341,7 +341,7 @@ pub fn calculation_origin_x(calc_size: &Vector2<f64>, origin_x: &GenericSize) ->
      match origin_x {
         GenericSize::Length(ex_l) => {
             match ex_l.unit {
-                styles::Unit::Px | styles::Unit::None  => Translation3::<f64>::new(-ex_l.value(), 0., 0.),
+                styles::Unit::Px | styles::Unit::Empty  => Translation3::<f64>::new(-ex_l.value(), 0., 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm
@@ -382,7 +382,7 @@ pub fn calculation_origin_y(calc_size: &Vector2<f64>, origin_y: &GenericSize) ->
         GenericSize::Length(ex_l) => {
             match ex_l.unit {
                 
-                styles::Unit::Px|styles::Unit::None => Translation3::<f64>::new(0., -ex_l.value(), 0.),
+                styles::Unit::Px|styles::Unit::Empty => Translation3::<f64>::new(0., -ex_l.value(), 0.),
                 styles::Unit::Rem
                 | styles::Unit::Em
                 | styles::Unit::Cm

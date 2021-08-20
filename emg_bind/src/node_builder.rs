@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-06-28 15:17:59
+ * @LastEditTime: 2021-08-18 19:19:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,7 +17,7 @@ use derive_more::From;
 use std::rc::Rc;
 
 use crate::{
-    map_callback_return_to_option_ms, map_fn_callback_return_to_option_ms,
+    map_fn_callback_return_to_option_ms,
     runtime::{
         dodrio::{
             self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
@@ -28,7 +28,6 @@ use crate::{
 use emg::im::Vector;
 use iced::Element;
 // ────────────────────────────────────────────────────────────────────────────────
-use bumpalo::boxed::Box;
 
 pub trait NodeBuilder<Message> // where
 // Message: 'static,
@@ -129,6 +128,9 @@ impl<Message> EventMessage<Message>
 where
     Message: 'static,
 {
+    /// # Panics
+    ///
+    /// Will panic if Callback not return  Msg / Option<Msg> or ()
     #[must_use]
     pub fn new<MsU: 'static, F: Fn() -> MsU + 'static>(name: EventNameString, cb: F) -> Self {
         let rc_callback = map_fn_callback_return_to_option_ms!(
@@ -336,11 +338,13 @@ mod node_builder_test {
     fn test_node_builder() {
         let bump = bumpalo::Bump::new();
         let x = bump.alloc("hello");
-        let a = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| None;
+        let a =
+            |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| Option::<i32>::None;
 
         // let cc = EventCallbackCloneStatic::new(a);
 
-        let a2 = |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| None;
+        let a2 =
+            |root: &mut dyn RootRender, vdom: VdomWeak, event: web_sys::Event| Option::<i32>::None;
         // let aa2 = fff(a2);
 
         // let cc2 = EventCallbackCloneStatic::new(a2);
@@ -352,15 +356,15 @@ mod node_builder_test {
             },
         );
 
-        let b = NodeBuilderWidget::<'_, Message> {
-            id: "".to_string(),
-            widget: Rc::new(Button::new(Text::new("a"))),
-            event_callbacks: vector![
-                EventCallback(String::from("xxx"), Box::new((a))).into(),
-                EventNode::Cb(EventCallback(String::from("ff"), Box::new((a2)))),
-                EventMessage(String::from("x"), Box::new(|| Message::A)).into(),
-            ],
-            layout_str: String::default(),
-        };
+        // let b = NodeBuilderWidget::<'_, Message> {
+        //     id: "".to_string(),
+        //     widget: Rc::new(Button::new(Text::new("a"))),
+        //     event_callbacks: vector![
+        //         EventCallback(String::from("xxx"), Box::new((a))).into(),
+        //         EventNode::Cb(EventCallback(String::from("ff"), Box::new((a2)))),
+        //         EventMessage(String::from("x"), Box::new(|| Message::A)).into(),
+        //     ],
+        //     layout_str: String::default(),
+        // };
     }
 }

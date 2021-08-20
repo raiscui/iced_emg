@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-07-01 09:46:42
+ * @LastEditTime: 2021-08-20 13:04:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -378,6 +378,8 @@ mod refresh_test {
     use seed_styles::CssWidth;
 
     use styles::px;
+
+    #[allow(unused)]
     use styles::{pc, width};
 
     use crate::animation::global_clock;

@@ -12,27 +12,27 @@ split-debuginfo = "unpacked"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# nalgebra = "0.25.4"
-nalgebra = "0.27.1"
+nalgebra = "0.25.4"
+# nalgebra = "0.29.0"
 derive_more = "0.99"
-seed_styles = { path="../../styles_hooks/seed_styles" }
-seed_style_macros = { path="../../styles_hooks/seed_styles/seed_style_macros" }
+seed_styles = { path = "../../styles_hooks/seed_styles" }
+seed_style_macros = { path = "../../styles_hooks/seed_styles/seed_style_macros" }
 
-emg_refresh = { path="../emg_refresh" }
-emg_state = { path="../emg_state" }
-emg = { path="../../emg" }
+emg_refresh = { path = "../emg_refresh" }
+emg_state = { path = "../emg_state" }
+emg = { path = "../../emg" }
 # topo = { version = "0.13.2", features = ["wasm-bindgen"] }
 log = "0.4"
-env_logger = "0.8"
+env_logger = "0.9.0"
 # tracing = { version = "^0.1" }
-tracing = { version="^0.1" }
+tracing = { version = "^0.1" }
 
 # tracing-wasm = "0.2.0"
 indented = "0.1.0"
 # tracing-log = { version = "", features = ["env_logger"] }
 im = "15.0.0"
-emg_animation = { path="../emg_animation" }
-emg_core = { path="../emg_core" }
+emg_animation = { path = "../emg_animation" }
+emg_core = { path = "../emg_core" }
 
 
 rustc-hash = "1.1.0"
@@ -42,6 +42,6 @@ indexmap = "1.7"
 illicit = "1.1.2"
 
 [dev-dependencies]
-tracing-subscriber = { version="^0.2" }
+tracing-subscriber = { version = "^0.2" }
 tracing-flame = "0.1.0"
-insta = { version="1.7.1" }
+insta = { version = "1.7.2" }

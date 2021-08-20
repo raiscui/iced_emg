@@ -1,6 +1,6 @@
 use emg_animation::func::list_find_dup;
 use emg_animation::props::is_transformation;
-use emg_state::{CloneStateVar, GStateStore};
+use emg_state::CloneStateVar;
 use im::Vector;
 use tracing::error;
 

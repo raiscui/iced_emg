@@ -1,14 +1,14 @@
 pub mod color;
+pub mod convert;
 pub mod opacity;
-use emg_core::{measures::Unit, GenericSize};
+use emg_core::measures::Unit;
 use im::{vector, Vector};
 use iter_fixed::IntoIteratorFixed;
 use ordered_float::NotNan;
-use seed_styles::{CssWidth, ExactLength, Percent};
 use std::{rc::Rc, time::Duration};
 use tracing::{trace, warn};
 
-use crate::{init_motion, Debuggable};
+use crate::Debuggable;
 
 // use emg_debuggable::{dbg4, Debuggable};
 
@@ -72,28 +72,6 @@ pub struct Motion {
     pub(crate) interpolation: Interpolation,
     pub(crate) unit: Unit,
     pub(crate) interpolation_override: Option<Interpolation>,
-}
-impl From<ExactLength> for Motion {
-    fn from(v: ExactLength) -> Self {
-        init_motion(v.value, v.unit)
-    }
-}
-#[allow(clippy::fallible_impl_from)]
-impl From<Motion> for ExactLength {
-    fn from(v: Motion) -> Self {
-        match v.unit {
-            Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::None => Self {
-                unit: v.unit,
-                value: v.position,
-            },
-            Unit::Vw | Unit::Vh | Unit::Pc => todo!(),
-        }
-    }
-}
-impl From<Percent> for Motion {
-    fn from(v: Percent) -> Self {
-        init_motion(v.0, Unit::Pc)
-    }
 }
 
 impl Motion {
@@ -165,77 +143,21 @@ pub struct ShadowMotion {
     blue: Motion,
     alpha: Motion,
 }
+type PropName = String;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Property {
-    Exact(Rc<String>, String),
-    Color(Rc<String>, Vector<Motion>),
-    Shadow(Rc<String>, bool, Box<ShadowMotion>),
-    Prop(Rc<String>, Motion),
-    Prop2(Rc<String>, Vector<Motion>),
-    Prop3(Rc<String>, Vector<Motion>),
-    Prop4(Rc<String>, Vector<Motion>),
-    Angle(Rc<String>, Motion),
+    Exact(Rc<PropName>, String),
+    Color(Rc<PropName>, Vector<Motion>),
+    Shadow(Rc<PropName>, bool, Box<ShadowMotion>),
+    Prop(Rc<PropName>, Motion),
+    Prop2(Rc<PropName>, Vector<Motion>),
+    Prop3(Rc<PropName>, Vector<Motion>),
+    Prop4(Rc<PropName>, Vector<Motion>),
+    Angle(Rc<PropName>, Motion),
     Points(Vector<[Motion; 2]>),
     Path(Vector<PathCommand>),
     // Anchor(Rc<String>, StateAnchor<GenericSize>),
-}
-
-//TODO need implement
-#[allow(clippy::fallible_impl_from)]
-impl From<CssWidth> for Property {
-    fn from(v: CssWidth) -> Self {
-        match v {
-            CssWidth::Length(l) => Self::Prop(Rc::new("width".to_string()), l.into()),
-            CssWidth::Percentage(p) => Self::Prop(Rc::new("width".to_string()), p.into()),
-            CssWidth::Auto | CssWidth::Initial | CssWidth::Inherit | CssWidth::StringValue(_) => {
-                todo!()
-            }
-        }
-    }
-}
-
-#[allow(clippy::fallible_impl_from)]
-impl From<Property> for CssWidth {
-    fn from(v: Property) -> Self {
-        match v {
-            //TODO need implement
-            Property::Prop(name, m) => {
-                if name.as_str() == "width"
-                    && matches!(
-                        m.unit,
-                        Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::None
-                    )
-                {
-                    ExactLength::from(m).into()
-                } else {
-                    panic!("propertyName is not width");
-                }
-            }
-            _ => panic!("Property can't convert to CssWidth "),
-        }
-    }
-}
-#[allow(clippy::fallible_impl_from)]
-impl From<Property> for GenericSize {
-    fn from(v: Property) -> Self {
-        match v {
-            //TODO need implement
-            Property::Prop(name, m) => {
-                if name.as_str() == "width"
-                    && matches!(
-                        m.unit,
-                        Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::None
-                    )
-                {
-                    ExactLength::from(m).into()
-                } else {
-                    panic!("propertyName is not width");
-                }
-            }
-            _ => panic!("Property can't convert to CssWidth "),
-        }
-    }
 }
 
 impl Property {
@@ -713,7 +635,7 @@ const fn position_error_margin(motion: &Motion) -> Precision {
     (match motion.unit {
         Unit::Px => 0.05,
         Unit::Pc => 0.005,
-        Unit::Rem | Unit::Em | Unit::Cm | Unit::Vw | Unit::Vh | Unit::None => 0.001,
+        Unit::Rem | Unit::Em | Unit::Cm | Unit::Vw | Unit::Vh | Unit::Empty => 0.001,
     }) as Precision
 }
 fn motion_is_done(motion: &Motion) -> bool {
@@ -1187,32 +1109,25 @@ fn set_target(override_interpolation: bool, current: Property, new_target: Prope
             }
             motion
         };
+        new_motion.target = target_motion.position;
+
         match new_motion.interpolation_override {
             None => {
                 if let Interpolation::Easing(mut ease) = new_motion.interpolation {
-                    new_motion.target = target_motion.position;
                     ease.start = new_motion.position;
                     ease.progress = NotNan::default();
                     new_motion.interpolation = Interpolation::Easing(ease);
-                    new_motion
-                } else {
-                    new_motion.target = target_motion.position;
-                    new_motion
                 }
             }
             Some(ref mut override_interpolation) => {
                 if let Interpolation::Easing(ease) = override_interpolation {
-                    new_motion.target = target_motion.position;
                     ease.start = new_motion.position;
                     ease.progress = NotNan::default();
                     new_motion.interpolation_override = Some(Interpolation::Easing(ease.clone()));
-                    new_motion
-                } else {
-                    new_motion.target = target_motion.position;
-                    new_motion
                 }
             }
         }
+        new_motion
     };
     match current {
         Exact(..) => current,
@@ -1320,15 +1235,13 @@ fn set_path_target((cmd, target_cmd): (PathCommand, PathCommand)) -> PathCommand
     };
 
     let set_motion_target_in_path = |(mut motion, target_motion): (Motion, Motion)| {
+        motion.target = target_motion.position;
         if let Interpolation::Easing(ease) = &mut motion.interpolation {
-            motion.target = target_motion.position;
             ease.start = motion.position;
             motion.interpolation = Interpolation::Easing(ease.clone());
-            motion
-        } else {
-            motion.target = target_motion.position;
-            motion
         }
+
+        motion
     };
     match cmd {
         Move(ref m) => match target_cmd {

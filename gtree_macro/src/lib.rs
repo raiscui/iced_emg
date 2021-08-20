@@ -355,6 +355,7 @@ pub struct GTreeSurface {
 }
 
 impl AtSetup for GTreeSurface {
+    /// setup the @ mark
     fn at_setup(&mut self, at_list: AtList) {
         for at in at_list.0 {
             match at {

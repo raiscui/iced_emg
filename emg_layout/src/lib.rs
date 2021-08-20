@@ -445,7 +445,7 @@ impl From<Mat4> for CssTransform {
 }
 impl<T> UpdateStyle<T> for Mat4
 where
-    Mat4: Into<T>,
+    Self: Into<T>,
     T: UpdateStyle<T>,
 {
     fn update_style(self, style: &mut Style) {
