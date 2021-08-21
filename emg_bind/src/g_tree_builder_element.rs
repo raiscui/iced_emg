@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-08-18 19:15:47
+ * @LastEditTime: 2021-08-21 15:54:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,21 +20,46 @@ where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
 {
     Layer(
-        String,
+        Ix,
         Vec<Box<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
-        Vec<GTreeBuilderElement<'a, Message>>,
+        Vec<GTreeBuilderElement<'a, Message, Ix>>,
     ),
-    El(String, Element<'a, Message>),
+    El(Ix, Element<'a, Message>),
     GElementTree(
-        String,
+        Ix,
         Vec<Box<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
         GElement<'a, Message>,
-        Vec<GTreeBuilderElement<'a, Message>>,
+        Vec<GTreeBuilderElement<'a, Message, Ix>>,
     ),
-    RefreshUse(String, Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
-    Cl(String, Box<dyn Fn() + 'a>),
-    Event(String, EventNode<Message>),
+    RefreshUse(Ix, Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
+    Cl(Ix, Box<dyn Fn() + 'a>),
+    Event(Ix, EventNode<Message>),
 }
+
+// impl<'a, Message>
+//     From<(
+//         String,
+//         Vec<Box<dyn RefreshFor<EmgEdgeItem<String>>>>,
+//         Result<GElement<'a, Message>, GTreeBuilderElement<'a, Message>>,
+//         Vec<GTreeBuilderElement<'a, Message>>,
+//     )> for GTreeBuilderElement<'a, Message>
+// // where
+// // Ix: Clone + std::hash::Hash + Ord + Default + 'static,
+// {
+//     fn from(
+//         f: (
+//             String,
+//             Vec<Box<dyn RefreshFor<EmgEdgeItem<String>>>>,
+//             Result<GElement<'a, Message>, GTreeBuilderElement<'a, Message>>,
+//             Vec<GTreeBuilderElement<'a, Message>>,
+//         ),
+//     ) -> Self {
+//         match f.2 {
+//             Ok(ge) => Self::GElementTree(f.0, f.1, ge, f.3),
+//             Err(gtbe) => Self::Layer(f.0, f.1, vec![gtbe]),
+//         }
+//     }
+// }
 
 impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
     for GTreeBuilderElement<'a, Message>

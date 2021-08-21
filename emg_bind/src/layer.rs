@@ -1,7 +1,6 @@
 use std::convert::TryInto;
 
 use crate::runtime::{
-    css,
     dodrio::{
         self,
         builder::ElementBuilder,
@@ -24,8 +23,6 @@ use crate::runtime::dodrio::builder::div;
 #[derive(Clone, Debug)]
 pub struct Layer<'a, Message> {
     id: String,
-    width: Length,
-    height: Length,
     children: Vec<Element<'a, Message>>,
 }
 
@@ -45,8 +42,6 @@ impl<'a, Message> Layer<'a, Message> {
     pub fn with_children<T: Into<String>>(id: T, children: Vec<Element<'a, Message>>) -> Self {
         Layer {
             id: id.into(),
-            width: Length::Fill,
-            height: Length::Shrink,
             children,
         }
     }
@@ -57,25 +52,19 @@ impl<'a, Message> Layer<'a, Message> {
         self
     }
 
-    /// Sets the vertical spacing _between_ elements.
-    ///
-    /// Custom margins per element do not exist in Iced. You should use this
-    /// method instead! While less flexible, it helps you keep spacing between
-    /// elements consistent.
+    // /// Sets the width of the [`Layer`].
+    // #[must_use]
+    // pub const fn width(mut self, width: Length) -> Self {
+    //     self.width = width;
+    //     self
+    // }
 
-    /// Sets the width of the [`Layer`].
-    #[must_use]
-    pub const fn width(mut self, width: Length) -> Self {
-        self.width = width;
-        self
-    }
-
-    /// Sets the height of the [`Layer`].
-    #[must_use]
-    pub const fn height(mut self, height: Length) -> Self {
-        self.height = height;
-        self
-    }
+    // /// Sets the height of the [`Layer`].
+    // #[must_use]
+    // pub const fn height(mut self, height: Length) -> Self {
+    //     self.height = height;
+    //     self
+    // }
 
     pub fn push<E>(mut self, child: E) -> Self
     where
@@ -91,6 +80,8 @@ impl<'a, Message> Layer<'a, Message> {
         self.children.push(child.into());
         self
     }
+
+    /// `GElement::Refresher_(_)` `GElement::Event_(_)` can't convert to Element
     pub fn try_ref_push<E>(&mut self, child: E) -> &mut Self
     where
         E: TryInto<Element<'a, Message>, Error = ()>,
@@ -175,13 +166,8 @@ impl<'a, Message> NodeBuilder<Message> for Layer<'a, Message>
         )
         .attr(
             "style",
-            bumpalo::format!(
-                in bump,
-                "width: {}; height: {}; display: block; position: absolute;",
-                css::length(self.width),
-                css::length(self.height)
-            )
-            .into_bump_str(),
+            bumpalo::collections::String::from_str_in("display: block; position: absolute;", bump)
+                .into_bump_str(),
         )
         .children(bumpalo::collections::Vec::from_iter_in(children, bump))
     }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-05-07 15:31:44
+ * @LastEditTime: 2021-08-21 15:36:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -74,7 +74,7 @@ where
 {
     type Error = ();
 
-    // #[allow(clippy::useless_conversion)]
+    ///  Refresher_(_)|Event_(_) can't to Element
     fn try_from(ge: GElement<'a, Message>) -> Result<Self, Self::Error> {
         use match_any::match_any;
 

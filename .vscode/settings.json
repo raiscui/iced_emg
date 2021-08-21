@@ -17,6 +17,7 @@
         "elems",
         "expl",
         "glayer",
+        "gtbe",
         "interp",
         "rerender"
     ],
