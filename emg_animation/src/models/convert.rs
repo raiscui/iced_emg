@@ -10,7 +10,7 @@ use super::{Motion, Property};
 /*
  * @Author: Rais
  * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2021-08-20 12:43:10
+ * @LastEditTime: 2021-08-21 18:05:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,10 @@ impl From<ExactLength> for Motion {
         init_motion(v.value, v.unit)
     }
 }
+
+//TODO 确定 定长 不定长 在一起?
 #[allow(clippy::fallible_impl_from)]
+#[allow(clippy::match_same_arms)]
 impl From<Motion> for ExactLength {
     fn from(v: Motion) -> Self {
         match v.unit {
@@ -27,7 +30,10 @@ impl From<Motion> for ExactLength {
                 unit: v.unit,
                 value: v.position,
             },
-            Unit::Vw | Unit::Vh | Unit::Pc => todo!(),
+            Unit::Vw | Unit::Vh | Unit::Pc => Self {
+                unit: v.unit,
+                value: v.position,
+            },
         }
     }
 }
@@ -52,31 +58,32 @@ impl From<CssWidth> for Property {
     }
 }
 
-#[allow(clippy::fallible_impl_from)]
-impl From<Property> for CssWidth {
-    fn from(v: Property) -> Self {
-        match v {
-            //TODO need implement
-            Property::Prop(name, m) => {
-                if name.as_str() == "width"
-                    && matches!(
-                        m.unit,
-                        Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::Empty
-                    )
-                {
-                    ExactLength::from(m).into()
-                } else {
-                    panic!(
-                        "propertyName is not width:{}, or unit not match:{:?}",
-                        name.as_str(),
-                        m.unit
-                    );
-                }
-            }
-            _ => panic!("Property can't convert to CssWidth "),
-        }
-    }
-}
+// //TODO full this
+// #[allow(clippy::fallible_impl_from)]
+// impl From<Property> for CssWidth {
+//     fn from(v: Property) -> Self {
+//         match v {
+//             //TODO need implement
+//             Property::Prop(name, m) => {
+//                 if name.as_str() == "width"
+//                     && matches!(
+//                         m.unit,
+//                         Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::Empty
+//                     )
+//                 {
+//                     ExactLength::from(m).into()
+//                 } else {
+//                     panic!(
+//                         "propertyName is not width:{}, or unit not match:{:?}",
+//                         name.as_str(),
+//                         m.unit
+//                     );
+//                 }
+//             }
+//             _ => panic!("Property can't convert to CssWidth "),
+//         }
+//     }
+// }
 #[allow(clippy::fallible_impl_from)]
 impl From<Property> for GenericSize {
     fn from(v: Property) -> Self {
@@ -87,7 +94,15 @@ impl From<Property> for GenericSize {
                 if (p_name == "width" || p_name == "height")
                     && matches!(
                         m.unit,
-                        Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::Empty
+                        Unit::Px
+                            | Unit::Rem
+                            | Unit::Em
+                            | Unit::Cm
+                            | Unit::Empty
+                            //TODO 确定不定长 要不要单独处理
+                            | Unit::Vw
+                            | Unit::Vh
+                            | Unit::Pc
                     )
                 {
                     ExactLength::from(m).into()

@@ -35,6 +35,7 @@ where
     }
 }
 
+//TODO 创建 (css name, GenericSize) 类型
 #[derive(Display, Clone, Debug, From, PartialEq, PartialOrd, Eq)]
 #[display(fmt = "{}")]
 pub enum GenericSize {

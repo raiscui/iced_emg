@@ -112,7 +112,7 @@ impl std::fmt::Display for ExactLength {
             Unit::Vh => write!(f, "{}vh", self.value),
 
             Unit::Empty => write!(f, "{}", self.value),
-            Unit::Pc => unreachable!(),
+            Unit::Pc => write!(f, "{}%", self.value),
         }
     }
 }

@@ -2,7 +2,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-08-20 12:46:39
+ * @LastEditTime: 2021-08-21 17:01:13
  * @LastEditors: Rais
 * @Description:
 */
@@ -171,10 +171,12 @@ fn calculation_w(p_calc_size: &Vector2<f64>, w: &GenericSize) -> f64 {
                 | styles::Unit::Vh => {
                     todo!()
                 }
-                styles::Unit::Pc => unreachable!(),
+                //TODO if use this , then remove GenericSize::Percentage(pc)
+                styles::Unit::Pc => p_calc_size.x * v*0.01,
                 
             }
         }
+        // TODO remove
         GenericSize::Percentage(pc) => p_calc_size.x * pc.value()*0.01,
         
         GenericSize::Auto
