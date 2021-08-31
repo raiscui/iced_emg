@@ -17,7 +17,7 @@ AnimationEdge {
             StateVarProperty(
                 StateVar(
                     Prop(
-                        "width",
+                        "CssWidth",
                         Motion {
                             position: NotNan(
                                 1.7581909454785352,

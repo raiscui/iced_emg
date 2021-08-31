@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-08-18 19:15:47
+ * @LastEditTime: 2021-08-30 09:43:39
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
-use emg::{edge_index_no_source, im::vector, Edge, EdgeIndex};
+use emg::{edge_index_no_source, im_rc::vector, Edge, EdgeIndex};
 use emg_core::GenericSize;
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
 use emg_refresh::{RefreshFor, RefreshUseFor};
@@ -20,21 +20,46 @@ where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
 {
     Layer(
-        String,
+        Ix,
         Vec<Box<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
-        Vec<GTreeBuilderElement<'a, Message>>,
+        Vec<GTreeBuilderElement<'a, Message, Ix>>,
     ),
-    El(String, Element<'a, Message>),
+    El(Ix, Element<'a, Message>),
     GElementTree(
-        String,
+        Ix,
         Vec<Box<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
         GElement<'a, Message>,
-        Vec<GTreeBuilderElement<'a, Message>>,
+        Vec<GTreeBuilderElement<'a, Message, Ix>>,
     ),
-    RefreshUse(String, Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
-    Cl(String, Box<dyn Fn() + 'a>),
-    Event(String, EventNode<Message>),
+    RefreshUse(Ix, Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
+    Cl(Ix, Box<dyn Fn() + 'a>),
+    Event(Ix, EventNode<Message>),
 }
+
+// impl<'a, Message>
+//     From<(
+//         String,
+//         Vec<Box<dyn RefreshFor<EmgEdgeItem<String>>>>,
+//         Result<GElement<'a, Message>, GTreeBuilderElement<'a, Message>>,
+//         Vec<GTreeBuilderElement<'a, Message>>,
+//     )> for GTreeBuilderElement<'a, Message>
+// // where
+// // Ix: Clone + std::hash::Hash + Ord + Default + 'static,
+// {
+//     fn from(
+//         f: (
+//             String,
+//             Vec<Box<dyn RefreshFor<EmgEdgeItem<String>>>>,
+//             Result<GElement<'a, Message>, GTreeBuilderElement<'a, Message>>,
+//             Vec<GTreeBuilderElement<'a, Message>>,
+//         ),
+//     ) -> Self {
+//         match f.2 {
+//             Ok(ge) => Self::GElementTree(f.0, f.1, ge, f.3),
+//             Err(gtbe) => Self::Layer(f.0, f.1, vec![gtbe]),
+//         }
+//     }
+// }
 
 impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
     for GTreeBuilderElement<'a, Message>

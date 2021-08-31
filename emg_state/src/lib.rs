@@ -12,6 +12,7 @@
 pub mod use_state_impl;
 pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::MultiAnchor as AnchorMultiAnchor;
+pub use anchors::singlethread::Var;
 use emg_core::GenericSize;
 pub use topo;
 pub use use_state_impl::state_store;

@@ -16,7 +16,7 @@ AnimationEdge {
                         To(
                             [
                                 Prop(
-                                    "width",
+                                    "CssWidth",
                                     Motion {
                                         position: NotNan(
                                             0.0,
@@ -44,7 +44,7 @@ AnimationEdge {
                         To(
                             [
                                 Prop(
-                                    "width",
+                                    "CssWidth",
                                     Motion {
                                         position: NotNan(
                                             1.0,
@@ -77,7 +77,7 @@ AnimationEdge {
             StateVarProperty(
                 StateVar(
                     Prop(
-                        "width",
+                        "CssWidth",
                         Motion {
                             position: NotNan(
                                 1.0,

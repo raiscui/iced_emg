@@ -106,22 +106,26 @@ EmgEdgeItem {
                                 rules: [
                                     Rule {
                                         value: Length(
-                                            ExactLength {
-                                                unit: Px,
-                                                value: NotNan(
-                                                    50.0,
-                                                ),
-                                            },
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        50.0,
+                                                    ),
+                                                },
+                                            ),
                                         ),
                                     },
                                     Rule {
                                         value: Length(
-                                            ExactLength {
-                                                unit: Px,
-                                                value: NotNan(
-                                                    50.0,
-                                                ),
-                                            },
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        50.0,
+                                                    ),
+                                                },
+                                            ),
                                         ),
                                     },
                                     Rule {
@@ -131,10 +135,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/calc.rs:141:29",
-                                    "emg_layout/src/calc.rs:141:33",
-                                    "emg_layout/src/calc.rs:141:52",
-                                    "emg_layout/src/calc.rs:141:71",
+                                    "emg_layout/src/calc.rs:153:29",
+                                    "emg_layout/src/calc.rs:153:33",
+                                    "emg_layout/src/calc.rs:153:52",
+                                    "emg_layout/src/calc.rs:153:71",
                                 ],
                                 pseudo: None,
                                 media: None,
@@ -239,22 +243,26 @@ EmgEdgeItem {
                                     rules: [
                                         Rule {
                                             value: Length(
-                                                ExactLength {
-                                                    unit: Px,
-                                                    value: NotNan(
-                                                        100.0,
-                                                    ),
-                                                },
+                                                Simplex(
+                                                    ExactLengthSimplex {
+                                                        unit: Px,
+                                                        value: NotNan(
+                                                            100.0,
+                                                        ),
+                                                    },
+                                                ),
                                             ),
                                         },
                                         Rule {
                                             value: Length(
-                                                ExactLength {
-                                                    unit: Px,
-                                                    value: NotNan(
-                                                        100.0,
-                                                    ),
-                                                },
+                                                Simplex(
+                                                    ExactLengthSimplex {
+                                                        unit: Px,
+                                                        value: NotNan(
+                                                            100.0,
+                                                        ),
+                                                    },
+                                                ),
                                             ),
                                         },
                                         Rule {
@@ -264,10 +272,10 @@ EmgEdgeItem {
                                         },
                                     ],
                                     updated_at: [
-                                        "emg_layout/src/lib.rs:936:13",
-                                        "emg_layout/src/lib.rs:936:17",
-                                        "emg_layout/src/lib.rs:936:31",
-                                        "emg_layout/src/lib.rs:936:45",
+                                        "emg_layout/src/lib.rs:945:13",
+                                        "emg_layout/src/lib.rs:945:17",
+                                        "emg_layout/src/lib.rs:945:31",
+                                        "emg_layout/src/lib.rs:945:45",
                                     ],
                                     pseudo: None,
                                     media: None,
@@ -290,12 +298,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                20.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    20.0,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -304,12 +314,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                20.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    20.0,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -322,11 +334,14 @@ EmgEdgeItem {
         origin_x: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Percentage(
-                        Percent(
-                            NotNan(
-                                100.0,
-                            ),
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Pc,
+                                value: NotNan(
+                                    100.0,
+                                ),
+                            },
                         ),
                     ),
                 ),
@@ -335,11 +350,14 @@ EmgEdgeItem {
         origin_y: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Percentage(
-                        Percent(
-                            NotNan(
-                                100.0,
-                            ),
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Pc,
+                                value: NotNan(
+                                    100.0,
+                                ),
+                            },
                         ),
                     ),
                 ),
@@ -348,11 +366,14 @@ EmgEdgeItem {
         origin_z: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Percentage(
-                        Percent(
-                            NotNan(
-                                100.0,
-                            ),
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Pc,
+                                value: NotNan(
+                                    100.0,
+                                ),
+                            },
                         ),
                     ),
                 ),
@@ -361,11 +382,14 @@ EmgEdgeItem {
         align_x: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Percentage(
-                        Percent(
-                            NotNan(
-                                100.0,
-                            ),
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Pc,
+                                value: NotNan(
+                                    100.0,
+                                ),
+                            },
                         ),
                     ),
                 ),
@@ -374,11 +398,14 @@ EmgEdgeItem {
         align_y: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Percentage(
-                        Percent(
-                            NotNan(
-                                100.0,
-                            ),
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Pc,
+                                value: NotNan(
+                                    100.0,
+                                ),
+                            },
                         ),
                     ),
                 ),
@@ -387,11 +414,14 @@ EmgEdgeItem {
         align_z: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Percentage(
-                        Percent(
-                            NotNan(
-                                100.0,
-                            ),
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Pc,
+                                value: NotNan(
+                                    100.0,
+                                ),
+                            },
                         ),
                     ),
                 ),
@@ -409,7 +439,7 @@ EmgEdgeItem {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:710:41",
+                "emg_layout/src/lib.rs:719:41",
             ],
             pseudo: None,
             media: None,
@@ -519,22 +549,26 @@ EmgEdgeItem {
                                 rules: [
                                     Rule {
                                         value: Length(
-                                            ExactLength {
-                                                unit: Px,
-                                                value: NotNan(
-                                                    20.0,
-                                                ),
-                                            },
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        20.0,
+                                                    ),
+                                                },
+                                            ),
                                         ),
                                     },
                                     Rule {
                                         value: Length(
-                                            ExactLength {
-                                                unit: Px,
-                                                value: NotNan(
-                                                    20.0,
-                                                ),
-                                            },
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        20.0,
+                                                    ),
+                                                },
+                                            ),
                                         ),
                                     },
                                     Rule {
@@ -544,10 +578,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/calc.rs:141:29",
-                                    "emg_layout/src/calc.rs:141:33",
-                                    "emg_layout/src/calc.rs:141:52",
-                                    "emg_layout/src/calc.rs:141:71",
+                                    "emg_layout/src/calc.rs:153:29",
+                                    "emg_layout/src/calc.rs:153:33",
+                                    "emg_layout/src/calc.rs:153:52",
+                                    "emg_layout/src/calc.rs:153:71",
                                 ],
                                 pseudo: None,
                                 media: None,
@@ -652,22 +686,26 @@ EmgEdgeItem {
                                     rules: [
                                         Rule {
                                             value: Length(
-                                                ExactLength {
-                                                    unit: Px,
-                                                    value: NotNan(
-                                                        50.0,
-                                                    ),
-                                                },
+                                                Simplex(
+                                                    ExactLengthSimplex {
+                                                        unit: Px,
+                                                        value: NotNan(
+                                                            50.0,
+                                                        ),
+                                                    },
+                                                ),
                                             ),
                                         },
                                         Rule {
                                             value: Length(
-                                                ExactLength {
-                                                    unit: Px,
-                                                    value: NotNan(
-                                                        50.0,
-                                                    ),
-                                                },
+                                                Simplex(
+                                                    ExactLengthSimplex {
+                                                        unit: Px,
+                                                        value: NotNan(
+                                                            50.0,
+                                                        ),
+                                                    },
+                                                ),
                                             ),
                                         },
                                         Rule {
@@ -677,10 +715,10 @@ EmgEdgeItem {
                                         },
                                     ],
                                     updated_at: [
-                                        "emg_layout/src/calc.rs:141:29",
-                                        "emg_layout/src/calc.rs:141:33",
-                                        "emg_layout/src/calc.rs:141:52",
-                                        "emg_layout/src/calc.rs:141:71",
+                                        "emg_layout/src/calc.rs:153:29",
+                                        "emg_layout/src/calc.rs:153:33",
+                                        "emg_layout/src/calc.rs:153:52",
+                                        "emg_layout/src/calc.rs:153:71",
                                     ],
                                     pseudo: None,
                                     media: None,

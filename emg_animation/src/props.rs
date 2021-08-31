@@ -1,4 +1,4 @@
-use im::Vector;
+use im_rc::Vector;
 use tracing::error;
 
 use crate::{func::list_find_dup, models::Property};
@@ -6,7 +6,7 @@ use crate::{func::list_find_dup, models::Property};
 /*
  * @Author: Rais
  * @Date: 2021-06-02 12:40:24
- * @LastEditTime: 2021-06-26 16:12:41
+ * @LastEditTime: 2021-08-29 22:48:19
  * @LastEditors: Rais
  * @Description:
  */

@@ -25,6 +25,7 @@ pub mod kw {
     syn::custom_keyword!(On);
     syn::custom_keyword!(Event);
     syn::custom_keyword!(E);
+    syn::custom_keyword!(Mod);
 
     // impl Debug for layer {
     //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -69,6 +70,7 @@ fn make_id(name: &str) -> String {
 enum At {
     Id(ID),
     Edge(Edge),
+    Mod,
 }
 
 impl From<Edge> for At {
@@ -112,6 +114,12 @@ impl Parse for AtList {
                 input.parse::<Token![=]>()?;
                 at_list.push(input.parse::<Edge>()?.into());
             }
+            if input.peek(kw::Mod) {
+                // println!("is edge");
+
+                input.parse::<kw::Mod>()?;
+                at_list.push(At::Mod);
+            }
         }
         Ok(Self(at_list))
     }
@@ -147,7 +155,7 @@ impl ToTokens for Edge {
         } = self;
         let content_iter = content.iter();
         quote_spanned!(
-            bracket_token.span=> vec![#(Box::new(#content_iter)),*]
+            bracket_token.span=> vec![#(Box::new(#content_iter) as Box<(dyn RefreshFor<EmgEdgeItem<_>>)>),*]
         )
         .to_tokens(tokens);
     }
@@ -171,6 +179,9 @@ impl AtSetup for GTreeClosure {
                 }
                 At::Edge(_) => {
                     panic!("closure can't have any edge");
+                }
+                At::Mod => {
+                    panic!("closure can't be Mod");
                 }
             }
         }
@@ -218,6 +229,9 @@ impl AtSetup for GOnEvent {
                 }
                 At::Edge(_) => {
                     panic!("On:Event can't have any edge");
+                }
+                At::Mod => {
+                    panic!("On:Event can't be Mod");
                 }
             }
         }
@@ -283,6 +297,9 @@ impl AtSetup for GRefresher {
                 }
                 At::Edge(_) => {
                     panic!("@RefreshUse can't have any edge");
+                }
+                At::Mod => {
+                    panic!("@RefreshUse can't be Mod");
                 }
             }
         }
@@ -350,6 +367,7 @@ impl ToTokens for GRefresher {
 pub struct GTreeSurface {
     edge: Option<Edge>,
     id: ID,
+    module: bool,
     expr: syn::Expr,
     children: ChildrenType,
 }
@@ -365,6 +383,9 @@ impl AtSetup for GTreeSurface {
                 At::Edge(edge) => {
                     self.edge = Some(edge);
                 }
+                At::Mod => {
+                    self.module = true;
+                }
             }
         }
     }
@@ -375,6 +396,7 @@ impl Parse for GTreeSurface {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let edge = None;
         let id = ID::default();
+        let module = false;
 
         //println!("GSurface:{}", input);
         let expr = input.parse::<syn::Expr>()?;
@@ -390,6 +412,7 @@ impl Parse for GTreeSurface {
                 Ok(Self {
                     edge,
                     id,
+                    module,
                     expr,
                     children,
                 })
@@ -400,6 +423,7 @@ impl Parse for GTreeSurface {
             Ok(Self {
                 edge,
                 id,
+                module,
                 expr,
                 children: None,
             })
@@ -412,6 +436,7 @@ impl ToTokens for GTreeSurface {
         let GTreeSurface {
             edge,
             id,
+            module,
             expr,
             children,
         } = self;
@@ -423,8 +448,55 @@ impl ToTokens for GTreeSurface {
         let id_token = id.get("GElement");
 
         // Tree GElementTree
-        quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token))
+        //TODO namespace ,slot
+
+
+        if *module {
+            quote_spanned! (expr.span() => 
+
+                match #expr{
+                    GTreeBuilderElement::Layer( expr_id,mut expr_edge,expr_children) =>{
+                        let new_id =format!("{}|{}", #id_token, expr_id);
+                        expr_edge.extend( #edge_token);
+                        // let new_children = expr_children.
+                        GTreeBuilderElement::Layer(new_id,expr_edge,expr_children)
+                    }
+                    GTreeBuilderElement::El(expr_id, el)=>{
+                        let new_id =format!("{}|{}", #id_token, expr_id);
+                        GTreeBuilderElement::El(new_id, el)
+                    },
+                    GTreeBuilderElement::GElementTree(
+                        expr_id,
+                        mut expr_edge,
+                        ge,
+                        expr_children
+                    )=>{
+                        let new_id =format!("{}|{}", #id_token, expr_id);
+                        expr_edge.extend( #edge_token);
+                        GTreeBuilderElement::GElementTree(
+                            new_id,
+                            expr_edge,
+                            ge,
+                            expr_children
+                        )
+                    }
+
+                    _=>{
+                    panic!("不能转换元件表达式到 Layer");
+
+                    }
+                }
+             
+        
+
+            )
+          
             .to_tokens(tokens);
+        } else {
+            quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token) )
+           
+             .to_tokens(tokens);
+        }
     }
 }
 
@@ -513,6 +585,9 @@ impl AtSetup for GTreeLayerStruct {
                 }
                 At::Edge(edge) => {
                     self.edge = Some(edge);
+                }
+                At::Mod => {
+                    panic!("layer can't be Mod");
                 }
             }
         }
@@ -613,6 +688,9 @@ impl Parse for Gtree {
                 At::Edge(_) => {
                     panic!("root layer can't have any Edge");
                 }
+                At::Mod => {
+                    panic!("root can't be Mod");
+                }
             }
         }
         // Ok(Gtree { emg_graph, root })
@@ -627,14 +705,14 @@ impl ToTokens for Gtree {
         let token = quote_spanned! {root.span()=> {
 
             #[allow(unused)]
-            use emg_bind::{
+            use emg_bind::{Text,
                 runtime::Element, EventCallback, EventMessage, GElement,
                 GTreeBuilderElement,
             };
             #[allow(unused)]
-            use emg_layout::{css, styles::*,add_values::*};
+            use emg_layout::{css, styles::*,add_values::*,EmgEdgeItem};
             #[allow(unused)]
-            use emg_refresh::Refresher;
+            use emg_refresh::{Refresher,RefreshFor};
             #[allow(unused)]
             use emg_state::{use_state, StateMultiAnchor,CloneStateVar,CloneStateAnchor};
 
@@ -642,6 +720,8 @@ impl ToTokens for Gtree {
             use std::rc::Rc;
             #[allow(unused)]
             use GElement::*;
+            #[allow(unused)]
+            use emg_core::TypeCheck;
             // #[allow(unused)]
             // pub use emg_bind::serde_closure;
 
@@ -812,66 +892,9 @@ mod tests {
         let input = r#" 
         @=a
         Layer [
-             @=b @E=[w(pc(50)),origin_x(pc(50)),align_x(pc(50))]
-             Layer [
-                @=c
-                Layer [],
-                Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
-
-                @=an E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
-                Text::new(format!("in quote.. {}", "b")) => [
-                    RefreshUse ||{100},
-                    RefreshUse  move||{
-                        that3.borrow().an.get_position(0)
-                    },
-                ],
+             @=b @Mod @E=[w(pc(50)),origin_x(pc(50)),align_x(pc(50))]
+             Text::new(format!("aaa{}", "b"))
               
-                @E=[w(px(150)),origin_x(pc(100)),align_x(pc(100))]
-                Text::new(format!("in quote.. {}", "b")) => [
-                    RefreshUse ||{100},
-                    RefreshUse this.borrow().ddd
-                ],
-                @E=[w(px(150)),origin_x(pc(0)),align_x(pc(0))]
-                Text::new(format!("dt.. {}", "b")) => [
-                    RefreshUse move||{that.borrow().dt.get_with(Duration:: subsec_millis)}
-                ],
-                @E=[w(px(250)),origin_x(pc(0)),align_y(pc(140))]
-                Text::new(format!("dt.. {}", "b")) => [
-                    RefreshUse move||{that2.borrow().dt2.get(). subsec_millis()}
-                ],
-                @=e @E=[w(px(60)),h(px(40)),css(background_color("red")),origin_x(pc(50)),align_y(pc(150))]
-                Layer [
-                    @E=[w(px(150)),h(px(30)),origin_x(pc(60)),align_y(pc(250))]
-                    Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                        On:click move||{
-                            trace!("bbbbbbbbbbbbb");
-
-                            a.set_with(|v|v+1);
-                            Message::None
-                        },
-                        
-                    ],
-                    @=b2 @E=[w(px(150)),h(px(30)),origin_x(pc(60)),align_y(pc(300))]
-                    Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                        On:click move |_root, vdom, _event| {
-                            interrupt(
-                                vector![to(vector![emg_animation::opacity(0.)]), to(vector![emg_animation::opacity(1.)])],
-                                &mut that4.borrow_mut().an,
-                            );
-
-                                        a.set(a.get()+1);
-                                    orders.schedule_render_then("am",
-                                        |tick| {
-                                            Message::Event(Event::OnAnimationFrame(tick))
-                                        }
-                                    )
-
-                                  
-                                    
-                                        }
-                    ]
-                ],
-            ]
         ]
 
         "#;

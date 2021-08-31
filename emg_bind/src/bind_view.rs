@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-08-18 19:15:57
+ * @LastEditTime: 2021-08-30 09:41:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@ use crate::{runtime::Element, GElement, NodeBuilderWidget};
 pub use emg::EdgeIndex;
 pub use emg::Graph;
 pub use emg::NodeIndex;
-use emg::{edge_index_no_source, im::vector, Outgoing};
+use emg::{edge_index_no_source, im_rc::vector, Outgoing};
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshUseFor;
 use std::{

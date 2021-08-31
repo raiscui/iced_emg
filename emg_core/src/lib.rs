@@ -1,14 +1,23 @@
 mod func;
+mod macros;
 pub mod measures;
-use measures::Unit;
-use measures::{px, ExactLength, Percent};
+use measures::{px, LogicLength};
+use measures::{ExactLengthSimplex, Unit};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
 use derive_more::Display;
 use derive_more::From;
 use ordered_float::NotNan;
+
+// ────────────────────────────────────────────────────────────────────────────────
+pub trait TypeCheck {
+    fn static_type_name() -> TypeName;
+    fn type_name(&self) -> TypeName;
+}
+
 // // use derive_more::Into;
+//TODO full this  "-,/"
 #[derive(Display, Clone, Debug, PartialEq, PartialOrd, Eq)]
 pub enum CalcOp<T>
 where
@@ -27,6 +36,7 @@ where
     pub fn add(a: T, b: T) -> Self {
         Self::Add { a, b }
     }
+
     pub fn mul(a: T, b: f64) -> Self {
         Self::Mul {
             a,
@@ -35,27 +45,88 @@ where
     }
 }
 
+#[derive(Display, Clone, Debug, PartialEq, PartialOrd, Eq)]
+pub struct TypeName(String);
+
+impl TypeName {
+    pub fn new<T>(name: T) -> Self
+    where
+        T: Into<String>,
+    {
+        Self(name.into())
+    }
+}
+
+impl std::ops::Deref for TypeName {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl<T> From<T> for TypeName
+where
+    T: Into<String>,
+{
+    fn from(v: T) -> Self {
+        Self(v.into())
+    }
+}
+
+// impl From<TypeName> for String {
+//     fn from(v: TypeName) -> Self {
+//         v.0
+//     }
+// }
+
+//TODO 创建 (css name, GenericSize) 类型
 #[derive(Display, Clone, Debug, From, PartialEq, PartialOrd, Eq)]
 #[display(fmt = "{}")]
 pub enum GenericSize {
     #[display(fmt = "auto")]
+    #[from(ignore)]
     Auto,
-    Length(ExactLength),
-    Percentage(Percent),
+    // #[display(fmt = "{}", _0)]
+    Length(LogicLength),
+    // Percentage(Percent),
     #[display(fmt = "initial")]
+    #[from(ignore)]
     Initial,
     #[display(fmt = "inherit")]
+    #[from(ignore)]
     Inherit,
+    // #[display(fmt = "{}", _0)]
     StringValue(String),
+    // #[display(fmt = "{}", _0)]
     Calculation(Box<CalcOp<GenericSize>>),
+    Parent(TypeName),
+}
+
+pub fn parent_ty<T>() -> GenericSize
+where
+    T: TypeCheck,
+{
+    GenericSize::Parent(T::static_type_name())
+}
+pub fn parent_str(type_name: &str) -> GenericSize {
+    GenericSize::Parent(TypeName::from(type_name))
+}
+
+impl Default for GenericSize {
+    fn default() -> Self {
+        Self::Length(px(0))
+    }
 }
 
 impl From<f64> for GenericSize {
     fn from(v: f64) -> Self {
-        Self::Length(ExactLength {
-            unit: Unit::Empty,
-            value: NotNan::new(v).unwrap(),
-        })
+        Self::Length(
+            ExactLengthSimplex {
+                unit: Unit::Empty,
+                value: NotNan::new(v).unwrap(),
+            }
+            .into(),
+        )
     }
 }
 
@@ -65,10 +136,19 @@ impl ::core::ops::Mul<f64> for GenericSize {
         Self::Calculation(Box::new(CalcOp::mul(self, rhs)))
     }
 }
-impl ::core::ops::Add for GenericSize {
+// impl ::core::ops::Add for GenericSize {
+//     type Output = GenericSize;
+//     fn add(self, rhs: GenericSize) -> GenericSize {
+//         Self::Calculation(Box::new(CalcOp::add(self, rhs)))
+//     }
+// }
+impl<T> ::core::ops::Add<T> for GenericSize
+where
+    T: Into<Self>,
+{
     type Output = GenericSize;
-    fn add(self, rhs: GenericSize) -> GenericSize {
-        Self::Calculation(Box::new(CalcOp::add(self, rhs)))
+    fn add(self, rhs: T) -> GenericSize {
+        Self::Calculation(Box::new(CalcOp::add(self, rhs.into())))
     }
 }
 
@@ -89,17 +169,12 @@ impl GenericSize {
     }
 
     #[must_use]
-    pub const fn as_length(&self) -> Option<&ExactLength> {
+    pub const fn as_length(&self) -> Option<&LogicLength> {
         if let Self::Length(v) = self {
             Some(v)
         } else {
             None
         }
-    }
-}
-impl Default for GenericSize {
-    fn default() -> Self {
-        Self::Length(px(0))
     }
 }
 

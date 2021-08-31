@@ -2,7 +2,7 @@ pub mod color;
 pub mod convert;
 pub mod opacity;
 use emg_core::measures::Unit;
-use im::{vector, Vector};
+use im_rc::{vector, Vector};
 use iter_fixed::IntoIteratorFixed;
 use ordered_float::NotNan;
 use std::{rc::Rc, time::Duration};

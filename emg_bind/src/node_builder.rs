@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-08-18 19:19:15
+ * @LastEditTime: 2021-08-30 09:42:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,7 +25,7 @@ use crate::{
         Bus, Css, Widget,
     },
 };
-use emg::im::Vector;
+use emg::im_rc::Vector;
 use iced::Element;
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -320,7 +320,7 @@ where
 #[cfg(test)]
 #[allow(unused)]
 mod node_builder_test {
-    use emg::im::vector;
+    use emg::im_rc::vector;
     use iced::Text;
     use wasm_bindgen_test::wasm_bindgen_test;
 
