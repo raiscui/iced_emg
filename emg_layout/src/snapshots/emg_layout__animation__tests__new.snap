@@ -34,7 +34,7 @@ AnimationEdge {
                                     26.0,
                                 ),
                             },
-                            unit: None,
+                            unit: Empty,
                             interpolation_override: None,
                         },
                     ),

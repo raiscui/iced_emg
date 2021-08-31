@@ -22,20 +22,21 @@
 // #![feature(auto_traits)]
 use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc};
 
+use add_values::{AlignX, OriginX, OriginY};
 use calc::layout_calculating;
 use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
-use emg_core::GenericSize;
+use emg_core::{GenericSize, TypeCheck};
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
-pub use im::Vector;
+pub use im_rc::Vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;
-use styles::{CssTransform, CssValueTrait, CssWidth, Style, UpdateStyle, px, s};
+use styles::{CssHeight, CssTransform, CssValueTrait, CssWidth, Style, UpdateStyle, px, s};
 // use styles::Percent;
 // use styles::ExactLength;
 // use styles::CssWidth;
@@ -117,6 +118,7 @@ where T : NotStateAnchor+NotStateVar+ Into<GenericSize> + Clone+'static{
 }
 
 impl<T> From<StateAnchor<T>> for GenericSizeAnchor
+//TODO sure not use "NotStateAnchor+NotStateVar+ " ?
 where T :  Into<GenericSize> + Clone+'static{
     fn from(v: StateAnchor<T>) -> Self {
         
@@ -124,6 +126,7 @@ where T :  Into<GenericSize> + Clone+'static{
     }
 }
 impl<T> From<StateVar<T>> for GenericSizeAnchor
+//TODO sure not use "NotStateAnchor+NotStateVar+ " ?
 where T :  Into<GenericSize> + Clone+'static{
     fn from(v: StateVar<T>) -> Self {
         
@@ -134,15 +137,7 @@ where T :  Into<GenericSize> + Clone+'static{
 
 
 
-impl Default for GenericLoc {
-    fn default() -> Self {
-        Self {
-            x: px(0).into(),
-            y: px(0).into(),
-            z: px(0).into(),
-        }
-    }
-}
+
 
 struct Transforms {
     loc: Translation3<f64>,
@@ -189,82 +184,96 @@ struct EdgeDataOutput {
     styles: StateAnchor<Style>,
     style_string: StateAnchor<String>,
 }
-#[derive(Display, Debug, Clone, PartialEq, PartialOrd, Eq)]
-// #[derive(Debug, Clone, Into)]
-// #[into(owned, ref, ref_mut)]
-#[display(fmt = "(w:{},h:{})", w, h)]
-pub struct GenericWH {
-    w: GenericSize,
-    h: GenericSize,
-}
-impl Default for GenericWH {
-    fn default() -> Self {
-        Self {
-            w: px(0).into(),
-            h: px(0).into(),
-        }
-    }
-}
-impl GenericWH {
-    pub fn new(w: impl Into<GenericSize>, h: impl Into<GenericSize>) -> Self {
-        Self {
-            w: w.into(),
-            h: h.into(),
-        }
-    }
 
-    #[must_use]
-    pub fn get_length_value(&self) -> (f64, f64) {
-        (
-            self.w
-                .try_get_length_value()
-                .expect("root size w get failed, expected Length Px struct"),
-            self.h
-                .try_get_length_value()
-                .expect("root size h get failed, expected Length Px struct"),
-        )
-    }
+
+// #[derive(Display, Debug, Clone, PartialEq, PartialOrd, Eq)]
+// // #[derive(Debug, Clone, Into)]
+// // #[into(owned, ref, ref_mut)]
+// #[display(fmt = "(w:{},h:{})", w, h)]
+// pub struct GenericWH {
+//     w: GenericSize,
+//     h: GenericSize,
+// }
+// impl Default for GenericWH {
+//     fn default() -> Self {
+//         Self {
+//             w: px(0).into(),
+//             h: px(0).into(),
+//         }
+//     }
+// }
+// impl GenericWH {
+//     pub fn new(w: impl Into<GenericSize>, h: impl Into<GenericSize>) -> Self {
+//         Self {
+//             w: w.into(),
+//             h: h.into(),
+//         }
+//     }
+
+//     #[must_use]
+//     pub fn get_length_value(&self) -> (f64, f64) {
+//         (
+//             self.w
+//                 .try_get_length_value()
+//                 .expect("root size w get failed, expected Length Px struct"),
+//             self.h
+//                 .try_get_length_value()
+//                 .expect("root size h get failed, expected Length Px struct"),
+//         )
+//     }
 
     
-}
-#[derive(Display, Debug, Clone, PartialEq, PartialOrd)]
-// #[derive(Debug, Clone, Into)]
-// #[into(owned, ref, ref_mut)]
-#[display(fmt = "(x:{},y:{},z:{})", x, y, z)]
-pub struct GenericLoc {
-    x: GenericSize,
-    y: GenericSize,
-    z: GenericSize,
-}
+// }
 
-impl GenericLoc {
-    pub fn new(
-        x: impl Into<GenericSize>,
-        y: impl Into<GenericSize>,
-        z: impl Into<GenericSize>,
-    ) -> Self {
-        Self {
-            x: x.into(),
-            y: y.into(),
-            z: z.into(),
-        }
-    }
 
-    #[must_use]
-    pub fn get_length_value(&self) -> (f64, f64, f64) {
-        (
-            self.x
-                .try_get_length_value()
-                .expect("root size get failed, expected Length Px struct"),
-            self.y
-                .try_get_length_value()
-                .expect("root size get failed, expected Length Px struct"),
-            self.z
-                .try_get_length_value()
-                .expect("root size get failed, expected Length Px struct"),
-        )
-    }
-}
+// impl Default for GenericLoc {
+//     fn default() -> Self {
+//         Self {
+//             x: px(0).into(),
+//             y: px(0).into(),
+//             z: px(0).into(),
+//         }
+//     }
+// }
+
+// #[derive(Display, Debug, Clone, PartialEq, PartialOrd)]
+// // #[derive(Debug, Clone, Into)]
+// // #[into(owned, ref, ref_mut)]
+// #[display(fmt = "(x:{},y:{},z:{})", x, y, z)]
+// pub struct GenericLoc {
+//     x: GenericSize,
+//     y: GenericSize,
+//     z: GenericSize,
+// }
+
+// impl GenericLoc {
+//     pub fn new(
+//         x: impl Into<GenericSize>,
+//         y: impl Into<GenericSize>,
+//         z: impl Into<GenericSize>,
+//     ) -> Self {
+//         Self {
+//             x: x.into(),
+//             y: y.into(),
+//             z: z.into(),
+//         }
+//     }
+
+//     #[must_use]
+//     pub fn get_length_value(&self) -> (f64, f64, f64) {
+//         (
+//             self.x
+//                 .try_get_length_value()
+//                 .expect("root size get failed, expected Length Px struct"),
+//             self.y
+//                 .try_get_length_value()
+//                 .expect("root size get failed, expected Length Px struct"),
+//             self.z
+//                 .try_get_length_value()
+//                 .expect("root size get failed, expected Length Px struct"),
+//         )
+//     }
+// }
 #[derive(Debug, Clone, PartialEq)]
 pub struct Layout
 {
@@ -661,15 +670,15 @@ where
          w: T, h: T) -> Self  where Ix:std::fmt::Debug{
 
         Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    
-            (px(w).into(), px(h).into()), 
+            (px(w).into(),  px(h).into()), 
             (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into()),
-            (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into()))
-       
+            (GenericSize::default().into(),GenericSize::default().into(),GenericSize::default().into()),)
+
     }
     
 
 
-#[topo::nested]
+    #[topo::nested]
     pub fn new_in_topo(
 
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
@@ -1014,16 +1023,16 @@ impl<T: Clone + seed_styles::CssValueTrait> From<T> for Css<T> {
 // pub fn size(v: impl Into<GenericSize>) -> GenericSizeAnchor {
 //     v.into().into()
 // }
-pub fn origin2(x: impl Into<GenericSize>, y: impl Into<GenericSize>) -> GenericLoc {
-    GenericLoc::new(x, y, px(0))
-}
-pub fn align2(x: impl Into<GenericSize>, y: impl Into<GenericSize>) -> GenericLoc {
-    GenericLoc::new(x, y, px(0))
-}
+// pub fn origin2(x: impl Into<GenericSize>, y: impl Into<GenericSize>) -> GenericLoc {
+//     GenericLoc::new(x, y, px(0))
+// }
+// pub fn align2(x: impl Into<GenericSize>, y: impl Into<GenericSize>) -> GenericLoc {
+//     GenericLoc::new(x, y, px(0))
+// }
 //TODO lifetime
 pub fn css<
+Ix: Clone + Hash + Eq + Ord + 'static + Default,
     Use: CssValueTrait + Clone + 'static,
-    Ix: Clone + Hash + Eq + Ord + 'static + Default,
 >(
     v: Use,
 ) -> Box<dyn RefreshFor<EmgEdgeItem<Ix>>> {
@@ -1039,12 +1048,13 @@ mod tests {
 
 
     use emg::{edge_index, edge_index_no_source, node_index};
-    use emg_refresh::RefreshUseFor;
+    use emg_core::parent;
+    use emg_refresh::{RefreshUseFor, RefreshWhoNoWarper};
     use emg_state::{StateVar};
-    use im::vector;
+    use im_rc::vector;
  
     use styles::{CssBackgroundColorTrait,CssWidth, CssHeight, h, hsl, pc, width};
-    use tracing::{info, span};
+    use tracing::{debug, info, span, warn};
 
     use tracing_flame::FlameLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -1110,12 +1120,12 @@ mod tests {
 
             let css_width = width(px(100));
             let css_height = h(px(100));
-            let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
 
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
-            let mut root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            let mut root_e = EmgEdgeItem::<String>::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
                 nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
@@ -1125,7 +1135,7 @@ mod tests {
 
             let e1_source =use_state( Some(node_index("root")));
             let e1_target = use_state(Some(node_index("1")));
-            let e1 = EmgEdgeItem::new_in_topo(
+            let e1 = EmgEdgeItem::<String>::new_in_topo(
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
@@ -1143,7 +1153,7 @@ mod tests {
             
             let e2_source =use_state( Some(node_index("1")));
             let e2_target = use_state(Some(node_index("2")));
-            let mut e2 = EmgEdgeItem::new_in_topo(
+            let mut e2 = EmgEdgeItem::<String>::new_in_topo(
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
@@ -1164,7 +1174,7 @@ mod tests {
                 trace!("loc refresh_use before {}", &e1);
             });
             info!("l2 =========================================================");
-
+            
             root_e.refresh_use(&vec![css(css_width)]);
             // root_e.refresh_use(&css(css_width.clone()));
             root_e.refresh_use(&Css(css_height));
@@ -1515,7 +1525,7 @@ mod tests {
             info!("=========================================================");
 
             // let cc = Affine3<f64>::identity();
-            let _ff = s().width(pc(11)).bg_color(hsl(40,70,30));
+            let _build_test = s().width(pc(11)).bg_color(hsl(40,70,30));
             let css_width = width(px(100));
             let css_height = h(px(100));
 
@@ -1538,9 +1548,9 @@ mod tests {
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
-                (px(10).into(), px(10).into()), 
+                ((parent::<CssHeight>()+ pc(100)).into(), (parent::<CssHeight>()+ pc(100)).into()), 
                 (pc(100).into(), pc(100).into(), pc(100).into()), 
-                (pc(50).into(), pc(20).into(), pc(20).into()),
+                ((parent::<CssWidth>()*0.5).into(), (parent::<CssHeight>()*0.2).into(), pc(20).into()),
             );
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
@@ -1572,7 +1582,13 @@ mod tests {
                 trace!("refresh_use before {}", &e1);
             });
             info!("l1 =========================================================");
-
+            warn!("calculated 1 =========================================================");
+            warn!("{}",e1.node
+            .get()
+            .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+            .and_then(EdgeItemNode::as_edge_data)
+            .unwrap()
+            .calculated);
             assert_eq!(
                 e1.node
                     .get()
@@ -1582,14 +1598,29 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Translation3::<f64>::new(950.0, 206.0, 0.)
+                Translation3::<f64>::new(-2040.0, -1944.0, 0.)
             );
-
+            warn!("calculated 2 =========================================================");
+            warn!("{}",e1.node
+            .get()
+            .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+            .and_then(EdgeItemNode::as_edge_data)
+            .unwrap()
+            .calculated);
 
             let xx = vec![css_width];
             // let xx = vec![css(css_width)];
 
             root_e.refresh_use(&xx);
+
+            warn!("calculated 3 =========================================================");
+            warn!("{}",e1.node
+            .get()
+            .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+            .and_then(EdgeItemNode::as_edge_data)
+            .unwrap()
+            .calculated);
+
             root_e.refresh_use(&xx);
             root_e.refresh_use(&xx);
             root_e.refresh_use(&xx);
@@ -1632,6 +1663,15 @@ mod tests {
             // root_e.refresh_use(&Css(css_height.clone()));
             let tempcss= use_state(css_height);
             root_e.refresh_use(&tempcss);
+            
+            warn!("calculated 4 root h w 100 =========================================================");
+            warn!("{}",e1.node
+            .get()
+            .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+            .and_then(EdgeItemNode::as_edge_data)
+            .unwrap()
+            .calculated);
+
             assert_eq!(
                 e1.node
                     .get()
@@ -1641,7 +1681,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Translation3::<f64>::new(40., 10., 0.)
+                Translation3::<f64>::new(-150.0, -180.0, 0.)
             );
             info!("=========================================================");
             tempcss.set(h(px(1111)));
@@ -1673,7 +1713,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Translation3::<f64>::new(40., 10., 0.)
+                Translation3::<f64>::new(-150.0, -180.0, 0.)
             );
 
             info!("=========================================================");
@@ -1708,6 +1748,7 @@ mod tests {
             e1.refresh_use(&Css(CssWidth::from(px(12))));
             e1.refresh_use(&Css(CssWidth::from(px(12))));
             e1.refresh_use(&Css(CssWidth::from(px(12))));
+            
             assert_eq!(
                 e1.node
                     .get()
@@ -1717,7 +1758,7 @@ mod tests {
                     .calculated
                     .size
                     .get(),
-                Vector2::<f64>::new(12., 10.)
+                Vector2::<f64>::new(12., 200.)
             );
             info!("=========================================================");
             assert_eq!(
@@ -1726,7 +1767,7 @@ mod tests {
                 .unwrap()
                 .styles_string
                 .get() ,
-            "width: 12px;\nheight: 10px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,10,0,1);\n"
+            "width: 12px;\nheight: 200px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,-180,0,1);\n"
             );
             trace!("refresh_use after {}", &e1);
             info!("=========================================================");
@@ -1747,7 +1788,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Translation3::<f64>::new(-4.0, -48.0, 0.0)
+                Translation3::<f64>::new(-4.0, -10.0, 0.0)
             );
             e2.set_size(px(100), px(100));
             assert_eq!(

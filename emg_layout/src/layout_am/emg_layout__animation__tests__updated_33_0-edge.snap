@@ -21,12 +21,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                1920.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    87.0304518011875,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -35,12 +37,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                1080.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    1080.0,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -54,12 +58,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                0.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -68,12 +74,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                0.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -82,12 +90,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                0.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -96,12 +106,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                0.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -110,12 +122,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                0.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -124,12 +138,14 @@ EmgEdgeItem {
             GenericSizeAnchor(
                 StateAnchor(
                     Length(
-                        ExactLength {
-                            unit: Px,
-                            value: NotNan(
-                                0.0,
-                            ),
-                        },
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
                     ),
                 ),
             ),
@@ -149,12 +165,14 @@ EmgEdgeItem {
                     GenericSizeAnchor(
                         StateAnchor(
                             Length(
-                                ExactLength {
-                                    unit: Px,
-                                    value: NotNan(
-                                        87.0304518011875,
-                                    ),
-                                },
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            87.0304518011875,
+                                        ),
+                                    },
+                                ),
                             ),
                         ),
                     ),
@@ -163,12 +181,14 @@ EmgEdgeItem {
                     GenericSizeAnchor(
                         StateAnchor(
                             Length(
-                                ExactLength {
-                                    unit: Px,
-                                    value: NotNan(
-                                        1080.0,
-                                    ),
-                                },
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            1080.0,
+                                        ),
+                                    },
+                                ),
                             ),
                         ),
                     ),
@@ -182,12 +202,14 @@ EmgEdgeItem {
                     GenericSizeAnchor(
                         StateAnchor(
                             Length(
-                                ExactLength {
-                                    unit: Px,
-                                    value: NotNan(
-                                        0.0,
-                                    ),
-                                },
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            0.0,
+                                        ),
+                                    },
+                                ),
                             ),
                         ),
                     ),
@@ -196,12 +218,14 @@ EmgEdgeItem {
                     GenericSizeAnchor(
                         StateAnchor(
                             Length(
-                                ExactLength {
-                                    unit: Px,
-                                    value: NotNan(
-                                        0.0,
-                                    ),
-                                },
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            0.0,
+                                        ),
+                                    },
+                                ),
                             ),
                         ),
                     ),
@@ -210,12 +234,14 @@ EmgEdgeItem {
                     GenericSizeAnchor(
                         StateAnchor(
                             Length(
-                                ExactLength {
-                                    unit: Px,
-                                    value: NotNan(
-                                        0.0,
-                                    ),
-                                },
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            0.0,
+                                        ),
+                                    },
+                                ),
                             ),
                         ),
                     ),
@@ -224,12 +250,14 @@ EmgEdgeItem {
                     GenericSizeAnchor(
                         StateAnchor(
                             Length(
-                                ExactLength {
-                                    unit: Px,
-                                    value: NotNan(
-                                        0.0,
-                                    ),
-                                },
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            0.0,
+                                        ),
+                                    },
+                                ),
                             ),
                         ),
                     ),
@@ -238,12 +266,14 @@ EmgEdgeItem {
                     GenericSizeAnchor(
                         StateAnchor(
                             Length(
-                                ExactLength {
-                                    unit: Px,
-                                    value: NotNan(
-                                        0.0,
-                                    ),
-                                },
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            0.0,
+                                        ),
+                                    },
+                                ),
                             ),
                         ),
                     ),
@@ -252,12 +282,14 @@ EmgEdgeItem {
                     GenericSizeAnchor(
                         StateAnchor(
                             Length(
-                                ExactLength {
-                                    unit: Px,
-                                    value: NotNan(
-                                        0.0,
-                                    ),
-                                },
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            0.0,
+                                        ),
+                                    },
+                                ),
                             ),
                         ),
                     ),
@@ -270,7 +302,7 @@ EmgEdgeItem {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:710:41",
+                "emg_layout/src/lib.rs:719:41",
             ],
             pseudo: None,
             media: None,
@@ -378,22 +410,26 @@ EmgEdgeItem {
                                 rules: [
                                     Rule {
                                         value: Length(
-                                            ExactLength {
-                                                unit: Px,
-                                                value: NotNan(
-                                                    87.0304518011875,
-                                                ),
-                                            },
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        87.0304518011875,
+                                                    ),
+                                                },
+                                            ),
                                         ),
                                     },
                                     Rule {
                                         value: Length(
-                                            ExactLength {
-                                                unit: Px,
-                                                value: NotNan(
-                                                    1080.0,
-                                                ),
-                                            },
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        1080.0,
+                                                    ),
+                                                },
+                                            ),
                                         ),
                                     },
                                     Rule {
@@ -403,10 +439,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/lib.rs:936:13",
-                                    "emg_layout/src/lib.rs:936:17",
-                                    "emg_layout/src/lib.rs:936:31",
-                                    "emg_layout/src/lib.rs:936:45",
+                                    "emg_layout/src/lib.rs:945:13",
+                                    "emg_layout/src/lib.rs:945:17",
+                                    "emg_layout/src/lib.rs:945:31",
+                                    "emg_layout/src/lib.rs:945:45",
                                 ],
                                 pseudo: None,
                                 media: None,

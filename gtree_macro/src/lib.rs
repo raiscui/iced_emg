@@ -720,6 +720,8 @@ impl ToTokens for Gtree {
             use std::rc::Rc;
             #[allow(unused)]
             use GElement::*;
+            #[allow(unused)]
+            use emg_core::TypeCheck;
             // #[allow(unused)]
             // pub use emg_bind::serde_closure;
 

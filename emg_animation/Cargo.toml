@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 tracing = { version = "^0.1" }
-im = "15.0.0"
+im-rc = "15.0.0"
 iter_fixed = "0.2.2"
 # emg_orders = { path = "../emg_orders"}
 # emg_debuggable = { path = "../emg_debuggable" }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-08-20 13:04:23
+ * @LastEditTime: 2021-08-31 10:32:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,16 +28,17 @@ impl<Ix> RefreshWhoNoWarper for EmgEdgeItem<Ix> where
 {
 }
 
-// impl<T> RefreshUseNoWarper for Css<T> where T: CssValueTrait + Clone + 'static {}
+impl<T> RefreshUseNoWarper for Css<T> where T: CssValueTrait + Clone + 'static {}
 
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Box<dyn RefreshFor<EmgEdgeItem<Ix>>>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
 {
     #[track_caller]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let _g = trace_span!(
-            "!!!!!!!!!!!!!!-> RefreshFor<EdgeItem> for Vec<Box<(dyn RefreshFor<EdgeItem> + 'static)>>"
+            "!!!!!!!!!!!!!!-> RefreshFor<EdgeItem> for Box<(dyn RefreshFor<EdgeItem> + 'static)>"
         )
         .entered();
         // let ii = i.as_ref();
@@ -51,19 +52,19 @@ where
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,
     Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
 {
-    #[allow(clippy::redundant_closure_for_method_calls)]
+    // #[allow(clippy::redundant_closure_for_method_calls)]
     default fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
-        let rc_var = self.get_var_with(|x| x.get());
-        warn!("Edge  Refresh use StateVar");
-        who.refresh_use(&*rc_var);
+        let rc_v = self.get_var_with(emg_state::Var::get);
+        warn!("Edge  Refresh use StateVar current value");
+        who.refresh_use(&*rc_v);
     }
 }
-
+// ────────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateVar<CssWidth>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,
-    // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
 {
     #[allow(clippy::redundant_closure_for_method_calls)]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
@@ -119,6 +120,9 @@ where
         // who.refresh_use(&*rc_var);
     }
 }
+
+// ────────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 // impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Vec<Box<(dyn RefreshFor<EmgEdgeItem<Ix>> + 'static)>>
 // where
@@ -337,7 +341,7 @@ where
 //         // who.refresh_use(self);
 //     }
 // }
-
+/// using at tree building
 impl<Ix, Message> RefreshFor<EmgEdgeItem<Ix>> for AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
@@ -351,6 +355,7 @@ where
         + std::fmt::Display,
 {
     fn refresh_for(&self, edge: &mut EmgEdgeItem<Ix>) {
+        //NOTE 当 tree 宏 中 在 edge中使用 am类型
         trace!(
             "AnimationE  RefreshFor EmgEdgeItem snapshot: \n{:#?}",
             illicit::Snapshot::get()
@@ -373,7 +378,7 @@ mod refresh_test {
     use emg_refresh::RefreshUseFor;
     use emg_state::CloneStateVar;
     use emg_state::{use_state, Dict, StateVar};
-    use im::vector;
+    use im_rc::vector;
     use seed_styles as styles;
     use seed_styles::CssWidth;
 

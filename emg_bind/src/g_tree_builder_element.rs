@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-08-21 15:54:30
+ * @LastEditTime: 2021-08-30 09:43:39
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
-use emg::{edge_index_no_source, im::vector, Edge, EdgeIndex};
+use emg::{edge_index_no_source, im_rc::vector, Edge, EdgeIndex};
 use emg_core::GenericSize;
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
 use emg_refresh::{RefreshFor, RefreshUseFor};

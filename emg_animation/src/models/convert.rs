@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use emg_core::GenericSize;
-use seed_styles::{CssWidth, ExactLength, Percent, Unit};
+use emg_core::{measures::ExactLengthSimplex, GenericSize, TypeCheck, TypeName};
+use seed_styles::{CssHeight, CssWidth, LogicLength, Unit};
 
 use crate::init_motion;
 
@@ -10,37 +10,57 @@ use super::{Motion, Property};
 /*
  * @Author: Rais
  * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2021-08-21 18:05:29
+ * @LastEditTime: 2021-08-30 19:26:56
  * @LastEditors: Rais
  * @Description:
  */
-impl From<ExactLength> for Motion {
-    fn from(v: ExactLength) -> Self {
-        init_motion(v.value, v.unit)
-    }
-}
 
-//TODO 确定 定长 不定长 在一起?
 #[allow(clippy::fallible_impl_from)]
-#[allow(clippy::match_same_arms)]
-impl From<Motion> for ExactLength {
-    fn from(v: Motion) -> Self {
-        match v.unit {
-            Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::Empty => Self {
-                unit: v.unit,
-                value: v.position,
-            },
-            Unit::Vw | Unit::Vh | Unit::Pc => Self {
-                unit: v.unit,
-                value: v.position,
-            },
+impl From<LogicLength> for Motion {
+    fn from(l: LogicLength) -> Self {
+        match l {
+            LogicLength::Simplex(v) => init_motion(v.value, v.unit),
+            //TODO calculated_motion
+            LogicLength::Calculation(_multiple_unit_l) => todo!("use multiple unit am for each"),
         }
     }
 }
 
-impl From<Percent> for Motion {
-    fn from(v: Percent) -> Self {
-        init_motion(v.0, Unit::Pc)
+#[allow(clippy::fallible_impl_from)]
+#[allow(clippy::match_same_arms)]
+impl From<Motion> for LogicLength {
+    fn from(v: Motion) -> Self {
+        match v.unit {
+            Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::Empty => ExactLengthSimplex {
+                unit: v.unit,
+                value: v.position,
+            }
+            .into(),
+            Unit::Vw | Unit::Vh | Unit::Pc => ExactLengthSimplex {
+                unit: v.unit,
+                value: v.position,
+            }
+            .into(),
+        }
+    }
+}
+
+// impl From<Percent> for Motion {
+//     fn from(v: Percent) -> Self {
+//         init_motion(v.0, Unit::Pc)
+//     }
+// }
+#[allow(clippy::match_same_arms)]
+#[allow(clippy::fallible_impl_from)]
+impl From<(TypeName, GenericSize)> for Property {
+    fn from((type_name, gs): (TypeName, GenericSize)) -> Self {
+        match gs {
+            GenericSize::Auto | GenericSize::Initial | GenericSize::Inherit => todo!(),
+            GenericSize::Length(l) => Self::Prop(Rc::new(type_name.to_string()), l.into()),
+            GenericSize::StringValue(_) => todo!(),
+            GenericSize::Calculation(_) => todo!(),
+            GenericSize::Parent(_) => todo!(),
+        }
     }
 }
 
@@ -48,9 +68,10 @@ impl From<Percent> for Motion {
 #[allow(clippy::fallible_impl_from)]
 impl From<CssWidth> for Property {
     fn from(v: CssWidth) -> Self {
+        let type_name = v.type_name();
         match v {
-            CssWidth::Length(l) => Self::Prop(Rc::new("width".to_string()), l.into()),
-            CssWidth::Percentage(p) => Self::Prop(Rc::new("width".to_string()), p.into()),
+            CssWidth::Gs(gs) => (type_name, gs).into(),
+            CssWidth::Length(l) => Self::Prop(Rc::new(type_name.to_string()), l.into()),
             CssWidth::Auto | CssWidth::Initial | CssWidth::Inherit | CssWidth::StringValue(_) => {
                 todo!()
             }
@@ -59,39 +80,41 @@ impl From<CssWidth> for Property {
 }
 
 // //TODO full this
-// #[allow(clippy::fallible_impl_from)]
-// impl From<Property> for CssWidth {
-//     fn from(v: Property) -> Self {
-//         match v {
-//             //TODO need implement
-//             Property::Prop(name, m) => {
-//                 if name.as_str() == "width"
-//                     && matches!(
-//                         m.unit,
-//                         Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::Empty
-//                     )
-//                 {
-//                     ExactLength::from(m).into()
-//                 } else {
-//                     panic!(
-//                         "propertyName is not width:{}, or unit not match:{:?}",
-//                         name.as_str(),
-//                         m.unit
-//                     );
-//                 }
-//             }
-//             _ => panic!("Property can't convert to CssWidth "),
-//         }
-//     }
-// }
+#[allow(clippy::fallible_impl_from)]
+impl From<Property> for CssWidth {
+    fn from(v: Property) -> Self {
+        // panic!("check here");
+        match v {
+            //TODO need implement
+            Property::Prop(name, m) => {
+                if name.as_str() == Self::static_type_name().as_str()
+                    && matches!(
+                        m.unit,
+                        Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::Empty
+                    )
+                {
+                    LogicLength::from(m).into()
+                } else {
+                    panic!(
+                        "propertyName is not width:{}, or unit not match:{:?}",
+                        name.as_str(),
+                        m.unit
+                    );
+                }
+            }
+            _ => panic!("Property can't convert to CssWidth "),
+        }
+    }
+}
 #[allow(clippy::fallible_impl_from)]
 impl From<Property> for GenericSize {
     fn from(v: Property) -> Self {
         match v {
             //TODO need implement
             Property::Prop(name, m) => {
-                let p_name = name.as_str();
-                if (p_name == "width" || p_name == "height")
+                let p_name = name.as_ref();
+                if (p_name == &*CssWidth::static_type_name()
+                    || p_name == &*CssHeight::static_type_name())
                     && matches!(
                         m.unit,
                         Unit::Px
@@ -105,7 +128,7 @@ impl From<Property> for GenericSize {
                             | Unit::Pc
                     )
                 {
-                    ExactLength::from(m).into()
+                    LogicLength::from(m).into()
                 } else {
                     panic!(
                         "propertyName is {}, it can't convert to GenericSize",

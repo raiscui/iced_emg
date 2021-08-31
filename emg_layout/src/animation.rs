@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-08-20 13:14:19
+ * @LastEditTime: 2021-08-30 14:05:53
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,7 +16,7 @@ use emg_state::{
     use_state_impl::{TopoKey, Var},
     Anchor, CloneStateAnchor, CloneStateVar, StateAnchor, StateMultiAnchor, StateVar,
 };
-use im::{vector, Vector};
+use im_rc::{vector, Vector};
 
 use emg_animation::{
     extract_initial_wait,
@@ -269,6 +269,8 @@ where
     }
 
     ////////
+    /// using at tree building
+    /// make animation property effecting what edge at what path
     /// # Panics
     ///
     /// Will panic when unimplemented
@@ -288,7 +290,13 @@ where
                 let name = svp.get_with(emg_animation::models::Property::name);
                 // let name = svp.store_get_rc(&*store).name().to_string();
                 match name.as_str() {
-                    "width" => l.w = (*svp).into(),
+                    //TODO full this
+                    "CssWidth" => {
+                        //TODO why directly l.w = ..., maybe change impl From<StateVarProperty> for StateVar<GenericSizeAnchor>
+                        // l.w = (*svp).into();
+                        l.w <<= svp;
+                        // panic!("why directly l.w = ..., maybe change impl From<StateVarProperty> for StateVar<GenericSizeAnchor>");
+                    }
                     _ => {
                         unimplemented!("not implemented....")
                     }
@@ -619,7 +627,7 @@ mod tests {
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
     };
-    use im::vector;
+    use im_rc::vector;
     use seed_styles as styles;
     use styles::{pc, width};
     use styles::{px, CssWidth};

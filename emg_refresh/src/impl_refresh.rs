@@ -3,7 +3,7 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-06-13 15:42:31
+ * @LastEditTime: 2021-08-28 09:59:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -30,7 +30,6 @@ pub auto trait RefreshWhoNoWarper {}
 pub auto trait RefreshUseNoWarper {}
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who> !RefreshWhoNoWarper for StateVar<Who> {}
 // ────────────────────────────────────────────────────────────────────────────────
 
 // impl<Use> !RefreshUseNoWarper for Vec<Use> {}
@@ -39,6 +38,7 @@ impl<Use> !RefreshUseNoWarper for Vec<Box<Use>> {}
 impl<Use> !RefreshUseNoWarper for Rc<Use> {}
 impl<Use> !RefreshUseNoWarper for StateVar<Use> {}
 impl<Use> !RefreshUseNoWarper for StateAnchor<Use> {}
+impl<Who> !RefreshWhoNoWarper for StateVar<Who> {}
 impl<Use> !RefreshWhoNoWarper for StateAnchor<Use> {}
 impl<'a, Use> !RefreshUseNoWarper for RefresherFor<'a, Use> {}
 impl<'a, Use> !RefreshUseNoWarper for Refresher<'a, Use> {}
