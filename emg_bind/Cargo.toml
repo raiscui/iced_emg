@@ -47,7 +47,7 @@ derive_more = "^0.99"
 delegate = "0.6.1"
 
 
-tracing = { version = "^0.1" }
+tracing = "0.1.26"
 
 indexmap = "1.7"
 rustc-hash = "1.1.0"

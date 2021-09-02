@@ -11,7 +11,7 @@ split-debuginfo = "unpacked"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-tracing = { version = "^0.1" }
+tracing = "0.1.26"
 im-rc = "15.0.0"
 iter_fixed = "0.2.2"
 # emg_orders = { path = "../emg_orders"}
@@ -22,4 +22,4 @@ seed_styles = { path = "../../styles_hooks/seed_styles" }
 ordered-float = "2.7.0"
 
 [dev-dependencies]
-insta = { version = "1.7.2" }
+insta = "1.7.2"
