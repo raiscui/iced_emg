@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-10 18:06:08
- * @LastEditTime: 2021-08-20 12:53:05
+ * @LastEditTime: 2021-09-02 12:53:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,7 @@ use crate::{event, subscription::Recipe, Hasher};
 use emg_animation::{Msg, Tick};
 use iced::futures::{self, StreamExt};
 use iced_futures::BoxStream;
-use tracing::{debug_span, error, trace, trace_span, warn};
+use tracing::{debug_span, error, trace, trace_span};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 // use web_sys::IdleRequestOptions;
@@ -141,11 +141,11 @@ mod test {
     // #[test]
     fn test() {
         let cc = RafEventRecipe::default();
-        let mut hasher = iced_web::Hasher::default();
+        let mut hasher = crate::Hasher::default();
         cc.hash(&mut hasher);
         console_log!("Hash is {:x}!", hasher.finish());
         let cc2 = RafEventRecipe::default();
-        let mut hasher2 = iced_web::Hasher::default();
+        let mut hasher2 = crate::Hasher::default();
         cc2.hash(&mut hasher2);
         console_log!("Hash is {:x}!", hasher2.finish());
     }

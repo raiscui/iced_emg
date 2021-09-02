@@ -28,8 +28,8 @@ illicit = "1.1.2"
 dyn-clone = "1.0.4"
 # downcast-rs = "1.2.0"
 
-strum = "0.20"
-strum_macros = "0.20"
+strum = "0.21.0"
+strum_macros = "0.21.1"
 
 match_any = "1.0.1"
 
@@ -44,7 +44,7 @@ emg_orders = { path = "../emg_orders" }
 iced_style = { path = "../../iced/style" }
 # from_variants = "0.5.0"
 derive_more = "^0.99"
-delegate = "0.5.2"
+delegate = "0.6.1"
 
 
 tracing = { version = "^0.1" }
@@ -68,9 +68,12 @@ emg_core = { path = "../emg_core" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "^0.4"
+dodrio = { path = "../../dodrio" }
+seed_styles = { path = "../../styles_hooks/seed_styles" }
+
 uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
 # console_log = { version = "0.2", features = ["color"] }
-iced_web = { version = "0.3", path = "../../iced/web" }
+iced_web = { path = "../../iced/web" }
 # tracing-wasm = "0.2.0"
 # console_error_panic_hook = "0.1.6"
 wasm-bindgen = "0.2"
@@ -82,7 +85,7 @@ wasm-bindgen-test = "^0.3"
 
 #for app
 [dependencies.iced_futures]
-version = "0.2"
+# version = "0.2"
 path = "../../iced/futures"
 
 # for app

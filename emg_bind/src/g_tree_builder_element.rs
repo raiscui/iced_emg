@@ -1,12 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-08-30 09:43:39
+ * @LastEditTime: 2021-09-01 09:43:00
  * @LastEditors: Rais
  * @Description:
  */
 
-use crate::{runtime::Element, EventNode, GElement, GraphType, Layer, NodeIndex};
+use crate::emg_runtime::{Element, EventNode, Layer};
+use crate::{GElement, GraphType, NodeIndex};
 use emg::{edge_index_no_source, im_rc::vector, Edge, EdgeIndex};
 use emg_core::GenericSize;
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
@@ -237,7 +238,7 @@ where
                 trace!("{:?}==>{:#?}", &root_id, &children_list);
                 // ─────────────────────────────────────────────────────────────────
 
-                let nix = self.insert_node(root_id.clone(), Layer::new(root_id).into());
+                let nix = self.insert_node(root_id.clone(), Layer::<Message>::new(root_id).into());
 
                 let width = global_width();
                 let height = global_height();
@@ -292,7 +293,7 @@ where
 
                 trace!("{:?}==>{:#?}", &id, &children_list);
                 // node index
-                let nix = self.insert_node(id.clone(), Layer::new(id).into());
+                let nix = self.insert_node(id.clone(), Layer::<Message>::new(id).into());
 
                 // edge
                 let mut ei = self

@@ -1,23 +1,21 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2021-05-07 15:56:50
+ * @LastEditTime: 2021-09-02 12:52:53
  * @LastEditors: Rais
 * @Description:
 */
 
-use crate::NodeBuilder;
-use iced_web::dodrio::bumpalo;
-use iced_web::{
-    css, Bus, Color, Css, Element, Font, HorizontalAlignment, Length, VerticalAlignment, Widget,
-};
+use seed_styles::GlobalStyleSV;
 
+use crate::iced_runtime::{css, Color, Font, HorizontalAlignment, Length, VerticalAlignment};
+use crate::{dodrio::bumpalo, Bus, Element, NodeBuilder, Widget};
 /// A paragraph of text.
 ///
 /// # Example
 ///
 /// ```
-/// # use iced_web::Text;
+/// # use emg_bind::Text;
 ///
 /// Text::new("I <3 iced!")
 ///     .size(40);
@@ -104,43 +102,25 @@ impl Text {
     }
 }
 
-impl<'a, Message> Widget<Message> for Text {
-    fn node<'b>(
-        &self,
-        bump: &'b bumpalo::Bump,
-        publish: &Bus<Message>,
-        style_sheet: &mut Css<'b>,
-    ) -> iced_web::dodrio::Node<'b> {
-        self.generate_element_builder(bump, publish, style_sheet)
-            .finish()
-    }
-}
-
-impl<'a, Message> From<Text> for Element<'a, Message> {
-    fn from(text: Text) -> Element<'a, Message> {
-        Element::new(text)
-    }
-}
-
 impl<Message> NodeBuilder<Message> for Text
 // where
 //     Message: 'static,
 {
     fn generate_element_builder<'b>(
         &self,
-        bump: &'b iced_web::dodrio::bumpalo::Bump,
-        _bus: &iced_web::Bus<Message>,
-        _style_sheet: &mut iced_web::Css<'b>,
-    ) -> iced_web::dodrio::builder::ElementBuilder<
+        bump: &'b dodrio::bumpalo::Bump,
+        _bus: &Bus<Message>,
+        _style_sheet: &GlobalStyleSV,
+    ) -> dodrio::builder::ElementBuilder<
         'b,
-        iced_web::dodrio::bumpalo::collections::Vec<'b, iced_web::dodrio::Listener<'b>>,
-        iced_web::dodrio::bumpalo::collections::Vec<'b, iced_web::dodrio::Attribute<'b>>,
-        iced_web::dodrio::bumpalo::collections::Vec<'b, iced_web::dodrio::Node<'b>>,
+        dodrio::bumpalo::collections::Vec<'b, dodrio::Listener<'b>>,
+        dodrio::bumpalo::collections::Vec<'b, dodrio::Attribute<'b>>,
+        dodrio::bumpalo::collections::Vec<'b, dodrio::Node<'b>>,
     > {
-        use iced_web::dodrio::builder::{p, text};
+        use dodrio::builder::{p, text};
 
         let content = {
-            use iced_web::dodrio::bumpalo::collections::String;
+            use dodrio::bumpalo::collections::String;
 
             String::from_str_in(&self.content, bump)
         };
@@ -175,5 +155,29 @@ impl<Message> NodeBuilder<Message> for Text
         p(bump)
             .attr("style", style.into_bump_str())
             .children(bumpalo::vec![in bump;text(content.into_bump_str())])
+    }
+}
+
+impl<'a, Message> Widget<Message> for Text
+where
+    Message: Clone,
+{
+    fn node<'b>(
+        &self,
+        bump: &'b bumpalo::Bump,
+        publish: &Bus<Message>,
+        style_sheet: &GlobalStyleSV,
+    ) -> dodrio::Node<'b> {
+        self.generate_element_builder(bump, publish, style_sheet)
+            .finish()
+    }
+}
+
+impl<'a, Message> From<Text> for Element<'a, Message>
+where
+    Message: Clone,
+{
+    fn from(text: Text) -> Element<'a, Message> {
+        Element::new(text)
     }
 }

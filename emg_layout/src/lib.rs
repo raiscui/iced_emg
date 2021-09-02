@@ -1548,9 +1548,9 @@ mod tests {
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
-                ((parent::<CssHeight>()+ pc(100)).into(), (parent::<CssHeight>()+ pc(100)).into()), 
+                ((parent!(CssHeight)+ pc(100)).into(), (parent!(CssHeight)+ pc(100)).into()), 
                 (pc(100).into(), pc(100).into(), pc(100).into()), 
-                ((parent::<CssWidth>()*0.5).into(), (parent::<CssHeight>()*0.2).into(), pc(20).into()),
+                ((parent!(CssWidth)*0.5).into(), (parent!(CssHeight)*0.2).into(), pc(20).into()),
             );
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();

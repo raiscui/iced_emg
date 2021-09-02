@@ -3,11 +3,12 @@ use std::{convert::TryFrom, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-05-07 15:15:12
- * @LastEditTime: 2021-05-07 15:26:23
+ * @LastEditTime: 2021-09-01 09:23:58
  * @LastEditors: Rais
  * @Description:
  */
-use crate::{GElement, NodeBuilderWidget};
+use crate::emg_runtime::NodeBuilderWidget;
+use crate::GElement;
 
 impl<'a, Message> TryFrom<GElement<'a, Message>> for NodeBuilderWidget<'a, Message>
 where

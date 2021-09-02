@@ -162,11 +162,11 @@ mod test {
     // #[test]
     fn test() {
         let cc = WindowEventRecipe::default();
-        let mut hasher = iced_web::Hasher::default();
+        let mut hasher = crate::Hasher::default();
         cc.hash(&mut hasher);
         console_log!("Hash is {:x}!", hasher.finish());
         let cc2 = WindowEventRecipe::default();
-        let mut hasher2 = iced_web::Hasher::default();
+        let mut hasher2 = crate::Hasher::default();
         cc2.hash(&mut hasher2);
         console_log!("Hash is {:x}!", hasher2.finish());
     }

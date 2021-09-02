@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-08-20 17:05:43
+ * @LastEditTime: 2021-09-02 16:14:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ use anchors::{
     singlethread::MultiAnchor,
 };
 use anymap::any::Any;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use std::hash::BuildHasherDefault;
 // use im::HashMap;
@@ -634,6 +634,7 @@ where
     // where
     //     T: std::fmt::Debug;
     fn store_set(&self, store: &GStateStore, value: T);
+    fn set_with_opt_once<F: FnOnce(&T) -> Option<T>>(&self, func_once: F);
     fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F);
     fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
     fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F);
@@ -744,6 +745,24 @@ where
                     before_fns,
                     after_fns,
                 );
+            },
+        );
+    }
+    fn set_with_opt_once<F: FnOnce(&T) -> Option<T>>(&self, func_once: F) {
+        read_var_with_topo_id::<_, T, ()>(
+            self.id,
+            |(var, before_fns, after_fns): &VarSimMap<T>| {
+                let opt_data = func_once(var.get().as_ref());
+                if let Some(data) = opt_data {
+                    start_set_var_and_before_after(
+                        // store,
+                        &StorageKey::TopoKey(self.id),
+                        var,
+                        data,
+                        before_fns,
+                        after_fns,
+                    );
+                }
             },
         );
     }
@@ -1609,8 +1628,8 @@ where
     if !state_exists_for_topo_id::<T>(id) {
         insert_var_with_topo_id::<T>(Var::new(data), id);
     } else {
-        panic!(
-            "this is checker:  already settled state ->{}",
+        warn!(
+            "this is checker: use_state call again, StateVar already settled state ->{}",
             &std::any::type_name::<T>()
         );
     }
