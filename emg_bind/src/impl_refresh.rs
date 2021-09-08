@@ -1,16 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-08-18 19:15:31
+ * @LastEditTime: 2021-09-08 17:20:50
  * @LastEditors: Rais
  * @Description:
  */
-use crate::{
-    GElement,
-    GElement::{Event_, Layer_, Refresher_, Text_},
-    NodeBuilderWidget,
-};
-use emg_refresh::{RefreshFor, RefreshUseFor, RefreshWhoNoWarper};
+use crate::{GElement, NodeBuilderWidget};
+use emg_refresh::{RefreshFor, RefreshForUse, RefreshWhoNoWarper};
 use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -21,7 +17,20 @@ where
     Message: 'static + Clone,
 {
     fn refresh_for(&self, el: &mut GElement<'a, Message>) {
+        use GElement::{Event_, Generic_, Layer_, Refresher_};
+        //TODO for builder
         match (el, self) {
+            (who, Generic_(use_something)) => {
+                use_something.refresh_for(who);
+                // let something = use_something.as_refresh_for();
+                // who.refresh_use(use_something);
+            }
+            (Generic_(who), use_something) => {
+                // let dyn_ref = who.as_ref();
+                // use_something.refresh_for(who);
+                who.refresh_use(use_something);
+            }
+
             // @ Single explicit match
             (_gel, _g_event_callback @ Event_(_)) => {
                 // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
@@ -33,20 +42,20 @@ where
             //refreshing use any impl RefreshFor
             (gel, Refresher_(refresher)) => {
                 trace!("{} refresh use refresher", gel);
-                gel.refresh_use(&**refresher);
+                gel.refresh_for_use(refresher.as_ref());
             }
             // TODO: do not many clone event_callback
 
             // layer 包裹 任何除了refresher的el
-            (Layer_(l), any_not_refresher) => {
-                trace!("layer refresh use {} (do push)", any_not_refresher);
-                l.try_ref_push(any_not_refresher.clone());
+            (Layer_(l), any_not_refresher_event) => {
+                trace!("layer refresh use {} (do push)", any_not_refresher_event);
+                l.try_ref_push(any_not_refresher_event.clone());
             }
             // refresher 不与任何不是 refresher 的 el 产生刷新动作
-            (Refresher_(_), any_not_refresher) => {
+            (Refresher_(_), any_not_refresher_event) => {
                 panic!(
                     "refresh for ( Refresher_ ) use ( {} ) is not supported",
-                    any_not_refresher
+                    any_not_refresher_event
                 );
             }
 
@@ -69,6 +78,8 @@ where
 // this is `GElement` refresh use `i32`
 impl<'a, Message> RefreshFor<GElement<'a, Message>> for i32 {
     fn refresh_for(&self, el: &mut GElement<'a, Message>) {
+        use GElement::Text_;
+
         match el {
             Text_(text) => {
                 trace!("==========Text update use i32");
@@ -86,6 +97,8 @@ impl<'a, Message> RefreshFor<GElement<'a, Message>> for i32 {
 // this is `GElement` refresh use `i32`
 impl<'a, Message> RefreshFor<GElement<'a, Message>> for u32 {
     fn refresh_for(&self, el: &mut GElement<'a, Message>) {
+        use GElement::Text_;
+
         match el {
             Text_(text) => {
                 trace!("==========Text update use u32");
@@ -100,6 +113,8 @@ impl<'a, Message> RefreshFor<GElement<'a, Message>> for u32 {
 }
 impl<'a, Message> RefreshFor<GElement<'a, Message>> for f64 {
     fn refresh_for(&self, el: &mut GElement<'a, Message>) {
+        use GElement::Text_;
+
         match el {
             Text_(text) => {
                 trace!("==========Text update use f64");
@@ -119,6 +134,7 @@ where
     Message: 'static + Clone,
 {
     fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<'a, Message>) {
+        use GElement::Event_;
         trace!("node_builder_widget refresh use GElement (event_callback)");
 
         match self {

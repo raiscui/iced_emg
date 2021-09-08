@@ -1,12 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-08-31 10:32:10
+ * @LastEditTime: 2021-09-07 16:44:40
  * @LastEditors: Rais
  * @Description:
  */
 
-use emg_refresh::{RefreshFor, RefreshUseFor, RefreshUseNoWarper, RefreshWhoNoWarper};
+use emg_refresh::{RefreshFor, RefreshForUse, RefreshUse, RefreshUseNoWarper, RefreshWhoNoWarper};
 use std::{any::Any, panic::Location};
 
 use emg_state::{CloneStateVar, StateAnchor, StateVar};
@@ -42,7 +42,7 @@ where
         )
         .entered();
         // let ii = i.as_ref();
-        who.refresh_use(self.as_ref());
+        who.refresh_for_use(self.as_ref());
     }
 }
 
@@ -56,7 +56,7 @@ where
     default fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let rc_v = self.get_var_with(emg_state::Var::get);
         warn!("Edge  Refresh use StateVar current value");
-        who.refresh_use(&*rc_v);
+        who.refresh_for_use(&*rc_v);
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -162,13 +162,13 @@ where
     let any = &css.0 as &dyn Any;
     if let Some(css_width) = any.downcast_ref::<CssWidth>() {
         debug!("dyn match CssWidth {}", &css_width);
-        ed.refresh_use(css_width);
+        ed.refresh_for_use(css_width);
         return;
     }
 
     if let Some(css_height) = any.downcast_ref::<CssHeight>() {
         debug!("dyn match CssHeight {}", &css_height);
-        ed.refresh_use(css_height);
+        ed.refresh_for_use(css_height);
         return;
     }
 
@@ -375,7 +375,7 @@ mod refresh_test {
     use emg::node_index;
     use emg_animation::to;
     use emg_core::into_vector;
-    use emg_refresh::RefreshUseFor;
+    use emg_refresh::RefreshForUse;
     use emg_state::CloneStateVar;
     use emg_state::{use_state, Dict, StateVar};
     use im_rc::vector;
@@ -415,7 +415,7 @@ mod refresh_test {
         illicit::Layer::new()
             .offer(EPath::<String>(vector![edge_index_no_source("root")]))
             .enter(|| {
-                root_e.refresh_use(&a);
+                root_e.refresh_for_use(&a);
                 // root_e.refresh_use(&a);
             });
 

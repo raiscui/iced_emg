@@ -9,7 +9,7 @@ use std::{clone::Clone, rc::Rc};
  */
 use crate::RefreshFor;
 
-use crate::{RefreshUseFor, Refresher, RefresherFor};
+use crate::{RefreshForUse, Refresher, RefresherFor};
 use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 use tracing::{debug, warn};
 // ────────────────────────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ where
     default fn refresh_for(&self, who: &mut Who) {
         for i in self {
             let ii = i.as_ref();
-            who.refresh_use(ii);
+            who.refresh_for_use(ii);
         }
     }
 }
@@ -60,7 +60,7 @@ where
 {
     default fn refresh_for(&self, who: &mut Who) {
         let r = self.as_ref();
-        who.refresh_use(r);
+        who.refresh_for_use(r);
     }
 }
 // impl RefreshUseNoWarper for Vec<u8> {}
@@ -72,7 +72,7 @@ where
 {
     default fn refresh_for(&self, who: &mut Who) {
         for i in self {
-            who.refresh_use(i);
+            who.refresh_for_use(i);
         }
     }
 }
@@ -84,7 +84,7 @@ where
 {
     fn refresh_for(&self, who: &mut Who) {
         let u_s_e = self.as_ref();
-        who.refresh_use(u_s_e);
+        who.refresh_for_use(u_s_e);
     }
 }
 impl<Who, Use> RefreshFor<Who> for Box<Use>
@@ -93,7 +93,7 @@ where
     Use: RefreshUseNoWarper + RefreshFor<Who>,
 {
     default fn refresh_for(&self, who: &mut Who) {
-        who.refresh_use(self.as_ref());
+        who.refresh_for_use(self.as_ref());
     }
 }
 
@@ -105,7 +105,7 @@ where
     fn refresh_for(&self, who: &mut StateVar<Who>) {
         debug!("==========refresh_for StateVar");
         let mut w = who.get();
-        w.refresh_use(self);
+        w.refresh_for_use(self);
         who.set(w);
     }
 }
@@ -123,7 +123,7 @@ where
             &std::any::type_name::<Use>()
         );
 
-        who.refresh_use(&self.get());
+        who.refresh_for_use(&self.get());
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ where
 {
     fn refresh_for(&self, who: &mut StateVar<Who>) {
         let mut w = who.get();
-        w.refresh_use(&self.get());
+        w.refresh_for_use(&self.get());
 
         who.set(w);
     }
@@ -163,7 +163,7 @@ where
 {
     fn refresh_for(&self, who: &mut Who) {
         // self.get()().refresh_for(who);
-        who.refresh_use(&self.get());
+        who.refresh_for_use(&self.get());
     }
 }
 
@@ -177,7 +177,7 @@ where
     fn refresh_for(&self, who: &mut StateVar<Who>) {
         let u_s_e = self.get();
         let mut w = who.get();
-        w.refresh_use(&u_s_e);
+        w.refresh_for_use(&u_s_e);
         who.set(w);
     }
 }
@@ -190,7 +190,7 @@ where
         for sa in self {
             let u_s_e = sa.get();
             let mut w = who.get();
-            w.refresh_use(&u_s_e);
+            w.refresh_for_use(&u_s_e);
             who.set(w);
         }
     }
@@ -203,7 +203,7 @@ where
         for sa in self {
             let u_s_e = sa.as_ref();
             let mut w = who.get();
-            w.refresh_use(u_s_e);
+            w.refresh_for_use(u_s_e);
             who.set(w);
         }
     }
@@ -217,7 +217,7 @@ where
         for sa in self {
             let u_s_e = sa.as_ref();
             let mut w = who.get();
-            w.refresh_use(u_s_e);
+            w.refresh_for_use(u_s_e);
             who.set(w);
         }
     }
@@ -232,7 +232,7 @@ where
         for sa in self {
             let u_s_e = sa.get();
             let mut w = who.get();
-            w.refresh_use(&u_s_e);
+            w.refresh_for_use(&u_s_e);
             who.set(w);
         }
     }
@@ -246,6 +246,6 @@ where
     default fn refresh_for(&self, who: &mut Who) {
         let u_s_e = self.get();
         // log::debug!(" ============ StateAnchor get:{:?}", &u_s_e);
-        who.refresh_use(&u_s_e);
+        who.refresh_for_use(&u_s_e);
     }
 }

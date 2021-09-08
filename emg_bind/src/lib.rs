@@ -10,9 +10,10 @@
 #![feature(convert_float_to_int)] //RafEventRecipe:  (timestamp * 1000.).trunc().to_int_unchecked::<u64>()
 #![feature(negative_impls)] // NOTE for Gid refresh
 #![feature(min_specialization)] // NOTE for Gid refresh
-                                // bumpalo
-                                // #![feature(allocator_api)]
-                                // #![feature(generic_associated_types)]
+#![feature(box_patterns)]
+// bumpalo
+// #![feature(allocator_api)]
+// #![feature(generic_associated_types)]
 
 pub mod emg_web;
 #[cfg(not(target_arch = "wasm32"))]
@@ -50,11 +51,13 @@ pub use emg_orders::Orders;
 // mod topo_store;
 pub use bind_view::*;
 pub use emg::{edge_index_no_source, Outgoing};
+pub use emg_msg_macro::emg_msg;
 pub use emg_runtime::*;
 pub use g_element::*;
 pub use g_tree_builder_element::*;
 pub use graph_layout::*;
 pub use sandbox::Sandbox;
+
 // pub use state_store::GStateStore;
 // pub use state_store::G_STATE_STORE;
 // pub use topo_store::use_state;

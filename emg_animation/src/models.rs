@@ -3,7 +3,7 @@ pub mod convert;
 pub mod opacity;
 use emg_core::measures::Unit;
 use im_rc::{vector, Vector};
-use iter_fixed::IntoIteratorFixed;
+// use iter_fixed::IntoIteratorFixed;
 use ordered_float::NotNan;
 use std::{rc::Rc, time::Duration};
 use tracing::{trace, warn};
@@ -14,6 +14,8 @@ use crate::Debuggable;
 
 type EaseFnT = Rc<Debuggable<Box<dyn Fn(Precision) -> Precision>>>;
 
+const DIM2: usize = 2;
+const DIM3: usize = 3;
 #[derive(Clone, Debug, Eq)]
 pub struct Easing {
     pub progress: NotNan<Precision>,
@@ -123,10 +125,10 @@ pub enum PathCommand {
     CurveTo(CubicCurveMotion),
     Quadratic(QuadraticCurveMotion),
     QuadraticTo(QuadraticCurveMotion),
-    SmoothQuadratic(Vector<[Motion; 2]>),
-    SmoothQuadraticTo(Vector<[Motion; 2]>),
-    Smooth(Vector<[Motion; 2]>),
-    SmoothTo(Vector<[Motion; 2]>),
+    SmoothQuadratic(Vector<[Motion; DIM2]>),
+    SmoothQuadraticTo(Vector<[Motion; DIM2]>),
+    Smooth(Vector<[Motion; DIM2]>),
+    SmoothTo(Vector<[Motion; DIM2]>),
     ClockwiseArc(ArcMotion),
     AntiClockwiseArc(ArcMotion),
     Close,
@@ -155,7 +157,7 @@ pub enum Property {
     Prop3(Rc<PropName>, Vector<Motion>),
     Prop4(Rc<PropName>, Vector<Motion>),
     Angle(Rc<PropName>, Motion),
-    Points(Vector<[Motion; 2]>),
+    Points(Vector<[Motion; DIM2]>),
     Path(Vector<PathCommand>),
     // Anchor(Rc<String>, StateAnchor<GenericSize>),
 }
@@ -298,11 +300,8 @@ fn map_path_motion(func: &dyn Fn(Motion) -> Motion, cmd: PathCommand) -> PathCom
         SmoothTo, Vertical, VerticalTo,
     };
     // let func_clone = func.clone();
-    let map_coords = move |coords: Vector<[Motion; 2]>| -> Vector<[Motion; 2]> {
-        coords
-            .into_iter()
-            .map(|m| m.into_iter_fixed().map(func).collect())
-            .collect()
+    let map_coords = move |coords: Vector<[Motion; DIM2]>| -> Vector<[Motion; DIM2]> {
+        coords.into_iter().map(|m| m.map(func)).collect()
     };
     // use arraymap::ArrayMap;
 
@@ -437,11 +436,7 @@ pub fn map_to_motion(func: &dyn Fn(Motion) -> Motion, prop: Property) -> Propert
 
         Angle(name, m) => Angle(name, func(m)),
 
-        Points(ms) => Points(
-            ms.into_iter()
-                .map(|m| m.into_iter_fixed().map(func).collect())
-                .collect(),
-        ),
+        Points(ms) => Points(ms.into_iter().map(|m| m.map(func)).collect()),
 
         Path(cmds) => Path(
             cmds.into_iter()
@@ -792,7 +787,7 @@ fn step(dt: Duration, props: Vector<Property>) -> Vector<Property> {
         })
         .collect()
 }
-fn step_coords(dt: Duration, coords: Vector<[Motion; 2]>) -> Vector<[Motion; 2]> {
+fn step_coords(dt: Duration, coords: Vector<[Motion; DIM2]>) -> Vector<[Motion; DIM2]> {
     coords
         .into_iter()
         .map(|[x, y]| [step_interpolation(dt, x), step_interpolation(dt, y)])
@@ -1484,9 +1479,9 @@ fn set_path_target((cmd, target_cmd): (PathCommand, PathCommand)) -> PathCommand
 /// of points by duplicating the last point of the smaller list.
 /// matchPoints : List ( Motion, Motion ) -> List ( Motion, Motion ) -> ( List ( Motion, Motion ), List ( Motion, Motion ) )
 fn match_points(
-    mut points1: Vector<[Motion; 2]>,
-    mut points2: Vector<[Motion; 2]>,
-) -> (Vector<[Motion; 2]>, Vector<[Motion; 2]>) {
+    mut points1: Vector<[Motion; DIM2]>,
+    mut points2: Vector<[Motion; DIM2]>,
+) -> (Vector<[Motion; DIM2]>, Vector<[Motion; DIM2]>) {
     let ordering = points1
         .len()
         .partial_cmp(&points2.len())

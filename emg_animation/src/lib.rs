@@ -5,6 +5,8 @@
 #![feature(slice_concat_ext)]
 #![feature(div_duration)]
 #![feature(extend_one)]
+#![feature(array_map)]
+
 pub mod func;
 pub mod models;
 pub mod props;

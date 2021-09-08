@@ -1,14 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2021-09-02 12:52:44
+ * @LastEditTime: 2021-09-02 17:37:17
  * @LastEditors: Rais
  * @Description:
  */
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub mod button;
-// pub mod checkbox;
+pub mod checkbox;
+pub use checkbox::Checkbox;
 pub mod layer;
 pub mod text;
 // ────────────────────────────────────────────────────────────────────────────────

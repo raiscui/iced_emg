@@ -1,25 +1,78 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-09-01 09:34:09
+ * @LastEditTime: 2021-09-08 16:36:57
  * @LastEditors: Rais
  * @Description:
  */
-use crate::emg_runtime::{EventNode, Button, Element, Layer, Text};
-use emg_refresh::RefreshFor;
+use crate::{
+    emg_runtime::{Button, Element, EventNode, Layer, Text},
+    NodeBuilder, NodeBuilderWidget,
+};
+pub use better_any;
+use better_any::{Tid, TidAble};
+use emg_core::TypeCheckObjectSafe;
+use emg_refresh::{RefreshFor, RefreshUse};
 // extern crate derive_more;
 use derive_more::From;
+use dyn_clonable::clonable;
 use std::{convert::TryFrom, rc::Rc};
 use strum_macros::Display;
-pub use GElement::*;
+pub trait GenerateElement<'a, Message> {
+    fn generate_element(&self) -> Element<'a, Message>;
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[clonable]
+pub trait DynGElement<'a, Message>:
+    // AsRefreshFor<GElement<'a, Message>>
+    Tid<'a>
+     +RefreshFor<GElement<'a, Message>>
+     +RefreshUse<GElement<'a,Message>>
+    + GenerateElement<'a, Message>
+    + NodeBuilder<Message>
+    + TypeCheckObjectSafe
+    + Clone
+    where Message: 'static
+{
+}
+pub trait MessageTid<'a>: TidAble<'a> {}
+// pub trait AsRefreshFor<T> {
+//     fn as_refresh_for(&self) -> &dyn RefreshFor<T>;
+// }
+// impl<'a, Message, T: RefreshFor<GElement<'a, Message>>> AsRefreshFor<GElement<'a, Message>> for T {
+//     fn as_refresh_for(&self) -> &dyn RefreshFor<GElement<'a, Message>> {
+//         self
+//     }
+// }
+
+// pub trait AsNodeBuilder<T> {
+//     fn as_node_builder(&self) -> &dyn NodeBuilder<T>;
+// }
+// // impl<Message, T: NodeBuilder<Message>> AsNodeBuilder<Message> for T {
+// //     fn as_node_builder(&self) -> &dyn NodeBuilder<Message> {
+// //         self
+// //     }
+// // }
+// impl<'a, Message> AsNodeBuilder<Message> for Box<dyn DynGElement<'a, Message>> {
+//     fn as_node_builder(&self) -> &dyn NodeBuilder<Message> {
+//         self.as_ref()
+//     }
+// }
+
 #[derive(Clone, Display, From)]
-pub enum GElement<'a, Message> {
-    Element_(Element<'a, Message>),
+pub enum GElement<'a, Message>
+where
+    Message: 'static,
+{
+    //TODO cow
+    Builder_(Box<GElement<'a, Message>>, NodeBuilderWidget<'a, Message>),
     Layer_(Layer<'a, Message>),
     Text_(Text),
     Button_(Button<'a, Message>),
     Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
     Event_(EventNode<Message>),
+    Generic_(Box<dyn DynGElement<'a, Message>>),
     // IntoE(Rc<dyn Into<Element<'a, Message>>>),
 }
 
@@ -51,19 +104,25 @@ impl<'a, Message: std::clone::Clone + 'static> GElement<'a, Message> {
 
 impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElement<'a, Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, Refresher_, Text_};
+        let nbw = "NodeBuilderWidget<'a, Message>".to_string();
+
         match self {
             Layer_(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
             Text_(t) => f.debug_tuple("GElement::Text").field(t).finish(),
             Refresher_(_) => f
                 .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement<'a, Message>>>)")
                 .finish(),
-            Element_(_) => f
-                .debug_tuple("GElement::Element_(Element<'a, Message>)")
+            Builder_(ge, _) => f
+                .debug_tuple("GElement::Builder_")
+                .field(&ge)
+                .field(&nbw)
                 .finish(),
             Event_(e) => f.debug_tuple("GElement::EventCallBack_").field(&e).finish(),
             Button_(_) => {
                 write!(f, "GElement::Button_")
             }
+            Generic_(_) => write!(f, "GElement::Generic_"),
         }
     }
 }
@@ -77,11 +136,22 @@ where
     ///  Refresher_(_)|Event_(_) can't to Element
     fn try_from(ge: GElement<'a, Message>) -> Result<Self, Self::Error> {
         use match_any::match_any;
+        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, Refresher_, Text_};
 
-        match_any! (ge,
-            Element_(x)=>Ok(x),
-            Layer_(x)|Text_(x)|Button_(x) => Ok(x.into()),
-            Refresher_(_)|Event_(_)=>Err(())
+        // if let GElement::Builder_(gel, builder) = ge {
+        //     let x = gel.borrow_mut().as_mut();
+        //     let ff = Rc::new(f);
+        // }
+
+        match_any!(ge,
+            Builder_(gel, mut builder) => {
+
+                builder.set_widget(gel);
+                Ok(builder.into())
+            },
+            Layer_(x) | Text_(x) | Button_(x) => Ok(x.into()),
+            Refresher_(_) | Event_(_) => Err(()),
+            Generic_(x) => Ok(x.generate_element())
         )
     }
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-09-01 09:52:59
+ * @LastEditTime: 2021-09-08 16:50:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,11 +11,8 @@ pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::{edge_index_no_source, im_rc::vector, Outgoing};
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
-use emg_refresh::RefreshUseFor;
-use std::{
-    convert::{TryFrom, TryInto},
-    hash::Hash,
-};
+use emg_refresh::RefreshForUse;
+use std::{convert::TryInto, hash::Hash};
 use tracing::{instrument, trace, trace_span};
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -88,46 +85,44 @@ where
         // TODO: cache.    use edge type?
         for child in children_s {
             //  TODO use COW
-            current_node_clone.refresh_use(&child);
+            current_node_clone.refresh_for_use(&child);
         }
+        if let Ok(mut node_builder_widget) =
+            NodeBuilderWidget::<Message>::try_new_from(&current_node_clone)
+        {
+            let _g = trace_span!("-> in NodeBuilderWidget").entered();
+            {
+                trace!("NodeBuilderWidget::<Message>::try_from  OK");
+                node_builder_widget.set_id(format!("{:?}", cix));
 
-        match NodeBuilderWidget::<Message>::try_from(current_node_clone) {
-            Ok(mut node_builder_widget) => {
-                let _g = trace_span!("-> in NodeBuilderWidget").entered();
-                {
-                    trace!("NodeBuilderWidget::<Message>::try_from  OK");
-                    node_builder_widget.set_id(format!("{:?}", cix));
+                let ei = &edges.get(paths.last().unwrap()).unwrap().item;
 
-                    let ei = &edges.get(paths.last().unwrap()).unwrap().item;
+                let store = self.store();
 
-                    let store = self.store();
+                let edge_styles = {
+                    let ed = ei.store_edge_data_with(&store, paths, |ed| ed.unwrap().clone());
+                    ed.store_styles_string(&store)
+                };
 
-                    let edge_styles = {
-                        let ed = ei.store_edge_data_with(&store, paths, |ed| ed.unwrap().clone());
-                        ed.store_styles_string(&store)
-                    };
+                trace!("styles---------------> {}", &edge_styles);
 
-                    trace!("styles---------------> {}", &edge_styles);
+                node_builder_widget.add_styles_string(edge_styles.as_str());
 
-                    node_builder_widget.add_styles_string(edge_styles.as_str());
-
-                    if !event_callbacks.is_empty() {
-                        for event_callback in event_callbacks {
-                            //TODO maybe just directly push event
-                            node_builder_widget.refresh_use(&event_callback);
-                        }
+                if !event_callbacks.is_empty() {
+                    for event_callback in event_callbacks {
+                        //TODO maybe just directly push event
+                        node_builder_widget.refresh_for_use(&event_callback);
                     }
-
-                    GElement::Element_(node_builder_widget.into())
                 }
+
+                GElement::Builder_(Box::new(current_node_clone), node_builder_widget)
             }
-            Err(old_gel) => {
-                trace!(
-                    "NodeBuilderWidget::<Message>::try_from  error use: {}",
-                    old_gel
-                );
-                old_gel
-            }
+        } else {
+            trace!(
+                "NodeBuilderWidget::<Message>::try_from  error use: {}",
+                &current_node_clone
+            );
+            current_node_clone
         }
     }
 

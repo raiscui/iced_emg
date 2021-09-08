@@ -84,15 +84,17 @@ impl<'a, Message> Layer<'a, Message> {
     }
 
     /// `GElement::Refresher_(_)` `GElement::Event_(_)` can't convert to Element
-    pub fn try_ref_push<E>(&mut self, child: E) -> &mut Self
+    pub fn try_ref_push<E>(&mut self, child: E) -> Option<&mut Self>
     where
         E: TryInto<Element<'a, Message>, Error = ()>,
     {
         //TODO type error,  show error if need;
         if let Ok(e) = child.try_into() {
             self.children.push(e);
+        } else {
+            return None;
         }
-        self
+        Some(self)
     }
 
     // pub fn update_use<T>(mut self, updater: T) -> Self

@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use emg_core::{measures::ExactLengthSimplex, GenericSize, TypeCheck, TypeName};
+use emg_core::{
+    measures::ExactLengthSimplex, GenericSize, TypeCheck, TypeCheckObjectSafe, TypeName,
+};
 use seed_styles::{CssHeight, CssWidth, LogicLength, Unit};
 
 use crate::init_motion;
@@ -10,7 +12,7 @@ use super::{Motion, Property};
 /*
  * @Author: Rais
  * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2021-08-30 19:26:56
+ * @LastEditTime: 2021-09-02 19:53:07
  * @LastEditors: Rais
  * @Description:
  */

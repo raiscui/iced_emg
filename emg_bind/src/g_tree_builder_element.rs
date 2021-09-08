@@ -1,17 +1,17 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-09-01 09:43:00
+ * @LastEditTime: 2021-09-08 15:30:52
  * @LastEditors: Rais
  * @Description:
  */
 
-use crate::emg_runtime::{Element, EventNode, Layer};
+use crate::emg_runtime::{EventNode, Layer};
 use crate::{GElement, GraphType, NodeIndex};
 use emg::{edge_index_no_source, im_rc::vector, Edge, EdgeIndex};
 use emg_core::GenericSize;
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
-use emg_refresh::{RefreshFor, RefreshUseFor};
+use emg_refresh::{RefreshFor, RefreshForUse};
 use emg_state::{topo, use_state};
 use std::rc::Rc;
 use tracing::{instrument, trace, trace_span};
@@ -19,13 +19,14 @@ use tracing::{instrument, trace, trace_span};
 pub enum GTreeBuilderElement<'a, Message, Ix = String>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
+    Message: 'static,
 {
     Layer(
         Ix,
         Vec<Box<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
         Vec<GTreeBuilderElement<'a, Message, Ix>>,
     ),
-    El(Ix, Element<'a, Message>),
+    // El(Ix, Element<'a, Message>),
     GElementTree(
         Ix,
         Vec<Box<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
@@ -35,6 +36,12 @@ where
     RefreshUse(Ix, Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
     Cl(Ix, Box<dyn Fn() + 'a>),
     Event(Ix, EventNode<Message>),
+    // GenericTree(
+    //     Ix,
+    //     Vec<Box<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+    //     Box<dyn DynGElement<'a, Message> + 'static>,
+    //     Vec<GTreeBuilderElement<'a, Message, Ix>>,
+    // ),
 }
 
 // impl<'a, Message>
@@ -75,11 +82,11 @@ impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
                     .field(children_list)
                     .finish()
             }
-            GTreeBuilderElement::El(id, el) => f
-                .debug_tuple("GTreeBuilderElement::El")
-                .field(id)
-                .field(el)
-                .finish(),
+            // GTreeBuilderElement::El(id, el) => f
+            //     .debug_tuple("GTreeBuilderElement::El")
+            //     .field(id)
+            //     .field(el)
+            //     .finish(),
             GTreeBuilderElement::GElementTree(id, _, gel, updaters) => {
                 let edge_str = "with-Edge-Vector";
 
@@ -105,6 +112,17 @@ impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
                 .field(id)
                 .field(&e)
                 .finish(),
+            // GTreeBuilderElement::GenericTree(id, _, dyn_gel, updaters) => {
+            //     let edge_str = "with-Edge-Vector";
+            //     let dyn_name = format!("DynGElement({})", dyn_gel.type_name());
+            //     // let name = "DynGElement";
+            //     f.debug_tuple("GTreeBuilderElement::GenericTree")
+            //         .field(id)
+            //         .field(&edge_str)
+            //         .field(&dyn_name)
+            //         .field(updaters)
+            //         .finish()
+            // }
         }
     }
 }
@@ -266,7 +284,7 @@ where
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path);
 
-                    root_ei.refresh_use(edge_refreshers);
+                    root_ei.refresh_for_use(edge_refreshers);
 
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
                         assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
@@ -304,7 +322,7 @@ where
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                    ei.refresh_use(edge_refreshers);
+                    ei.refresh_for_use(edge_refreshers);
 
                     // next
                     #[cfg(debug_assertions)]
@@ -323,21 +341,20 @@ where
                 });
             }
 
-            GTreeBuilderElement::El(id, element) => {
-                let _span =
-                    trace_span!("-> handle_children_in_topo [El] ", ?id, ?parent_nix).entered();
+            // GTreeBuilderElement::El(id, element) => {
+            //     let _span =
+            //         trace_span!("-> handle_children_in_topo [El] ", ?id, ?parent_nix).entered();
 
-                let nix = self.insert_node(id.clone(), element.clone().into());
+            //     let nix = self.insert_node(id.clone(), element.clone().into());
 
-                //TODO string style nodes impl  or edge:empty
-                // let e = format!("{} -> {}", parent_nix.index(), nix.index()).into();
-                // trace!("{}", &e);
-                // self.insert_update_edge(&parent_nix, &nix, e);
-                let _ei = self
-                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
-                    .unwrap();
-            }
-
+            //     //TODO string style nodes impl  or edge:empty
+            //     // let e = format!("{} -> {}", parent_nix.index(), nix.index()).into();
+            //     // trace!("{}", &e);
+            //     // self.insert_update_edge(&parent_nix, &nix, e);
+            //     let _ei = self
+            //         .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
+            //         .unwrap();
+            // }
             GTreeBuilderElement::GElementTree(id, edge_refreshers, gel, refreshers) => {
                 let _span =
                     trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
@@ -354,7 +371,7 @@ where
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                    ei.refresh_use(edge_refreshers);
+                    ei.refresh_for_use(edge_refreshers);
 
                     //next
                     #[cfg(debug_assertions)]
@@ -414,7 +431,41 @@ where
                 let _ei = self
                     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
                     .unwrap();
-            }
+            } // GTreeBuilderElement::GenericTree(id, edge_refreshers, dyn_gel, refreshers) => {
+              //     panic!("test here");
+              //     let _span =
+              //         trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
+
+              //     //node index
+              //     let nix = self.insert_node(id.clone(), dyn_gel.clone().into());
+
+              //     //edge
+              //     let mut ei = self
+              //         .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix.clone()))
+              //         .unwrap();
+
+              //     let path = (&*illicit::expect::<EPath<Self::Ix>>()).add_build(nix.clone());
+
+              //     illicit::Layer::new().offer(path.clone()).enter(|| {
+              //         debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
+              //         ei.refresh_use(edge_refreshers);
+
+              //         //next
+              //         #[cfg(debug_assertions)]
+              //         illicit::Layer::new().offer(nix.clone()).enter(|| {
+              //             assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
+              //             refreshers
+              //                 .iter()
+              //                 .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+              //         });
+              //         #[cfg(not(debug_assertions))]
+              //         illicit::Layer::new().offer(nix).enter(|| {
+              //             refreshers
+              //                 .iter()
+              //                 .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+              //         });
+              //     });
+              // }
         };
     }
 }

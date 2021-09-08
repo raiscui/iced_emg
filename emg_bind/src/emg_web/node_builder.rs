@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-09-02 14:04:15
+ * @LastEditTime: 2021-09-08 16:33:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,13 +13,13 @@ mod gelement2nodebuilderwidget;
 use derive_more::From;
 use seed_styles::GlobalStyleSV;
 
-use std::rc::Rc;
+use std::{rc::Rc, string::String};
 
 use crate::{
     dodrio::{
         self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
     },
-    map_fn_callback_return_to_option_ms, Bus, Element, Widget,
+    map_fn_callback_return_to_option_ms, Bus, DynGElement, Element, GElement, Widget,
 };
 use emg::im_rc::Vector;
 // ────────────────────────────────────────────────────────────────────────────────
@@ -177,12 +177,24 @@ where
     }
 }
 
+#[derive(Clone)]
+enum BuilderWidget<'a, Message>
+where
+    Message: 'static,
+{
+    Static(Rc<dyn NodeBuilder<Message> + 'a>),
+    Dyn(Box<dyn DynGElement<'a, Message>>),
+}
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
-pub struct NodeBuilderWidget<'a, Message> {
+pub struct NodeBuilderWidget<'a, Message>
+where
+    Message: 'static,
+{
     id: String,
     //TODO : instead use GElement
-    widget: Rc<dyn NodeBuilder<Message> + 'a>,
+    widget: Option<BuilderWidget<'a, Message>>,
     //TODO use vec deque
     event_callbacks: Vector<EventNode<Message>>,
     // event_callbacks: Vector<EventNode<Message>>,
@@ -194,20 +206,40 @@ where
     Message: std::clone::Clone + std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let widget = if self.widget.is_none() {
+            String::from("None")
+        } else {
+            String::from("Option<Rc<dyn NodeBuilder<Message> + 'a>>")
+        };
+
         f.debug_struct("NodeBuilderWidget")
-            .field("widget", &String::from("Rc<dyn NodeBuilder<Message> + 'a>"))
+            .field("widget", &widget)
             .field("event_callbacks", &self.event_callbacks)
+            .field("layout", &self.layout_str)
             .finish()
     }
 }
 
-impl<'a, Message: std::clone::Clone> NodeBuilderWidget<'a, Message> {
-    pub fn new(widget: Rc<dyn NodeBuilder<Message> + 'a>) -> Self {
+impl<'a, Message: Clone + 'static> Default for NodeBuilderWidget<'a, Message> {
+    fn default() -> Self {
         Self {
-            id: "".to_string(),
-            widget,
-            event_callbacks: Vector::new(),
+            id: String::default(),
+            widget: None,
+            event_callbacks: Vector::default(),
             layout_str: String::default(),
+        }
+    }
+}
+impl<'a, Message: std::clone::Clone + 'static> NodeBuilderWidget<'a, Message> {
+    /// # Errors
+    ///
+    /// Will return `Err` if `gel` does not Layer_(_) | Button_(_) | Text_(_)
+    #[allow(clippy::result_unit_err)]
+    pub fn try_new_from(gel: &GElement<'a, Message>) -> Result<Self, ()> {
+        use GElement::{Button_, Layer_, Text_};
+        match gel {
+            Layer_(_) | Button_(_) | Text_(_) => Ok(NodeBuilderWidget::default()),
+            _ => Err(()),
         }
     }
     pub fn set_id(&mut self, id: String) {
@@ -226,6 +258,39 @@ impl<'a, Message: std::clone::Clone> NodeBuilderWidget<'a, Message> {
     pub fn event_callbacks(&self) -> &Vector<EventNode<Message>> {
         &self.event_callbacks
     }
+
+    /// Set the node builder widget's widget.
+    /// # Panics
+    ///
+    /// Will Panics if `gel` is Refresher_ | Event_
+    /// permission to read it.
+    pub fn set_widget(&mut self, gel: Box<GElement<'a, Message>>) {
+        // use match_any::match_any;
+        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, Refresher_, Text_};
+
+        match gel {
+            box Builder_(gel_in, mut builder) => {
+                builder.set_widget(gel_in);
+            }
+            box Layer_(x) => {
+                self.widget = Some(BuilderWidget::Static(Rc::new(x)));
+            }
+            box Text_(x) => {
+                self.widget = Some(BuilderWidget::Static(Rc::new(x)));
+            }
+            box Button_(x) => {
+                self.widget = Some(BuilderWidget::Static(Rc::new(x)));
+            }
+            box (Refresher_(_) | Event_(_)) => {
+                todo!();
+            }
+            box Generic_(x) => {
+                self.widget = Some(BuilderWidget::Dyn(x));
+            }
+        };
+
+        //TODO add type_name
+    }
 }
 
 impl<'a, Message> Widget<Message> for NodeBuilderWidget<'a, Message>
@@ -239,7 +304,10 @@ where
         bus: &Bus<Message>,
         style_sheet: &GlobalStyleSV,
     ) -> Node<'b> {
-        let mut element_builder = self.widget.generate_element_builder(bump, bus, style_sheet);
+        let mut element_builder = match self.widget.as_ref().unwrap() {
+            BuilderWidget::Static(x) => x.generate_element_builder(bump, bus, style_sheet),
+            BuilderWidget::Dyn(x) => x.generate_element_builder(bump, bus, style_sheet),
+        };
 
         element_builder = element_builder
             .attr(

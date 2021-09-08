@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2021-09-02 12:52:53
+ * @LastEditTime: 2021-09-08 16:37:21
  * @LastEditors: Rais
 * @Description:
 */
@@ -51,6 +51,10 @@ impl Text {
     pub fn content<T: Into<String>>(&mut self, label: T) -> &mut Self {
         self.content = label.into();
         self
+    }
+    #[must_use]
+    pub fn get_content(&self) -> String {
+        self.content.clone()
     }
 
     /// Sets the size of the [`Text`].

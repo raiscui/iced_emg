@@ -13,6 +13,8 @@ use ordered_float::NotNan;
 // ────────────────────────────────────────────────────────────────────────────────
 pub trait TypeCheck {
     fn static_type_name() -> TypeName;
+}
+pub trait TypeCheckObjectSafe {
     fn type_name(&self) -> TypeName;
 }
 

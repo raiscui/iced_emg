@@ -91,7 +91,7 @@ pub trait RefreshFor<Who> {
 mod updater_test {
 
     // use crate::CloneState;
-    use crate::RefreshUseFor;
+    use crate::RefreshForUse;
     use crate::{test::setup_tracing, RefreshFor};
     use tracing::info;
     use wasm_bindgen_test::wasm_bindgen_test;
@@ -121,20 +121,20 @@ mod updater_test {
         let ff2 = use_state(2_i32);
         let ff_w = ff2.watch();
         let ffw_vec = vec![Box::new(ff_w.clone()), Box::new(ff_w.clone())];
-        ff.refresh_use(&ff2);
-        ff.refresh_use(&ff_w);
-        ff.refresh_use(&ffw_vec);
+        ff.refresh_for_use(&ff2);
+        ff.refresh_for_use(&ff_w);
+        ff.refresh_for_use(&ffw_vec);
         ff2.refresh_for(&mut ff);
         info!("==== test_anchor: {}", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
-        s.refresh_use(&ff2);
+        s.refresh_for_use(&ff2);
         ff2.refresh_for(&mut s);
         info!("==== test_anchor: {}", &s);
         assert_eq!("sss,2,2", &s);
         // ─────────────────────────────────────────────────────────────────
 
-        ff.refresh_use(&n);
+        ff.refresh_for_use(&n);
         n.refresh_for(&mut ff);
         info!("==== test_anchor 2: {}", ff.get());
         assert_eq!("hello,2,2,2,2,2,99,99", ff.get());
@@ -142,7 +142,7 @@ mod updater_test {
 
         let a = use_state(4_i32);
 
-        ff.refresh_use(&a);
+        ff.refresh_for_use(&a);
         a.refresh_for(&mut ff);
         info!("==== test_anchor 3: {}", ff.get());
 

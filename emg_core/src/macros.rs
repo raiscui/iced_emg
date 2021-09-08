@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 11:58:58
- * @LastEditTime: 2021-08-31 12:40:59
+ * @LastEditTime: 2021-09-06 14:11:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,7 @@ macro_rules! into_vector {
         }
     };
 }
-
+/// ## use parent type to generate GenericSize::Parent(T::static_type_name())
 #[macro_export]
 macro_rules! parent {
     ( $type_name:ty  ) => {{
@@ -32,14 +32,15 @@ macro_rules! parent {
 
 #[cfg(test)]
 mod tests {
-    use crate::{TypeCheck, TypeName};
+    use crate::{TypeCheck, TypeCheckObjectSafe, TypeName};
 
     struct EE {}
     impl TypeCheck for EE {
         fn static_type_name() -> crate::TypeName {
             TypeName("ff".to_string())
         }
-
+    }
+    impl TypeCheckObjectSafe for EE {
         fn type_name(&self) -> crate::TypeName {
             TypeName("ff".to_string())
         }

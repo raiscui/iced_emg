@@ -26,6 +26,7 @@ pub mod kw {
     syn::custom_keyword!(Event);
     syn::custom_keyword!(E);
     syn::custom_keyword!(Mod);
+    // syn::custom_keyword!(Dyn);
 
     // impl Debug for layer {
     //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -271,8 +272,7 @@ impl ToTokens for GOnEvent {
         };
         token.to_tokens(tokens);
 
-        // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
-        // quote!(GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
+
     }
 }
 // @ GRefresher ────────────────────────────────────────────────────────────────────────────────
@@ -355,8 +355,7 @@ impl ToTokens for GRefresher {
         // let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::RefreshUse(#id_token,Rc::new(#kws::new(#closure_token))) );
 
         kw_token.to_tokens(tokens);
-        // quote_spanned!(expr.span()=>GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
-        // quote!(GTreeBuilderElement::El(#expr.into())).to_tokens(tokens)
+ 
     }
 }
 
@@ -461,10 +460,10 @@ impl ToTokens for GTreeSurface {
                         // let new_children = expr_children.
                         GTreeBuilderElement::Layer(new_id,expr_edge,expr_children)
                     }
-                    GTreeBuilderElement::El(expr_id, el)=>{
-                        let new_id =format!("{}|{}", #id_token, expr_id);
-                        GTreeBuilderElement::El(new_id, el)
-                    },
+                    // GTreeBuilderElement::El(expr_id, el)=>{
+                    //     let new_id =format!("{}|{}", #id_token, expr_id);
+                    //     GTreeBuilderElement::El(new_id, el)
+                    // },
                     GTreeBuilderElement::GElementTree(
                         expr_id,
                         mut expr_edge,
@@ -500,6 +499,151 @@ impl ToTokens for GTreeSurface {
     }
 }
 
+// // @ DynObjTree ────────────────────────────────────────────────────────────────────────────────
+
+// #[allow(dead_code)]
+// #[derive(Debug)]
+// pub struct DynObjTree {
+//     edge: Option<Edge>,
+//     id: ID,
+//     module: bool,
+//     expr: syn::Expr,
+//     children: ChildrenType,
+// }
+
+// impl AtSetup for DynObjTree {
+//     /// setup the @ mark
+//     fn at_setup(&mut self, at_list: AtList) {
+//         for at in at_list.0 {
+//             match at {
+//                 At::Id(id) => {
+//                     self.id = id;
+//                 }
+//                 At::Edge(edge) => {
+//                     self.edge = Some(edge);
+//                 }
+//                 At::Mod => {
+//                     self.module = true;
+//                 }
+//             }
+//         }
+//     }
+// }
+
+// impl Parse for DynObjTree {
+//     #[allow(clippy::non_ascii_literal)]
+//     fn parse(input: ParseStream) -> syn::Result<Self> {
+//         let edge = None;
+//         let id = ID::default();
+//         let module = false;
+
+//         //println!("GSurface:{}", input);
+//         let expr = input.parse::<syn::Expr>()?;
+//         if input.peek(token::FatArrow) {
+//             input.parse::<token::FatArrow>()?; //=>
+//                                                // []
+//             if input.peek(token::Bracket) {
+//                 // println!("=>[] find");
+//                 let content;
+//                 let _bracket = bracketed!(content in input);
+//                 let children: ChildrenType =
+//                     Some(content.parse_terminated(GTreeMacroElement::parse)?);
+//                 Ok(Self {
+//                     edge,
+//                     id,
+//                     module,
+//                     expr,
+//                     children,
+//                 })
+//             } else {
+//                 panic!("还没有完成 直接 单一 无[] 的后缀")
+//             }
+//         } else {
+//             Ok(Self {
+//                 edge,
+//                 id,
+//                 module,
+//                 expr,
+//                 children: None,
+//             })
+//         }
+//     }
+// }
+// impl ToTokens for DynObjTree {
+//     fn to_tokens(&self, tokens: &mut TokenStream) {
+//         // self.expr.to_tokens(tokens)
+//         let DynObjTree {
+//             edge,
+//             id,
+//             module,
+//             expr,
+//             children,
+//         } = self;
+//         // println!("expr===={:?}", self.expr);
+//         let edge_token = edge2token(edge);
+
+//         let children_iter = children.iter();
+//         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
+//         let id_token = id.get("Generic");
+
+//         // Tree GElementTree
+//         //TODO namespace ,slot
+
+
+//         if *module {
+//             quote_spanned! (expr.span() => 
+
+//                 match #expr{
+//                     GTreeBuilderElement::Layer( expr_id,mut expr_edge,expr_children) =>{
+//                         let new_id =format!("{}|{}", #id_token, expr_id);
+//                         expr_edge.extend( #edge_token);
+//                         // let new_children = expr_children.
+//                         GTreeBuilderElement::Layer(new_id,expr_edge,expr_children)
+//                     }
+//                     GTreeBuilderElement::El(expr_id, el)=>{
+//                         let new_id =format!("{}|{}", #id_token, expr_id);
+//                         GTreeBuilderElement::El(new_id, el)
+//                     },
+//                     GTreeBuilderElement::GElementTree(
+//                         expr_id,
+//                         mut expr_edge,
+//                         ge,
+//                         expr_children
+//                     )=>{
+//                         let new_id =format!("{}|{}", #id_token, expr_id);
+//                         expr_edge.extend( #edge_token);
+//                         GTreeBuilderElement::GElementTree(
+//                             new_id,
+//                             expr_edge,
+//                             ge,
+//                             expr_children
+//                         )
+//                     }
+
+//                     _=>{
+//                     panic!("不能转换元件表达式到 Layer");
+
+//                     }
+//                 }
+             
+        
+
+//             )
+          
+//             .to_tokens(tokens);
+//         } else {
+//             quote_spanned! (expr.span() => {
+//                 let dyn_gel = #expr;
+//                 let type_name = dyn_gel.type_name();
+//                 let id_token_end = format!("{}-{}",#id_token,type_name);
+//                 GTreeBuilderElement::GenericTree(id_token_end,#edge_token,Box::new(dyn_gel),#children_token)
+//             } )
+           
+//              .to_tokens(tokens);
+//         }
+//     }
+// }
+
 // @ GTreeMacroElement ────────────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug)]
@@ -508,7 +652,8 @@ enum GTreeMacroElement {
     GS(Box<GTreeSurface>),
     RT(Box<GRefresher>),
     GC(GTreeClosure),
-    OnEvent(GOnEvent), // OtherExpr(syn::Expr),
+    OnEvent(GOnEvent),
+    // GT(Box<DynObjTree>) // OtherExpr(syn::Expr),
 }
 
 impl Parse for GTreeMacroElement {
@@ -523,6 +668,13 @@ impl Parse for GTreeMacroElement {
             let mut parsed: GTreeLayerStruct = input.parse()?;
             parsed.at_setup(at_list);
             Ok(Self::GL(parsed))
+            // ─────────────────────────────────────────────────────────────────
+
+        // }else if input.peek(kw::Dyn) {
+        //     //@ Dyn
+        //     let mut parsed: DynObjTree = input.parse()?;
+        //     parsed.at_setup(at_list);
+        //     Ok(Self::GT(Box::new(parsed)))
         } else if input.peek(kw::RefreshUse) {
             // @refresher
             let mut parsed: GRefresher = input.parse()?;
@@ -557,7 +709,9 @@ impl ToTokens for GTreeMacroElement {
         use match_any::match_any;
 
         match_any!( self ,
-            Self::GL(x)|Self::GS(x)|Self::RT(x)|Self::GC(x)|Self::OnEvent(x) => x.to_tokens(tokens)
+            Self::GL(x)|Self::GS(x)|Self::RT(x)|Self::GC(x)|Self::OnEvent(x)
+            // |Self::GT(x) 
+            => x.to_tokens(tokens)
         );
     }
 }

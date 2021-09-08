@@ -1049,7 +1049,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_core::parent;
-    use emg_refresh::{RefreshUseFor, RefreshWhoNoWarper};
+    use emg_refresh::{RefreshForUse, RefreshWhoNoWarper};
     use emg_state::{StateVar};
     use im_rc::vector;
  
@@ -1175,9 +1175,9 @@ mod tests {
             });
             info!("l2 =========================================================");
             
-            root_e.refresh_use(&vec![css(css_width)]);
+            root_e.refresh_for_use(&vec![css(css_width)]);
             // root_e.refresh_use(&css(css_width.clone()));
-            root_e.refresh_use(&Css(css_height));
+            root_e.refresh_for_use(&Css(css_height));
             assert_eq!(
                 e1.edge_data(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .unwrap()
@@ -1188,8 +1188,8 @@ mod tests {
             );
             info!("=========================================================");
 
-            e2.refresh_use(&Css(CssWidth::from(px(20))));
-            e2.refresh_use(&Css(CssHeight::from(px(20))));
+            e2.refresh_for_use(&Css(CssWidth::from(px(20))));
+            e2.refresh_for_use(&Css(CssHeight::from(px(20))));
 
             trace!("refresh_use after {:#?}", &e2);
             info!("l3 =========================================================");
@@ -1313,41 +1313,41 @@ mod tests {
             let xx = vec![css_width];
             // let xx = vec![css(css_width)];
 
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
 
             // trace!("refresh_use after css_width {}", &root_e);
             trace!("refresh_use after css_width {}", &e1);
@@ -1355,7 +1355,7 @@ mod tests {
 
             // root_e.refresh_use(&Css(css_height.clone()));
             let tempcss= use_state(css_height);
-            root_e.refresh_use(&tempcss);
+            root_e.refresh_for_use(&tempcss);
             assert_eq!(
                 e1.node
                     .get()
@@ -1395,36 +1395,36 @@ mod tests {
 
             info!("=========================================================");
 
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
             assert_eq!(
                 e1.node
                     .get()
@@ -1450,7 +1450,7 @@ mod tests {
 
             trace!("refresh_use after {}", &e2);
             info!("l1351 =========================================================");
-            e2.refresh_use(&Css(CssHeight::from(px(50))));
+            e2.refresh_for_use(&Css(CssHeight::from(px(50))));
             assert_eq!(
                 e2.node
                     .get()
@@ -1492,7 +1492,7 @@ mod tests {
                 trace!("refresh_use after2 {}", &e2);
             });
             info!("=========================================================");
-            e2.refresh_use(&Css(CssHeight::from(px(150))));
+            e2.refresh_for_use(&Css(CssHeight::from(px(150))));
 
             trace!("refresh_use after {:#?}", &e2);
             info!("..=========================================================");
@@ -1611,7 +1611,7 @@ mod tests {
             let xx = vec![css_width];
             // let xx = vec![css(css_width)];
 
-            root_e.refresh_use(&xx);
+            root_e.refresh_for_use(&xx);
 
             warn!("calculated 3 =========================================================");
             warn!("{}",e1.node
@@ -1621,40 +1621,40 @@ mod tests {
             .unwrap()
             .calculated);
 
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
-            root_e.refresh_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
+            root_e.refresh_for_use(&xx);
 
             // trace!("refresh_use after css_width {}", &root_e);
             trace!("refresh_use after css_width {}", &e1);
@@ -1662,7 +1662,7 @@ mod tests {
 
             // root_e.refresh_use(&Css(css_height.clone()));
             let tempcss= use_state(css_height);
-            root_e.refresh_use(&tempcss);
+            root_e.refresh_for_use(&tempcss);
             
             warn!("calculated 4 root h w 100 =========================================================");
             warn!("{}",e1.node
@@ -1718,36 +1718,36 @@ mod tests {
 
             info!("=========================================================");
 
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
             
             assert_eq!(
                 e1.node
@@ -1774,7 +1774,7 @@ mod tests {
 
             trace!("refresh_use after {}", &e2);
             info!("l1351 =========================================================");
-            e2.refresh_use(&Css(CssHeight::from(px(50))));
+            e2.refresh_for_use(&Css(CssHeight::from(px(50))));
             assert_eq!(
                 e2.node
                     .get()
@@ -1816,7 +1816,7 @@ mod tests {
                 trace!("refresh_use after2 {}", &e2);
             });
             info!("=========================================================");
-            e2.refresh_use(&Css(CssHeight::from(px(150))));
+            e2.refresh_for_use(&Css(CssHeight::from(px(150))));
 
             trace!("refresh_use after {:#?}", &e2);
             info!("..=========================================================");

@@ -2,7 +2,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-09-02 12:45:00
+ * @LastEditTime: 2021-09-08 15:32:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -198,7 +198,10 @@ pub trait Application {
     }
 }
 
-struct Instance<'a, A: Application> {
+struct Instance<'a, A: Application>
+where
+    A::Message: 'static,
+{
     application: Rc<RefCell<A>>,
     bus: Bus<A::Message>,
     g: Rc<RefCell<GraphType<'a, A::Message>>>,

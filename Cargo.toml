@@ -12,5 +12,7 @@ members = [
     "emg_animation",
     "emg_orders",
     "emg_debuggable",
+    "emg_msg_macro",
+    "emg_msg_impl",
 ]
 exclude = ["tests"]

@@ -27,6 +27,13 @@ illicit = "1.1.2"
 # lazy_static = "1.4.0"
 dyn-clone = "1.0.4"
 # downcast-rs = "1.2.0"
+dyn-clonable = "0.9.0"
+
+better_any = { path = "../../better_any/better_any", features = [
+    "nightly",
+    "derive",
+] }
+emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
 
 strum = "0.21.0"
 strum_macros = "0.21.1"
