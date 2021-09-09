@@ -1,6 +1,7 @@
 use std::convert::TryInto;
 
 use seed_styles::GlobalStyleSV;
+use tracing::warn;
 
 use crate::emg_runtime::{
     dodrio::{
@@ -148,12 +149,15 @@ impl<'a, Message> NodeBuilder<Message> for Layer<'a, Message>
         bumpalo::collections::Vec<'b, Attribute<'b>>,
         bumpalo::collections::Vec<'b, Node<'b>>,
     > {
+        warn!("Layer index:{}", self.id.as_str());
+
         let children = self
             .children
             .iter()
             .map(|element| element.node(bump, bus, style_sheet));
 
         // TODO: Complete styling
+
         layer(
             // bumpalo::format!(in bump,"{}{}",&self.id,"-layer").into_bump_str(),
             bump,

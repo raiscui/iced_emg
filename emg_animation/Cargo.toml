@@ -19,7 +19,7 @@ im-rc = "15.0.0"
 emg_state = { path = "../emg_state" }
 emg_core = { path = "../emg_core" }
 seed_styles = { path = "../../styles_hooks/seed_styles" }
-ordered-float = "2.7.0"
+ordered-float = "2.8.0"
 
 [dev-dependencies]
 insta = "1.7.2"

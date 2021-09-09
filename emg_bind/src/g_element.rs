@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-09-08 16:36:57
+ * @LastEditTime: 2021-09-09 17:15:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,6 +11,7 @@ use crate::{
 };
 pub use better_any;
 use better_any::{Tid, TidAble};
+use emg::NodeIndex;
 use emg_core::TypeCheckObjectSafe;
 use emg_refresh::{RefreshFor, RefreshUse};
 // extern crate derive_more;
@@ -72,8 +73,14 @@ where
     Button_(Button<'a, Message>),
     Refresher_(Rc<dyn RefreshFor<GElement<'a, Message>> + 'a>),
     Event_(EventNode<Message>),
+    //internal
     Generic_(Box<dyn DynGElement<'a, Message>>),
-    // IntoE(Rc<dyn Into<Element<'a, Message>>>),
+    #[from(ignore)]
+    NodeRef_(String), // IntoE(Rc<dyn Into<Element<'a, Message>>>),
+}
+
+pub fn node_ref<'a, Message>(str: impl Into<String>) -> GElement<'a, Message> {
+    GElement::NodeRef_(str.into())
 }
 
 // fn replace_with<X, F: Fn(X) -> X>(x: &mut X, convert: F)
@@ -100,6 +107,21 @@ impl<'a, Message: std::clone::Clone + 'static> GElement<'a, Message> {
     pub fn is_event_(&self) -> bool {
         matches!(self, Self::Event_(..))
     }
+
+    /// Returns `true` if the g element is [`NodeIndex_`].
+    ///
+    /// [`NodeIndex_`]: GElement::NodeIndex_
+    pub fn is_node_ref_(&self) -> bool {
+        matches!(self, Self::NodeRef_(..))
+    }
+
+    pub fn as_node_ref_(&self) -> Option<&String> {
+        if let Self::NodeRef_(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElement<'a, Message> {
@@ -123,6 +145,9 @@ impl<'a, Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElem
                 write!(f, "GElement::Button_")
             }
             Generic_(_) => write!(f, "GElement::Generic_"),
+            GElement::NodeRef_(nid) => {
+                write!(f, "GElement::NodeIndex({})", nid)
+            }
         }
     }
 }
@@ -136,7 +161,7 @@ where
     ///  Refresher_(_)|Event_(_) can't to Element
     fn try_from(ge: GElement<'a, Message>) -> Result<Self, Self::Error> {
         use match_any::match_any;
-        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, Refresher_, Text_};
+        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_};
 
         // if let GElement::Builder_(gel, builder) = ge {
         //     let x = gel.borrow_mut().as_mut();
@@ -151,7 +176,11 @@ where
             },
             Layer_(x) | Text_(x) | Button_(x) => Ok(x.into()),
             Refresher_(_) | Event_(_) => Err(()),
-            Generic_(x) => Ok(x.generate_element())
+            Generic_(x) => Ok(x.generate_element()),
+            NodeRef_(_)=> panic!("TryFrom<GElement to Element: \n     GElement::NodeIndex_() should handle before.")
+
+
+
         )
     }
 }

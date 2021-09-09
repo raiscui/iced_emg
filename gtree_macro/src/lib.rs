@@ -860,7 +860,7 @@ impl ToTokens for Gtree {
 
             #[allow(unused)]
             use emg_bind::{Element, EventCallback, EventMessage, GElement,
-                GTreeBuilderElement,
+                GTreeBuilderElement,node_ref
             };
             #[allow(unused)]
             use emg_layout::{css, styles::*,add_values::*,EmgEdgeItem};

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-09-08 16:50:27
+ * @LastEditTime: 2021-09-09 17:54:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,7 +23,7 @@ pub type GraphType<'a, Message, Ix = String> = Graph<N<'a, Message>, E<Ix>, Ix>;
 
 pub trait GraphView<'a, Message> {
     type N;
-    type Ix: std::fmt::Debug;
+    type Ix: std::fmt::Debug + std::fmt::Display;
     type E;
 
     fn gelement_refresh_and_comb(
@@ -53,7 +53,7 @@ pub trait GraphView<'a, Message> {
 
 impl<'a, Message, Ix> GraphView<'a, Message> for Graph<N<'a, Message>, E<Ix>, Ix>
 where
-    Ix: Clone + Hash + Eq + std::fmt::Debug + Ord + Default,
+    Ix: Clone + Hash + Eq + std::fmt::Debug + std::fmt::Display + Ord + Default + From<String>,
     // E: Clone + std::fmt::Debug,
     Message: 'static + Clone + std::fmt::Debug,
 {
@@ -81,11 +81,26 @@ where
             .drain_filter(|gel| gel.is_event_())
             .collect::<Vec<_>>();
 
+        //make node_ref real
+        children_s
+            .iter_mut()
+            .filter(|gel| gel.is_node_ref_())
+            .for_each(|gel| {
+                if let Some(node) = gel
+                    .as_node_ref_()
+                    .and_then(|str| self.get_node_weight_use_ix(&str.clone().into()))
+                {
+                    *gel = node.clone(); //TODO use cow 因为 children_s 只是刷新current_node_clone
+                } else {
+                    panic!("can't get node id:{}", gel);
+                }
+            });
+
         // The const / dyn child node performs the change
         // TODO: cache.    use edge type?
-        for child in children_s {
+        for child in &children_s {
             //  TODO use COW
-            current_node_clone.refresh_for_use(&child);
+            current_node_clone.refresh_for_use(child);
         }
         if let Ok(mut node_builder_widget) =
             NodeBuilderWidget::<Message>::try_new_from(&current_node_clone)
@@ -93,7 +108,7 @@ where
             let _g = trace_span!("-> in NodeBuilderWidget").entered();
             {
                 trace!("NodeBuilderWidget::<Message>::try_from  OK");
-                node_builder_widget.set_id(format!("{:?}", cix));
+                node_builder_widget.set_id(format!("{}", cix));
 
                 let ei = &edges.get(paths.last().unwrap()).unwrap().item;
 

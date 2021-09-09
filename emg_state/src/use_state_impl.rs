@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-09-02 16:14:27
+ * @LastEditTime: 2021-09-09 13:12:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -1655,7 +1655,7 @@ mod state_test {
     struct TT(String);
     impl From<i32> for TT {
         fn from(v: i32) -> Self {
-            Self(format!("{:?}", v))
+            Self(format!("{}", v))
         }
     }
     impl From<TT> for i32 {

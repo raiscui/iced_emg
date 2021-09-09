@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2021-09-08 16:45:22
+ * @LastEditTime: 2021-09-09 16:09:17
  * @LastEditors: Rais
  * @Description:
  */
@@ -245,6 +245,7 @@ where
                 //TODO 反射?
                 todo!("reflection?");
             }
+            GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
         };
     }
 }
@@ -278,6 +279,7 @@ where
                     self.refresh_for(checkbox);
                 }
             }
+            GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
         };
     }
 }

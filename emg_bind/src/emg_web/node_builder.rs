@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-09-08 16:33:49
+ * @LastEditTime: 2021-09-09 15:36:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,6 +12,7 @@ mod gelement2nodebuilderwidget;
 
 use derive_more::From;
 use seed_styles::GlobalStyleSV;
+use tracing::warn;
 
 use std::{rc::Rc, string::String};
 
@@ -266,7 +267,7 @@ impl<'a, Message: std::clone::Clone + 'static> NodeBuilderWidget<'a, Message> {
     /// permission to read it.
     pub fn set_widget(&mut self, gel: Box<GElement<'a, Message>>) {
         // use match_any::match_any;
-        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, Refresher_, Text_};
+        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_};
 
         match gel {
             box Builder_(gel_in, mut builder) => {
@@ -287,6 +288,7 @@ impl<'a, Message: std::clone::Clone + 'static> NodeBuilderWidget<'a, Message> {
             box Generic_(x) => {
                 self.widget = Some(BuilderWidget::Dyn(x));
             }
+            box NodeRef_(_) => panic!("set_widget: GElement::NodeIndex_() should handle before."),
         };
 
         //TODO add type_name
@@ -308,6 +310,8 @@ where
             BuilderWidget::Static(x) => x.generate_element_builder(bump, bus, style_sheet),
             BuilderWidget::Dyn(x) => x.generate_element_builder(bump, bus, style_sheet),
         };
+
+        warn!("node_builder_widget index:{}", self.id.as_str());
 
         element_builder = element_builder
             .attr(
