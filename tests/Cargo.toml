@@ -8,7 +8,47 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+emg_bind = { path = "../emg_bind" }
+
+
+iced = { path = "../../iced" }
+# iced_web = "0.3"
+
+emg_refresh = { path = "../emg_refresh" }
+emg_state = { path = "../emg_state" }
+emg_layout = { path = "../emg_layout" }
+emg_animation = { path = "../emg_animation" }
+gtree = { path = "../gtree" }
+seed_styles = { path = "../../styles_hooks/seed_styles" }
+emg_core = { path = "../emg_core" }
+anchors = { path = "../../anchors" }
+
+
+tracing = "0.1.26"
+
+tracing-wasm = "0.2.0"
+console_error_panic_hook = "0.1.6"
+# im-rc = "15.0.0"
+# serde = "1.0.130"
+
 gtree_proc_macro = { path = "../gtree_proc_macro" }
 [dev-dependencies]
-emg_bind = {path="../emg_bind"}
 wasm-bindgen-test = "0.3"
+
+
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+version = "^0.3"
+features = [
+    "Performance",
+    "Window",
+    "console",
+    "Document",
+    "HtmlElement",
+    "HtmlInputElement",
+    "Event",
+    "EventTarget",
+    "InputEvent",
+    "KeyboardEvent",
+    "IdleRequestOptions",
+]

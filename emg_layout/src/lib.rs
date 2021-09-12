@@ -33,6 +33,7 @@ use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
 pub use im_rc::Vector;
+pub use im_rc::vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;

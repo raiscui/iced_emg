@@ -14,5 +14,6 @@ members = [
     "emg_debuggable",
     "emg_msg_macro",
     "emg_msg_impl",
+    "tests"
 ]
-exclude = ["tests"]
+# exclude = [""]
