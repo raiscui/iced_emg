@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 11:58:58
- * @LastEditTime: 2021-09-10 18:15:35
+ * @LastEditTime: 2021-09-14 16:23:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 macro_rules! into_vector {
     ( $( $element:expr ) , * ) => {
         {
-            let mut v = emg_layout::Vector::new();
+            let mut v = $crate::Vector::new();
 
             $(
                 v.push_back($element.into());

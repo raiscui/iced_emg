@@ -24,7 +24,7 @@ emg_core = { path = "../emg_core" }
 anchors = { path = "../../anchors" }
 
 
-tracing = "0.1.26"
+tracing = "0.1"
 
 tracing-wasm = "0.2.0"
 console_error_panic_hook = "0.1.6"
@@ -34,7 +34,6 @@ console_error_panic_hook = "0.1.6"
 gtree_proc_macro = { path = "../gtree_proc_macro" }
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
-
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]

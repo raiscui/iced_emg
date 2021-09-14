@@ -10,7 +10,7 @@ split-debuginfo = "unpacked"
 
 [dependencies]
 emg_state = { path = "../emg_state" }
-tracing = "0.1.26"
+tracing = "0.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # console_log = { version = "0.2", features = ["color"] }

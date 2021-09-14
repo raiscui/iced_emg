@@ -1,6 +1,5 @@
 use emg_animation::{models::Property, Debuggable};
 use emg_state::{topo, use_state, CloneStateVar, StateVar};
-use seed_styles::CssWidth;
 use tracing::trace;
 
 use crate::GenericSizeAnchor;

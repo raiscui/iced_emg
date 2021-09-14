@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-08-30 14:05:53
+ * @LastEditTime: 2021-09-14 22:11:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,12 +11,12 @@ mod func;
 
 use std::{cell::Cell, rc::Rc, time::Duration};
 
+use emg_core::{vector, Vector};
 use emg_state::{
     topo, use_state,
     use_state_impl::{TopoKey, Var},
     Anchor, CloneStateAnchor, CloneStateVar, StateAnchor, StateMultiAnchor, StateVar,
 };
-use im_rc::{vector, Vector};
 
 use emg_animation::{
     extract_initial_wait,
@@ -624,10 +624,10 @@ mod tests {
     use emg_animation::models::Property;
     use emg_animation::{interrupt, opacity, style, to, Tick};
     use emg_core::into_vector;
+    use emg_core::vector;
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
     };
-    use im_rc::vector;
     use seed_styles as styles;
     use styles::{pc, width};
     use styles::{px, CssWidth};

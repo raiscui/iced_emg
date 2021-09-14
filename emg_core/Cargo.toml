@@ -11,3 +11,4 @@ split-debuginfo = "unpacked"
 [dependencies]
 ordered-float = "2.8.0"
 derive_more = "0.99.13"
+im-rc = "15.0.0"

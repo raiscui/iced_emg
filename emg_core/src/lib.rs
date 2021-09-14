@@ -8,6 +8,8 @@ use measures::{ExactLengthSimplex, Unit};
 
 use derive_more::Display;
 use derive_more::From;
+pub use im_rc::vector;
+pub use im_rc::Vector;
 use ordered_float::NotNan;
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -182,8 +184,13 @@ impl GenericSize {
 
 #[cfg(test)]
 mod tests {
+    use im_rc::Vector;
+
+    use crate::into_vector;
+
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
+        let f: Vector<i32> = into_vector![1, 2, 3];
     }
 }

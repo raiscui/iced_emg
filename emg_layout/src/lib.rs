@@ -32,8 +32,8 @@ use emg_core::{GenericSize, TypeCheck};
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
-pub use im_rc::Vector;
-pub use im_rc::vector;
+pub use emg_core::Vector;
+use emg_core::vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;
@@ -1051,8 +1051,8 @@ mod tests {
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_core::parent;
     use emg_refresh::{RefreshForUse, RefreshWhoNoWarper};
-    use emg_state::{StateVar};
-    use im_rc::vector;
+    use emg_state::StateVar;
+    use emg_core::vector;
  
     use styles::{CssBackgroundColorTrait,CssWidth, CssHeight, h, hsl, pc, width};
     use tracing::{debug, info, span, warn};

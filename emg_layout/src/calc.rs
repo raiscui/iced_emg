@@ -2,18 +2,18 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-08-31 11:01:24
+ * @LastEditTime: 2021-09-14 16:38:35
  * @LastEditors: Rais
 * @Description:
 */
-use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, add_values::{AlignX, AlignY, OriginX, OriginY}};
+use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4};
 
 use emg::EdgeIndex;
-use emg_core::{TypeCheck, TypeName};
+use emg_core::{ TypeName};
 use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo};
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
-use styles::{CssHeight, CssHeightTrait, CssTransform, CssTransformTrait, CssWidth, CssWidthTrait, LogicLength, px, s};
+use styles::{ CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, LogicLength, px, s};
 use tracing::{ trace,trace_span};
 use derive_more::From;
 

@@ -40,7 +40,7 @@ pub fn emg_msg(_attr: TokenStream, item: TokenStream) -> Result<TokenStream, syn
             }
         }
     }
-    println!("{:#?}", ast);
+    // println!("{:#?}", ast);
 
     let id = ast.ident.clone();
     let output = if has_derive {
