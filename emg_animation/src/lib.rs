@@ -16,7 +16,7 @@ use std::convert::TryInto;
 // use emg_debuggable::dbg4;
 use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
 
-use im_rc::{vector, Vector};
+use emg_core::{vector, Vector};
 use models::{map_to_motion, update_animation, Animation, Interpolation, Property, Step};
 use ordered_float::NotNan;
 use props::warn_for_double_listed_properties;
@@ -274,7 +274,7 @@ impl<T> fmt::Debug for Debuggable<T> {
 mod tests {
     use std::time::Duration;
 
-    use im_rc::vector;
+    use emg_core::vector;
 
     use crate::{
         extract_initial_wait, fill, interrupt,

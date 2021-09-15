@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-09-14 22:11:41
+ * @LastEditTime: 2021-09-15 12:06:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -114,7 +114,7 @@ pub fn global_clock_set(now: Duration) {
 macro_rules! anima {
     ( $( $element:expr ) , * ) => {
         {
-            let mut v = $crate::Vector::new();
+            let mut v = emg_core::Vector::new();
 
             $(
                 v.push_back($element.into());

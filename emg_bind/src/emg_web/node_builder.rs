@@ -22,7 +22,7 @@ use crate::{
     },
     map_fn_callback_return_to_option_ms, Bus, DynGElement, Element, GElement, Widget,
 };
-use emg::im_rc::Vector;
+use emg_core::Vector;
 // ────────────────────────────────────────────────────────────────────────────────
 //TODO move out to global
 pub trait NodeBuilder<Message> // where
@@ -387,7 +387,7 @@ where
 #[cfg(test)]
 #[allow(unused)]
 mod node_builder_test {
-    use emg::im_rc::vector;
+    use emg_core::vector;
     use iced::Text;
     use wasm_bindgen_test::wasm_bindgen_test;
 

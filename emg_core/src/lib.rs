@@ -8,6 +8,7 @@ use measures::{ExactLengthSimplex, Unit};
 
 use derive_more::Display;
 use derive_more::From;
+pub use im_rc;
 pub use im_rc::vector;
 pub use im_rc::Vector;
 use ordered_float::NotNan;
