@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2021-09-09 16:09:17
+ * @LastEditTime: 2021-09-15 15:37:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,7 +21,10 @@ use seed_styles::GlobalStyleSV;
 use tracing::{error, trace, warn};
 
 use crate::emg_runtime::dodrio::bumpalo;
-use std::rc::Rc;
+use std::{
+    ops::{Deref, DerefMut},
+    rc::Rc,
+};
 
 /// A box that can be checked.
 ///
@@ -225,7 +228,7 @@ where
                 unimplemented!();
             }
             GElement::Builder_(gel, _) => {
-                gel.refresh_for(who_checkbox);
+                gel.deref().refresh_for(who_checkbox);
             }
             GElement::Text_(t) => {
                 who_checkbox.label = t.get_content();
@@ -262,7 +265,7 @@ where
                 l.ref_push(self.clone());
             }
             GElement::Builder_(gel, _) => {
-                let mut_gel = gel.as_mut();
+                let mut_gel = gel.deref_mut();
                 self.refresh_for(mut_gel);
             }
             GElement::Text_(_)

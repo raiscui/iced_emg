@@ -18,14 +18,14 @@ mod test {
         subscription, Application, Button, Checkbox, Command, Element, GTreeBuilderElement,
         GraphMethods, GraphType, GraphView, Orders, Subscription, Text, Tick,
     };
-    use emg_core::into_vector;
+    use emg_core::{into_vector, vector};
     use emg_core::{parent, TypeCheck, TypeCheckObjectSafe};
     use emg_layout::{
         add_values::origin_x,
         anima,
         animation::{global_clock, AnimationE},
         styles::{pc, px, width, CssWidth},
-        vector, EmgEdgeItem,
+        EmgEdgeItem,
     };
     use emg_state::{topo, CloneStateVar, Dict, StateAnchor};
 
@@ -72,15 +72,32 @@ mod test {
         }
 
         let mut emg_graph = GraphType::<Message>::default();
-
         let an: AnimationE<Message> = anima![width(px(80))];
-        let a = use_state(9999);
-
+        let a = use_state(9999);        
+        
         let p = web_sys::window().unwrap().performance().unwrap();
 
         let treetime = p.now();
 
-        let root: GTreeBuilderElement<'a, Message> = gtree! {
+        let root: GTreeBuilderElement<'a, Message> = 
+        
+        //
+        
+        // gtree! {
+        //     @=a
+        //     Layer [
+        //         Button::new(Text::new(format!("2 button in quote..{}", "e"))) => []
+        //         ]
+        // };
+        // gtree! {
+        //     @=a
+        //     Layer [
+        //             Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
+        //                 Text::new(format!("2 button in quote..{}", "e"))
+        //             ]
+        //         ]
+        // };
+         gtree! {
             @=a
             Layer [
                  @=b @E=[w(w(pc(50))),h(pc(50)),origin_x(pc(50)),align_x(pc(50))]
@@ -100,7 +117,7 @@ mod test {
                     @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
                     Text::new(format!("in quote.. {}", "b")) => [
                         // xxx,
-                        RefreshUse ||{100},
+                        RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
                         // RefreshUse  move||{
                         //     that3.borrow().an.get_position(0)
                         // },
@@ -161,8 +178,6 @@ mod test {
                                     to(into_vector![width(pc(100))]),
                                 ]);
 
-
-
                                             a.set(a.get()+1);
 
                                             debug!("will render");
@@ -171,7 +186,6 @@ mod test {
                                         //         Message::Event(Event::OnAnimationFrame(tick))
                                         //     }
                                         // )
-
 
                                         // orders.publish(Message::X);
 
@@ -191,26 +205,23 @@ mod test {
             ]
         };
 
-        let treebuildtime = p.now()- treetime;
+        let treebuildtime = p.now() - treetime;
         warn!("treebuildtime:{}", treebuildtime);
 
-        let handle_root_in_topo_start = p.now(); 
+        let handle_root_in_topo_start = p.now();
         emg_graph.handle_root_in_topo(&root);
-        let handle_root_in_topo_time = p.now()-handle_root_in_topo_start;
+        let handle_root_in_topo_time = p.now() - handle_root_in_topo_start;
         warn!("handle_root_in_topo_time:{}", treebuildtime);
 
-
-        let vs= p.now();
+        let vs = p.now();
         emg_graph.view("a");
-        let ve = p.now()-vs;
+        let ve = p.now() - vs;
         warn!("view 1:{}", treebuildtime);
 
-        
-        let vs= p.now();
+        let vs = p.now();
         emg_graph.view("a");
-        let ve = p.now()-vs;
+        let ve = p.now() - vs;
         warn!("view 2:{}", treebuildtime);
-
 
         let mut tot = 0f64;
 
@@ -221,11 +232,10 @@ mod test {
 
             let t2 = p.now();
 
-            tot+=t2-t1;
+            tot += t2 - t1;
         }
         warn!("tut:{}", tot);
 
-        warn!("dt:{}", tot/10000.);
-
+        warn!("dt:{}", tot / 10000.);
     }
 }

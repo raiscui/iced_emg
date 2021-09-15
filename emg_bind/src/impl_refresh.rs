@@ -1,17 +1,18 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-09-08 17:20:50
+ * @LastEditTime: 2021-09-15 15:11:30
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{GElement, NodeBuilderWidget};
-use emg_refresh::{RefreshFor, RefreshForUse, RefreshWhoNoWarper};
+use emg_refresh::{RefreshFor, RefreshForUse, RefreshUseNoWarper, RefreshWhoNoWarper};
 use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
 impl<'a, Message> RefreshWhoNoWarper for GElement<'a, Message> {}
+impl<'a, Message> RefreshUseNoWarper for GElement<'a, Message> {}
 impl<'a, Message> RefreshFor<GElement<'a, Message>> for GElement<'a, Message>
 where
     Message: 'static + Clone,
