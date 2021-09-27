@@ -5,7 +5,6 @@
 #![allow(clippy::used_underscore_binding)]//for display attr
 
 // ────────────────────────────────────────────────────────────────────────────────
-#![feature(iter_intersperse)]
 #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
@@ -22,22 +21,20 @@
 // #![feature(auto_traits)]
 use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc};
 
-use add_values::{AlignX, OriginX, OriginY};
 use calc::layout_calculating;
 use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
-use emg_core::{GenericSize, TypeCheck};
+use emg_core::{GenericSize};
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
 use emg_core::Vector;
-use emg_core::vector;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;
-use styles::{CssHeight, CssTransform, CssValueTrait, CssWidth, Style, UpdateStyle, px, s};
+use styles::{ CssTransform, CssValueTrait, Style, UpdateStyle, px, s};
 // use styles::Percent;
 // use styles::ExactLength;
 // use styles::CssWidth;
@@ -485,7 +482,7 @@ impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
     }
 
 
-    pub fn add_build(&self, target_nix:NodeIndex<Ix>)-> Self {
+    pub fn link(&self, target_nix:NodeIndex<Ix>)-> Self {
         let last = self.last().and_then(|e|e.target_nix().as_ref());
         let mut new_e = self.clone();
         new_e.push_back(EdgeIndex::new(last.cloned(),target_nix));
@@ -1050,7 +1047,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_core::parent;
-    use emg_refresh::{RefreshForUse, RefreshWhoNoWarper};
+    use emg_refresh::{RefreshForUse};
     use emg_state::StateVar;
     use emg_core::vector;
  

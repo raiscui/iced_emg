@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-09-09 15:36:51
+ * @LastEditTime: 2021-09-27 23:37:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ use derive_more::From;
 use seed_styles::GlobalStyleSV;
 use tracing::warn;
 
-use std::{rc::Rc, string::String};
+use std::{cell::RefCell, rc::Rc, string::String};
 
 use crate::{
     dodrio::{
@@ -179,30 +179,30 @@ where
 }
 
 #[derive(Clone)]
-enum BuilderWidget<'a, Message>
+enum BuilderWidget<Message>
 where
     Message: 'static,
 {
-    Static(Rc<dyn NodeBuilder<Message> + 'a>),
-    Dyn(Box<dyn DynGElement<'a, Message>>),
+    Static(Rc<dyn NodeBuilder<Message>>),
+    Dyn(Box<dyn DynGElement<Message>>),
 }
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
-pub struct NodeBuilderWidget<'a, Message>
+pub struct NodeBuilderWidget<Message>
 where
     Message: 'static,
 {
     id: String,
     //TODO : instead use GElement
-    widget: Option<BuilderWidget<'a, Message>>,
+    widget: Option<BuilderWidget<Message>>,
     //TODO use vec deque
     event_callbacks: Vector<EventNode<Message>>,
     // event_callbacks: Vector<EventNode<Message>>,
     layout_str: String,
 }
 
-impl<'a, Message> std::fmt::Debug for NodeBuilderWidget<'a, Message>
+impl<Message> std::fmt::Debug for NodeBuilderWidget<Message>
 where
     Message: std::clone::Clone + std::fmt::Debug,
 {
@@ -221,7 +221,7 @@ where
     }
 }
 
-impl<'a, Message: Clone + 'static> Default for NodeBuilderWidget<'a, Message> {
+impl<Message: Clone + 'static> Default for NodeBuilderWidget<Message> {
     fn default() -> Self {
         Self {
             id: String::default(),
@@ -231,12 +231,12 @@ impl<'a, Message: Clone + 'static> Default for NodeBuilderWidget<'a, Message> {
         }
     }
 }
-impl<'a, Message: std::clone::Clone + 'static> NodeBuilderWidget<'a, Message> {
+impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
     /// # Errors
     ///
     /// Will return `Err` if `gel` does not Layer_(_) | Button_(_) | Text_(_)
     #[allow(clippy::result_unit_err)]
-    pub fn try_new_from(gel: &GElement<'a, Message>) -> Result<Self, ()> {
+    pub fn try_new_use(gel: &GElement<Message>) -> Result<Self, ()> {
         use GElement::{Button_, Layer_, Text_};
         match gel {
             Layer_(_) | Button_(_) | Text_(_) => Ok(NodeBuilderWidget::default()),
@@ -265,37 +265,37 @@ impl<'a, Message: std::clone::Clone + 'static> NodeBuilderWidget<'a, Message> {
     ///
     /// Will Panics if `gel` is Refresher_ | Event_
     /// permission to read it.
-    pub fn set_widget(&mut self, gel: Box<GElement<'a, Message>>) {
+    pub fn set_widget(&mut self, gel: Rc<RefCell<GElement<Message>>>) {
         // use match_any::match_any;
         use GElement::{Builder_, Button_, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_};
-
-        match gel {
-            box Builder_(gel_in, mut builder) => {
+        let gel_take = gel.replace(GElement::NodeRef_(Default::default()));
+        match gel_take {
+            Builder_(gel_in, mut builder) => {
                 builder.set_widget(gel_in);
             }
-            box Layer_(x) => {
+            Layer_(x) => {
                 self.widget = Some(BuilderWidget::Static(Rc::new(x)));
             }
-            box Text_(x) => {
+            Text_(x) => {
                 self.widget = Some(BuilderWidget::Static(Rc::new(x)));
             }
-            box Button_(x) => {
+            Button_(x) => {
                 self.widget = Some(BuilderWidget::Static(Rc::new(x)));
             }
-            box (Refresher_(_) | Event_(_)) => {
+            Refresher_(_) | Event_(_) => {
                 todo!();
             }
-            box Generic_(x) => {
+            Generic_(x) => {
                 self.widget = Some(BuilderWidget::Dyn(x));
             }
-            box NodeRef_(_) => panic!("set_widget: GElement::NodeIndex_() should handle before."),
+            NodeRef_(_) => panic!("set_widget: GElement::NodeIndex_() should handle before."),
         };
 
         //TODO add type_name
     }
 }
 
-impl<'a, Message> Widget<Message> for NodeBuilderWidget<'a, Message>
+impl<Message> Widget<Message> for NodeBuilderWidget<Message>
 where
     Message: 'static + Clone,
 {
@@ -376,11 +376,11 @@ where
     }
 }
 
-impl<'a, Message> From<NodeBuilderWidget<'a, Message>> for Element<'a, Message>
+impl<Message> From<NodeBuilderWidget<Message>> for Element<Message>
 where
     Message: 'static + Clone,
 {
-    fn from(node_builder_widget: NodeBuilderWidget<'a, Message>) -> Element<'a, Message> {
+    fn from(node_builder_widget: NodeBuilderWidget<Message>) -> Element<Message> {
         Element::new(node_builder_widget)
     }
 }

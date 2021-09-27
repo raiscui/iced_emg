@@ -24,25 +24,25 @@ use crate::emg_runtime::dodrio::builder::div;
 /// A [`Layer`] will try to fill the horizontal space of its container.
 #[allow(missing_debug_implementations)]
 #[derive(Clone, Debug)]
-pub struct Layer<'a, Message> {
+pub struct Layer<Message> {
     id: String,
-    children: Vec<Element<'a, Message>>,
+    children: Vec<Element<Message>>,
 }
 
-impl<'a, Message> Default for Layer<'a, Message> {
+impl<Message> Default for Layer<Message> {
     fn default() -> Self {
         Self::new("")
     }
 }
 
-impl<'a, Message> Layer<'a, Message> {
+impl<Message> Layer<Message> {
     /// Creates an empty [`Layer`].
     pub fn new<T: Into<String>>(id: T) -> Self {
         Self::with_children(id, Vec::new())
     }
 
     /// Creates a [`Layer`] with the given elements.
-    pub fn with_children<T: Into<String>>(id: T, children: Vec<Element<'a, Message>>) -> Self {
+    pub fn with_children<T: Into<String>>(id: T, children: Vec<Element<Message>>) -> Self {
         Layer {
             id: id.into(),
             children,
@@ -50,7 +50,7 @@ impl<'a, Message> Layer<'a, Message> {
     }
 
     #[must_use]
-    pub fn set_children(mut self, children: Vec<Element<'a, Message>>) -> Self {
+    pub fn set_children(mut self, children: Vec<Element<Message>>) -> Self {
         self.children = children;
         self
     }
@@ -71,14 +71,14 @@ impl<'a, Message> Layer<'a, Message> {
 
     pub fn push<E>(mut self, child: E) -> Self
     where
-        E: Into<Element<'a, Message>>,
+        E: Into<Element<Message>>,
     {
         self.children.push(child.into());
         self
     }
     pub fn ref_push<E>(&mut self, child: E) -> &mut Self
     where
-        E: Into<Element<'a, Message>>,
+        E: Into<Element<Message>>,
     {
         self.children.push(child.into());
         self
@@ -87,7 +87,7 @@ impl<'a, Message> Layer<'a, Message> {
     /// `GElement::Refresher_(_)` `GElement::Event_(_)` can't convert to Element
     pub fn try_ref_push<E>(&mut self, child: E) -> Option<&mut Self>
     where
-        E: TryInto<Element<'a, Message>, Error = ()>,
+        E: TryInto<Element<Message>, Error = ()>,
     {
         //TODO type error,  show error if need;
         if let Ok(e) = child.try_into() {
@@ -115,17 +115,17 @@ impl<'a, Message> Layer<'a, Message> {
 // }
 
 #[inline]
-fn layer<'a, B>(
+fn layer<'b, B>(
     // tag_name: &'a str,
     bump: B,
 ) -> ElementBuilder<
-    'a,
-    bumpalo::collections::Vec<'a, Listener<'a>>,
-    bumpalo::collections::Vec<'a, Attribute<'a>>,
-    bumpalo::collections::Vec<'a, Node<'a>>,
+    'b,
+    bumpalo::collections::Vec<'b, Listener<'b>>,
+    bumpalo::collections::Vec<'b, Attribute<'b>>,
+    bumpalo::collections::Vec<'b, Node<'b>>,
 >
 where
-    B: Into<&'a Bump>,
+    B: Into<&'b Bump>,
 {
     ElementBuilder::new(bump, "layer")
     // ElementBuilder::new(bump, stringify!(layer))
@@ -133,7 +133,7 @@ where
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<'a, Message> NodeBuilder<Message> for Layer<'a, Message>
+impl<Message> NodeBuilder<Message> for Layer<Message>
 // where
 // Message: 'static,
 {
@@ -181,7 +181,7 @@ impl<'a, Message> NodeBuilder<Message> for Layer<'a, Message>
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<'a, Message> Widget<Message> for Layer<'a, Message>
+impl<Message> Widget<Message> for Layer<Message>
 where
     Message: Clone,
 {
@@ -196,11 +196,11 @@ where
     }
 }
 
-impl<'a, Message> From<Layer<'a, Message>> for Element<'a, Message>
+impl<Message> From<Layer<Message>> for Element<Message>
 where
     Message: 'static + Clone,
 {
-    fn from(layer: Layer<'a, Message>) -> Element<'a, Message> {
+    fn from(layer: Layer<Message>) -> Element<Message> {
         Element::new(layer)
     }
 }

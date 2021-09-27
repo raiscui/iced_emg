@@ -3,7 +3,7 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-08-28 09:59:21
+ * @LastEditTime: 2021-09-17 17:20:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -55,6 +55,26 @@ where
     }
 }
 impl<Who> RefreshFor<Who> for Box<dyn RefreshFor<Who>>
+where
+    Who: RefreshWhoNoWarper,
+{
+    default fn refresh_for(&self, who: &mut Who) {
+        let r = self.as_ref();
+        who.refresh_for_use(r);
+    }
+}
+impl<Who> RefreshFor<Who> for Vec<Rc<dyn RefreshFor<Who>>>
+where
+    Who: RefreshWhoNoWarper,
+{
+    default fn refresh_for(&self, who: &mut Who) {
+        for i in self {
+            let ii = i.as_ref();
+            who.refresh_for_use(ii);
+        }
+    }
+}
+impl<Who> RefreshFor<Who> for Rc<dyn RefreshFor<Who>>
 where
     Who: RefreshWhoNoWarper,
 {

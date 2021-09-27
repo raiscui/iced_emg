@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2021-09-08 16:37:21
+ * @LastEditTime: 2021-09-27 21:29:28
  * @LastEditors: Rais
 * @Description:
 */
@@ -162,7 +162,7 @@ impl<Message> NodeBuilder<Message> for Text
     }
 }
 
-impl<'a, Message> Widget<Message> for Text
+impl<Message> Widget<Message> for Text
 where
     Message: Clone,
 {
@@ -177,11 +177,11 @@ where
     }
 }
 
-impl<'a, Message> From<Text> for Element<'a, Message>
+impl<Message> From<Text> for Element<Message>
 where
     Message: Clone,
 {
-    fn from(text: Text) -> Element<'a, Message> {
+    fn from(text: Text) -> Element<Message> {
         Element::new(text)
     }
 }

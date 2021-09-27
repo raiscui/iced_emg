@@ -2,7 +2,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2021-09-08 15:32:15
+ * @LastEditTime: 2021-09-27 23:38:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -68,7 +68,7 @@ pub trait Application {
     /// Returns the widgets to display in the [`Application`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view<'a>(&self, g: &'a GraphType<'_, Self::Message>) -> Element<'a, Self::Message>;
+    fn view(&self, g: &GraphType<Self::Message>) -> Element<Self::Message>;
 
     /// Returns the event [`Subscription`] for the current state of the
     /// application.
@@ -83,10 +83,10 @@ pub trait Application {
     }
 
     /// Build dom `GTreeBuilderElement`, will callonce at `run`
-    fn tree_build<'a>(
+    fn tree_build(
         this: Rc<RefCell<Self>>,
-        orders: impl Orders<Self::Message> + 'static,
-    ) -> GTreeBuilderElement<'a, Self::Message>;
+        orders: impl Orders<Self::Message>,
+    ) -> GTreeBuilderElement<Self::Message>;
 
     /// Runs the [`Application`].
     /// # Errors
@@ -122,10 +122,12 @@ pub trait Application {
 
         // ─────────────────────────────────────────────────────────────────
 
-        let mut emg_graph = GraphType::<Self::Message>::default();
+        let emg_graph = GraphType::<Self::Message>::default();
         let root = Self::tree_build(Rc::clone(&application), orders.clone());
-        emg_graph.handle_root_in_topo(&root);
+        // emg_graph.handle_root_in_topo(&root);
         let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
+        emg_graph_rc_refcell.handle_root_in_topo(&root);
+
         // let emg_graph_rc = (emg_graph);
         // GraphType::<Self::Message>::init();
         // GraphType::<Self::Message>::get_mut_graph_with(|g| {
@@ -198,13 +200,13 @@ pub trait Application {
     }
 }
 
-struct Instance<'a, A: Application>
+struct Instance<A: Application>
 where
     A::Message: 'static,
 {
     application: Rc<RefCell<A>>,
     bus: Bus<A::Message>,
-    g: Rc<RefCell<GraphType<'a, A::Message>>>,
+    g: Rc<RefCell<GraphType<A::Message>>>,
 }
 
 trait CssNode<'a> {
@@ -235,7 +237,7 @@ impl<'a> CssNode<'a> for GlobalStyleSV {
     }
 }
 
-impl<'a, A> dodrio::Render<'a> for Instance<'_, A>
+impl<'a, A> dodrio::Render<'a> for Instance<A>
 where
     A: Application,
 {

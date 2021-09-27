@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2021-09-15 15:37:18
+ * @LastEditTime: 2021-09-27 23:38:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -18,7 +18,7 @@ use emg_core::{TypeCheckObjectSafe, TypeName};
 use emg_refresh::RefreshFor;
 pub use iced_style::checkbox::{Style, StyleSheet};
 use seed_styles::GlobalStyleSV;
-use tracing::{error, trace, warn};
+use tracing::trace;
 
 use crate::emg_runtime::dodrio::bumpalo;
 use std::{
@@ -179,20 +179,20 @@ where
     }
 }
 
-impl<'a, Message> From<Checkbox<Message>> for Element<'a, Message>
+impl<Message> From<Checkbox<Message>> for Element<Message>
 where
     Message: 'static + Clone,
 {
-    fn from(checkbox: Checkbox<Message>) -> Element<'a, Message> {
+    fn from(checkbox: Checkbox<Message>) -> Element<Message> {
         Element::new(checkbox)
     }
 }
 
-impl<'a, Message> GenerateElement<'a, Message> for Checkbox<Message>
+impl<Message> GenerateElement<Message> for Checkbox<Message>
 where
     Message: 'static + Clone,
 {
-    fn generate_element(&self) -> Element<'a, Message> {
+    fn generate_element(&self) -> Element<Message> {
         Element::new(self.clone())
     }
 }
@@ -218,9 +218,9 @@ where
 // }
 
 // @ 被GElement更新 ------------------------------------
-impl<'a, Message> RefreshFor<Checkbox<Message>> for GElement<'a, Message>
+impl<Message> RefreshFor<Checkbox<Message>> for GElement<Message>
 where
-    Message: 'static + Clone + MessageTid<'a>,
+    Message: 'static + Clone + for<'a> MessageTid<'a>,
 {
     fn refresh_for(&self, who_checkbox: &mut Checkbox<Message>) {
         match self {
@@ -228,7 +228,7 @@ where
                 unimplemented!();
             }
             GElement::Builder_(gel, _) => {
-                gel.deref().refresh_for(who_checkbox);
+                gel.borrow().deref().refresh_for(who_checkbox);
             }
             GElement::Text_(t) => {
                 who_checkbox.label = t.get_content();
@@ -254,19 +254,18 @@ where
 }
 
 // @ 更新who -GElement ------------------------------------
-impl<'a, Message> RefreshFor<GElement<'a, Message>> for Checkbox<Message>
+impl<Message> RefreshFor<GElement<Message>> for Checkbox<Message>
 where
-    Message: 'static + Clone + MessageTid<'a>,
+    Message: 'static + Clone + for<'a> MessageTid<'a>,
 {
-    fn refresh_for(&self, who: &mut GElement<'a, Message>) {
+    fn refresh_for(&self, who: &mut GElement<Message>) {
         match who {
             GElement::Layer_(l) => {
                 // unimplemented!();
                 l.ref_push(self.clone());
             }
             GElement::Builder_(gel, _) => {
-                let mut_gel = gel.deref_mut();
-                self.refresh_for(mut_gel);
+                self.refresh_for(gel.borrow_mut().deref_mut());
             }
             GElement::Text_(_)
             | GElement::Button_(_)
@@ -292,14 +291,14 @@ impl<Message> TypeCheckObjectSafe for Checkbox<Message> {
     }
 }
 
-impl<'a, Message> DynGElement<'a, Message> for Checkbox<Message> where
-    Message: Clone + 'static + MessageTid<'a>
+impl<Message> DynGElement<Message> for Checkbox<Message> where
+    Message: Clone + 'static + for<'a> MessageTid<'a>
 {
 }
 
-impl<'a, Message> From<Checkbox<Message>> for GElement<'a, Message>
+impl<Message> From<Checkbox<Message>> for GElement<Message>
 where
-    Message: Clone + MessageTid<'a>,
+    Message: Clone + for<'a> MessageTid<'a>,
 {
     fn from(checkbox: Checkbox<Message>) -> Self {
         GElement::Generic_(Box::new(checkbox))

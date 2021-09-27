@@ -1,10 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-09-09 13:12:10
+ * @LastEditTime: 2021-09-27 13:19:44
  * @LastEditors: Rais
  * @Description:
  */
+
+pub use anchors::collections::ord_map::Dict;
+pub use anchors::dict;
 
 pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::Engine;
@@ -22,6 +25,8 @@ use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
 // use delegate::delegate;
 use slotmap::{DefaultKey, Key, SlotMap, SparseSecondaryMap};
+
+// ────────────────────────────────────────────────────────────────────────────────
 
 thread_local! {
     static G_STATE_STORE: Rc<RefCell<GStateStore>> =Rc::new( RefCell::new(
@@ -63,7 +68,7 @@ impl Default for GStateStore {
     }
 }
 
-type VarSimMap<T> = (Var<T>, SynCallFnsMap<T>, SynCallFnsMap<T>);
+type VarSimMap<T> = (Var<T>, SynCallBeforeFnsMap<T>, SynCallFnsMap<T>);
 
 type VarSecMap<T> = SparseSecondaryMap<DefaultKey, VarSimMap<T>, BuildHasherDefault<CustomHasher>>;
 
@@ -201,6 +206,7 @@ impl GStateStore {
 
         //
         if !before_fns.is_empty() {
+            let current = Some(var.get());
             before_fns
                 .iter()
                 //TODO check performance
@@ -215,7 +221,7 @@ impl GStateStore {
                 })
                 .for_each(|func| {
                     // let skip_clone = skip2.clone();
-                    func(skip, data);
+                    func(skip, &current, data);
                 });
         }
         // debug!("in callbacks ,bf_fns called, then --> var set :{:?}", data);
@@ -256,7 +262,7 @@ impl GStateStore {
                     key,
                     (
                         var,
-                        SynCallFnsMap::<T>::default(),
+                        SynCallBeforeFnsMap::<T>::default(),
                         SynCallFnsMap::<T>::default(),
                     ),
                 );
@@ -266,7 +272,7 @@ impl GStateStore {
                     key,
                     (
                         var,
-                        SynCallFnsMap::<T>::default(),
+                        SynCallBeforeFnsMap::<T>::default(),
                         SynCallFnsMap::<T>::default(),
                     ),
                 );
@@ -276,7 +282,7 @@ impl GStateStore {
                 key,
                 (
                     var,
-                    SynCallFnsMap::<T>::default(),
+                    SynCallBeforeFnsMap::<T>::default(),
                     SynCallFnsMap::<T>::default(),
                 ),
             );
@@ -305,7 +311,7 @@ impl GStateStore {
         &mut self,
         current_id: &StorageKey,
         before_fn_id: &StorageKey,
-        func: BoxSynCallFn<T>, //TODO add store
+        func: BoxSynCallBeforeFn<T>, //TODO add store
     ) -> Result<(), String> {
         assert_ne!(current_id, before_fn_id);
 
@@ -433,18 +439,21 @@ impl GStateStore {
 }
 
 type SynCallFnsMap<T> = HashMap<StorageKey, BoxSynCallFn<T>>;
+type SynCallBeforeFnsMap<T> = HashMap<StorageKey, BoxSynCallBeforeFn<T>>;
 
 fn before_fns_run<T: 'static>(
     // store: &GStateStore,
     current_id: &StorageKey,
+    current_data: &Option<Rc<T>>,
     data: &T,
-    fns: &SynCallFnsMap<T>,
+    fns: &SynCallBeforeFnsMap<T>,
 ) -> RefCell<Vec<StorageKey>> {
     // let mut new_set = HashSet::default();
     // new_set.insert(*current_id);
     let key_collection = vec![*current_id];
     let skip = RefCell::new(key_collection);
-    fns.values().for_each(|bf_func| bf_func(&skip, data));
+    fns.values()
+        .for_each(|bf_func| bf_func(&skip, current_data, data));
     skip
 }
 fn after_fns_run<T: 'static>(
@@ -467,11 +476,12 @@ fn start_set_var_and_before_after<T: Clone + 'static>(
     current_id: &StorageKey,
     var: &anchors::expert::Var<T, Engine>,
     data: T,
-    before_fns: &SynCallFnsMap<T>,
+    before_fns: &SynCallBeforeFnsMap<T>,
     after_fns: &SynCallFnsMap<T>,
 ) {
     //NOTE staring first callback call
-    let skip = before_fns_run(current_id, &data, before_fns);
+    let current = Some(var.get());
+    let skip = before_fns_run(current_id, &current, &data, before_fns);
     var.set(data.clone());
     after_fns_run(&skip, &data, after_fns);
 }
@@ -594,7 +604,7 @@ where
         self.store_get_var_with(store, |v| StateAnchor(v.watch()))
     }
     /// # set, but in the callback fn scope
-    pub fn set_in_callback(&self, skip: &SkipKeyCollection, value: &T)
+    pub fn seting_in_b_a_callback(&self, skip: &SkipKeyCollection, value: &T)
     where
         T: Clone + std::fmt::Debug,
     {
@@ -651,7 +661,7 @@ where
     fn insert_before_fn(
         &self,
         before_fn_key: TopoKey,
-        func: impl Fn(&SkipKeyCollection, &T) + 'static,
+        func: impl Fn(&SkipKeyCollection, &Option<Rc<T>>, &T) + 'static,
         init: bool,
     ) -> Result<(), String>;
 
@@ -858,7 +868,7 @@ where
     fn insert_before_fn(
         &self,
         callback_key: TopoKey,
-        func: impl Fn(&SkipKeyCollection, &T) + 'static,
+        func: impl Fn(&SkipKeyCollection, &Option<Rc<T>>, &T) + 'static,
         init: bool,
     ) -> Result<(), String> {
         insert_before_fn(
@@ -894,8 +904,8 @@ where
         insert_before_fn(
             self,
             &StorageKey::TopoKey(b.id),
-            Box::new(move |skip, value| {
-                b.set_in_callback(skip, &(*value).clone().into());
+            Box::new(move |skip, current, value| {
+                b.seting_in_b_a_callback(skip, &(*value).clone().into());
             }),
             false,
         )
@@ -917,16 +927,16 @@ where
         insert_before_fn(
             self,
             &StorageKey::TopoKey(b.id),
-            Box::new(move |skip, value| {
-                b.set_in_callback(skip, &(*value).clone().into());
+            Box::new(move |skip, current, value| {
+                b.seting_in_b_a_callback(skip, &(*value).clone().into());
             }),
             false,
         )
         .and(insert_before_fn(
             &b,
             &StorageKey::TopoKey(self.id),
-            Box::new(move |skip, value| {
-                this.set_in_callback(skip, &(*value).clone().into());
+            Box::new(move |skip, current, value| {
+                this.seting_in_b_a_callback(skip, &(*value).clone().into());
             }),
             false,
         ))
@@ -1084,8 +1094,6 @@ where
         GStateStore::engine_get_with2(engine, &self.0, func)
     }
 }
-
-pub use anchors::collections::ord_map::Dict;
 
 impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> StateAnchor<Dict<K, V>> {
     #[track_caller]
@@ -1456,7 +1464,7 @@ fn clone_state_with_topo_id<T: 'static>(id: TopoKey) -> Option<Var<T>> {
 }
 
 fn read_state_val_with_topo_id<
-    F: FnOnce(&T, &SynCallFnsMap<T>, &SynCallFnsMap<T>) -> R,
+    F: FnOnce(&T, &SynCallBeforeFnsMap<T>, &SynCallFnsMap<T>) -> R,
     T: 'static,
     R,
 >(
@@ -1512,11 +1520,12 @@ fn read_var_with_topo_id<F: FnOnce(&VarSimMap<T>) -> R, T: 'static, R>(id: TopoK
 
 // type BoxSynCallFn<T> = Box<dyn Fn(&GStateStore, &SkipKeyCollection, &T)>;
 type BoxSynCallFn<T> = Box<dyn Fn(&SkipKeyCollection, &T)>;
+type BoxSynCallBeforeFn<T> = Box<dyn Fn(&SkipKeyCollection, &Option<Rc<T>>, &T)>;
 
 fn insert_before_fn<T: 'static + std::clone::Clone>(
     sv: &StateVar<T>,
     before_id: &StorageKey,
-    func: BoxSynCallFn<T>,
+    func: BoxSynCallBeforeFn<T>,
     init: bool,
 ) -> Result<(), String> {
     G_STATE_STORE.with(|g_state_store_refcell| {
@@ -1533,7 +1542,7 @@ fn insert_before_fn<T: 'static + std::clone::Clone>(
                 return Err("before_fns already has this fn".to_string());
             }
 
-            func(&skip, &*var.get());
+            func(&skip, &None, &*var.get());
             // let v = &(*var.get());
             // before_fns_run(store, &StorageKey::TopoKey(sv.id), v, before_fns);
             // if v.clone() != (*var.get()).clone() {
@@ -1646,6 +1655,9 @@ where
 #[cfg(test)]
 #[allow(unused_variables)]
 mod state_test {
+    use crate::*;
+    use std::ops::Deref;
+
     use tracing::debug;
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -1715,13 +1727,28 @@ mod state_test {
     // #[wasm_bindgen_test]
     fn callback2() {
         let a = use_state(1);
+        let a_2 = use_state(1);
+        let update_id_a_2 = TopoKey::new(topo::call(topo::CallId::current));
+
+        a_2.insert_before_fn(
+            update_id_a_2.into(),
+            move |skip, current, value| {
+                println!("current:{:?}", &current);
+                println!("value:{}", value);
+                assert_eq!(current, &Some(Rc::new(1)));
+                assert_eq!(*value, 2);
+            },
+            false,
+        );
+        a_2.set(2);
+
         let b = a.build_bi_similar_use_into_in_topo::<TT>();
         let c = b.build_similar_use_into_in_topo::<i32>();
         let d = b.build_similar_use_into_in_topo::<i32>();
         d.insert_before_fn(
             c.id.into(),
-            move |skip, value| {
-                c.set_in_callback(skip, &(*value).into());
+            move |skip, current, value| {
+                c.seting_in_b_a_callback(skip, &(*value).into());
             },
             true,
         )
@@ -1730,10 +1757,10 @@ mod state_test {
 
         c.insert_before_fn(
             a.id.into(),
-            move |skip, value| {
+            move |skip, current, value| {
                 println!("c -> before_fns 1 -> set a:{:?}", &value);
 
-                a.set_in_callback(skip, &value);
+                a.seting_in_b_a_callback(skip, &value);
             },
             true,
         )
@@ -1743,9 +1770,9 @@ mod state_test {
         //NOTE same a set_in_callback will ignored at second times
         c.insert_before_fn(
             update_id2.into(),
-            move |skip, value| {
+            move |skip, current, value| {
                 println!("c -> before_fns 2 -> set a:{:?}", value + 1);
-                a.set_in_callback(skip, &(value + 1).into());
+                a.seting_in_b_a_callback(skip, &(value + 1).into());
             },
             true,
         )
@@ -1754,7 +1781,7 @@ mod state_test {
         c.insert_after_fn(
             e.id.into(),
             move |skip, v| {
-                e.set_in_callback(skip, v);
+                e.seting_in_b_a_callback(skip, v);
             },
             true,
         )
@@ -1804,6 +1831,11 @@ mod state_test {
         println!("{}", a);
         println!("{}", a.get());
         assert_eq!(1, a.get());
+    }
+    #[test]
+    fn macros() {
+        let ffss = dict! {1=>1};
+        println!("{:?}", ffss);
     }
     #[allow(clippy::similar_names)]
     #[test]

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-09-15 12:06:54
+ * @LastEditTime: 2021-09-18 15:20:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -548,9 +548,9 @@ where
                     props_init
                         .iter()
                         .zip(revised_value.2.iter())
-                        .for_each(|(sv, prop)| sv.set_in_callback(skip, prop));
-                    interruption_init.set_in_callback(skip, &revised_value.0);
-                    steps_init.set_in_callback(skip, &revised_value.1);
+                        .for_each(|(sv, prop)| sv.seting_in_b_a_callback(skip, prop));
+                    interruption_init.seting_in_b_a_callback(skip, &revised_value.0);
+                    steps_init.seting_in_b_a_callback(skip, &revised_value.1);
                 },
                 false,
             )
