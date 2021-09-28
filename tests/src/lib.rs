@@ -73,6 +73,7 @@ mod test {
 
         let emg_graph =Rc::new(RefCell::new( GraphType::<Message>::default()));
         let an: AnimationE<Message> = anima![width(px(80))];
+        let an2 = an.clone();
         let a = use_state(9999);        
         
         let p = web_sys::window().unwrap().performance().unwrap();
@@ -224,6 +225,11 @@ mod test {
         warn!("view 2:{}", ve);
 
         let mut tot = 0f64;
+
+        an2.interrupt(vector![
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+        ]);
 
         for i in 0..10000 {
             let t1 = p.now();
