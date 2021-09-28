@@ -229,6 +229,52 @@ mod test {
         an2.interrupt(vector![
             to(into_vector![width(px(50))]),
             to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
         ]);
 
         for i in 0..10000 {
@@ -240,7 +286,7 @@ mod test {
 
             tot += t2 - t1;
         }
-        warn!("tut:{}", tot);
+        warn!("tut:{}", tot);//990
 
         warn!("dt:{}", tot / 10000.);
     }
