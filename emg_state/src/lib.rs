@@ -10,12 +10,12 @@
 
 // #![feature(specialization)]
 pub mod use_state_impl;
+pub use anchors::dict;
 pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::MultiAnchor as AnchorMultiAnchor;
 pub use anchors::singlethread::Var;
 use emg_core::GenericSize;
 pub use topo;
-pub use use_state_impl::dict;
 pub use use_state_impl::state_store;
 pub use use_state_impl::state_store_with;
 pub use use_state_impl::use_state;
@@ -44,6 +44,7 @@ impl ::core::ops::Add for StateAnchor<GenericSize> {
 }
 #[cfg(test)]
 mod tests {
+    use crate::dict;
     use std::rc::Rc;
 
     use crate::{state_store, use_state, CloneStateVar, StateAnchor, StateMultiAnchor, StateVar};
@@ -55,6 +56,7 @@ mod tests {
     }
     #[test]
     fn it_works() {
+        let f = dict! {1=>2};
         let x = Rc::new(X {
             a: use_state(0),
             b: use_state(vec![]),
