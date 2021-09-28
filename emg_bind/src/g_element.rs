@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-09-27 22:14:08
+ * @LastEditTime: 2021-09-28 17:25:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -168,7 +168,7 @@ where
         // }
 
         match_any!(ge,
-            Builder_(gel, mut builder) => {
+            Builder_(ref gel, mut builder) => {
 
                 builder.set_widget(gel);
                 Ok(builder.into())

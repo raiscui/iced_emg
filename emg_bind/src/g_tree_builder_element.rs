@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-09-28 16:11:31
+ * @LastEditTime: 2021-09-28 17:28:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,7 +28,7 @@ where
 {
     Layer(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,//NOTE Rc for clone
+        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
         Vec<GTreeBuilderElement<Message, Ix>>,
     ),
     // El(Ix, Element< Message>),
@@ -358,7 +358,7 @@ where
 
                 // edge
                 let mut new_def_ei = self
-                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix.clone()))
+                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix, nix.clone()))
                     .unwrap();
 
                 let path = (&*illicit::expect::<EPath<Self::Ix>>()).link(nix.clone());
@@ -409,7 +409,7 @@ where
 
                 //edge
                 let mut new_def_ei = self
-                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix.clone()))
+                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix, nix.clone()))
                     .unwrap();
 
                 let path = (&*illicit::expect::<EPath<Self::Ix>>()).link(nix.clone());
@@ -422,9 +422,9 @@ where
                     #[cfg(debug_assertions)]
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
                         assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
-                        children_list.iter().for_each(|child_gtree_builder| {
-                            self.handle_children_in_topo(child_gtree_builder)
-                        });
+                        for child_gtree_builder in children_list.iter() {
+                            self.handle_children_in_topo(child_gtree_builder);
+                        }
                     });
                     #[cfg(not(debug_assertions))]
                     illicit::Layer::new().offer(nix).enter(|| {
@@ -444,7 +444,7 @@ where
 
                 sa_dict_gbe
                     .insert_before_fn(
-                        update_id.into(),
+                        update_id,
                         move |_skip, current, value| {
                             //// TODO use graph find all parent
                             // let parent = parent_nix.clone();
@@ -469,11 +469,11 @@ where
 
                 sa_dict_gbe
                     .insert_after_fn(
-                        update_id2.into(),
+                        update_id2,
                         move |_skip, value| {
                             value.iter().for_each(|(_k, v)| {
                                 this2.handle_children_in_topo(v);
-                            })
+                            });
                         },
                         true,
                     )
@@ -491,7 +491,7 @@ where
                     .insert_node(id.clone(), StateAnchor::constant(u.clone().into()));
 
                 let _ei = self
-                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
+                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix, nix))
                     .unwrap();
             }
 
@@ -523,7 +523,7 @@ where
                 // self.insert_update_edge(&parent_nix, &nix, e);
 
                 let _ei = self
-                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
+                    .setup_default_edge_in_topo(EdgeIndex::new(parent_nix, nix))
                     .unwrap();
             } // GTreeBuilderElement::GenericTree(id, edge_refreshers, dyn_gel, refreshers) => {
               //     panic!("test here");

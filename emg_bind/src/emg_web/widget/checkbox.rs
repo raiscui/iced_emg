@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2021-09-27 23:38:54
+ * @LastEditTime: 2021-09-28 17:28:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -265,7 +265,7 @@ where
                 l.ref_push(self.clone());
             }
             GElement::Builder_(gel, _) => {
-                self.refresh_for(gel.borrow_mut().deref_mut());
+                self.refresh_for(&mut *gel.borrow_mut());
             }
             GElement::Text_(_)
             | GElement::Button_(_)

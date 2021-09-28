@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-09-27 23:36:43
+ * @LastEditTime: 2021-09-28 17:20:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -97,16 +97,16 @@ where
             .iter()
             .filter(|gel| gel.borrow().is_node_ref_())
             .for_each(|gel| {
-                gel.replace_with(|gelmut|{
+                gel.replace_with(|gelmut| {
                     let node = gelmut
-                    .as_node_ref_()
-                    .and_then(|str| self.get_node_weight_use_ix(&str.clone().into())).cloned().expect("expect get node id");
+                        .as_node_ref_()
+                        .and_then(|str| self.get_node_weight_use_ix(&str.clone().into()))
+                        .cloned()
+                        .expect("expect get node id");
 
-                     //TODO use cow 因为 children_s 只是刷新current_node_clone
-                     node.get()
-                
+                    //TODO use cow 因为 children_s 只是刷新current_node_clone
+                    node.get()
                 });
-                
             });
         //TODO edge gel 一起 refresh?
         // The const / dyn child node performs the change
@@ -116,10 +116,10 @@ where
             current_node_clone
                 .borrow_mut()
                 .deref_mut()
-                .refresh_for_use(child.borrow().deref());
+                .refresh_for_use(&*child.borrow());
         }
         if let Ok(mut node_builder_widget) =
-            NodeBuilderWidget::<Message>::try_new_use(current_node_clone.clone().borrow().deref())
+            NodeBuilderWidget::<Message>::try_new_use(&*current_node_clone.clone().borrow())
         {
             let _g = trace_span!("-> in NodeBuilderWidget").entered();
             {
@@ -143,7 +143,7 @@ where
                 if !event_callbacks.is_empty() {
                     for event_callback in event_callbacks {
                         //TODO maybe just directly push event
-                        node_builder_widget.refresh_for_use(event_callback.borrow().deref());
+                        node_builder_widget.refresh_for_use(&*event_callback.borrow());
                     }
                 }
 
@@ -190,7 +190,7 @@ where
             let paths: EPath<Self::Ix> = EPath::new(vector![edge_index_no_source(cix.clone())]);
             // TODO add store in gelement_refresh_and_comb
             let gel = self.gelement_refresh_and_comb(&edges, &cix, &paths);
-            gel.replace(GElement::NodeRef_(Default::default()))
+            gel.replace(GElement::NodeRef_(std::string::String::default()))
                 .try_into()
                 .unwrap()
         }
