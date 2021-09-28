@@ -85,7 +85,7 @@ pub trait Application {
     /// Build dom `GTreeBuilderElement`, will callonce at `run`
     fn tree_build(
         this: Rc<RefCell<Self>>,
-        orders: impl Orders<Self::Message>,
+        orders: impl Orders<Self::Message> + 'static,
     ) -> GTreeBuilderElement<Self::Message>;
 
     /// Runs the [`Application`].

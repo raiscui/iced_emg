@@ -94,18 +94,19 @@ where
         //make node_ref real
         //TODO link node at build
         children_s
-            .iter_mut()
+            .iter()
             .filter(|gel| gel.borrow().is_node_ref_())
             .for_each(|gel| {
-                if let Some(node) = gel
-                    .borrow()
+                gel.replace_with(|gelmut|{
+                    let node = gelmut
                     .as_node_ref_()
-                    .and_then(|str| self.get_node_weight_use_ix(&str.clone().into()))
-                {
-                    *gel.borrow_mut() = node.get(); //TODO use cow 因为 children_s 只是刷新current_node_clone
-                } else {
-                    panic!("can't get node id:{}", gel.borrow());
-                }
+                    .and_then(|str| self.get_node_weight_use_ix(&str.clone().into())).cloned().expect("expect get node id");
+
+                     //TODO use cow 因为 children_s 只是刷新current_node_clone
+                     node.get()
+                
+                });
+                
             });
         //TODO edge gel 一起 refresh?
         // The const / dyn child node performs the change
