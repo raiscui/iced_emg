@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-09-27 23:37:04
+ * @LastEditTime: 2021-09-28 16:11:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,7 +28,7 @@ where
 {
     Layer(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,//NOTE Rc for clone
         Vec<GTreeBuilderElement<Message, Ix>>,
     ),
     // El(Ix, Element< Message>),

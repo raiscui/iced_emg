@@ -156,7 +156,7 @@ impl ToTokens for Edge {
         } = self;
         let content_iter = content.iter();
         quote_spanned!(
-            bracket_token.span=> vec![#(Box::new(#content_iter) as Box<(dyn RefreshFor<EmgEdgeItem<_>>)>),*]
+            bracket_token.span=> vec![#(Rc::new(#content_iter) as Rc<(dyn RefreshFor<EmgEdgeItem<_>>)>),*]
         )
         .to_tokens(tokens);
     }
