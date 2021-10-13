@@ -5,8 +5,11 @@ edition = "2018"
 resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [profile.dev]
 split-debuginfo = "unpacked"
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 ordered-float = "2.8.0"

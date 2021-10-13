@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-09-28 17:20:15
+ * @LastEditTime: 2021-10-12 13:33:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,13 +14,7 @@ use emg_core::vector;
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshForUse;
 use emg_state::{CloneStateAnchor, StateAnchor};
-use std::{
-    cell::RefCell,
-    convert::TryInto,
-    hash::Hash,
-    ops::{Deref, DerefMut},
-    rc::Rc,
-};
+use std::{cell::RefCell, convert::TryInto, hash::Hash, ops::DerefMut, rc::Rc};
 use tracing::{instrument, trace, trace_span};
 // ────────────────────────────────────────────────────────────────────────────────
 

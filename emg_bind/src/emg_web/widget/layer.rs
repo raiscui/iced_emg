@@ -43,7 +43,7 @@ impl<Message> Layer<Message> {
 
     /// Creates a [`Layer`] with the given elements.
     pub fn with_children<T: Into<String>>(id: T, children: Vec<Element<Message>>) -> Self {
-        Layer {
+        Self {
             id: id.into(),
             children,
         }
@@ -200,8 +200,8 @@ impl<Message> From<Layer<Message>> for Element<Message>
 where
     Message: 'static + Clone,
 {
-    fn from(layer: Layer<Message>) -> Element<Message> {
-        Element::new(layer)
+    fn from(layer: Layer<Message>) -> Self {
+        Self::new(layer)
     }
 }
 

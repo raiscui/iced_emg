@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2021-09-27 21:29:28
+ * @LastEditTime: 2021-10-12 13:30:25
  * @LastEditors: Rais
 * @Description:
 */
@@ -181,7 +181,7 @@ impl<Message> From<Text> for Element<Message>
 where
     Message: Clone,
 {
-    fn from(text: Text) -> Element<Message> {
-        Element::new(text)
+    fn from(text: Text) -> Self {
+        Self::new(text)
     }
 }

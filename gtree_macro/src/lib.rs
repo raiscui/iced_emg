@@ -40,17 +40,20 @@ struct ID(Option<Ident>);
 
 impl ID {
     pub fn get(&self, def_name: &str) -> TokenStream {
-        if let Some(id) = &self.0 {
-            let id_string = id.to_string();
-            // println!("id:{}", &id_string);
+        self.0.as_ref().map_or_else(
+            || {
+                let id = make_id(def_name);
+                // println!("id:{}", &id);
 
-            quote_spanned!(id.span()=>String::from(#id_string))
-        } else {
-            let id = make_id(def_name);
-            // println!("id:{}", &id);
+                quote!(String::from(#id))
+            },
+            |id| {
+                let id_string = id.to_string();
+                // println!("id:{}", &id_string);
 
-            quote!(String::from(#id))
-        }
+                quote_spanned!(id.span()=>String::from(#id_string))
+            },
+        )
     }
 }
 
@@ -99,9 +102,10 @@ impl Parse for AtList {
             // println!("in at_list parse :{}", &input);
 
             if input.peek(Token![=]) {
-                if !input.peek2(Ident::peek_any) {
-                    panic!("should not use Rust keyword ");
-                }
+                assert!(
+                    input.peek2(Ident::peek_any),
+                    "emg-gtree_macro: should not use Rust keyword "
+                );
                 // println!("is id");
 
                 input.parse::<Token![=]>()?;
@@ -271,8 +275,6 @@ impl ToTokens for GOnEvent {
             panic!("event callback argument size is must empty or three")
         };
         token.to_tokens(tokens);
-
-
     }
 }
 // @ GRefresher ────────────────────────────────────────────────────────────────────────────────
@@ -355,7 +357,6 @@ impl ToTokens for GRefresher {
         // let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::RefreshUse(#id_token,Rc::new(#kws::new(#closure_token))) );
 
         kw_token.to_tokens(tokens);
- 
     }
 }
 
@@ -449,10 +450,9 @@ impl ToTokens for GTreeSurface {
         // Tree GElementTree
         //TODO namespace ,slot
 
-
         if *module {
-            quote_spanned! (expr.span() => 
-
+            quote_spanned! (expr.span() =>
+                // let exp_v:GTreeBuilderElement<_,_> = ;
                 match #expr{
                     GTreeBuilderElement::Layer( expr_id,mut expr_edge,expr_children) =>{
                         let new_id =format!("{}|{}", #id_token, expr_id);
@@ -480,21 +480,26 @@ impl ToTokens for GTreeSurface {
                         )
                     }
 
+                    GTreeBuilderElement::Dyn(x) =>{
+
+                        GTreeBuilderElement::Dyn(x)
+                    }
+
                     _=>{
                     panic!("不能转换元件表达式到 Layer");
 
                     }
                 }
-             
-        
+
+
 
             )
-          
             .to_tokens(tokens);
         } else {
-            quote_spanned! (expr.span() => GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token) )
-           
-             .to_tokens(tokens);
+            quote_spanned! (expr.span() => 
+                    GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token)
+             )
+            .to_tokens(tokens);
         }
     }
 }
@@ -589,9 +594,8 @@ impl ToTokens for GTreeSurface {
 //         // Tree GElementTree
 //         //TODO namespace ,slot
 
-
 //         if *module {
-//             quote_spanned! (expr.span() => 
+//             quote_spanned! (expr.span() =>
 
 //                 match #expr{
 //                     GTreeBuilderElement::Layer( expr_id,mut expr_edge,expr_children) =>{
@@ -625,11 +629,9 @@ impl ToTokens for GTreeSurface {
 
 //                     }
 //                 }
-             
-        
 
 //             )
-          
+
 //             .to_tokens(tokens);
 //         } else {
 //             quote_spanned! (expr.span() => {
@@ -638,7 +640,7 @@ impl ToTokens for GTreeSurface {
 //                 let id_token_end = format!("{}-{}",#id_token,type_name);
 //                 GTreeBuilderElement::GenericTree(id_token_end,#edge_token,Box::new(dyn_gel),#children_token)
 //             } )
-           
+
 //              .to_tokens(tokens);
 //         }
 //     }
@@ -670,11 +672,11 @@ impl Parse for GTreeMacroElement {
             Ok(Self::GL(parsed))
             // ─────────────────────────────────────────────────────────────────
 
-        // }else if input.peek(kw::Dyn) {
-        //     //@ Dyn
-        //     let mut parsed: DynObjTree = input.parse()?;
-        //     parsed.at_setup(at_list);
-        //     Ok(Self::GT(Box::new(parsed)))
+            // }else if input.peek(kw::Dyn) {
+            //     //@ Dyn
+            //     let mut parsed: DynObjTree = input.parse()?;
+            //     parsed.at_setup(at_list);
+            //     Ok(Self::GT(Box::new(parsed)))
         } else if input.peek(kw::RefreshUse) {
             // @refresher
             let mut parsed: GRefresher = input.parse()?;
@@ -710,7 +712,7 @@ impl ToTokens for GTreeMacroElement {
 
         match_any!( self ,
             Self::GL(x)|Self::GS(x)|Self::RT(x)|Self::GC(x)|Self::OnEvent(x)
-            // |Self::GT(x) 
+            // |Self::GT(x)
             => x.to_tokens(tokens)
         );
     }

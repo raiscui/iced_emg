@@ -51,7 +51,7 @@ impl<Message> Button<Message> {
     where
         E: Into<Element<Message>>,
     {
-        Button {
+        Self {
             // id: "".to_string(),
             content: content.into(),
             on_press: None,
@@ -214,7 +214,7 @@ impl<Message> From<Button<Message>> for Element<Message>
 where
     Message: 'static + Clone,
 {
-    fn from(button: Button<Message>) -> Element<Message> {
-        Element::new(button)
+    fn from(button: Button<Message>) -> Self {
+        Self::new(button)
     }
 }

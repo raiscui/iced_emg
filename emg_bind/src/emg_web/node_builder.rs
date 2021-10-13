@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-09-28 17:25:19
+ * @LastEditTime: 2021-10-12 13:32:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -239,7 +239,7 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
     pub fn try_new_use(gel: &GElement<Message>) -> Result<Self, ()> {
         use GElement::{Button_, Layer_, Text_};
         match gel {
-            Layer_(_) | Button_(_) | Text_(_) => Ok(NodeBuilderWidget::default()),
+            Layer_(_) | Button_(_) | Text_(_) => Ok(Self::default()),
             _ => Err(()),
         }
     }
@@ -380,8 +380,8 @@ impl<Message> From<NodeBuilderWidget<Message>> for Element<Message>
 where
     Message: 'static + Clone,
 {
-    fn from(node_builder_widget: NodeBuilderWidget<Message>) -> Element<Message> {
-        Element::new(node_builder_widget)
+    fn from(node_builder_widget: NodeBuilderWidget<Message>) -> Self {
+        Self::new(node_builder_widget)
     }
 }
 #[cfg(test)]

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:14:26
- * @LastEditTime: 2021-09-27 22:04:05
+ * @LastEditTime: 2021-10-12 13:31:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -67,7 +67,7 @@ impl<Message> Element<Message> {
 
     /// Marks the [`Element`] as _to-be-explained_.
     #[must_use]
-    pub const fn explain(self, _color: Color) -> Element<Message> {
+    pub const fn explain(self, _color: Color) -> Self {
         self
     }
 
@@ -89,11 +89,11 @@ struct Map<A, B> {
 }
 
 impl<A, B> Map<A, B> {
-    pub fn new<F>(widget: Box<dyn Widget<A>>, mapper: F) -> Map<A, B>
+    pub fn new<F>(widget: Box<dyn Widget<A>>, mapper: F) -> Self
     where
         F: 'static + Fn(A) -> B,
     {
-        Map {
+        Self {
             widget,
             mapper: Rc::new(mapper),
         }

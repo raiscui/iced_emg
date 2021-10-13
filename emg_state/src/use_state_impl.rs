@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-09-27 13:19:44
+ * @LastEditTime: 2021-10-12 17:30:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,7 @@ use anchors::{
 use anymap::any::Any;
 use tracing::{debug, warn};
 
-use std::hash::BuildHasherDefault;
+use std::{hash::BuildHasherDefault, ops::Deref};
 // use im::HashMap;
 use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
@@ -568,7 +568,7 @@ where
         state_exists_for_topo_id::<T>(self.id)
     }
 
-    #[must_use]
+    // #[must_use]
     pub fn get_with<F: Fn(&T) -> R, R>(&self, func: F) -> R {
         read_state_val_with_topo_id(self.id, |t, _, _| func(t))
     }
@@ -580,6 +580,14 @@ where
         //     .expect("You are trying to get a var state that doesn't exist in this context!")
         //     .get()
         self.store_get_var_with(store, anchors::expert::Var::get)
+    }
+
+    #[must_use]
+    pub fn get_rc(&self) -> Rc<T> {
+        G_STATE_STORE.with(|g_state_store_refcell: &Rc<RefCell<GStateStore>>| {
+            let store = g_state_store_refcell.borrow();
+            self.store_get_rc(&*store)
+        })
     }
 
     pub fn get_var_with<F: Fn(&Var<T>) -> R, R>(&self, func: F) -> R {
@@ -603,7 +611,7 @@ where
         // self.get_var_with(|v| StateAnchor(v.watch()))
         self.store_get_var_with(store, |v| StateAnchor(v.watch()))
     }
-    /// # set, but in the callback fn scope
+    /// # set, but in the before / after callback fn scope
     pub fn seting_in_b_a_callback(&self, skip: &SkipKeyCollection, value: &T)
     where
         T: Clone + std::fmt::Debug,

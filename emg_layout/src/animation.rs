@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-09-18 15:20:11
+ * @LastEditTime: 2021-10-12 12:33:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -88,7 +88,7 @@ pub fn global_anima_running_sa() -> StateAnchor<bool> {
 }
 #[must_use]
 pub fn global_anima_running() -> bool {
-    G_AM_RUNING.with(|running| running.get())
+    G_AM_RUNING.with(emg_state::CloneStateAnchor::get)
 }
 #[must_use]
 pub fn global_anima_running_build() -> StateAnchor<bool> {

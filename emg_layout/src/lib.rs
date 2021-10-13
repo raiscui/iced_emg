@@ -8,6 +8,7 @@
 #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
+#![feature(iter_intersperse)]
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(test)]
 // ────────────────────────────────────────────────────────────────────────────────

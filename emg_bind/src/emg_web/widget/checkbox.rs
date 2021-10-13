@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2021-09-28 17:28:43
+ * @LastEditTime: 2021-10-12 13:32:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,6 +12,7 @@ use crate::{
     DynGElement, GElement, GenerateElement, MessageTid, NodeBuilder,
 };
 
+#[allow(unused_imports)]
 use better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt};
 
 use emg_core::{TypeCheckObjectSafe, TypeName};
@@ -21,10 +22,7 @@ use seed_styles::GlobalStyleSV;
 use tracing::trace;
 
 use crate::emg_runtime::dodrio::bumpalo;
-use std::{
-    ops::{Deref, DerefMut},
-    rc::Rc,
-};
+use std::{ops::Deref, rc::Rc};
 
 /// A box that can be checked.
 ///
@@ -183,8 +181,8 @@ impl<Message> From<Checkbox<Message>> for Element<Message>
 where
     Message: 'static + Clone,
 {
-    fn from(checkbox: Checkbox<Message>) -> Element<Message> {
-        Element::new(checkbox)
+    fn from(checkbox: Checkbox<Message>) -> Self {
+        Self::new(checkbox)
     }
 }
 
@@ -301,6 +299,6 @@ where
     Message: Clone + for<'a> MessageTid<'a>,
 {
     fn from(checkbox: Checkbox<Message>) -> Self {
-        GElement::Generic_(Box::new(checkbox))
+        Self::Generic_(Box::new(checkbox))
     }
 }
