@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-10-14 15:20:07
+ * @LastEditTime: 2021-10-15 14:44:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -182,12 +182,12 @@ impl GStateStore {
         &self,
         // data: T,
         current_id: &StorageKey,
-    ) -> VarBAfnCollect<T> {
+    ) -> &VarBAfnCollect<T> {
         trace!("get_state_use_key_and_start_set_run_cb");
         //unwrap or default to keep borrow checker happy
         self.opt_get_state_and_bf_af_use_id::<T>(current_id)
             .expect("set_state_with_key: can't set state that doesn't exist in this context!")
-            .clone()
+        // .clone()
         // trace!("start_set_var_and_before_after");
 
         // start_set_var_and_before_after(current_id, var, data, before_fns, after_fns);
@@ -614,13 +614,13 @@ where
         read_var_with_topo_id::<_, T, R>(self.id, |(v, _, _): &VarBAfnCollect<T>| -> R { func(v) })
     }
     pub fn store_get_var_with<F: Fn(&Var<T>) -> R, R>(&self, store: &GStateStore, func: F) -> R {
-        let var = store
+        let var = &store
             .opt_get_state_and_bf_af_use_id::<T>(&StorageKey::TopoKey(self.id))
             .expect("You are trying to get a var state that doesn't exist in this context!")
-            .0
-            .clone();
+            .0;
+        // .clone();
 
-        func(&var)
+        func(var)
     }
 
     #[must_use]
@@ -754,12 +754,12 @@ where
     fn store_set(&self, store: &GStateStore, value: T) {
         let s_key = StorageKey::TopoKey(self.id);
         let (var, before_fns, after_fns) = store.get_var_b_a_fn_collect::<T>(&s_key);
-        start_set_var_and_before_after(&s_key, &var, value, &before_fns, &after_fns);
+        start_set_var_and_before_after(&s_key, var, value, before_fns, after_fns);
     }
     fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
         let (var, before_fns, after_fns) = store
             .opt_get_state_and_bf_af_use_id::<T>(&StorageKey::TopoKey(self.id))
-            .cloned()
+            // .cloned()
             .expect("You are trying to get a var state that doesn't exist in this context!");
 
         let data = func(var.get().as_ref());
@@ -767,10 +767,10 @@ where
         start_set_var_and_before_after(
             // store,
             &StorageKey::TopoKey(self.id),
-            &var,
+            var,
             data,
-            &before_fns,
-            &after_fns,
+            before_fns,
+            after_fns,
         );
     }
 
@@ -1459,11 +1459,10 @@ fn set_state_and_run_cb_with_topo_id<T: 'static + std::clone::Clone>(data: T, cu
         trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
 
         let s_key = StorageKey::TopoKey(current_id);
-        let (var, before_fns, after_fns) = g_state_store_refcell
-            .borrow()
-            .get_var_b_a_fn_collect::<T>(&s_key);
+        let s = g_state_store_refcell.borrow();
+        let (var, before_fns, after_fns) = s.get_var_b_a_fn_collect::<T>(&s_key);
 
-        start_set_var_and_before_after(&s_key, &var, data, &before_fns, &after_fns);
+        start_set_var_and_before_after(&s_key, var, data, before_fns, after_fns);
     });
 
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
@@ -1555,6 +1554,8 @@ fn get_anchor_val_in_var_with_topo_id<T: 'static + std::clone::Clone>(id: TopoKe
     })
 }
 
+//TODO will error: panicked at 'already borrowed: BorrowMutError',
+//maybe won't use  read_var_with_topo_id just directly use opt_get_state_and_bf_af_use_id
 fn read_var_with_topo_id<F: FnOnce(&VarBAfnCollect<T>) -> R, T: 'static, R>(
     id: TopoKey,
     func: F,
@@ -1563,11 +1564,12 @@ fn read_var_with_topo_id<F: FnOnce(&VarBAfnCollect<T>) -> R, T: 'static, R>(
         G_STATE_STORE.with(|g_state_store_refcell: &Rc<RefCell<GStateStore>>| {
             trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
 
-            g_state_store_refcell
-                .borrow()
+            let s = g_state_store_refcell.borrow();
+            let varba = s
                 .opt_get_state_and_bf_af_use_id::<T>(&StorageKey::TopoKey(id))
-                .cloned()
-                .expect("You are trying to get a var state that doesn't exist in this context!")
+                .cloned() //TODO remove this
+                .expect("You are trying to get a var state that doesn't exist in this context!");
+            varba
             // func(
             //     // &store,
             //     store
