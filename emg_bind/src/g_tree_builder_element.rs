@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-10-13 11:59:28
+ * @LastEditTime: 2021-10-15 11:31:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,11 +13,9 @@ use emg_core::vector;
 use emg_core::{GenericSize, Vector};
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
 use emg_refresh::{RefreshFor, RefreshForUse};
-use emg_state::{
-    topo, use_state, use_state_impl::TopoKey, CloneStateVar, Dict, StateAnchor, StateVar,
-};
+use emg_state::{CloneStateVar, Dict, StateAnchor, StateVar, topo::{self, call_in_slot}, use_state, use_state_impl::TopoKey};
 use std::{cell::RefCell, convert::TryFrom, rc::Rc};
-use tracing::{debug, instrument, trace, trace_span};
+use tracing::{debug, instrument, trace, trace_span, warn};
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -28,22 +26,22 @@ where
 {
     Layer(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
-        Vec<GTreeBuilderElement<Message, Ix>>,
+        Vector<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
+        Vector<GTreeBuilderElement<Message, Ix>>,
     ),
     // El(Ix, Element< Message>),
     GElementTree(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+        Vector<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
         GElement<Message>,
-        Vec<GTreeBuilderElement<Message, Ix>>,
+        Vector<GTreeBuilderElement<Message, Ix>>,
     ),
     RefreshUse(Ix, Rc<dyn RefreshFor<GElement<Message>>>),
     Cl(Ix, Rc<dyn Fn()>),
     Event(Ix, EventNode<Message>),
     Dyn(
-        // Ix,
-        // Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+        Ix,
+        Vector<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
         StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>,
     ),
     // Fragment(Vec<GTreeBuilderElement< Message, Ix>>),
@@ -55,13 +53,35 @@ where
     // )
 }
 
+// impl<Message, Ix> GTreeBuilderElement<Message, Ix>
+// where
+//     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
+//     Message: 'static,
+// {
+//     fn set_id(&mut self,id:Ix){
+//         match self{
+//             GTreeBuilderElement::Layer(id_mut, _, _) 
+//             |GTreeBuilderElement::GElementTree(id_mut, _, _, _)
+//             |GTreeBuilderElement::RefreshUse(id_mut, _) 
+//             |GTreeBuilderElement::Cl(id_mut, _) 
+//             |GTreeBuilderElement::Event(id_mut, _)
+//             |GTreeBuilderElement::Dyn(id_mut, _, _) =>{
+//                 *id_mut = id;
+                 
+//             }
+//         }
+
+    
+//     }
+// }
+
 impl<Message, Ix> From<StateVar<Dict<Ix, Self>>> for GTreeBuilderElement<Message, Ix>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
 {
     fn from(value: StateVar<Dict<Ix, Self>>) -> Self {
-        Self::Dyn(value)
+        Self::Dyn(Ix::default(), vector![], value)
     }
 }
 
@@ -149,11 +169,11 @@ impl<Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
                 .field(id)
                 .field(&e)
                 .finish(),
-            GTreeBuilderElement::Dyn(_sa_dict_gbe) => {
-                let gbe = "StateAnchor<Dict<Ix,GTreeBuilderElement< Message, Ix>>>";
+            GTreeBuilderElement::Dyn(id,_e,_sa_dict_gbe) => {
+                let gbe = "StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>";
 
-                f.debug_tuple("GTreeBuilderElement::SA")
-                    // .field(id)
+                f.debug_tuple("GTreeBuilderElement::Dyn")
+                    .field(id)
                     .field(&gbe)
                     .finish()
             } // GTreeBuilderElement::GenericTree(id, _, dyn_gel, updaters) => {
@@ -208,7 +228,7 @@ where
     ) -> Result<EmgEdgeItem<Self::Ix>, String>;
 
     fn handle_root_in_topo(&self, tree_layer: &GTreeBuilderElement<Message>);
-    fn handle_children_in_topo(&self, tree_layer: &'_ GTreeBuilderElement<Message>);
+    fn handle_children_in_topo(&self, replace_id:Option<&Self::Ix>, tree_layer: &'_ GTreeBuilderElement<Message>);
 }
 
 impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
@@ -286,22 +306,23 @@ where
         self.borrow_mut()
             .nodes_connect_eix(&ei)
             .ok_or("node insert eix fails")?;
-            trace!("\nhandle_children:\n nodes_connect_eix: {:#?}",&ei);
+            trace!("\n setup_default_edge_in_topo:\n nodes_connect_eix: {:#?}",&ei);
 
 
         let source = use_state(ei.source_nix().as_ref().cloned());
-        trace!("\nhandle_children:\n cloned sv e source");
+        trace!("\n setup_default_edge_in_topo:\n cloned sv e source");
 
         let target = use_state(ei.target_nix().as_ref().cloned());
-        trace!("\nhandle_children:\n cloned sv e target");
+        trace!("\n setup_default_edge_in_topo:\n cloned sv e target");
 
         let edge_item = EmgEdgeItem::default_in_topo(
             source.watch(),
             target.watch(),
             self.borrow().get_raw_edges_watch(),
         );
+        let edge = Edge::new(source, target, edge_item.clone());
         self.borrow_mut()
-            .just_insert_edge(ei, Edge::new(source, target, edge_item.clone()));
+            .just_insert_edge(ei, edge);
         Ok(edge_item)
     }
 
@@ -354,7 +375,7 @@ where
                         trace!("{:?}", *illicit::expect::<NodeIndex<Self::Ix>>());
                         children_list
                             .iter()
-                            .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                            .for_each(|child_layer| self.handle_children_in_topo(None, child_layer));
                     });
                 });
             }
@@ -364,20 +385,38 @@ where
         };
     }
     #[topo::nested]
-    fn handle_children_in_topo(&self, tree_layer: &GTreeBuilderElement<Message>) {
+    fn handle_children_in_topo(&self,replace_id:Option<&Self::Ix>, tree_layer: &GTreeBuilderElement<Message>) {
         debug!("handle_children");
         let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
         match tree_layer {
             //
-            GTreeBuilderElement::Layer(id, edge_refreshers, children_list) => {
+            GTreeBuilderElement::Layer(org_id, edge_refreshers, children_list) => {
+                let id = replace_id.unwrap_or(org_id);
+
                 let _span =
                     trace_span!("-> handle_children_in_topo [layer] ", ?id, ?parent_nix).entered();
 
                 trace!("\nhandle_children:\n{:?}==>{:#?}", &id, &children_list);
+
+
+                //NOTE current node 因为dyn 节点 插入新节点时候 没有删除原存在节点,所以会重复走 handle_children_in_topo, 当前这里处理是ID存在就全部跳过
+                //TODO make GTreeBuilderElement all type same like this
+                //TODO 处理如下更新时候 内容变更情况
+                // dyn_tree2.set_with_once(move|dict| {
+                //     dict.update(
+                //         "aa3".to_string(),
+                //         new_dom
+                //     )
+                // });
+                if self.borrow().nodes_contains_key(id){
+                    warn!("children:Layer id:{} already exists , pass",id);
+                    return;
+                }
                 // node index
-                let nix = self.borrow_mut().insert_node(
+                //NOTE current node 因为`or_insert_node` 1个ID 只插入一次
+                let nix = self.borrow_mut().or_insert_node(
                     id.clone(),
-                    StateAnchor::constant(Layer::<Message>::new(id).into()),
+                    ||StateAnchor::constant(Layer::<Message>::new(id).into()),
                 );
                 trace!("\nhandle_children:\n inserted node: {:#?}",&nix);
 
@@ -398,16 +437,16 @@ where
                     // next
                     #[cfg(debug_assertions)]
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
-                        assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
+                        debug_assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
                         children_list
                             .iter()
-                            .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                            .for_each(|child_layer| self.handle_children_in_topo(None,child_layer));
                     });
                     #[cfg(not(debug_assertions))]
                     illicit::Layer::new().offer(nix).enter(|| {
                         children_list
                             .iter()
-                            .for_each(|child_layer| self.handle_children_in_topo(child_layer));
+                            .for_each(|child_layer| self.handle_children_in_topo(None,child_layer));
                     });
                 });
             }
@@ -426,7 +465,9 @@ where
             //         .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
             //         .unwrap();
             // }
-            GTreeBuilderElement::GElementTree(id, edge_refreshers, gel, children_list) => {
+            GTreeBuilderElement::GElementTree(org_id, edge_refreshers, gel, children_list) => {
+                let id = replace_id.unwrap_or(org_id);
+
                 let _span =
                     trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
 
@@ -452,24 +493,27 @@ where
                         debug_assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
 
                         for child_gtree_builder in children_list.iter() {
-                            self.handle_children_in_topo(child_gtree_builder);
+                            self.handle_children_in_topo(None,child_gtree_builder);
                         }
                     });
                 });
             }
-            GTreeBuilderElement::Dyn(sa_dict_gbe) => {
-                let _span = trace_span!("-> handle_children [SA] ", ?parent_nix).entered();
+            
+            GTreeBuilderElement::Dyn(org_id,edge_refresher,sa_dict_gbe) => {
+                let id = replace_id.unwrap_or(org_id);
 
-                let update_id = TopoKey::new(topo::call(topo::CallId::current));
+                let _span = trace_span!("-> handle_children [SA] ", ?parent_nix).entered();
+                debug!("builder:: GTreeBuilderElement::Dyn id:{:?}",id);
+
 
                 let this = self.clone();
                 let this2 = self.clone();
-                debug!("builder:: GTreeBuilderElement::Dyn");
 
                 let current_path = (&*illicit::expect::<EPath<Self::Ix>>()).clone();
 
                 // let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
-
+                // let update_id = TopoKey::new(topo::CallId::current());
+                let update_id = TopoKey::new(topo::root(||topo::call_in_slot(sa_dict_gbe.id(),topo::CallId::current)));
                 //TODO move it , for  use StateAnchor
                 sa_dict_gbe
                     .insert_before_fn(
@@ -477,16 +521,17 @@ where
                         move |_skip, current, new_v| {
                             //// TODO use graph find all parent
                             // let parent = parent_nix.clone();
-                            debug!("builder::insert_before_fn");
-                            if let Some(current_data) = current {
-                                let current_key = current_data.as_ref().keys();
-                                let value_key = new_v.as_ref().keys().collect::<Vector<_>>();
-
+                            debug!("builder::running before_fn");
+                            trace!("builder::before_fn: is current has? {}",&current.is_some());
+                            if let Some(old_data) = current {
+                                let old_key = old_data.keys();
+                                let new_key = new_v.keys().collect::<Vector<_>>();
                                 // let mut ii = value_key.clone().into_iter();
 
-                                current_key
-                                    .filter(|c_ix| !value_key.contains(c_ix))
+                                old_key
+                                    .filter(|c_ix| !new_key.contains(c_ix))
                                     .for_each(|k| {
+                                        trace!("builder::in  before_fn: remove key: {}",k);
                                         this.borrow_mut().remove_node(node_index(k.clone()));
                                     });
                             }
@@ -495,13 +540,16 @@ where
                     )
                     .unwrap();
 
-                let update_id2 = TopoKey::new(topo::call(topo::CallId::current));
+                // let update_id2 =TopoKey::new(topo::CallId::current());
+                // let update_id2 = TopoKey::new(topo::call(topo::CallId::current));
+                let gtbe_id = id.clone();
+
 
                 sa_dict_gbe
                     .insert_after_fn(
-                        update_id2,
+                        update_id,
                         move |_skip, value| {
-                            debug!("builder::insert_after_fn");
+                            debug!("builder::running after_fn");
 
                             let cur_parent_nix = illicit::get::<NodeIndex<Self::Ix>>()
                                 .map_or(parent_nix.clone(), |p| (*p).clone());
@@ -513,12 +561,23 @@ where
                                 .offer(cur_parent_nix)
                                 .offer(cur_path)
                                 .enter(|| {
-                                    value.iter().for_each(|(_k, v)| {
-                                    debug!("builder::insert_after_fn>> illicit env , run handle_children_in_topo");
+                                    value.iter().for_each(|(k, v)| {
+                                    debug!("builder::after_fn >> illicit env , \n ---- run handle_children_in_topo for key:{}",k);
                                      trace_span!( 
                                         "builder::illicit ",
                                         ).in_scope(||{
-                                            this2.handle_children_in_topo(v);
+                                            //TODO: use dyn key id in root 区分每个dyn, 这样可以使用same key
+                                            topo::root(||{
+                                                call_in_slot(&gtbe_id,||{
+                                                    call_in_slot(k,||
+                                                        {
+                                                            this2.handle_children_in_topo(Some(k),v);
+                                                        }
+                                                    );
+                                                });
+                                                
+                                            });
+                                            
                                         });
                                     });
                                 });
@@ -529,10 +588,19 @@ where
 
                 debug!("builder:: sa_dict_gbe run handle_children_in_topo");
                 let rc_sa = sa_dict_gbe.get_rc();
-                for (_, v) in rc_sa.iter() {
+                for (k, v) in rc_sa.iter() {
                     debug!("builder:: sa_dict_gbe handle_children_in_topo call");
+                    topo::root(||{
+                        call_in_slot(id,||{
 
-                    self.handle_children_in_topo(v);
+                            call_in_slot(k,||
+                                {
+                                    self.handle_children_in_topo(Some(k),v);
+                                }
+                            );
+
+                        });
+                    });
                 }
 
                 // value.iter().for_each(|(_k, v)| {
@@ -542,7 +610,9 @@ where
                 // });
             }
 
-            GTreeBuilderElement::RefreshUse(id, u) => {
+            GTreeBuilderElement::RefreshUse(org_id, u) => {
+                let id = replace_id.unwrap_or(org_id);
+
                 let _span =
                     trace_span!("-> handle_children_in_topo [RefreshUse] ", ?id, ?parent_nix)
                         .entered();
@@ -557,7 +627,9 @@ where
                     .unwrap();
             }
 
-            GTreeBuilderElement::Cl(id, dyn_fn) => {
+            GTreeBuilderElement::Cl(org_id, dyn_fn) => {
+                let id = replace_id.unwrap_or(org_id);
+
                 let _span = trace_span!(
                     "-> handle_children_in_topo [Cl] dyn_fn running",
                     ?id,
@@ -569,7 +641,9 @@ where
             }
 
             // TODO make RC remove most clones
-            GTreeBuilderElement::Event(id, callback) => {
+            GTreeBuilderElement::Event(org_id, callback) => {
+                let id = replace_id.unwrap_or(org_id);
+
                 let _span =
                     trace_span!("-> handle_children_in_topo [Event] ", ?id, ?parent_nix).entered();
 

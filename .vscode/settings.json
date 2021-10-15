@@ -15,15 +15,16 @@
     "peacock.color": "#ab438e",
     "git.ignoreLimitWarning": true,
     "cSpell.words": [
-        "Gtree",
-        "Posix",
         "cmds",
         "elems",
         "expl",
         "glayer",
         "gtbe",
+        "Gtree",
         "interp",
-        "rerender"
+        "Posix",
+        "rerender",
+        "varba"
     ],
     "files.exclude": {
         "**/.git": true,

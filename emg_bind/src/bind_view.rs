@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-10-12 13:33:23
+ * @LastEditTime: 2021-10-14 17:45:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -86,7 +86,9 @@ where
             .collect::<Vec<_>>();
 
         //make node_ref real
+
         //TODO link node at build
+        //NOTE NodeRef_ 处理
         children_s
             .iter()
             .filter(|gel| gel.borrow().is_node_ref_())
@@ -125,8 +127,12 @@ where
                 let store = self.store();
 
                 //TODO use StateAnchor ? for child edge change
+                trace!("edge::path:  {}", &paths);
                 let edge_styles = {
-                    let ed = ei.store_edge_data_with(&store, paths, |ed| ed.unwrap().clone());
+                    let ed = ei.store_edge_data_with(&store, paths, |ed| {
+                        ed.unwrap_or_else(|| panic!("not find EdgeData for path:{}", &paths))
+                            .clone()
+                    });
                     ed.store_styles_string(&store)
                 };
 

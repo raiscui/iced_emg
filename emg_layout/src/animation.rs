@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-10-12 12:33:29
+ * @LastEditTime: 2021-10-13 16:22:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -536,7 +536,6 @@ where
                 move |skip, _| {
                     // println!("call update after set timing {:?}", v);
                     debug!("====[insert_after_fn] calling --> topo id:{:?}", &id);
-
                     // anima_clone.update_in_callback(skip);
                     if !sa_running_clone.get() {
                         debug!("not running , return");
@@ -1153,7 +1152,7 @@ mod tests {
             css_w.set(width(px(99)));
 
             let edge_style_string_sa = root_e
-                    .node
+                    .edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1466,7 +1465,7 @@ mod tests {
             css_w.set(width(px(99)));
 
             let edge_style_string_sa = e1
-                    .node
+                    .edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
                     .and_then(EdgeItemNode::as_edge_data)

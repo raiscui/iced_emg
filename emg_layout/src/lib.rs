@@ -531,9 +531,13 @@ where
 
     pub other_styles: StateVar<Style>,
     // no self  first try
-    pub node:DictPathEiNodeSA<Ix>, //TODO with self?  not with self?
+    pub edge_nodes:DictPathEiNodeSA<Ix>, //TODO with self?  not with self?
     store:Rc<RefCell<GStateStore>>
 }
+impl<Ix> Eq for EmgEdgeItem<Ix>
+where 
+Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
+{}
 
 
 impl<Ix> PartialEq for EmgEdgeItem<Ix> 
@@ -543,7 +547,7 @@ Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id && self.paths == other.paths && self.layout == other.layout && self.path_styles == other.path_styles
-        && self.other_styles == other.other_styles && self.node == other.node
+        && self.other_styles == other.other_styles && self.edge_nodes == other.edge_nodes
     }
 }
 impl<
@@ -566,7 +570,7 @@ impl<
             indented(&self.layout),
             indented(PathVarMapDisplay(self.path_styles.get())),
             indented(&self.other_styles),
-            indented(DictDisplay(self.node.get())),
+            indented(DictDisplay(self.edge_nodes.get())),
         );
         write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
     }
@@ -576,7 +580,7 @@ pub type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>;
 
 impl<Ix> EmgEdgeItem<Ix>
 where
-    Ix: Clone + Hash + Ord + Default 
+    Ix: Clone + Hash + Ord + Default + std::fmt::Debug 
 {
     #[cfg(test)]
     fn set_size(&self,
@@ -595,7 +599,7 @@ where
     #[must_use]
     fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
       
-        self.node
+        self.edge_nodes
             .get()
             .get(key)
             .and_then(EdgeItemNode::as_edge_data).cloned()
@@ -609,7 +613,16 @@ where
             
     // }
     pub fn store_edge_data_with<F: FnOnce(Option<&EdgeData>)->R,R>(&self,store:&GStateStore, key: &EPath<Ix>,func:F) -> R {
-        self.node.store_get_with(store,|o|{
+        #[cfg(debug_assertions)]
+        {
+            let oo = self.edge_nodes.store_get_with(store,|o|{
+                o.clone()
+            });
+            trace!("edge_nodes: {:#?}",&oo);
+        }
+   
+
+        self.edge_nodes.store_get_with(store,|o|{
            func(o
             .get(key)
             .and_then(EdgeItemNode::as_edge_data) )
@@ -618,7 +631,7 @@ where
             
     }
     pub fn engine_edge_data_with<F: FnOnce(Option<&EdgeData>)->R,R>(&self,engine:&mut Engine, key: &EPath<Ix>,func:F) -> R {
-        self.node.engine_get_with(engine,|o|{
+        self.edge_nodes.engine_get_with(engine,|o|{
            func(o
             .get(key)
             .and_then(EdgeItemNode::as_edge_data) )
@@ -743,7 +756,7 @@ where
                         println!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_source_nix_clone);
                         if   someone_eix.target_nix() == &opt_source_nix_clone {
 
-                            Some(e.item.node.clone())
+                            Some(e.item.edge_nodes.clone())
 
                         }else{
                             None
@@ -821,7 +834,7 @@ where
             path_styles,
             path_layouts,
             other_styles: other_styles_sv,
-            node,
+            edge_nodes: node,
             store:state_store()
         }
     }
@@ -1297,7 +1310,7 @@ mod tests {
             info!("l1 =========================================================");
 
             assert_eq!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1356,7 +1369,7 @@ mod tests {
             let tempcss= use_state(css_height);
             root_e.refresh_for_use(&tempcss);
             assert_eq!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1369,7 +1382,7 @@ mod tests {
             info!("=========================================================");
             tempcss.set(h(px(1111)));
             assert_ne!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1381,7 +1394,7 @@ mod tests {
             );
             tempcss.set(h(px(100)));
             assert_eq!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1425,7 +1438,7 @@ mod tests {
             e1.refresh_for_use(&Css(CssWidth::from(px(12))));
             e1.refresh_for_use(&Css(CssWidth::from(px(12))));
             assert_eq!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1437,7 +1450,7 @@ mod tests {
             );
             info!("=========================================================");
             assert_eq!(
-                e1.node.get().get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                e1.edge_nodes.get().get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
                 .unwrap()
                 .styles_string
@@ -1451,7 +1464,7 @@ mod tests {
             info!("l1351 =========================================================");
             e2.refresh_for_use(&Css(CssHeight::from(px(50))));
             assert_eq!(
-                e2.node
+                e2.edge_nodes
                     .get()
                     .get(&EPath(vector![
                         edge_index_no_source("root"),
@@ -1467,7 +1480,7 @@ mod tests {
             );
             e2.set_size(px(100), px(100));
             assert_eq!(
-                e2.node
+                e2.edge_nodes
                     .get()
                     .get(&EPath(vector![
                         edge_index_no_source("root"),
@@ -1497,7 +1510,7 @@ mod tests {
             info!("..=========================================================");
             trace!(
                 "{}",
-                e2.node
+                e2.edge_nodes
                     .get()
                     .get(&EPath(vector![
                         edge_index_no_source( "root"),
@@ -1582,14 +1595,14 @@ mod tests {
             });
             info!("l1 =========================================================");
             warn!("calculated 1 =========================================================");
-            warn!("{}",e1.node
+            warn!("{}",e1.edge_nodes
             .get()
             .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
             .and_then(EdgeItemNode::as_edge_data)
             .unwrap()
             .calculated);
             assert_eq!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1600,7 +1613,7 @@ mod tests {
                 Translation3::<f64>::new(-2040.0, -1944.0, 0.)
             );
             warn!("calculated 2 =========================================================");
-            warn!("{}",e1.node
+            warn!("{}",e1.edge_nodes
             .get()
             .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
             .and_then(EdgeItemNode::as_edge_data)
@@ -1613,7 +1626,7 @@ mod tests {
             root_e.refresh_for_use(&xx);
 
             warn!("calculated 3 =========================================================");
-            warn!("{}",e1.node
+            warn!("{}",e1.edge_nodes
             .get()
             .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
             .and_then(EdgeItemNode::as_edge_data)
@@ -1664,7 +1677,7 @@ mod tests {
             root_e.refresh_for_use(&tempcss);
             
             warn!("calculated 4 root h w 100 =========================================================");
-            warn!("{}",e1.node
+            warn!("{}",e1.edge_nodes
             .get()
             .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
             .and_then(EdgeItemNode::as_edge_data)
@@ -1672,7 +1685,7 @@ mod tests {
             .calculated);
 
             assert_eq!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1684,7 +1697,7 @@ mod tests {
             );
             info!("=========================================================");
             tempcss.set(h(px(1111)));
-            let _ff =  e1.node
+            let _ff =  e1.edge_nodes
             .get()
             .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
             .and_then(EdgeItemNode::as_edge_data)
@@ -1692,7 +1705,7 @@ mod tests {
                     .styles_string
                     .get();
             assert_ne!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1704,7 +1717,7 @@ mod tests {
             );
             tempcss.set(h(px(100)));
             assert_eq!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1749,7 +1762,7 @@ mod tests {
             e1.refresh_for_use(&Css(CssWidth::from(px(12))));
             
             assert_eq!(
-                e1.node
+                e1.edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1761,7 +1774,7 @@ mod tests {
             );
             info!("=========================================================");
             assert_eq!(
-                e1.node.get().get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
+                e1.edge_nodes.get().get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
                 .unwrap()
                 .styles_string
@@ -1775,7 +1788,7 @@ mod tests {
             info!("l1351 =========================================================");
             e2.refresh_for_use(&Css(CssHeight::from(px(50))));
             assert_eq!(
-                e2.node
+                e2.edge_nodes
                     .get()
                     .get(&EPath(vector![
                         edge_index_no_source("root"),
@@ -1791,7 +1804,7 @@ mod tests {
             );
             e2.set_size(px(100), px(100));
             assert_eq!(
-                e2.node
+                e2.edge_nodes
                     .get()
                     .get(&EPath(vector![
                         edge_index_no_source("root"),
@@ -1821,7 +1834,7 @@ mod tests {
             info!("..=========================================================");
             trace!(
                 "{}",
-                e2.node
+                e2.edge_nodes
                     .get()
                     .get(&EPath(vector![
                         edge_index_no_source( "root"),

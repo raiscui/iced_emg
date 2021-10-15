@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-10-12 13:32:07
+ * @LastEditTime: 2021-10-13 18:07:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,8 +11,9 @@ mod gelement2nodebuilderwidget;
 // ────────────────────────────────────────────────────────────────────────────────
 
 use derive_more::From;
+use emg_state::state_store;
 use seed_styles::GlobalStyleSV;
-use tracing::warn;
+use tracing::{trace, warn};
 
 use std::{cell::RefCell, rc::Rc, string::String};
 
@@ -327,8 +328,8 @@ where
         // let mut v =
         //     bumpalo::collections::Vec::from_iter_in(self.event_callbacks.iter().cloned(), bump);
         // TODO: `self.event_callbacks`   use take replace the clone
-        let mut event_nodes = self.event_callbacks.clone();
-        // let mut event_nodes = bumpalo::boxed::Box::new_in(self.event_callbacks.clone(), &bump);
+        let mut event_nodes = self.event_callbacks.clone(); //TODO remove clone use ref
+                                                            // let mut event_nodes = bumpalo::boxed::Box::new_in(self.event_callbacks.clone(), &bump);
 
         while let Some(event_node) = event_nodes.pop_front() {
             // let aa = collections::String::from_str_in(event.as_str(), bump);
@@ -363,6 +364,8 @@ where
                         move |_root: &mut dyn RootRender,
                               _vdom: VdomWeak,
                               _event: web_sys::Event| {
+                            trace!("borrow_mut g_state_store_refcell");
+
                             if let Some(msg) = msg_fn() {
                                 event_bus.publish(msg);
                             }
