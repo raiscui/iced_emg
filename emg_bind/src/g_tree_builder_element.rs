@@ -14,7 +14,7 @@ use emg_core::{GenericSize, Vector};
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
 use emg_refresh::{RefreshFor, RefreshForUse};
 use emg_state::{CloneStateVar, Dict, StateAnchor, StateVar, topo::{self, call_in_slot}, use_state, use_state_impl::TopoKey};
-use std::{cell::RefCell, convert::TryFrom, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, instrument, trace, trace_span, warn};
 
 #[allow(dead_code)]
@@ -499,7 +499,7 @@ where
                 });
             }
             
-            GTreeBuilderElement::Dyn(org_id,edge_refresher,sa_dict_gbe) => {
+            GTreeBuilderElement::Dyn(org_id,_edge_refresher,sa_dict_gbe) => {
                 let id = replace_id.unwrap_or(org_id);
 
                 let _span = trace_span!("-> handle_children [SA] ", ?parent_nix).entered();

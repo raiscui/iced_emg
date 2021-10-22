@@ -19,7 +19,7 @@ use anchors::{
 use anymap::any::Any;
 use tracing::{debug, warn};
 
-use std::{hash::BuildHasherDefault, ops::Deref, panic::Location};
+use std::{hash::BuildHasherDefault, panic::Location};
 // use im::HashMap;
 use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
@@ -936,7 +936,7 @@ where
         insert_before_fn(
             self,
             &StorageKey::TopoKey(b.id),
-            Rc::new(move |skip, current, value| {
+            Rc::new(move |skip, _current, value| {
                 b.seting_in_b_a_callback(skip, &(*value).clone().into());
             }),
             false,
@@ -959,7 +959,7 @@ where
         insert_before_fn(
             self,
             &StorageKey::TopoKey(b.id),
-            Rc::new(move |skip, current, value| {
+            Rc::new(move |skip, _current, value| {
                 b.seting_in_b_a_callback(skip, &(*value).clone().into());
             }),
             false,
@@ -967,7 +967,7 @@ where
         .and(insert_before_fn(
             &b,
             &StorageKey::TopoKey(self.id),
-            Rc::new(move |skip, current, value| {
+            Rc::new(move |skip, _current, value| {
                 this.seting_in_b_a_callback(skip, &(*value).clone().into());
             }),
             false,

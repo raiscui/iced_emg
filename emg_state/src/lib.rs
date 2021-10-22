@@ -56,7 +56,7 @@ mod tests {
     }
     #[test]
     fn it_works() {
-        let f = dict! {1=>2};
+        let _f = dict! {1=>2};
         let x = Rc::new(X {
             a: use_state(0),
             b: use_state(vec![]),

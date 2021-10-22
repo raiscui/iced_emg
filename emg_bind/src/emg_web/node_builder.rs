@@ -11,7 +11,7 @@ mod gelement2nodebuilderwidget;
 // ────────────────────────────────────────────────────────────────────────────────
 
 use derive_more::From;
-use emg_state::state_store;
+
 use seed_styles::GlobalStyleSV;
 use tracing::{trace, warn};
 

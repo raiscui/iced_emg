@@ -192,6 +192,6 @@ mod tests {
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
-        let f: Vector<i32> = into_vector![1, 2, 3];
+        let _f: Vector<i32> = into_vector![1, 2, 3];
     }
 }
