@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-10-14 17:45:05
+ * @LastEditTime: 2021-10-22 16:00:12
  * @LastEditors: Rais
  * @Description:
  */
@@ -174,7 +174,7 @@ where
 
                 opt_this_child_nix.map(|this_child_nix| {
                     let mut new_paths = paths.clone();
-                    new_paths.push_back(eix.clone());
+                    new_paths.push_back(eix.clone()); //TODO remove clone
 
                     self.gelement_refresh_and_comb(edges, this_child_nix.index(), &new_paths)
                 })
