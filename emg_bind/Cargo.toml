@@ -7,7 +7,7 @@ description = "element motion graph iced bind"
 repository = "https://github.com"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
-keywords = ["web", "iced"]
+keywords = ["web", "iced", "emg"]
 categories = ["web"]
 resolver = "2"
 
