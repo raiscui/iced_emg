@@ -247,6 +247,7 @@ where
                 todo!("reflection?");
             }
             GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
+            GElement::EmptyNeverUse => panic!("EmptyNeverUse never here"),
         };
     }
 }
@@ -280,6 +281,7 @@ where
                 }
             }
             GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
+            GElement::EmptyNeverUse => panic!("EmptyNeverUse never here"),
         };
     }
 }

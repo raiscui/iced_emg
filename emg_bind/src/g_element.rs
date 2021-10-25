@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-10-11 17:38:44
+ * @LastEditTime: 2021-10-25 16:19:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -18,6 +18,7 @@ use derive_more::From;
 use dyn_clonable::clonable;
 use std::{cell::RefCell, convert::TryFrom, rc::Rc};
 use strum_macros::Display;
+use tracing::debug;
 pub trait GenerateElement<Message> {
     fn generate_element(&self) -> Element<Message>;
 }
@@ -76,6 +77,7 @@ where
     Generic_(Box<dyn DynGElement<Message>>),
     #[from(ignore)]
     NodeRef_(String), // IntoE(Rc<dyn Into<Element< Message>>>),
+    EmptyNeverUse,
 }
 
 pub fn node_ref<Message>(str: impl Into<String>) -> GElement<Message> {
@@ -147,6 +149,7 @@ impl<Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElement<
             GElement::NodeRef_(nid) => {
                 write!(f, "GElement::NodeIndex({})", nid)
             }
+            GElement::EmptyNeverUse => write!(f, "GElement::EmptyNeverUse"),
         }
     }
 }
@@ -160,7 +163,9 @@ where
     ///  Refresher_(_)|Event_(_) can't to Element
     fn try_from(ge: GElement<Message>) -> Result<Self, Self::Error> {
         use match_any::match_any;
-        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_};
+        use GElement::{
+            Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
+        };
 
         // if let GElement::Builder_(gel, builder) = ge {
         //     let x = gel.borrow_mut().as_mut();
@@ -175,8 +180,11 @@ where
             },
             Layer_(x) | Text_(x) | Button_(x) => Ok(x.into()),
             Refresher_(_) | Event_(_) => Err(()),
-            Generic_(x) => Ok(x.generate_element()),
-            NodeRef_(_)=> panic!("TryFrom<GElement to Element: \n     GElement::NodeIndex_() should handle before.")
+            Generic_(x) => {
+                debug!("Generic_:: from Generic_ to element");
+                Ok(x.generate_element())},
+            NodeRef_(_)=> panic!("TryFrom<GElement to Element: \n     GElement::NodeIndex_() should handle before."),
+            EmptyNeverUse=> panic!("EmptyNeverUse never here")
 
 
 

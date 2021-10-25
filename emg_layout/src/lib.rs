@@ -524,14 +524,14 @@ where
 {
     //TODO save g_store
     pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,// dyn by Edge(source_nix , target_nix)
-    pub paths:DictPathEiNodeSA<Ix>, // with parent self
+    pub paths:DictPathEiNodeSA<Ix>, // with parent self  // current not has current node
     pub layout: Layout,
     path_styles: StateVar<PathVarMap<Ix, Style>>, //TODO check use
     path_layouts:StateVar<PathVarMap<Ix, Layout>>,
 
     pub other_styles: StateVar<Style>,
     // no self  first try
-    pub edge_nodes:DictPathEiNodeSA<Ix>, //TODO with self?  not with self?
+    pub edge_nodes:DictPathEiNodeSA<Ix>, //TODO with self?  not with self?  (current with self)
     store:Rc<RefCell<GStateStore>>
 }
 impl<Ix> Eq for EmgEdgeItem<Ix>
@@ -765,7 +765,8 @@ where
                     })
                     .anchor()
                     .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
-                        x.values().map(emg_state::StateAnchor::anchor).collect::<Anchor<Vector<_>>>()
+                        x.values().map(emg_state::StateAnchor::anchor)
+                        .collect::<Anchor<Vector<_>>>()
                         .map(|v:&Vector<_>|{
                             let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
                             Dict::unions(v.clone())})
@@ -1005,6 +1006,15 @@ impl EdgeItemNode {
     #[must_use]
     pub const fn as_edge_data(&self) -> Option<&EdgeData> {
         if let Self::EdgeData(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use] 
+    pub const fn as_string(&self) -> Option<&String> {
+        if let Self::String(v) = self {
             Some(v)
         } else {
             None

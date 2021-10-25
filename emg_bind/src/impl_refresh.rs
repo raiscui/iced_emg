@@ -3,7 +3,7 @@ use std::ops::Deref;
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-09-27 21:50:43
+ * @LastEditTime: 2021-10-25 16:20:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,11 +15,11 @@ use tracing::{trace, warn};
 
 impl<Message> RefreshWhoNoWarper for GElement<Message> {}
 impl<Message> RefreshUseNoWarper for GElement<Message> {}
-impl<Message> RefreshFor<GElement<Message>> for GElement<Message>
+impl<Message> RefreshFor<Self> for GElement<Message>
 where
     Message: 'static + Clone,
 {
-    fn refresh_for(&self, el: &mut GElement<Message>) {
+    fn refresh_for(&self, el: &mut Self) {
         use GElement::{Builder_, Event_, Generic_, Layer_, Refresher_, Text_};
         //TODO for builder
         match (el, self) {

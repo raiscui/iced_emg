@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-10-15 14:44:35
+ * @LastEditTime: 2021-10-25 17:26:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -56,6 +56,7 @@ impl std::fmt::Debug for GStateStore {
         write!(f, "the graph store")
     }
 }
+
 impl Default for GStateStore {
     fn default() -> Self {
         //TODO with capacity
@@ -63,7 +64,8 @@ impl Default for GStateStore {
             anymap: anymap::Map::new(),
             id_to_key_map: HashMap::default(),
             primary_slotmap: SlotMap::new(),
-            engine: RefCell::new(Engine::new()),
+            // engine: RefCell::new(Engine::new()),
+            engine: RefCell::new(Engine::new_with_max_height(64)),
         }
     }
 }

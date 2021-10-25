@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-10-13 18:07:46
+ * @LastEditTime: 2021-10-25 16:18:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,7 @@ mod gelement2nodebuilderwidget;
 use derive_more::From;
 
 use seed_styles::GlobalStyleSV;
-use tracing::{trace, warn};
+use tracing::{debug, trace, warn};
 
 use std::{cell::RefCell, rc::Rc, string::String};
 
@@ -240,7 +240,7 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
     pub fn try_new_use(gel: &GElement<Message>) -> Result<Self, ()> {
         use GElement::{Button_, Layer_, Text_};
         match gel {
-            Layer_(_) | Button_(_) | Text_(_) => Ok(Self::default()),
+            Layer_(_) | Button_(_) | Text_(_) => Ok(Self::default()), //TODO check if is Generic_
             _ => Err(()),
         }
     }
@@ -268,8 +268,10 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
     /// permission to read it.
     pub fn set_widget(&mut self, gel: &Rc<RefCell<GElement<Message>>>) {
         // use match_any::match_any;
-        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_};
-        let gel_take = gel.replace(GElement::NodeRef_(std::string::String::default()));
+        use GElement::{
+            Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
+        };
+        let gel_take = gel.replace(GElement::EmptyNeverUse);
         match gel_take {
             Builder_(ref gel_in, mut builder) => {
                 builder.set_widget(gel_in);
@@ -287,9 +289,12 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
                 todo!();
             }
             Generic_(x) => {
+                debug!("Generic_:: NodeBuilderWidget set widget: Generic_");
                 self.widget = Some(BuilderWidget::Dyn(x));
             }
             NodeRef_(_) => panic!("set_widget: GElement::NodeIndex_() should handle before."),
+
+            EmptyNeverUse => panic!("EmptyNeverUse never here"),
         };
 
         //TODO add type_name

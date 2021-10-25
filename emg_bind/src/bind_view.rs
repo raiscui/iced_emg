@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-10-22 16:00:12
+ * @LastEditTime: 2021-10-25 16:41:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -168,13 +168,13 @@ where
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
     ) -> Vec<Rc<RefCell<GElement<Message>>>> {
-        self.edges_iter_use_ix(cix, Outgoing)
+        self.edges_iter(cix, Outgoing)
             .filter_map(|eix| {
                 let opt_this_child_nix = eix.nix_by_dir(Outgoing).as_ref();
 
                 opt_this_child_nix.map(|this_child_nix| {
                     let mut new_paths = paths.clone();
-                    new_paths.push_back(eix.clone()); //TODO remove clone
+                    new_paths.push_back(eix.clone());
 
                     self.gelement_refresh_and_comb(edges, this_child_nix.index(), &new_paths)
                 })
@@ -190,9 +190,7 @@ where
             let paths: EPath<Self::Ix> = EPath::new(vector![edge_index_no_source(cix.clone())]);
             // TODO add store in gelement_refresh_and_comb
             let gel = self.gelement_refresh_and_comb(&edges, &cix, &paths);
-            gel.replace(GElement::NodeRef_(std::string::String::default()))
-                .try_into()
-                .unwrap()
+            gel.replace(GElement::EmptyNeverUse).try_into().unwrap()
         }
     }
 
