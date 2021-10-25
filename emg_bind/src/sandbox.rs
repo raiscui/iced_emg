@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2021-09-01 12:58:04
+ * @LastEditTime: 2021-09-27 21:52:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -36,7 +36,7 @@ pub trait Sandbox {
     /// Returns the widgets to display in the [`Sandbox`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view<'a>(&self, g: &'a GraphType<'_, Self::Message>) -> Element<'a, Self::Message>;
+    fn view(&self, g: &GraphType<Self::Message>) -> Element<Self::Message>;
 
     /// Returns the background color of the [`Sandbox`].
     ///
@@ -58,7 +58,7 @@ pub trait Sandbox {
         1.0
     }
 
-    fn tree_build<'a>(this: Rc<RefCell<Self>>) -> GTreeBuilderElement<'a, Self::Message>;
+    fn tree_build(this: Rc<RefCell<Self>>) -> GTreeBuilderElement<Self::Message>;
 
     /// Runs the [`Sandbox`].
     ///
@@ -109,13 +109,13 @@ where
         Subscription::none()
     }
 
-    fn view<'a>(&self, g: &'a GraphType<'_, T::Message>) -> Element<'a, T::Message> {
+    fn view(&self, g: &GraphType<T::Message>) -> Element<T::Message> {
         T::view(self, g)
     }
-    fn tree_build<'a>(
+    fn tree_build(
         this: Rc<RefCell<Self>>,
-        _orders: impl Orders<Self::Message> + 'static,
-    ) -> GTreeBuilderElement<'a, T::Message> {
+        _orders: impl Orders<Self::Message>,
+    ) -> GTreeBuilderElement<T::Message> {
         T::tree_build(this)
     }
 }

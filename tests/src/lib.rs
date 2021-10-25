@@ -50,7 +50,7 @@ mod test {
 
     #[wasm_bindgen_test]
     // #[test]
-    fn test1<'a>() {
+    fn test1() {
         console_error_panic_hook::set_once();
         #[cfg(debug_assertions)]
         {
@@ -71,15 +71,16 @@ mod test {
             tracing_wasm::set_as_global_default_with_config(config.build());
         }
 
-        let mut emg_graph = GraphType::<Message>::default();
+        let emg_graph =Rc::new(RefCell::new( GraphType::<Message>::default()));
         let an: AnimationE<Message> = anima![width(px(80))];
+        let an2 = an.clone();
         let a = use_state(9999);        
         
         let p = web_sys::window().unwrap().performance().unwrap();
 
         let treetime = p.now();
 
-        let root: GTreeBuilderElement<'a, Message> = 
+        let root: GTreeBuilderElement< Message> = 
         
         //
         
@@ -211,30 +212,81 @@ mod test {
         let handle_root_in_topo_start = p.now();
         emg_graph.handle_root_in_topo(&root);
         let handle_root_in_topo_time = p.now() - handle_root_in_topo_start;
-        warn!("handle_root_in_topo_time:{}", treebuildtime);
+        warn!("handle_root_in_topo_time:{}", handle_root_in_topo_time);
 
         let vs = p.now();
-        emg_graph.view("a");
+        emg_graph.borrow().view("a");
         let ve = p.now() - vs;
-        warn!("view 1:{}", treebuildtime);
+        warn!("view 1:{}", ve);
 
         let vs = p.now();
-        emg_graph.view("a");
+        emg_graph.borrow().view("a");
         let ve = p.now() - vs;
-        warn!("view 2:{}", treebuildtime);
+        warn!("view 2:{}", ve);
 
         let mut tot = 0f64;
+
+        an2.interrupt(vector![
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+            to(into_vector![width(px(50))]),
+            to(into_vector![width(pc(10110))]),
+        ]);
 
         for i in 0..10000 {
             let t1 = p.now();
 
-            emg_graph.view("a");
+            emg_graph.borrow().view("a");
 
             let t2 = p.now();
 
             tot += t2 - t1;
         }
-        warn!("tut:{}", tot);
+        warn!("tut:{}", tot);//990
 
         warn!("dt:{}", tot / 10000.);
     }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:14:26
- * @LastEditTime: 2021-09-02 12:50:20
+ * @LastEditTime: 2021-10-12 13:31:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,11 +24,11 @@ use crate::emg_runtime::dodrio::bumpalo;
 ///
 /// [built-in widget]: mod@crate::widget
 #[allow(missing_debug_implementations)]
-pub struct Element<'a, Message> {
-    pub(crate) widget: Box<dyn Widget<Message> + 'a>,
+pub struct Element<Message> {
+    pub(crate) widget: Box<dyn Widget<Message>>,
 }
 
-impl<'a, Message> Clone for Element<'a, Message> {
+impl<Message> Clone for Element<Message> {
     fn clone(&self) -> Self {
         Self {
             widget: self.widget.clone(),
@@ -36,15 +36,15 @@ impl<'a, Message> Clone for Element<'a, Message> {
     }
 }
 
-impl<'a, Message> std::fmt::Debug for Element<'a, Message> {
+impl<Message> std::fmt::Debug for Element<Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[Element]")
     }
 }
 
-impl<'a, Message> Element<'a, Message> {
+impl<Message> Element<Message> {
     /// Create a new [`Element`] containing the given [`Widget`].
-    pub fn new(widget: impl Widget<Message> + 'a) -> Self {
+    pub fn new(widget: impl Widget<Message> + 'static) -> Self {
         Self {
             widget: Box::new(widget),
         }
@@ -54,7 +54,7 @@ impl<'a, Message> Element<'a, Message> {
     ///
     /// This method is useful when you want to decouple different parts of your
     /// UI and make them __composable__.
-    pub fn map<F, B>(self, f: F) -> Element<'a, B>
+    pub fn map<F, B>(self, f: F) -> Element<B>
     where
         Message: 'static + Clone,
         B: 'static + Clone,
@@ -67,7 +67,7 @@ impl<'a, Message> Element<'a, Message> {
 
     /// Marks the [`Element`] as _to-be-explained_.
     #[must_use]
-    pub const fn explain(self, _color: Color) -> Element<'a, Message> {
+    pub const fn explain(self, _color: Color) -> Self {
         self
     }
 
@@ -83,24 +83,24 @@ impl<'a, Message> Element<'a, Message> {
 }
 
 #[derive(Clone)]
-struct Map<'a, A, B> {
-    widget: Box<dyn Widget<A> + 'a>,
+struct Map<A, B> {
+    widget: Box<dyn Widget<A>>,
     mapper: Rc<dyn Fn(A) -> B>,
 }
 
-impl<'a, A, B> Map<'a, A, B> {
-    pub fn new<F>(widget: Box<dyn Widget<A> + 'a>, mapper: F) -> Map<'a, A, B>
+impl<A, B> Map<A, B> {
+    pub fn new<F>(widget: Box<dyn Widget<A>>, mapper: F) -> Self
     where
         F: 'static + Fn(A) -> B,
     {
-        Map {
+        Self {
             widget,
             mapper: Rc::new(mapper),
         }
     }
 }
 
-impl<'a, A, B> Widget<B> for Map<'a, A, B>
+impl<A, B> Widget<B> for Map<A, B>
 where
     A: 'static + Clone,
     B: 'static + Clone,

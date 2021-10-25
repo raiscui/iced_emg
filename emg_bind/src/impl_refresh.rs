@@ -1,7 +1,9 @@
+use std::ops::Deref;
+
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-09-15 15:11:30
+ * @LastEditTime: 2021-10-25 16:20:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,14 +13,14 @@ use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<'a, Message> RefreshWhoNoWarper for GElement<'a, Message> {}
-impl<'a, Message> RefreshUseNoWarper for GElement<'a, Message> {}
-impl<'a, Message> RefreshFor<GElement<'a, Message>> for GElement<'a, Message>
+impl<Message> RefreshWhoNoWarper for GElement<Message> {}
+impl<Message> RefreshUseNoWarper for GElement<Message> {}
+impl<Message> RefreshFor<Self> for GElement<Message>
 where
     Message: 'static + Clone,
 {
-    fn refresh_for(&self, el: &mut GElement<'a, Message>) {
-        use GElement::{Event_, Generic_, Layer_, Refresher_};
+    fn refresh_for(&self, el: &mut Self) {
+        use GElement::{Builder_, Event_, Generic_, Layer_, Refresher_, Text_};
         //TODO for builder
         match (el, self) {
             (who, Generic_(use_something)) => {
@@ -59,6 +61,12 @@ where
                     any_not_refresher_event
                 );
             }
+            (Text_(who), Text_(us_it)) => {
+                who.content(us_it.get_content());
+            }
+            (who, Builder_(us_gel, _)) => {
+                us_gel.borrow().deref().refresh_for(who);
+            }
 
             // @ any not match ─────────────────────────────────────────────────────────────────
 
@@ -77,8 +85,8 @@ where
 /// `GElement` refresh use X
 /// for Refresher<GElement> many type
 // this is `GElement` refresh use `i32`
-impl<'a, Message> RefreshFor<GElement<'a, Message>> for i32 {
-    fn refresh_for(&self, el: &mut GElement<'a, Message>) {
+impl<Message> RefreshFor<GElement<Message>> for i32 {
+    fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
         match el {
@@ -96,8 +104,8 @@ impl<'a, Message> RefreshFor<GElement<'a, Message>> for i32 {
 /// `GElement` refresh use X
 /// for Refresher<GElement> many type
 // this is `GElement` refresh use `i32`
-impl<'a, Message> RefreshFor<GElement<'a, Message>> for u32 {
-    fn refresh_for(&self, el: &mut GElement<'a, Message>) {
+impl<Message> RefreshFor<GElement<Message>> for u32 {
+    fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
         match el {
@@ -112,8 +120,8 @@ impl<'a, Message> RefreshFor<GElement<'a, Message>> for u32 {
         }
     }
 }
-impl<'a, Message> RefreshFor<GElement<'a, Message>> for f64 {
-    fn refresh_for(&self, el: &mut GElement<'a, Message>) {
+impl<Message> RefreshFor<GElement<Message>> for f64 {
+    fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
         match el {
@@ -130,11 +138,11 @@ impl<'a, Message> RefreshFor<GElement<'a, Message>> for f64 {
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<'a, Message> RefreshFor<NodeBuilderWidget<'a, Message>> for GElement<'a, Message>
+impl<Message> RefreshFor<NodeBuilderWidget<Message>> for GElement<Message>
 where
     Message: 'static + Clone,
 {
-    fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<'a, Message>) {
+    fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<Message>) {
         use GElement::Event_;
         trace!("node_builder_widget refresh use GElement (event_callback)");
 

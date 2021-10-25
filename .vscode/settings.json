@@ -6,20 +6,25 @@
         "activityBar.foreground": "#15202b",
         "activityBar.inactiveForeground": "#15202b99",
         "activityBarBadge.background": "#b2c975",
-        "activityBarBadge.foreground": "#15202b"
+        "activityBarBadge.foreground": "#15202b",
+        "editorGroup.border": "#c160a6",
+        "panel.border": "#c160a6",
+        "sash.hoverBorder": "#c160a6",
+        "sideBar.border": "#c160a6"
     },
     "peacock.color": "#ab438e",
     "git.ignoreLimitWarning": true,
     "cSpell.words": [
-        "Gtree",
-        "Posix",
         "cmds",
         "elems",
         "expl",
         "glayer",
         "gtbe",
+        "Gtree",
         "interp",
-        "rerender"
+        "Posix",
+        "rerender",
+        "varba"
     ],
     "files.exclude": {
         "**/.git": true,

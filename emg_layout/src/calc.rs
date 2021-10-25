@@ -22,7 +22,7 @@ use derive_more::From;
 // #[track_caller]
 #[topo::nested]
 pub fn layout_calculating<Ix>(
-    id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
+    _id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
     path_edgedata: &EdgeData,//parent
     layout: StateAnchor<Layout>,
 ) -> LayoutCalculated 

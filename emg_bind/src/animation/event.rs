@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-10 18:06:08
- * @LastEditTime: 2021-09-02 12:53:03
+ * @LastEditTime: 2021-09-28 17:29:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,6 +20,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 // use web_sys::IdleRequestOptions;
 
+#[derive(Default)]
 pub struct RafEventRecipe {
     // sender: UnboundedSender<(Event, event::Status)>,
 // sender: Sender<(Event, event::Status)>,
@@ -30,16 +31,16 @@ pub struct RafEventRecipe {
 // boxed_local: BoxStream<(Event, event::Status)>,
 }
 
-impl Default for RafEventRecipe {
-    fn default() -> Self {
-        // let (sender, receiver) = futures::channel::mpsc::channel(10);
+// impl Default for RafEventRecipe {
+//     fn default() -> Self {
+//         // let (sender, receiver) = futures::channel::mpsc::channel(10);
 
-        // let (sender, receiver) = futures::channel::mpsc::unbounded();
+//         // let (sender, receiver) = futures::channel::mpsc::unbounded();
 
-        // Self::new(sender, receiver)
-        Self {}
-    }
-}
+//         // Self::new(sender, receiver)
+//         Self {}
+//     }
+// }
 
 pub type AmClosure = Rc<RefCell<Option<Closure<dyn FnMut(f64)>>>>;
 

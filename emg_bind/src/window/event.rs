@@ -47,13 +47,14 @@ pub enum Event {
     // FilesHoveredLeft,
 }
 
+#[derive(Default)]
 pub struct WindowEventRecipe {}
 
-impl Default for WindowEventRecipe {
-    fn default() -> Self {
-        Self {}
-    }
-}
+// impl Default for WindowEventRecipe {
+//     fn default() -> Self {
+//         Self {}
+//     }
+// }
 
 //TODO: 泛型 like download.rs
 impl Recipe<Hasher, (crate::event::Event, event::Status)> for WindowEventRecipe {

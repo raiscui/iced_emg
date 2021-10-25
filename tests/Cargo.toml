@@ -27,7 +27,7 @@ anchors = { path = "../../anchors" }
 tracing = "0.1"
 
 tracing-wasm = "0.2.0"
-console_error_panic_hook = "0.1.6"
+console_error_panic_hook = "0.1"
 # im-rc = "15.0.0"
 # serde = "1.0.130"
 

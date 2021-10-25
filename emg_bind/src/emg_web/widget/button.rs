@@ -6,7 +6,7 @@ pub use iced_style::button::{Style, StyleSheet};
 use seed_styles::GlobalStyleSV;
 
 use crate::emg_runtime::{Bus, Element, NodeBuilder, Widget};
-use crate::iced_runtime::{css, Background,  Length};
+use crate::iced_runtime::{css, Background, Length};
 
 /// A generic widget that produces a message when pressed.
 ///
@@ -23,9 +23,9 @@ use crate::iced_runtime::{css, Background,  Length};
 /// ```
 #[allow(missing_debug_implementations)]
 #[derive(Clone)]
-pub struct Button<'a, Message> {
+pub struct Button<Message> {
     // id: String,
-    content: Element<'a, Message>,
+    content: Element<Message>,
     on_press: Option<Message>,
     width: Length,
     #[allow(dead_code)]
@@ -36,22 +36,22 @@ pub struct Button<'a, Message> {
     padding: u16,
     style: Box<dyn StyleSheet>,
 }
-// impl<'a, Message> RefreshWhoNoWarper for Button<'a, Message> {}
-// impl<'a, Message> RefreshFor<Button<'a, Message>> for Gid {
-//     fn refresh_for(&self, el: &mut Button<'a, Message>) {
+// impl< Message> RefreshWhoNoWarper for Button< Message> {}
+// impl< Message> RefreshFor<Button< Message>> for Gid {
+//     fn refresh_for(&self, el: &mut Button< Message>) {
 //         el.id = self.id();
 //     }
 // }
 
-impl<'a, Message> Button<'a, Message> {
+impl<Message> Button<Message> {
     /// Creates a new [`Button`] with some local [`State`] and the given
     /// content.
     // pub fn new<E>(_state: &'a mut State, content: E) -> Self
     pub fn new<E>(content: E) -> Self
     where
-        E: Into<Element<'a, Message>>,
+        E: Into<Element<Message>>,
     {
-        Button {
+        Self {
             // id: "".to_string(),
             content: content.into(),
             on_press: None,
@@ -123,7 +123,7 @@ impl State {
 // ────────────────────────────────────────────────────────────────────────────────
 use dodrio::{builder::ElementBuilder, bumpalo, Attribute, Listener, Node};
 
-impl<'a, Message> NodeBuilder<Message> for Button<'a, Message>
+impl<Message> NodeBuilder<Message> for Button<Message>
 where
     Message: 'static + Clone,
 {
@@ -195,7 +195,7 @@ where
     }
 }
 
-impl<'a, Message> Widget<Message> for Button<'a, Message>
+impl<Message> Widget<Message> for Button<Message>
 where
     Message: 'static + Clone,
 {
@@ -210,11 +210,11 @@ where
     }
 }
 
-impl<'a, Message> From<Button<'a, Message>> for Element<'a, Message>
+impl<Message> From<Button<Message>> for Element<Message>
 where
     Message: 'static + Clone,
 {
-    fn from(button: Button<'a, Message>) -> Element<'a, Message> {
-        Element::new(button)
+    fn from(button: Button<Message>) -> Self {
+        Self::new(button)
     }
 }

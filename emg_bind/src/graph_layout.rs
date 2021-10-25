@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-06 14:13:04
- * @LastEditTime: 2021-05-26 15:08:26
+ * @LastEditTime: 2021-09-27 21:49:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,7 @@ pub trait GraphMethods<Ix> {
         h: impl Into<GenericSizeAnchor>,
     );
 }
-impl<'a, Message, Ix> GraphMethods<Ix> for GraphType<'a, Message, Ix>
+impl<Message, Ix> GraphMethods<Ix> for GraphType<Message, Ix>
 where
     Ix: Clone + Hash + Eq + std::fmt::Debug + Ord + Default,
     // E: Clone + std::fmt::Debug,

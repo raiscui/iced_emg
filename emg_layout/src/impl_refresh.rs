@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-09-14 16:39:02
+ * @LastEditTime: 2021-09-17 17:18:17
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg_refresh::{RefreshFor, RefreshForUse, RefreshUseNoWarper, RefreshWhoNoWarper};
-use std::{any::Any, panic::Location};
+use std::{any::Any, panic::Location, rc::Rc};
 
 use emg_state::{CloneStateVar, StateAnchor, StateVar};
 pub use seed_styles as styles;
@@ -31,6 +31,21 @@ impl<Ix> RefreshWhoNoWarper for EmgEdgeItem<Ix> where
 impl<T> RefreshUseNoWarper for Css<T> where T: CssValueTrait + Clone + 'static {}
 
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Box<dyn RefreshFor<EmgEdgeItem<Ix>>>
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+{
+    #[track_caller]
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+        let _g = trace_span!(
+            "!!!!!!!!!!!!!!-> RefreshFor<EdgeItem> for Box<(dyn RefreshFor<EdgeItem> + 'static)>"
+        )
+        .entered();
+        // let ii = i.as_ref();
+        who.refresh_for_use(self.as_ref());
+    }
+}
+impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,

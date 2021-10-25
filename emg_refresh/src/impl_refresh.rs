@@ -3,13 +3,14 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-08-28 09:59:21
+ * @LastEditTime: 2021-10-15 11:31:04
  * @LastEditors: Rais
  * @Description:
  */
 use crate::RefreshFor;
 
 use crate::{RefreshForUse, Refresher, RefresherFor};
+use emg_core::im_rc::Vector;
 use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 use tracing::{debug, warn};
 // ────────────────────────────────────────────────────────────────────────────────
@@ -43,6 +44,21 @@ impl<Use> !RefreshWhoNoWarper for StateAnchor<Use> {}
 impl<'a, Use> !RefreshUseNoWarper for RefresherFor<'a, Use> {}
 impl<'a, Use> !RefreshUseNoWarper for Refresher<'a, Use> {}
 // ────────────────────────────────────────────────────────────────────────────────
+// impl<Who> RefreshFor<Who> for Vector<Box<dyn RefreshFor<Who>>>
+// where
+//     Who: RefreshWhoNoWarper,
+// {
+//     default fn refresh_for(&self, who: &mut Who) {
+//         self.iter().for_each(|i| {
+//             let ii = i.as_ref();
+//             who.refresh_for_use(ii);
+//         });
+//         // for i in self.iter() {
+//         //     let ii = i.as_ref();
+//         //     who.refresh_for_use(ii);
+//         // }
+//     }
+// }
 impl<Who> RefreshFor<Who> for Vec<Box<dyn RefreshFor<Who>>>
 where
     Who: RefreshWhoNoWarper,
@@ -55,6 +71,37 @@ where
     }
 }
 impl<Who> RefreshFor<Who> for Box<dyn RefreshFor<Who>>
+where
+    Who: RefreshWhoNoWarper,
+{
+    default fn refresh_for(&self, who: &mut Who) {
+        let r = self.as_ref();
+        who.refresh_for_use(r);
+    }
+}
+impl<Who> RefreshFor<Who> for Vector<Rc<dyn RefreshFor<Who>>>
+where
+    Who: RefreshWhoNoWarper,
+{
+    default fn refresh_for(&self, who: &mut Who) {
+        for i in self.iter() {
+            let ii = i.as_ref();
+            who.refresh_for_use(ii);
+        }
+    }
+}
+impl<Who> RefreshFor<Who> for Vec<Rc<dyn RefreshFor<Who>>>
+where
+    Who: RefreshWhoNoWarper,
+{
+    default fn refresh_for(&self, who: &mut Who) {
+        for i in self {
+            let ii = i.as_ref();
+            who.refresh_for_use(ii);
+        }
+    }
+}
+impl<Who> RefreshFor<Who> for Rc<dyn RefreshFor<Who>>
 where
     Who: RefreshWhoNoWarper,
 {

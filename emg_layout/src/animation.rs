@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-09-15 12:06:54
+ * @LastEditTime: 2021-10-13 16:22:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -88,7 +88,7 @@ pub fn global_anima_running_sa() -> StateAnchor<bool> {
 }
 #[must_use]
 pub fn global_anima_running() -> bool {
-    G_AM_RUNING.with(|running| running.get())
+    G_AM_RUNING.with(emg_state::CloneStateAnchor::get)
 }
 #[must_use]
 pub fn global_anima_running_build() -> StateAnchor<bool> {
@@ -536,7 +536,6 @@ where
                 move |skip, _| {
                     // println!("call update after set timing {:?}", v);
                     debug!("====[insert_after_fn] calling --> topo id:{:?}", &id);
-
                     // anima_clone.update_in_callback(skip);
                     if !sa_running_clone.get() {
                         debug!("not running , return");
@@ -548,9 +547,9 @@ where
                     props_init
                         .iter()
                         .zip(revised_value.2.iter())
-                        .for_each(|(sv, prop)| sv.set_in_callback(skip, prop));
-                    interruption_init.set_in_callback(skip, &revised_value.0);
-                    steps_init.set_in_callback(skip, &revised_value.1);
+                        .for_each(|(sv, prop)| sv.seting_in_b_a_callback(skip, prop));
+                    interruption_init.seting_in_b_a_callback(skip, &revised_value.0);
+                    steps_init.seting_in_b_a_callback(skip, &revised_value.1);
                 },
                 false,
             )
@@ -1153,7 +1152,7 @@ mod tests {
             css_w.set(width(px(99)));
 
             let edge_style_string_sa = root_e
-                    .node
+                    .edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root")]))
                     .and_then(EdgeItemNode::as_edge_data)
@@ -1466,7 +1465,7 @@ mod tests {
             css_w.set(width(px(99)));
 
             let edge_style_string_sa = e1
-                    .node
+                    .edge_nodes
                     .get()
                     .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
                     .and_then(EdgeItemNode::as_edge_data)
