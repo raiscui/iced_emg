@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-10-25 16:41:03
+ * @LastEditTime: 2021-11-12 15:06:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -87,7 +87,7 @@ where
 
         //make node_ref real
 
-        //TODO link node at build
+        //TODO link node use refresh_for_use
         //NOTE NodeRef_ 处理
         children_s
             .iter()
