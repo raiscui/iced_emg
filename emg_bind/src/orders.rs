@@ -1,18 +1,17 @@
 use crate::{window::observe_size, Orders};
 use emg_animation::Tick;
 // use fxhash::FxBuildHasher;
-
+use emg_hasher::CustomHasher;
 use emg_layout::{
     animation::{global_anima_running_sa, global_clock},
     global_height, global_width,
 };
 use emg_state::{state_store, CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
-use rustc_hash::FxHasher as CustomHasher;
 
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-09-01 12:54:45
+ * @LastEditTime: 2021-11-12 10:32:19
  * @LastEditors: Rais
  * @Description:
  */

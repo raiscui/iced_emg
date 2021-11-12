@@ -13,5 +13,5 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 ordered-float = "2.8.0"
-derive_more = "0.99.13"
+derive_more = "0.99"
 im-rc = "15.0.0"

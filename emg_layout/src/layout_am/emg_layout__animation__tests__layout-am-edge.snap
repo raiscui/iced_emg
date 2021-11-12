@@ -162,7 +162,7 @@ EmgEdgeItem {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:719:41",
+                "emg_layout/src/lib.rs:731:41",
             ],
             pseudo: None,
             media: None,
@@ -174,7 +174,7 @@ EmgEdgeItem {
             pre_combinators: [],
         },
     ),
-    node: StateAnchor(
+    edge_nodes: StateAnchor(
         {
             EPath(
                 [
@@ -299,10 +299,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/lib.rs:945:13",
-                                    "emg_layout/src/lib.rs:945:17",
-                                    "emg_layout/src/lib.rs:945:31",
-                                    "emg_layout/src/lib.rs:945:45",
+                                    "emg_layout/src/lib.rs:958:13",
+                                    "emg_layout/src/lib.rs:958:17",
+                                    "emg_layout/src/lib.rs:958:31",
+                                    "emg_layout/src/lib.rs:958:45",
                                 ],
                                 pseudo: None,
                                 media: None,

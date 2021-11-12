@@ -21,6 +21,7 @@
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
 use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc};
+use emg_hasher::CustomHasher;
 
 use calc::layout_calculating;
 use derive_more::Display;
@@ -511,7 +512,7 @@ where
 
 pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
 // use ahash::AHasher as CustomHasher;
-use rustc_hash::FxHasher as CustomHasher;
+// use rustc_hash::FxHasher as CustomHasher;
 
 // type PathVarMap<Ix,T> = Dict<EPath<Ix>,T>;
 // type PathVarMap<Ix,T> = indexmap::IndexMap <EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
@@ -817,11 +818,11 @@ where
                         }
                                 
                     };
-                    EdgeItemNode::EdgeData(EdgeData {
+                    EdgeItemNode::EdgeData(Box::new(EdgeData {
                         calculated: layout_calculated,
                         styles_string,
                         opt_p_calculated
-                    })
+                    }))
                 }).into()
 
             }).into()
@@ -997,7 +998,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
 
 #[derive(Display, From, Clone, Debug, PartialEq, Eq)]
 pub enum EdgeItemNode {
-    EdgeData(EdgeData),
+    EdgeData(Box<EdgeData>),
     String(String), //TODO make can write, in DictPathEiNodeSA it clone need RC?
     Empty,
 }

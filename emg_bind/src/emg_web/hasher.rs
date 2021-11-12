@@ -5,9 +5,10 @@
  * @LastEditors: Rais
  * @Description:
  */
-use std::fmt;
 
-use rustc_hash::FxHasher as CustomHasher;
+ //TODO remove this mod
+use emg_hasher::CustomHasher;
+use std::fmt;
 // use std::collections::hash_map::DefaultHasher;
 /// The hasher used to compare subscriptions.
 

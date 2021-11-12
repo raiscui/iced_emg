@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-10-25 17:26:51
+ * @LastEditTime: 2021-11-12 10:34:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -40,7 +40,8 @@ thread_local! {
 // use ahash::AHasher as CustomHasher;
 use indexmap::IndexMap as HashMap;
 // use rustc_hash::FxHashMap as HashMap;
-use rustc_hash::FxHasher as CustomHasher;
+// use rustc_hash::FxHasher as CustomHasher;
+use emg_hasher::CustomHasher;
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(clippy::module_name_repetitions)]
@@ -1758,7 +1759,7 @@ mod state_test {
     use tracing::Level;
 
     use tracing_flame::FlameLayer;
-    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    use tracing_subscriber::{fmt, prelude::*};
 
     fn _init() {
         // let _el = env_logger::try_init();
