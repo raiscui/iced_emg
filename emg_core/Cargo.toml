@@ -12,6 +12,6 @@ split-debuginfo = "unpacked"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-ordered-float = "2.8.0"
+ordered-float = "2"
 derive_more = "0.99"
 im-rc = "15.0.0"

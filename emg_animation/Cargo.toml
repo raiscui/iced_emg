@@ -18,7 +18,7 @@ tracing = "0.1"
 emg_state = { path = "../emg_state" }
 emg_core = { path = "../emg_core" }
 seed_styles = { path = "../../styles_hooks/seed_styles" }
-ordered-float = "2.8.0"
+ordered-float = "2"
 
 [dev-dependencies]
-insta = "1.8"
+insta = "1"

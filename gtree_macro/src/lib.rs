@@ -13,7 +13,7 @@ use syn::parse::{Parse, ParseStream};
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
 
 use syn::{Ident, Token};
-use uuid::Uuid;
+// use uuid::Uuid;
 use nanoid::nanoid;
 // ────────────────────────────────────────────────────────────────────────────────
 // use proc_macro::Diagnostic;

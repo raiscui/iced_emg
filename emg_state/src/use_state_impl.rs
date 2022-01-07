@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2021-11-12 10:34:45
+ * @LastEditTime: 2022-01-07 13:04:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -1132,6 +1132,7 @@ where
 
 impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> StateAnchor<Dict<K, V>> {
     #[track_caller]
+    #[must_use]
     pub fn filter<F: FnMut(&K, &V) -> bool + 'static>(&self, mut f: F) -> Self {
         self.0
             .filter_map(move |k, v| if f(k, v) { Some(v.clone()) } else { None })

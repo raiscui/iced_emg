@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2021-09-17 17:18:17
+ * @LastEditTime: 2022-01-07 13:08:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -407,6 +407,7 @@ mod refresh_test {
     use crate::GraphEdgesDict;
     use crate::{anima, AnimationE, EmgEdgeItem};
 
+    #[allow(dead_code)]
     #[derive(Debug, Clone, PartialEq)]
     enum Message {
         A,
