@@ -14,6 +14,7 @@ use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, to
 
 use syn::{Ident, Token};
 use uuid::Uuid;
+use nanoid::nanoid;
 // ────────────────────────────────────────────────────────────────────────────────
 // use proc_macro::Diagnostic;
 pub mod kw {
@@ -45,24 +46,28 @@ impl ID {
                 let id = make_id(def_name);
                 // println!("id:{}", &id);
 
-                quote!(String::from(#id))
+                // quote!(String::from(#id))
+                quote!(IdStr::new_inline(#id))
             },
             |id| {
                 let id_string = id.to_string();
                 // println!("id:{}", &id_string);
 
-                quote_spanned!(id.span()=>String::from(#id_string))
+                // quote_spanned!(id.span()=>String::from(#id_string))
+                quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
             },
         )
     }
 }
 
 fn make_id(name: &str) -> String {
-    let mut id = (*Uuid::new_v4()
-        .to_simple()
-        .encode_lower(&mut Uuid::encode_buffer()))
-    .to_string();
-    id.push_str(("-".to_owned() + name).as_str());
+    let mut id = nanoid!(8);
+    // let mut id = (*Uuid::new_v4()
+    //     .to_simple()
+    //     .encode_lower(&mut Uuid::encode_buffer()))
+    // .to_string();
+    id.push('-');
+    id.push_str(name);
     id
 }
 
@@ -873,7 +878,7 @@ impl ToTokens for Gtree {
 
             #[allow(unused)]
             use emg_bind::{Element, EventCallback, EventMessage, GElement,
-                GTreeBuilderElement,node_ref
+                GTreeBuilderElement,node_ref,IdStr
             };
             #[allow(unused)]
             use emg_layout::{css, styles::*,add_values::*,EmgEdgeItem};

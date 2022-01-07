@@ -20,6 +20,7 @@ quote = "1"
 trace-var = { path = "../../trace-var" }
 match_any = "1.0.1"
 
+nanoid = "0.4.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }

@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use crate::IdStr;
 use seed_styles::GlobalStyleSV;
 use tracing::warn;
 
@@ -25,7 +26,7 @@ use crate::emg_runtime::dodrio::builder::div;
 #[allow(missing_debug_implementations)]
 #[derive(Clone, Debug)]
 pub struct Layer<Message> {
-    id: String,
+    id: IdStr,
     children: Vec<Element<Message>>,
 }
 
@@ -37,12 +38,12 @@ impl<Message> Default for Layer<Message> {
 
 impl<Message> Layer<Message> {
     /// Creates an empty [`Layer`].
-    pub fn new<T: Into<String>>(id: T) -> Self {
+    pub fn new<T: Into<IdStr>>(id: T) -> Self {
         Self::with_children(id, Vec::new())
     }
 
     /// Creates a [`Layer`] with the given elements.
-    pub fn with_children<T: Into<String>>(id: T, children: Vec<Element<Message>>) -> Self {
+    pub fn with_children<T: Into<IdStr>>(id: T, children: Vec<Element<Message>>) -> Self {
         Self {
             id: id.into(),
             children,

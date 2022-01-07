@@ -35,8 +35,8 @@ better_any = { path = "../../better_any/better_any", features = [
 ] }
 emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
 
-strum = "0.22.0"
-strum_macros = "0.22.0"
+strum = "0.23.0"
+strum_macros = "0.23.1"
 
 match_any = "1.0.1"
 
@@ -61,6 +61,7 @@ indexmap = "1.7"
 
 emg_core = { path = "../emg_core" }
 emg_hasher = { path = "../emg_hasher" }
+smol_str = "0.1.21"
 
 # emg_debuggable = { path = "../emg_debuggable" }
 # stream_throttle ={ version = "0.4.0",default-features = false, features = ["timer-futures-timer"], path = "../../stream-throttle"}

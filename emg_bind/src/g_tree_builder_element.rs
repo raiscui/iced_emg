@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2021-10-15 11:31:44
+ * @LastEditTime: 2022-01-07 11:53:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,10 +16,12 @@ use emg_refresh::{RefreshFor, RefreshForUse};
 use emg_state::{CloneStateVar, Dict, StateAnchor, StateVar, topo::{self, call_in_slot}, use_state, use_state_impl::TopoKey};
 use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, instrument, trace, trace_span, warn};
+use crate::IdStr;
+
 
 #[allow(dead_code)]
 #[derive(Clone)]
-pub enum GTreeBuilderElement<Message, Ix = String>
+pub enum GTreeBuilderElement<Message, Ix = IdStr>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
@@ -190,6 +192,8 @@ impl<Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
         }
     }
 }
+
+
 pub trait GTreeBuilderFn<Message>
 where
     Self::Ix: Clone + Default + std::hash::Hash + Ord,
@@ -234,13 +238,15 @@ where
 impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
 where
     Message: std::clone::Clone + std::fmt::Debug + 'static,
+    // Ix: Clone + Default + std::hash::Hash + Ord+std::fmt::Debug+std::fmt::Display,
+
     // Ix: std::hash::Hash
     //     + std::clone::Clone
     //     + std::cmp::Ord
     //     + std::default::Default
     //     + std::fmt::Debug,
 {
-    type Ix = String;
+    type Ix = IdStr;
     // TODO: use builder ?
     #[topo::nested]
     #[instrument(skip(self))]
@@ -416,7 +422,7 @@ where
                 //NOTE current node 因为`or_insert_node` 1个ID 只插入一次
                 let nix = self.borrow_mut().or_insert_node(
                     id.clone(),
-                    ||StateAnchor::constant(Layer::<Message>::new(id).into()),
+                    ||StateAnchor::constant(Layer::<Message>::new(id.clone()).into()),
                 );
                 trace!("\nhandle_children:\n inserted node: {:#?}",&nix);
 

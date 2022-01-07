@@ -15,6 +15,8 @@
 // #![feature(allocator_api)]
 // #![feature(generic_associated_types)]
 
+pub use smol_str::SmolStr as IdStr;
+
 pub mod emg_web;
 #[cfg(not(target_arch = "wasm32"))]
 pub use iced as runtime;

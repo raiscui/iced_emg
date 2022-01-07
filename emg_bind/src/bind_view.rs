@@ -1,10 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-11-12 15:06:51
+ * @LastEditTime: 2021-12-22 12:15:14
  * @LastEditors: Rais
  * @Description:
  */
+use crate::IdStr;
 use crate::{Element, GElement, NodeBuilderWidget};
 pub use emg::EdgeIndex;
 pub use emg::Graph;
@@ -16,12 +17,13 @@ use emg_refresh::RefreshForUse;
 use emg_state::{CloneStateAnchor, StateAnchor};
 use std::{cell::RefCell, convert::TryInto, hash::Hash, ops::DerefMut, rc::Rc};
 use tracing::{instrument, trace, trace_span};
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub type N<Message> = StateAnchor<GElement<Message>>;
 // pub type N< Message> = RefCell<GElement< Message>>;
 pub type E<Ix> = EmgEdgeItem<Ix>;
-pub type GraphType<Message, Ix = String> = Graph<N<Message>, E<Ix>, Ix>;
+pub type GraphType<Message, Ix = IdStr> = Graph<N<Message>, E<Ix>, Ix>;
 
 pub trait GraphView<Message> {
     type N;
