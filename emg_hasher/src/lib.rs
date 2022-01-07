@@ -4,7 +4,7 @@
 // pub use std::collections::hash_map::DefaultHasher as CustomHasher;
 
 pub use rustc_hash::FxHasher as CustomHasher;
-
+// pub use highway::HighwayHasher as CustomHasher;
 // pub use fnv::FnvHasher as CustomHasher;
 
 // pub use ahash::AHasher as CustomHasher;
