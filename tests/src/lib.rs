@@ -82,8 +82,6 @@ mod test {
 
         let root: GTreeBuilderElement< Message> = 
         
-        //
-        
         // gtree! {
         //     @=a
         //     Layer [
@@ -207,12 +205,12 @@ mod test {
         };
 
         let treebuildtime = p.now() - treetime;
-        warn!("treebuildtime:{}", treebuildtime);
+        warn!("build GTreeBuilderElement:{}", treebuildtime);
 
         let handle_root_in_topo_start = p.now();
         emg_graph.handle_root_in_topo(&root);
         let handle_root_in_topo_time = p.now() - handle_root_in_topo_start;
-        warn!("handle_root_in_topo_time:{}", handle_root_in_topo_time);
+        warn!("emg_graph.handle_root_in_topo:{}", handle_root_in_topo_time);
 
         let vs = p.now();
         emg_graph.borrow().view("a");
@@ -277,15 +275,19 @@ mod test {
             to(into_vector![width(pc(10110))]),
         ]);
 
+        let t1 = p.now();
+
+
         for i in 0..10000 {
-            let t1 = p.now();
 
             emg_graph.borrow().view("a");
 
-            let t2 = p.now();
-
-            tot += t2 - t1;
+       
         }
+        let t2 = p.now();
+
+        tot += t2 - t1;
+
         warn!("tut:{}", tot);//990
 
         warn!("dt:{}", tot / 10000.);

@@ -41,6 +41,6 @@ indexmap = "1.7"
 illicit = "1.1.2"
 
 [dev-dependencies]
-tracing-subscriber = { version = "0.2.25", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
 tracing-flame = "0.1.0"
 insta = "1.8"
