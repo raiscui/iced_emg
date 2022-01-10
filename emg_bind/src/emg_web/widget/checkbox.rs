@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-01-07 17:59:09
+ * @LastEditTime: 2022-01-10 11:47:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -229,7 +229,7 @@ where
                 gel.borrow().deref().refresh_for(who_checkbox);
             }
             GElement::Text_(t) => {
-                who_checkbox.label = t.get_content().into(); //TODO text.get_content directly return IdStr
+                who_checkbox.label = t.get_content(); //TODO text.get_content directly return IdStr
             }
             GElement::Button_(_) => {
                 unimplemented!();

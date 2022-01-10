@@ -1,11 +1,12 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2021-10-12 13:30:25
+ * @LastEditTime: 2022-01-10 11:46:12
  * @LastEditors: Rais
 * @Description:
 */
 
+use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
 
 use crate::iced_runtime::{css, Color, Font, HorizontalAlignment, Length, VerticalAlignment};
@@ -22,7 +23,7 @@ use crate::{dodrio::bumpalo, Bus, Element, NodeBuilder, Widget};
 /// ```
 #[derive(Debug, Clone)]
 pub struct Text {
-    content: String,
+    content: IdStr,
     size: Option<u16>,
     color: Option<Color>,
     font: Font,
@@ -34,7 +35,7 @@ pub struct Text {
 
 impl Text {
     /// Create a new fragment of [`Text`] with the given contents.
-    pub fn new<T: Into<String>>(label: T) -> Self {
+    pub fn new<T: Into<IdStr>>(label: T) -> Self {
         Self {
             content: label.into(),
             size: None,
@@ -48,12 +49,12 @@ impl Text {
     }
 
     /// update content string of the [`Text`].
-    pub fn content<T: Into<String>>(&mut self, label: T) -> &mut Self {
+    pub fn content<T: Into<IdStr>>(&mut self, label: T) -> &mut Self {
         self.content = label.into();
         self
     }
     #[must_use]
-    pub fn get_content(&self) -> String {
+    pub fn get_content(&self) -> IdStr {
         self.content.clone()
     }
 
