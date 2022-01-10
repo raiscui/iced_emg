@@ -2,7 +2,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2021-09-14 16:38:35
+ * @LastEditTime: 2022-01-07 13:39:01
  * @LastEditors: Rais
 * @Description:
 */
@@ -458,7 +458,7 @@ pub fn calculation_origin(p_calc_size: &Vector2<f64>, p_calc_origin:&Translation
     calculation_origin_x(p_calc_size, p_calc_origin,p_calc_align,calc_size, origin_x) * calculation_origin_y(p_calc_size, p_calc_origin,p_calc_align,calc_size, origin_y)
 }
 
-fn calculation_origin_x_logiclength(calc_size: &Vector2<f64>, l:&LogicLength)->Translation3<f64> {
+fn calculation_origin_x_logiclength(calc_size: &Vector2<f64>, l:&LogicLength)-> Translation3<f64> {
 
     match l {
         LogicLength::Simplex(els) => {

@@ -33,7 +33,7 @@ use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
 use emg_core::Vector;
-use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3};
+use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3,Vector2, Vector3};
 use nalgebra as na;
 pub use seed_styles as styles;
 use styles::{ CssTransform, CssValueTrait, Style, UpdateStyle, px, s};
@@ -1071,7 +1071,7 @@ mod tests {
 
 
     use emg::{edge_index, edge_index_no_source, node_index};
-    use emg_core::parent;
+    use emg_core::{parent, IdStr};
     use emg_refresh::{RefreshForUse};
     use emg_state::StateVar;
     use emg_core::vector;
@@ -1143,12 +1143,12 @@ mod tests {
 
             let css_width = width(px(100));
             let css_height = h(px(100));
-            let e_dict_sv:StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
 
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
-            let mut root_e = EmgEdgeItem::<String>::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+            let mut root_e = EmgEdgeItem::<IdStr>::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
                 nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
@@ -1158,7 +1158,7 @@ mod tests {
 
             let e1_source =use_state( Some(node_index("root")));
             let e1_target = use_state(Some(node_index("1")));
-            let e1 = EmgEdgeItem::<String>::new_in_topo(
+            let e1 = EmgEdgeItem::<IdStr>::new_in_topo(
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
@@ -1176,7 +1176,7 @@ mod tests {
             
             let e2_source =use_state( Some(node_index("1")));
             let e2_target = use_state(Some(node_index("2")));
-            let mut e2 = EmgEdgeItem::<String>::new_in_topo(
+            let mut e2 = EmgEdgeItem::<IdStr>::new_in_topo(
                 e2_source.watch(),
                     e2_target.watch(),
                   e_dict_sv.watch(),
@@ -1266,7 +1266,7 @@ mod tests {
             let css_width = width(px(100));
             let css_height = h(px(100));
 
-            let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
@@ -1552,7 +1552,7 @@ mod tests {
             let css_width = width(px(100));
             let css_height = h(px(100));
 
-            let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
@@ -1870,7 +1870,7 @@ mod tests {
         {
             let _g = span!(Level::TRACE, "change_parent").entered();
 
-            let e_dict_sv:StateVar<GraphEdgesDict<&str>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));

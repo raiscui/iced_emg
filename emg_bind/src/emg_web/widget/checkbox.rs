@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2021-10-12 13:32:39
+ * @LastEditTime: 2022-01-07 17:59:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,7 @@ use crate::{
 #[allow(unused_imports)]
 use better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt};
 
-use emg_core::{TypeCheckObjectSafe, TypeName};
+use emg_core::{IdStr, TypeCheckObjectSafe, TypeName};
 use emg_refresh::RefreshFor;
 pub use iced_style::checkbox::{Style, StyleSheet};
 use seed_styles::GlobalStyleSV;
@@ -47,8 +47,8 @@ pub struct Checkbox<Message> {
     is_checked: bool,
     //FIXME use cow for Rc 防止 克隆对象和 原始对象使用同一个 callback
     on_toggle: Rc<dyn Fn(bool) -> Message>,
-    label: String,
-    id: Option<String>,
+    label: IdStr,
+    id: Option<IdStr>,
     width: Length,
     #[allow(dead_code)]
     style: Box<dyn StyleSheet>,
@@ -63,7 +63,7 @@ impl<Message> Checkbox<Message> {
     ///   * a function that will be called when the [`Checkbox`] is toggled. It
     ///     will receive the new state of the [`Checkbox`] and must produce a
     ///     `Message`.
-    pub fn new<F>(is_checked: bool, label: impl Into<String>, f: F) -> Self
+    pub fn new<F>(is_checked: bool, label: impl Into<IdStr>, f: F) -> Self
     where
         F: 'static + Fn(bool) -> Message,
     {
@@ -91,7 +91,7 @@ impl<Message> Checkbox<Message> {
     }
 
     /// Sets the id of the [`Checkbox`].
-    pub fn id(mut self, id: impl Into<String>) -> Self {
+    pub fn id(mut self, id: impl Into<IdStr>) -> Self {
         self.id = Some(id.into());
         self
     }
@@ -229,7 +229,7 @@ where
                 gel.borrow().deref().refresh_for(who_checkbox);
             }
             GElement::Text_(t) => {
-                who_checkbox.label = t.get_content();
+                who_checkbox.label = t.get_content().into(); //TODO text.get_content directly return IdStr
             }
             GElement::Button_(_) => {
                 unimplemented!();
@@ -287,7 +287,7 @@ where
 }
 impl<Message> TypeCheckObjectSafe for Checkbox<Message> {
     fn type_name(&self) -> TypeName {
-        TypeName::new("Checkbox")
+        TypeName::new(IdStr::new_inline("Checkbox"))
     }
 }
 

@@ -1,4 +1,3 @@
-use std::rc::Rc;
 
 use emg_core::{
     measures::ExactLengthSimplex, GenericSize, TypeCheck, TypeCheckObjectSafe, TypeName,
@@ -12,7 +11,7 @@ use super::{Motion, Property};
 /*
  * @Author: Rais
  * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2021-09-02 19:53:07
+ * @LastEditTime: 2022-01-07 16:59:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -58,7 +57,7 @@ impl From<(TypeName, GenericSize)> for Property {
     fn from((type_name, gs): (TypeName, GenericSize)) -> Self {
         match gs {
             GenericSize::Auto | GenericSize::Initial | GenericSize::Inherit => todo!(),
-            GenericSize::Length(l) => Self::Prop(Rc::new(type_name.to_string()), l.into()),
+            GenericSize::Length(l) => Self::Prop(type_name, l.into()),
             GenericSize::StringValue(_) => todo!(),
             GenericSize::Calculation(_) => todo!(),
             GenericSize::Parent(_) => todo!(),
@@ -73,7 +72,7 @@ impl From<CssWidth> for Property {
         let type_name = v.type_name();
         match v {
             CssWidth::Gs(gs) => (type_name, gs).into(),
-            CssWidth::Length(l) => Self::Prop(Rc::new(type_name.to_string()), l.into()),
+            CssWidth::Length(l) => Self::Prop(type_name, l.into()),
             CssWidth::Auto | CssWidth::Initial | CssWidth::Inherit | CssWidth::StringValue(_) => {
                 todo!()
             }
@@ -113,10 +112,9 @@ impl From<Property> for GenericSize {
     fn from(v: Property) -> Self {
         match v {
             //TODO need implement
-            Property::Prop(name, m) => {
-                let p_name = name.as_ref();
-                if (p_name == &*CssWidth::static_type_name()
-                    || p_name == &*CssHeight::static_type_name())
+            Property::Prop(p_name, m) => {
+                if (p_name == CssWidth::static_type_name()
+                    || p_name == CssHeight::static_type_name())
                     && matches!(
                         m.unit,
                         Unit::Px
@@ -134,7 +132,7 @@ impl From<Property> for GenericSize {
                 } else {
                     panic!(
                         "propertyName is {}, it can't convert to GenericSize",
-                        name.as_str()
+                        p_name.as_str()
                     );
                 }
             }

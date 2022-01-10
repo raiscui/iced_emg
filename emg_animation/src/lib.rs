@@ -214,8 +214,8 @@ where
 }
 
 // custom : String -> Float -> String -> Animation.Model.Property
-fn custom(name: String, value: f64, unit: Unit) -> Property {
-    Property::Prop(Rc::new(name), init_motion(value, unit))
+fn custom(name: &str, value: f64, unit: Unit) -> Property {
+    Property::Prop(name.into(), init_motion(value, unit))
 }
 
 /// Update an animation.

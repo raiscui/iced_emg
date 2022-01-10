@@ -878,7 +878,7 @@ impl ToTokens for Gtree {
 
             #[allow(unused)]
             use emg_bind::{Element, EventCallback, EventMessage, GElement,
-                GTreeBuilderElement,node_ref,IdStr
+                GTreeBuilderElement,node_ref
             };
             #[allow(unused)]
             use emg_layout::{css, styles::*,add_values::*,EmgEdgeItem};
@@ -892,7 +892,7 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use GElement::*;
             #[allow(unused)]
-            use emg_core::{TypeCheck,im_rc::Vector};
+            use emg_core::{TypeCheck,im_rc::Vector,IdStr};
             // #[allow(unused)]
             // pub use emg_bind::serde_closure;
 

@@ -1,17 +1,17 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2021-12-22 12:15:14
+ * @LastEditTime: 2022-01-07 18:11:59
  * @LastEditors: Rais
  * @Description:
  */
-use crate::IdStr;
 use crate::{Element, GElement, NodeBuilderWidget};
 pub use emg::EdgeIndex;
 pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::{edge_index_no_source, Outgoing};
 use emg_core::vector;
+use emg_core::IdStr;
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshForUse;
 use emg_state::{CloneStateAnchor, StateAnchor};
@@ -57,7 +57,8 @@ pub trait GraphView<Message> {
 
 impl<Message, Ix> GraphView<Message> for Graph<N<Message>, E<Ix>, Ix>
 where
-    Ix: Clone + Hash + Eq + std::fmt::Debug + std::fmt::Display + Ord + Default + From<String>,
+    Ix: Clone + Hash + Eq + std::fmt::Debug + std::fmt::Display + Ord + Default + From<IdStr>,
+    // + From<String>,
     // E: Clone + std::fmt::Debug,
     Message: 'static + Clone + std::fmt::Debug,
 {

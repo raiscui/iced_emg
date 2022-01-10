@@ -1,7 +1,7 @@
 pub mod color;
 pub mod convert;
 pub mod opacity;
-use emg_core::measures::Unit;
+use emg_core::{measures::Unit, IdStr, TypeName};
 use emg_core::{vector, Vector};
 // use iter_fixed::IntoIteratorFixed;
 use ordered_float::NotNan;
@@ -145,18 +145,18 @@ pub struct ShadowMotion {
     blue: Motion,
     alpha: Motion,
 }
-type PropName = String;
+type PropName = TypeName;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Property {
-    Exact(Rc<PropName>, String),
-    Color(Rc<PropName>, Vector<Motion>),
-    Shadow(Rc<PropName>, bool, Box<ShadowMotion>),
-    Prop(Rc<PropName>, Motion),
-    Prop2(Rc<PropName>, Vector<Motion>),
-    Prop3(Rc<PropName>, Vector<Motion>),
-    Prop4(Rc<PropName>, Vector<Motion>),
-    Angle(Rc<PropName>, Motion),
+    Exact(PropName, String),
+    Color(PropName, Vector<Motion>),
+    Shadow(PropName, bool, Box<ShadowMotion>),
+    Prop(PropName, Motion),
+    Prop2(PropName, Vector<Motion>),
+    Prop3(PropName, Vector<Motion>),
+    Prop4(PropName, Vector<Motion>),
+    Angle(PropName, Motion),
     Points(Vector<[Motion; DIM2]>),
     Path(Vector<PathCommand>),
     // Anchor(Rc<String>, StateAnchor<GenericSize>),
@@ -164,7 +164,7 @@ pub enum Property {
 
 impl Property {
     #[must_use]
-    pub fn name(&self) -> Rc<String> {
+    pub fn name(&self) -> TypeName {
         use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
 
         match self {
@@ -177,9 +177,9 @@ impl Property {
             | Prop4(name, ..)
             | Angle(name, ..) => name.clone(),
 
-            Points(_point) => Rc::new("points".to_string()),
+            Points(_point) => TypeName::new(IdStr::new_inline("points")),
 
-            Path(_path) => Rc::new("points".to_string()),
+            Path(_path) => TypeName::new(IdStr::new_inline("Path")),
         }
     }
 }
@@ -610,7 +610,7 @@ where
     }
 }
 fn replace_props(props: Vector<Property>, replacements: &Vector<Property>) -> Vector<Property> {
-    let replacement_names: Vec<Rc<String>> = replacements.iter().map(Property::name).collect();
+    let replacement_names: Vec<PropName> = replacements.iter().map(Property::name).collect();
     let removed = props
         .into_iter()
         .filter(|prop| replacement_names.contains(&prop.name()));

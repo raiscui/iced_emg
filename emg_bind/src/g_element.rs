@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2021-10-25 16:19:11
+ * @LastEditTime: 2022-01-07 17:54:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@ use crate::{
 };
 pub use better_any;
 use better_any::{Tid, TidAble};
-use emg_core::TypeCheckObjectSafe;
+use emg_core::{IdStr, TypeCheckObjectSafe};
 use emg_refresh::{RefreshFor, RefreshUse};
 // extern crate derive_more;
 use derive_more::From;
@@ -76,11 +76,11 @@ where
     //internal
     Generic_(Box<dyn DynGElement<Message>>),
     #[from(ignore)]
-    NodeRef_(String), // IntoE(Rc<dyn Into<Element< Message>>>),
+    NodeRef_(IdStr), // IntoE(Rc<dyn Into<Element< Message>>>),
     EmptyNeverUse,
 }
 
-pub fn node_ref<Message>(str: impl Into<String>) -> GElement<Message> {
+pub fn node_ref<Message>(str: impl Into<IdStr>) -> GElement<Message> {
     GElement::NodeRef_(str.into())
 }
 
@@ -116,7 +116,7 @@ impl<Message: std::clone::Clone + 'static> GElement<Message> {
         matches!(self, Self::NodeRef_(..))
     }
 
-    pub fn as_node_ref_(&self) -> Option<&String> {
+    pub fn as_node_ref_(&self) -> Option<&IdStr> {
         if let Self::NodeRef_(v) = self {
             Some(v)
         } else {

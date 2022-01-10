@@ -6,7 +6,7 @@ use seed_styles::Unit;
 /*
  * @Author: Rais
  * @Date: 2021-05-10 15:31:40
- * @LastEditTime: 2021-09-15 10:59:52
+ * @LastEditTime: 2022-01-07 17:11:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -32,7 +32,7 @@ impl Color {
 }
 
 fn custom_color(
-    name: String,
+    name: &str,
     Color {
         red,
         green,
@@ -41,7 +41,7 @@ fn custom_color(
     }: Color,
 ) -> Property {
     Property::Color(
-        Rc::new(name),
+        name.into(),
         vector![
             init_motion(f64::from(red), Unit::Empty),
             init_motion(f64::from(green), Unit::Empty),
@@ -52,5 +52,5 @@ fn custom_color(
 }
 #[must_use]
 pub fn fill(color: Color) -> Property {
-    custom_color("fill".to_string(), color)
+    custom_color("fill", color)
 }

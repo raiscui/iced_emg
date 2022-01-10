@@ -389,8 +389,8 @@ mod refresh_test {
     use emg::edge_index_no_source;
     use emg::node_index;
     use emg_animation::to;
-    use emg_core::into_vector;
     use emg_core::vector;
+    use emg_core::{into_vector, IdStr};
     use emg_refresh::RefreshForUse;
     use emg_state::CloneStateVar;
     use emg_state::{use_state, Dict, StateVar};
@@ -415,7 +415,7 @@ mod refresh_test {
 
     #[test]
     fn edge() {
-        let e_dict_sv: StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
         let root_e_source = use_state(None);
         let root_e_target = use_state(Some(node_index("root")));
         let mut root_e = EmgEdgeItem::default_with_wh_in_topo(

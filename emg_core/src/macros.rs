@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 11:58:58
- * @LastEditTime: 2021-09-15 10:43:42
+ * @LastEditTime: 2022-01-07 16:16:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -32,17 +32,19 @@ macro_rules! parent {
 
 #[cfg(test)]
 mod tests {
-    use crate::{TypeCheck, TypeCheckObjectSafe, TypeName};
+    use crate::{IdStr, TypeCheck, TypeCheckObjectSafe, TypeName};
 
     struct EE {}
     impl TypeCheck for EE {
         fn static_type_name() -> crate::TypeName {
-            TypeName("ff".to_string())
+            TypeName::new(IdStr::new_inline("ff"))
         }
     }
     impl TypeCheckObjectSafe for EE {
         fn type_name(&self) -> crate::TypeName {
-            TypeName("ff".to_string())
+            // TypeName::new(IdStr::new_inline("ff"))
+            "ff".into()
+            // TypeName::new(IdStr::new_inline("ff"))
         }
     }
 

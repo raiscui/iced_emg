@@ -15,8 +15,6 @@
 // #![feature(allocator_api)]
 // #![feature(generic_associated_types)]
 
-pub use smol_str::SmolStr as IdStr;
-
 pub mod emg_web;
 #[cfg(not(target_arch = "wasm32"))]
 pub use iced as runtime;
@@ -26,8 +24,6 @@ pub use iced_web as iced_runtime;
 
 #[cfg(target_arch = "wasm32")]
 pub use emg_web as emg_runtime;
-
-pub use uuid::Uuid;
 
 mod g_element;
 mod g_tree_builder_element;

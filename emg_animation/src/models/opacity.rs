@@ -5,12 +5,12 @@ use crate::custom;
 /*
  * @Author: Rais
  * @Date: 2021-05-10 15:58:45
- * @LastEditTime: 2021-06-14 22:21:44
+ * @LastEditTime: 2022-01-07 17:02:57
  * @LastEditors: Rais
  * @Description:
  */
 // opacity : Float -> Animation.Model.Property
 #[must_use]
 pub fn opacity(val: f64) -> super::Property {
-    custom("opacity".to_string(), val, Unit::Empty)
+    custom("opacity", val, Unit::Empty)
 }

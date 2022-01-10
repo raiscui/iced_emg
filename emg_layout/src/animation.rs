@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2021-11-12 12:56:59
+ * @LastEditTime: 2022-01-07 17:38:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -622,8 +622,8 @@ mod tests {
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
     use emg_animation::models::Property;
     use emg_animation::{interrupt, opacity, style, to, Tick};
-    use emg_core::into_vector;
     use emg_core::vector;
+    use emg_core::{into_vector, IdStr};
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
     };
@@ -1115,7 +1115,7 @@ mod tests {
             // let _guard = span.enter();
             // trace!("fff");
 
-            let e_dict_sv:StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
@@ -1335,7 +1335,7 @@ mod tests {
         let css_w: StateVar<CssWidth> = use_state(width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
 
-        let e_dict_sv: StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
         let root_e_source = use_state(None);
         let root_e_target = use_state(Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
@@ -1383,7 +1383,7 @@ mod tests {
         let a: AnimationE<Message> = anima![css_w];
         insta::assert_debug_snapshot!("anima_macro_init", &a);
 
-        let e_dict_sv: StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
         let root_e_source = use_state(None);
         let root_e_target = use_state(Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
@@ -1428,7 +1428,7 @@ mod tests {
             // let _guard = span.enter();
             // trace!("fff");
 
-            let e_dict_sv:StateVar<GraphEdgesDict<String>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
 
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));

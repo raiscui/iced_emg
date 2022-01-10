@@ -58,10 +58,8 @@ tracing = "0.1"
 
 indexmap = "1.7"
 # rustc-hash = "1.1.0"
-
 emg_core = { path = "../emg_core" }
 emg_hasher = { path = "../emg_hasher" }
-smol_str = "0.1.21"
 
 # emg_debuggable = { path = "../emg_debuggable" }
 # stream_throttle ={ version = "0.4.0",default-features = false, features = ["timer-futures-timer"], path = "../../stream-throttle"}
@@ -75,11 +73,13 @@ smol_str = "0.1.21"
 # features = ["allocator_api"] 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2.3", features = ["js"] }
+
 wasm-bindgen-futures = "^0.4"
 dodrio = { path = "../../dodrio" }
 seed_styles = { path = "../../styles_hooks/seed_styles" }
 
-uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
+# uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
 # console_log = { version = "0.2", features = ["color"] }
 iced_web = { path = "../../iced/web" }
 # tracing-wasm = "0.2.0"

@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use crate::IdStr;
+use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
 use tracing::warn;
 
@@ -32,22 +32,19 @@ pub struct Layer<Message> {
 
 impl<Message> Default for Layer<Message> {
     fn default() -> Self {
-        Self::new("")
+        Self::new(IdStr::new_inline(""))
     }
 }
 
 impl<Message> Layer<Message> {
     /// Creates an empty [`Layer`].
-    pub fn new<T: Into<IdStr>>(id: T) -> Self {
+    pub fn new(id: IdStr) -> Self {
         Self::with_children(id, Vec::new())
     }
 
     /// Creates a [`Layer`] with the given elements.
-    pub fn with_children<T: Into<IdStr>>(id: T, children: Vec<Element<Message>>) -> Self {
-        Self {
-            id: id.into(),
-            children,
-        }
+    pub fn with_children(id: IdStr, children: Vec<Element<Message>>) -> Self {
+        Self { id: id, children }
     }
 
     #[must_use]

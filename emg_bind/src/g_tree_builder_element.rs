@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-01-07 11:53:35
+ * @LastEditTime: 2022-01-07 14:53:52
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,14 +9,13 @@
 use crate::emg_runtime::{EventNode, Layer};
 use crate::{GElement, GraphType, NodeIndex};
 use emg::{edge_index_no_source, node_index, Edge, EdgeIndex};
-use emg_core::vector;
+use emg_core::{vector,IdStr};
 use emg_core::{GenericSize, Vector};
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
 use emg_refresh::{RefreshFor, RefreshForUse};
 use emg_state::{CloneStateVar, Dict, StateAnchor, StateVar, topo::{self, call_in_slot}, use_state, use_state_impl::TopoKey};
 use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, instrument, trace, trace_span, warn};
-use crate::IdStr;
 
 
 #[allow(dead_code)]

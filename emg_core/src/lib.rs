@@ -5,6 +5,7 @@ use measures::{px, LogicLength};
 use measures::{ExactLengthSimplex, Unit};
 
 // ────────────────────────────────────────────────────────────────────────────────
+pub use smol_str::SmolStr as IdStr;
 
 use derive_more::Display;
 use derive_more::From;
@@ -50,20 +51,21 @@ where
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, PartialOrd, Eq)]
-pub struct TypeName(String);
+#[derive(Display, Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
+//TODO use IdStr
+pub struct TypeName(IdStr);
 
 impl TypeName {
-    pub fn new<T>(name: T) -> Self
-    where
-        T: Into<String>,
+    pub const fn new(name: IdStr) -> Self
+// where
+    //     T: AsRef<str>,
     {
-        Self(name.into())
+        Self(name)
     }
 }
 
 impl std::ops::Deref for TypeName {
-    type Target = String;
+    type Target = IdStr;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -71,7 +73,7 @@ impl std::ops::Deref for TypeName {
 }
 impl<T> From<T> for TypeName
 where
-    T: Into<String>,
+    T: AsRef<str>,
 {
     fn from(v: T) -> Self {
         Self(v.into())
