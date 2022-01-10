@@ -26,7 +26,7 @@ tracing = "0.1"
 emg_core = { path = "../emg_core" }
 
 # ahash = "0.7.6"
-indexmap = "1.7"
+indexmap = "1.8"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

@@ -11,7 +11,7 @@ use emg_state::{state_store, CloneStateAnchor, CloneStateVar, StateAnchor, State
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2021-11-12 10:32:19
+ * @LastEditTime: 2022-01-10 12:43:17
  * @LastEditors: Rais
  * @Description:
  */
@@ -318,17 +318,18 @@ where
         //     .map(|callback| Effect::TriggeredHandler(Box::new(move || callback(tick))))
         //     .collect();
 
-        if !self.data.after_next_render_callbacks.borrow().is_empty() {
+        let lens = self.data.after_next_render_callbacks.borrow().len();
+        if lens != 0 {
             // ─────────────────────────────────────────────────────────────────
             let tick = Tick::new(new_render_timestamp);
 
-            let len = self.data.after_next_render_callbacks.borrow().len();
-            debug!("len after_next_render_callbacks: {:?} ", &len);
+            // let len = borrowed_indexmap.len();
+            debug!("len after_next_render_callbacks: {:?} ", &lens);
 
             self.data
                 .after_next_render_callbacks
                 .replace(FxIndexMap::with_capacity_and_hasher(
-                    len + 1,
+                    lens + 1,
                     BuildHasherDefault::<CustomHasher>::default(),
                 ))
                 .into_iter()
