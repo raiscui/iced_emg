@@ -706,7 +706,7 @@ where
     /// permission to read it.
     fn insert_after_fn(
         &self,
-        callback_key: TopoKey,
+        after_fn_key: TopoKey,
         func: impl Fn(&SkipKeyCollection, &T) + 'static,
         init: bool,
     ) -> Result<(), String>;
@@ -902,32 +902,32 @@ where
     //TODO 回环检测 , 当两个或者两个以上 有 di关系的 StateVar  set的时候 会再次互相调用set -回环
     fn insert_before_fn(
         &self,
-        callback_key: TopoKey,
+        before_fn_key: TopoKey,
         func: impl Fn(&SkipKeyCollection, &Option<Rc<T>>, &T) + 'static,
         init: bool,
     ) -> Result<(), String> {
         insert_before_fn(
             self,
-            &StorageKey::TopoKey(callback_key),
+            &StorageKey::TopoKey(before_fn_key),
             Rc::new(func),
             init,
         )
     }
     fn insert_after_fn(
         &self,
-        callback_key: TopoKey,
+        after_fn_key: TopoKey,
         func: impl Fn(&SkipKeyCollection, &T) + 'static,
         init: bool,
     ) -> Result<(), String> {
         insert_after_fn(
             self,
-            &StorageKey::TopoKey(callback_key),
+            &StorageKey::TopoKey(after_fn_key),
             Rc::new(func),
             init,
         )
     }
-    fn remove_after_fn(&self, callback_key: TopoKey) {
-        remove_after_fn(self, &StorageKey::TopoKey(callback_key));
+    fn remove_after_fn(&self, after_fn_key: TopoKey) {
+        remove_after_fn(self, &StorageKey::TopoKey(after_fn_key));
     }
 
     #[topo::nested]
