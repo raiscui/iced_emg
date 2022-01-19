@@ -73,7 +73,7 @@ impl std::ops::Deref for TypeName {
 }
 impl<T> From<T> for TypeName
 where
-    T: AsRef<str>,
+    T: Into<IdStr>,
 {
     fn from(v: T) -> Self {
         Self(v.into())

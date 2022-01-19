@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-01-07 17:54:29
+ * @LastEditTime: 2022-01-18 16:23:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -74,9 +74,9 @@ where
     Refresher_(Rc<dyn RefreshFor<GElement<Message>>>),
     Event_(EventNode<Message>),
     //internal
-    Generic_(Box<dyn DynGElement<Message>>),
+    Generic_(Box<dyn DynGElement<Message>>), //范型
     #[from(ignore)]
-    NodeRef_(IdStr), // IntoE(Rc<dyn Into<Element< Message>>>),
+    NodeRef_(IdStr),     // IntoE(Rc<dyn Into<Element< Message>>>),
     EmptyNeverUse,
 }
 

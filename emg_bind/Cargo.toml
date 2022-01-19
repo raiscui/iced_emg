@@ -61,6 +61,9 @@ indexmap = "1.8.0"
 emg_core = { path = "../emg_core" }
 emg_hasher = { path = "../emg_hasher" }
 
+tinyvec = { version = "1.5.1", features = ["alloc"] }
+smallvec = { version = "1.7.0", features = ["const_generics", "union"] }
+
 # emg_debuggable = { path = "../emg_debuggable" }
 # stream_throttle ={ version = "0.4.0",default-features = false, features = ["timer-futures-timer"], path = "../../stream-throttle"}
 
@@ -73,7 +76,7 @@ emg_hasher = { path = "../emg_hasher" }
 # features = ["allocator_api"] 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.3", features = ["js"] }
+getrandom = { version = "0.2.4", features = ["js"] }
 
 wasm-bindgen-futures = "^0.4"
 dodrio = { path = "../../dodrio" }

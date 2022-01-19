@@ -40,6 +40,8 @@ indexmap = "1.8"
 
 illicit = "1.1.2"
 
+tinyvec = { version = "1.5.1", features = ["alloc"] }
+
 [dev-dependencies]
 tracing-subscriber = { version = "0.3.5", features = ["env-filter"] }
 tracing-flame = "0.2.0"

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2021-10-25 16:18:13
+ * @LastEditTime: 2022-01-19 10:57:12
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,18 +12,26 @@ mod gelement2nodebuilderwidget;
 
 use derive_more::From;
 
+use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
+use smallvec::SmallVec;
+use tinyvec::TinyVec;
 use tracing::{debug, trace, warn};
 
-use std::{cell::RefCell, rc::Rc, string::String};
+use std::{
+    cell::RefCell,
+    collections::{vec_deque, VecDeque},
+    rc::Rc,
+    string::String,
+};
 
 use crate::{
     dodrio::{
         self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
     },
-    map_fn_callback_return_to_option_ms, Bus, DynGElement, Element, GElement, Widget,
+    map_fn_callback_return_to_option_ms, Bus, DynGElement, Element, GElement, Widget, VEC_SMALL,
 };
-use emg_core::Vector;
+// use emg_core::Vector;
 // ────────────────────────────────────────────────────────────────────────────────
 //TODO move out to global
 pub trait NodeBuilder<Message> // where
@@ -101,7 +109,7 @@ pub trait NodeBuilder<Message> // where
 //         Self(f)
 //     }
 // }
-type EventNameString = String;
+type EventNameString = IdStr;
 
 #[derive(Clone)]
 pub struct EventCallback<Message>(
@@ -194,11 +202,11 @@ pub struct NodeBuilderWidget<Message>
 where
     Message: 'static,
 {
-    id: String,
+    id: IdStr,
     //TODO : instead use GElement
     widget: Option<BuilderWidget<Message>>,
     //TODO use vec deque
-    event_callbacks: Vector<EventNode<Message>>,
+    event_callbacks: VecDeque<EventNode<Message>>,
     // event_callbacks: Vector<EventNode<Message>>,
     layout_str: String,
 }
@@ -225,9 +233,9 @@ where
 impl<Message: Clone + 'static> Default for NodeBuilderWidget<Message> {
     fn default() -> Self {
         Self {
-            id: String::default(),
+            id: IdStr::new_inline(""),
             widget: None,
-            event_callbacks: Vector::default(),
+            event_callbacks: VecDeque::default(),
             layout_str: String::default(),
         }
     }
@@ -244,7 +252,7 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
             _ => Err(()),
         }
     }
-    pub fn set_id(&mut self, id: String) {
+    pub fn set_id(&mut self, id: IdStr) {
         self.id = id;
     }
 
@@ -257,7 +265,7 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
 
     /// Get a reference to the node builder widgets event callbacks.
     #[must_use]
-    pub fn event_callbacks(&self) -> &Vector<EventNode<Message>> {
+    pub fn event_callbacks(&self) -> &VecDeque<EventNode<Message>> {
         &self.event_callbacks
     }
 

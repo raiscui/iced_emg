@@ -46,6 +46,7 @@ use styles::{CssHeightTrait, CssTransformTrait, CssWidthTrait};
 // ────────────────────────────────────────────────────────────────────────────────
 
 use indented::indented;
+use tinyvec::TinyVec;
 use tracing::{span, trace_span,error,instrument, trace, Level};
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -463,10 +464,12 @@ where
 }
 
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug, Default)]
+// pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(TinyVec<[EdgeIndex<Ix>;2]>);
 pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(Vector<EdgeIndex<Ix>>);
 
 impl<Ix: Clone + Hash + Eq + PartialEq + Default> std::ops::Deref for EPath<Ix> {
     type Target = Vector<EdgeIndex<Ix>>;
+    // type Target = TinyVec<[EdgeIndex<Ix>;2]>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -483,8 +486,8 @@ impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
         Self(vec)
     }
 
-
-    pub fn link(&self, target_nix:NodeIndex<Ix>)-> Self {
+    #[must_use]
+        pub fn link(&self, target_nix:NodeIndex<Ix>)-> Self {
         let last = self.last().and_then(|e|e.target_nix().as_ref());
         let mut new_e = self.clone();
         new_e.push_back(EdgeIndex::new(last.cloned(),target_nix));

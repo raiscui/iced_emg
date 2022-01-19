@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-01-14 16:31:15
+ * @LastEditTime: 2022-01-19 12:44:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,12 +10,14 @@ use crate::emg_runtime::{EventNode, Layer};
 use crate::{GElement, GraphType, NodeIndex};
 use emg::{edge_index_no_source, node_index, Edge, EdgeIndex};
 use emg_core::{vector,IdStr};
-use emg_core::{GenericSize, Vector};
+use emg_core::{GenericSize};
+// use emg_core::{GenericSize, Vector};
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
 use emg_refresh::{RefreshFor, RefreshForUse};
 use emg_state::{CloneStateVar, Dict, StateAnchor, StateVar, topo::{self, call_in_slot}, use_state, use_state_impl::TopoKey};
 use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, instrument, trace, trace_span, warn};
+use tinyvec::{TinyVec, tiny_vec};
 
 
 #[allow(dead_code)]
@@ -27,22 +29,22 @@ where
 {
     Layer(
         Ix,
-        Vector<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
-        Vector<GTreeBuilderElement<Message, Ix>>,
+        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
+        Vec<GTreeBuilderElement<Message, Ix>>,
     ),
     // El(Ix, Element< Message>),
     GElementTree(
         Ix,
-        Vector<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
         GElement<Message>,
-        Vector<GTreeBuilderElement<Message, Ix>>,
+        Vec<GTreeBuilderElement<Message, Ix>>,
     ),
     RefreshUse(Ix, Rc<dyn RefreshFor<GElement<Message>>>),
     Cl(Ix, Rc<dyn Fn()>),
     Event(Ix, EventNode<Message>),
     Dyn(
         Ix,
-        Vector<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
         StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>,
     ),
     // Fragment(Vec<GTreeBuilderElement< Message, Ix>>),
@@ -82,7 +84,7 @@ where
     Message: 'static,
 {
     fn from(value: StateVar<Dict<Ix, Self>>) -> Self {
-        Self::Dyn(Ix::default(), vector![], value)
+        Self::Dyn(Ix::default(), vec![], value)
     }
 }
 
@@ -529,16 +531,16 @@ where
                             debug!("builder::running before_fn");
                             trace!("builder::before_fn: is current has? {}",&current.is_some());
                             if let Some(old_data) = current {
-                                let old_key = old_data.keys();
-                                let new_key = new_v.keys().collect::<Vector<_>>();
-                                // let mut ii = value_key.clone().into_iter();
+                                let old_data_clone = (**old_data).clone();
+                                
+                                let new_v_removed =old_data_clone.relative_complement(new_v.clone());
+                                for k in new_v_removed.keys() {
+                                    this.borrow_mut().remove_node(node_index(k.clone()));
+                                }
+                                
+                                //INFO like: https://stackoverflow.com/questions/56261476/why-is-finding-the-intersection-of-integer-sets-faster-with-a-vec-compared-to-bt
 
-                                old_key
-                                    .filter(|c_ix| !new_key.contains(c_ix))
-                                    .for_each(|k| {
-                                        trace!("builder::in  before_fn: remove key: {}",k);
-                                        this.borrow_mut().remove_node(node_index(k.clone()));
-                                    });
+                                
                             }
                         },
                         false,

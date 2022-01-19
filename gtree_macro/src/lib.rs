@@ -165,7 +165,7 @@ impl ToTokens for Edge {
         } = self;
         let content_iter = content.iter();
         quote_spanned!(
-            bracket_token.span=> vector![#(Rc::new(#content_iter) as Rc<(dyn RefreshFor<EmgEdgeItem<_>>)>),*]
+            bracket_token.span=> vec![#(Rc::new(#content_iter) as Rc<(dyn RefreshFor<EmgEdgeItem<_>>)>),*]
         )
         .to_tokens(tokens);
     }
@@ -273,9 +273,9 @@ impl ToTokens for GOnEvent {
         let id_token = id.get(format!("Event-{}", event_name).as_str());
 
         let token = if closure.inputs.is_empty() {
-            quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(String::from(#event_name), #closure ).into()) )
+            quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(IdStr::new_inline(#event_name), #closure ).into()) )
         } else if closure.inputs.len() == 3 {
-            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new(String::from(#event_name),Rc::new(#closure)).into()) )
+            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new(IdStr::new_inline(#event_name),Rc::new(#closure)).into()) )
         } else {
             panic!("event callback argument size is must empty or three")
         };
@@ -449,7 +449,7 @@ impl ToTokens for GTreeSurface {
         let edge_token = edge2token(edge);
 
         let children_iter = children.iter();
-        let children_token = quote_spanned! {children.span()=>vector![#(#children_iter),*]};
+        let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
 
         // Tree GElementTree
         //TODO namespace ,slot
@@ -464,7 +464,7 @@ impl ToTokens for GTreeSurface {
                         let new_id =format!("{}|{}", #id_token, expr_id);
                         expr_edge.extend( #edge_token);
                         // let new_children = expr_children.
-                        GTreeBuilderElement::Layer(new_id,expr_edge,expr_children)
+                        GTreeBuilderElement::Layer(IdStr::new(new_id),expr_edge,expr_children)
                     }
                     // GTreeBuilderElement::El(expr_id, el)=>{
                     //     let new_id =format!("{}|{}", #id_token, expr_id);
@@ -479,7 +479,7 @@ impl ToTokens for GTreeSurface {
                         let new_id =format!("{}|{}", #id_token, expr_id);
                         expr_edge.extend( #edge_token);
                         GTreeBuilderElement::GElementTree(
-                            new_id,
+                            IdStr::new(new_id),
                             expr_edge,
                             ge,
                             expr_children
@@ -810,7 +810,7 @@ fn edge2token(edge: &Option<Edge>) -> TokenStream {
             quote!(#e)
         }
         None => {
-            quote!(vector![])
+            quote!(vec![])
         }
     }
 }
@@ -829,7 +829,7 @@ impl ToTokens for GTreeLayerStruct {
             quote_spanned! {layer.span()=>GTreeBuilderElement::Layer};
 
         let id_token = id.get("Layer");
-        let children_token = quote_spanned! {children.span()=>vector![#(#children_iter),*]};
+        let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
         // let brace_op_token = quote_spanned! {children.span()=>vec![#children_token]};
 
         quote!(#g_tree_builder_element_layer_token(#id_token,#edge_token,#children_token))

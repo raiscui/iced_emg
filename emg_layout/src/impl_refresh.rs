@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2022-01-07 13:08:30
+ * @LastEditTime: 2022-01-18 16:14:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -45,6 +45,7 @@ where
         who.refresh_for_use(self.as_ref());
     }
 }
+
 impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,

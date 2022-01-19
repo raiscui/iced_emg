@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-01-07 18:11:59
+ * @LastEditTime: 2022-01-19 13:24:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -36,11 +36,12 @@ pub trait GraphView<Message> {
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
         // opt_parent_e: Option<Self::E>,
-        // opt_eix: Option<&EdgeIndex<Self::Ix>>,
+        // opt_eix: Option<&EdgeIndex<Ix>>,
         // current_node: &RefCell<GElement< Message>>,
     ) -> Rc<RefCell<GElement<Message>>>
     where
-        <Self as GraphView<Message>>::Ix: Clone + Hash + Eq + Ord + Default;
+        // <Self as GraphView<Message>>::Ix: Clone + Hash + Eq + Ord + Default;
+        Self::Ix: Clone + Hash + Eq + Ord + Default;
 
     fn children_to_elements(
         &self,
@@ -49,22 +50,21 @@ pub trait GraphView<Message> {
         paths: &EPath<Self::Ix>,
     ) -> Vec<Rc<RefCell<GElement<Message>>>>
     where
-        <Self as GraphView<Message>>::Ix: Clone + Hash + Eq + Ord + Default;
+        // <Self as GraphView<Message>>::Ix: Clone + Hash + Eq + Ord + Default;
+        Self::Ix: Clone + Hash + Eq + Ord + Default;
 
     fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<Message>;
-    // fn global_view(ix: Self::Ix) -> Element< Message>;
+    // fn global_view(ix: Ix) -> Element< Message>;
 }
 
-impl<Message, Ix> GraphView<Message> for Graph<N<Message>, E<Ix>, Ix>
+// impl<Message> GraphView<Message> for GraphType<Message>
+impl<Message> GraphView<Message> for GraphType<Message>
 where
-    Ix: Clone + Hash + Eq + std::fmt::Debug + std::fmt::Display + Ord + Default + From<IdStr>,
-    // + From<String>,
-    // E: Clone + std::fmt::Debug,
     Message: 'static + Clone + std::fmt::Debug,
 {
-    type Ix = Ix;
+    type Ix = IdStr;
     type N = N<Message>;
-    type E = E<Ix>;
+    type E = E<IdStr>;
 
     // #[instrument(skip(self, edges))]
     fn gelement_refresh_and_comb(
@@ -72,12 +72,13 @@ where
         edges: &GraphEdgesDict<Self::Ix>,
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
-        // edge_for_cix: &Edge<Self::E, Self::Ix>,
+        // edge_for_cix: &Edge<Self::E, Ix>,
         // current_node: &RefCell<GElement< Message>>,
     ) -> Rc<RefCell<GElement<Message>>> {
         // debug!("run here 01");
         //TODO has no drop clone for AnimationE inside,need bumpalo do drop
         let current_node_clone = Rc::new(RefCell::new(
+            //TODO maybe no need rc RefCell
             self.get_node_weight_use_ix(cix).unwrap().get(),
         )); //TODO cache
             // debug!("run here 01.1");
@@ -99,7 +100,7 @@ where
                 gel.replace_with(|gelmut| {
                     let node = gelmut
                         .as_node_ref_()
-                        .and_then(|str| self.get_node_weight_use_ix(&str.clone().into()))
+                        .and_then(|str| self.get_node_weight_use_ix(str))
                         .cloned()
                         .expect("expect get node id");
 
@@ -123,7 +124,8 @@ where
             let _g = trace_span!("-> in NodeBuilderWidget").entered();
             {
                 trace!("NodeBuilderWidget::<Message>::try_from  OK");
-                node_builder_widget.set_id(format!("{}", cix));
+                // node_builder_widget.set_id(format!("{}", cix));
+                node_builder_widget.set_id(cix.clone());
 
                 let ei = &edges.get(paths.last().unwrap()).unwrap().item;
 
@@ -186,23 +188,23 @@ where
     }
 
     fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<Message> {
-        let cix = into_ix.into();
+        let cix: Self::Ix = into_ix.into();
         let _g = trace_span!("graph view-", ?cix);
         {
             let edges = self.raw_edges().store_get_rc(&self.store());
-            let paths: EPath<Self::Ix> = EPath::new(vector![edge_index_no_source(cix.clone())]);
+            let paths = EPath::new(vector![edge_index_no_source(cix.clone())]);
             // TODO add store in gelement_refresh_and_comb
             let gel = self.gelement_refresh_and_comb(&edges, &cix, &paths);
             gel.replace(GElement::EmptyNeverUse).try_into().unwrap()
         }
     }
 
-    // fn global_view(cix: Self::Ix) -> Element< Message> {
+    // fn global_view(cix: Ix) -> Element< Message> {
     //     G_STORE.with(|g_store_refcell| {
     //         // g_store_refcell.borrow_mut().set_graph(g);
     //         g_store_refcell
     //             .borrow()
-    //             .get_graph::<Self::N, Self::E, Self::Ix>()
+    //             .get_graph::<Self::N, Self::E, Ix>()
     //             .gelement_comb_and_refresh(&cix)
     //             .try_into()
     //             .unwrap()

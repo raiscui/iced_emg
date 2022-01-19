@@ -213,7 +213,8 @@ mod test {
         warn!("emg_graph.handle_root_in_topo:{}", handle_root_in_topo_time);
 
         let vs = p.now();
-        emg_graph.borrow().view("a");
+        emg_graph.borrow()
+        .view("a");
         let ve = p.now() - vs;
         warn!("view 1:{}", ve);
 

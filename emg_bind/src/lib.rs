@@ -56,6 +56,8 @@ pub use g_tree_builder_element::*;
 pub use graph_layout::*;
 pub use sandbox::Sandbox;
 
+const VEC_SMALL: usize = 4;
+
 // pub use state_store::GStateStore;
 // pub use state_store::G_STATE_STORE;
 // pub use topo_store::use_state;
