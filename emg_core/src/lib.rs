@@ -6,12 +6,13 @@ use measures::{ExactLengthSimplex, Unit};
 
 // ────────────────────────────────────────────────────────────────────────────────
 pub use smol_str::SmolStr as IdStr;
-
+// pub use compact_str::CompactStr as IdStr;
 use derive_more::Display;
 use derive_more::From;
-pub use im_rc;
-pub use im_rc::vector;
-pub use im_rc::Vector;
+// pub use im_rc;
+pub use imbl as im_rc;
+pub use imbl::vector;
+pub use imbl::Vector;
 use ordered_float::NotNan;
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -187,7 +188,7 @@ impl GenericSize {
 
 #[cfg(test)]
 mod tests {
-    use im_rc::Vector;
+    use imbl::Vector;
 
     use crate::into_vector;
 

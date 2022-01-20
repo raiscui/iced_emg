@@ -67,11 +67,11 @@ where
     Message: 'static,
 {
     //TODO cow
-    Builder_(Rc<RefCell<GElement<Message>>>, NodeBuilderWidget<Message>),
+    Builder_(Rc<RefCell<Self>>, NodeBuilderWidget<Message>),
     Layer_(Layer<Message>),
     Text_(Text),
     Button_(Button<Message>),
-    Refresher_(Rc<dyn RefreshFor<GElement<Message>>>),
+    Refresher_(Rc<dyn RefreshFor<Self>>),
     Event_(EventNode<Message>),
     //internal
     Generic_(Box<dyn DynGElement<Message>>), //范型

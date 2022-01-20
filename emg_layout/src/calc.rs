@@ -9,7 +9,7 @@
 use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4};
 
 use emg::EdgeIndex;
-use emg_core::{ TypeName};
+use emg_core::TypeName;
 use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo};
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;

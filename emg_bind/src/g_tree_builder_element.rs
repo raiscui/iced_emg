@@ -17,7 +17,6 @@ use emg_refresh::{RefreshFor, RefreshForUse};
 use emg_state::{CloneStateVar, Dict, StateAnchor, StateVar, topo::{self, call_in_slot}, use_state, use_state_impl::TopoKey};
 use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, instrument, trace, trace_span, warn};
-use tinyvec::{TinyVec, tiny_vec};
 
 
 #[allow(dead_code)]

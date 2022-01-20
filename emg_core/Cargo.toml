@@ -14,5 +14,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 ordered-float = "2"
 derive_more = "0.99"
-im-rc = "15.0.0"
+# im-rc = "15.0.0"
 smol_str = "0.1.21"
+# compact_str = "0.2.0"
+imbl = { path = "../../imbl" }

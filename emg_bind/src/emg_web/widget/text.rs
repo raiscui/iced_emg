@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2022-01-10 11:46:12
+ * @LastEditTime: 2022-01-19 16:19:10
  * @LastEditors: Rais
 * @Description:
 */
@@ -66,6 +66,7 @@ impl Text {
     }
 
     /// Sets the [`Color`] of the [`Text`].
+    #[must_use]
     pub fn color<C: Into<Color>>(mut self, color: C) -> Self {
         self.color = Some(color.into());
         self

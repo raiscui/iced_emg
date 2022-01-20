@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-01-19 10:57:12
+ * @LastEditTime: 2022-01-19 16:21:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,22 +14,15 @@ use derive_more::From;
 
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
-use smallvec::SmallVec;
-use tinyvec::TinyVec;
 use tracing::{debug, trace, warn};
 
-use std::{
-    cell::RefCell,
-    collections::{vec_deque, VecDeque},
-    rc::Rc,
-    string::String,
-};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc, string::String};
 
 use crate::{
     dodrio::{
         self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
     },
-    map_fn_callback_return_to_option_ms, Bus, DynGElement, Element, GElement, Widget, VEC_SMALL,
+    map_fn_callback_return_to_option_ms, Bus, DynGElement, Element, GElement, Widget,
 };
 // use emg_core::Vector;
 // ────────────────────────────────────────────────────────────────────────────────

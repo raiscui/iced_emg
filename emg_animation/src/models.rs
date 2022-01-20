@@ -734,13 +734,13 @@ fn is_cmd_done(cmd: &PathCommand) -> bool {
 fn step(dt: Duration, props: Vector<Property>) -> Vector<Property> {
     use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     props
-        .into_iter()
+        .into_iter() //TODO iter_mut
         .map(|property| match property {
             Exact(..) => property,
             Prop(name, motion) => Prop(name, step_interpolation(dt, motion)),
             Prop2(name, m) => Prop2(
                 name,
-                m.into_iter()
+                m.into_iter() //TODO iter_mut
                     .map(|motion| step_interpolation(dt, motion))
                     .collect(),
             ),
@@ -1153,10 +1153,10 @@ fn set_target(override_interpolation: bool, current: Property, new_target: Prope
                 }),
             ),
             _ => current,
-        },
-        Prop(ref name, ref m) => match new_target {
-            Prop(_, t) => Prop(name.clone(), set_motion_target((m.clone(), t))),
-            _ => current,
+        }, //TODO all like prop , no clone/ref
+        Prop(name, m) => match new_target {
+            Prop(_, t) => Prop(name, set_motion_target((m, t))),
+            _ => Prop(name, m),
         },
         Prop2(ref name, ref m) => match new_target {
             Prop2(_, t) => Prop2(
@@ -1233,7 +1233,8 @@ fn set_path_target((cmd, target_cmd): (PathCommand, PathCommand)) -> PathCommand
         motion.target = target_motion.position;
         if let Interpolation::Easing(ease) = &mut motion.interpolation {
             ease.start = motion.position;
-            motion.interpolation = Interpolation::Easing(ease.clone());
+            //TODO check no need motion.interpolation =xx
+            // motion.interpolation = Interpolation::Easing(ease.clone());
         }
 
         motion

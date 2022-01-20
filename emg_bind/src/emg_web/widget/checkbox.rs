@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-01-10 11:47:43
+ * @LastEditTime: 2022-01-19 16:18:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -85,12 +85,14 @@ impl<Message> Checkbox<Message> {
     }
 
     /// Sets the style of the [`Checkbox`].
+    #[must_use]
     pub fn style(mut self, style: impl Into<Box<dyn StyleSheet>>) -> Self {
         self.style = style.into();
         self
     }
 
     /// Sets the id of the [`Checkbox`].
+    #[must_use]
     pub fn id(mut self, id: impl Into<IdStr>) -> Self {
         self.id = Some(id.into());
         self

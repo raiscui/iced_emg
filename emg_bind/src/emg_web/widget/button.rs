@@ -65,36 +65,42 @@ impl<Message> Button<Message> {
     }
 
     /// Sets the width of the [`Button`].
+    #[must_use]
     pub const fn width(mut self, width: Length) -> Self {
         self.width = width;
         self
     }
 
     /// Sets the height of the [`Button`].
+    #[must_use]
     pub const fn height(mut self, height: Length) -> Self {
         self.height = height;
         self
     }
 
     /// Sets the minimum width of the [`Button`].
+    #[must_use]
     pub const fn min_width(mut self, min_width: u32) -> Self {
         self.min_width = min_width;
         self
     }
 
     /// Sets the minimum height of the [`Button`].
+    #[must_use]
     pub const fn min_height(mut self, min_height: u32) -> Self {
         self.min_height = min_height;
         self
     }
 
     /// Sets the padding of the [`Button`].
+    #[must_use]
     pub const fn padding(mut self, padding: u16) -> Self {
         self.padding = padding;
         self
     }
 
     /// Sets the style of the [`Button`].
+    #[must_use]
     pub fn style(mut self, style: impl Into<Box<dyn StyleSheet>>) -> Self {
         self.style = style.into();
         self
@@ -102,6 +108,7 @@ impl<Message> Button<Message> {
 
     /// Sets the message that will be produced when the [`Button`] is pressed.
     #[allow(clippy::missing_const_for_fn)]
+    #[must_use]
     pub fn on_press(mut self, msg: Message) -> Self {
         self.on_press = Some(msg);
         self

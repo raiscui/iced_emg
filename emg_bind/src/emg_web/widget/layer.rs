@@ -38,13 +38,15 @@ impl<Message> Default for Layer<Message> {
 
 impl<Message> Layer<Message> {
     /// Creates an empty [`Layer`].
+    #[must_use]
     pub fn new(id: IdStr) -> Self {
         Self::with_children(id, Vec::new())
     }
 
     /// Creates a [`Layer`] with the given elements.
+    #[must_use]
     pub fn with_children(id: IdStr, children: Vec<Element<Message>>) -> Self {
-        Self { id: id, children }
+        Self { id, children }
     }
 
     #[must_use]
@@ -67,6 +69,7 @@ impl<Message> Layer<Message> {
     //     self
     // }
 
+    #[must_use]
     pub fn push<E>(mut self, child: E) -> Self
     where
         E: Into<Element<Message>>,
