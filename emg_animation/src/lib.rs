@@ -6,6 +6,7 @@
 #![feature(div_duration)]
 #![feature(extend_one)]
 // #![feature(array_map)]
+#![feature(box_patterns)]
 
 pub mod func;
 pub mod models;
@@ -21,6 +22,8 @@ use models::{map_to_motion, update_animation, Animation, Interpolation, Property
 use ordered_float::NotNan;
 use props::warn_for_double_listed_properties;
 use seed_styles::Unit;
+use tinyvec::tiny_vec;
+use tinyvec::TinyVec;
 
 // ────────────────────────────────────────────────────────────────────────────────
 pub use crate::models::color::fill;
@@ -37,7 +40,7 @@ use crate::models::Interpolation::*;
 pub type Msg = models::Tick;
 pub type State<Message> = models::Animation<Message>;
 
-fn init_motion(position: impl TryInto<NotNan<f64>>, unit: Unit) -> Motion {
+pub fn init_motion(position: impl TryInto<NotNan<f64>>, unit: Unit) -> Motion {
     let p: NotNan<f64> = position.try_into().ok().unwrap();
     Motion {
         position: p,

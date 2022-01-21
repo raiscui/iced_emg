@@ -7,8 +7,10 @@ resolver = "2"
 
 [profile.dev]
 split-debuginfo = "unpacked"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
+bench = false
 
 [dependencies]
 tracing = "0.1"
@@ -19,6 +21,16 @@ emg_state = { path = "../emg_state" }
 emg_core = { path = "../emg_core" }
 seed_styles = { path = "../../styles_hooks/seed_styles" }
 ordered-float = "2"
+derive_more = "0.99"
+
+tinyvec = { version = "1.5.1", features = ["alloc"] }
+smallvec = { version = "1.7.0", features = ["const_generics", "union"] }
+
 
 [dev-dependencies]
 insta = "1"
+criterion = { version = "0.3", features = ["html_reports", "real_blackbox"] }
+# plotters = "0.3.1"
+[[bench]]
+name = "my_benchmark"
+harness = false

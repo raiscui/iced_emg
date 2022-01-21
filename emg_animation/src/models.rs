@@ -1,14 +1,15 @@
 pub mod color;
 pub mod convert;
 pub mod opacity;
-use emg_core::{measures::Unit, IdStr, TypeName};
+use emg_core::{measures::Unit, tiny_vec, IdStr, TypeName};
 use emg_core::{vector, Vector};
+use tinyvec::TinyVec;
 // use iter_fixed::IntoIteratorFixed;
+use crate::Debuggable;
+use derive_more::Display;
 use ordered_float::NotNan;
 use std::{rc::Rc, time::Duration};
 use tracing::{trace, warn};
-
-use crate::Debuggable;
 
 // use emg_debuggable::{dbg4, Debuggable};
 
@@ -66,7 +67,8 @@ pub enum Interpolation {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Display, Clone, Debug, PartialEq, Eq)]
+#[display(fmt = "Motion:{{pos:{}}}", position)]
 pub struct Motion {
     pub(crate) position: NotNan<Precision>,
     pub(crate) velocity: NotNan<Precision>,
@@ -145,21 +147,46 @@ pub struct ShadowMotion {
     blue: Motion,
     alpha: Motion,
 }
-type PropName = TypeName;
+pub type PropName = TypeName;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Display, Clone, Debug, PartialEq, Eq)]
+#[display(fmt = "{}")]
 pub enum Property {
+    #[display(fmt = "({},motion:{})", _0, _1)]
     Exact(PropName, String),
+
+    #[display(fmt = "({},motion:{:?})", _0, _1)]
     Color(PropName, Vector<Motion>),
+
+    #[display(fmt = "({},motion:{})", _0, _1)]
     Shadow(PropName, bool, Box<ShadowMotion>),
+
+    #[display(fmt = "Prop({},motion:{})", _0, _1)]
     Prop(PropName, Motion),
+
+    #[display(fmt = "Prop2({},motion:{:?})", _0, _1)]
     Prop2(PropName, Vector<Motion>),
+
+    #[display(fmt = "Prop3({},motion:{:?})", _0, _1)]
     Prop3(PropName, Vector<Motion>),
+
+    #[display(fmt = "Prop4({},motion:{:?})", _0, _1)]
     Prop4(PropName, Vector<Motion>),
+
+    #[display(fmt = "Angle({},motion:{})", _0, _1)]
     Angle(PropName, Motion),
+
+    #[display(fmt = "Points(Points,motion:{:?})", _0)]
     Points(Vector<[Motion; DIM2]>),
+
+    #[display(fmt = "Path(Path,motion:{:?})", _0)]
     Path(Vector<PathCommand>),
     // Anchor(Rc<String>, StateAnchor<GenericSize>),
+}
+impl Default for Property {
+    fn default() -> Self {
+        Self::Exact(TypeName::new(IdStr::new_inline("")), String::default())
+    }
 }
 
 impl Property {
@@ -517,6 +544,108 @@ pub fn update_animation<Message: std::clone::Clone + std::fmt::Debug>(
 }
 
 // resolveSteps : List Property -> List (Step msg) -> Time.Posix -> ( List Property, List msg, List (Step msg) )
+// #[must_use]
+// pub fn resolve_steps_mut<Message>(
+//     current_style: &mut Vector<Property>,
+//     steps: &mut Vector<Step<Message>>,
+//     dt: Duration,
+// ) -> Vector<Message>
+// where
+//     Message: Clone,
+// {
+//     match steps.pop_front() {
+//         None => vector![],
+//         Some(current_step) => match current_step {
+//             Step::Wait(n) => {
+//                 if n.is_zero() {
+//                     resolve_steps_mut(current_style, steps, dt)
+//                 } else {
+//                     steps.push_front(Step::Wait(n.saturating_sub(dt)));
+//                     vector![]
+//                 }
+//             }
+//             Step::Send(msg) => {
+//                 let mut msgs = resolve_steps_mut(current_style, steps, dt);
+
+//                 msgs.push_front(msg);
+
+//                 msgs
+//             }
+//             Step::To(target) => {
+//                 //TODO 优化, 目前 alreadyThere 内部会 start_towards 然后判断 all(is_done)
+
+//                 let x = start_towards(false, current_style, target);
+//                 let stepped = step(Duration::ZERO, x);
+//                 if stepped.iter().all(is_done) {
+//                     (current_style, vector![], steps)
+//                 } else {
+//                     steps.push_front(Step::_Step);
+//                     (stepped, vector![], steps)
+//                 }
+
+//                 if already_there(current_style.clone(), target.clone()) {
+//                 } else {
+//                     steps.push_front(Step::_Step);
+
+//                     resolve_steps(start_towards(false, current_style, target), steps, dt)
+//                 }
+//             }
+//             Step::ToWith(target) => {
+//                 //TODO 优化, 目前 alreadyThere 内部会 start_towards 然后判断 all(is_done)
+//                 if already_there(current_style.clone(), target.clone()) {
+//                     (current_style, vector![], steps)
+//                 } else {
+//                     steps.push_front(Step::_Step);
+
+//                     resolve_steps(start_towards(true, current_style, target), steps, dt)
+//                 }
+//             }
+//             Step::Set(props) => resolve_steps(replace_props(current_style, &props), steps, dt),
+//             Step::_Step => {
+//                 let stepped = step(dt, current_style);
+//                 if stepped.iter().all(is_done) {
+//                     (
+//                         stepped
+//                             .into_iter()
+//                             .map(|prop| {
+//                                 map_to_motion(
+//                                     &|mut m: Motion| {
+//                                         m.interpolation_override = None;
+//                                         m
+//                                     },
+//                                     prop,
+//                                 )
+//                             })
+//                             .collect(),
+//                         vector![],
+//                         steps,
+//                     )
+//                 } else {
+//                     steps.push_front(Step::_Step);
+//                     (stepped, vector![], steps)
+//                 }
+//             }
+//             Step::Loop(mut sub_steps) => {
+//                 let old_steps = sub_steps.clone();
+//                 sub_steps.push_back(Step::Loop(old_steps));
+//                 resolve_steps(current_style, sub_steps, dt)
+//             }
+//             Step::Repeat(n, mut sub_steps) => {
+//                 if n == 0 {
+//                     resolve_steps(current_style, steps, dt)
+//                 } else {
+//                     let old_steps = sub_steps.clone();
+//                     sub_steps.push_back(Step::Repeat(n - 1, old_steps));
+//                     sub_steps.append(steps);
+
+//                     resolve_steps(current_style, sub_steps, dt)
+//                 }
+//             }
+//         },
+//     }
+// }
+
+// resolveSteps : List Property -> List (Step msg) -> Time.Posix -> ( List Property, List msg, List (Step msg) )
 #[must_use]
 pub fn resolve_steps<Message>(
     current_style: Vector<Property>,
@@ -731,7 +860,51 @@ fn is_cmd_done(cmd: &PathCommand) -> bool {
         Close => true,
     }
 }
-fn step(dt: Duration, props: Vector<Property>) -> Vector<Property> {
+
+pub fn step_mut(dt: Duration, props: &mut Vector<Property>) {
+    use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
+    props
+        .iter_mut()
+        // .into_iter() //TODO iter_mut
+        .for_each(|property| match property {
+            Exact(..) => (),
+            Prop(_, motion) => step_interpolation_mut(dt, motion),
+            Prop2(_, m) => m
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion)),
+
+            Prop3(_, m) => m
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion)),
+
+            Prop4(_, m) => m
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion)),
+
+            Angle(_, m) => step_interpolation_mut(dt, m),
+            Color(_, m) => m
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion)),
+            Shadow(_, _, box shadow) => {
+                step_interpolation_mut(dt, &mut shadow.offset_x);
+                step_interpolation_mut(dt, &mut shadow.offset_y);
+                step_interpolation_mut(dt, &mut shadow.size);
+                step_interpolation_mut(dt, &mut shadow.blur);
+                step_interpolation_mut(dt, &mut shadow.red);
+                step_interpolation_mut(dt, &mut shadow.green);
+                step_interpolation_mut(dt, &mut shadow.blue);
+                step_interpolation_mut(dt, &mut shadow.alpha);
+            }
+            Points(points) => points.iter_mut().for_each(|[x, y]| {
+                step_interpolation_mut(dt, x);
+                step_interpolation_mut(dt, y);
+            }),
+
+            Path(cmds) => cmds.iter_mut().for_each(|cmd| step_path_ref(dt, cmd)),
+        });
+}
+
+pub fn step(dt: Duration, props: Vector<Property>) -> Vector<Property> {
     use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     props
         .into_iter() //TODO iter_mut
@@ -787,11 +960,109 @@ fn step(dt: Duration, props: Vector<Property>) -> Vector<Property> {
         })
         .collect()
 }
+fn step_coords_ref(dt: Duration, coords: &mut Vector<[Motion; DIM2]>) {
+    coords.iter_mut().for_each(|[x, y]| {
+        step_interpolation_mut(dt, x);
+        step_interpolation_mut(dt, y)
+    });
+}
 fn step_coords(dt: Duration, coords: Vector<[Motion; DIM2]>) -> Vector<[Motion; DIM2]> {
     coords
         .into_iter()
         .map(|[x, y]| [step_interpolation(dt, x), step_interpolation(dt, y)])
         .collect()
+}
+#[allow(clippy::too_many_lines)]
+fn step_path_ref(dt: Duration, cmd: &mut PathCommand) {
+    use PathCommand::{
+        AntiClockwiseArc, ClockwiseArc, Close, Curve, CurveTo, Horizontal, HorizontalTo, Line,
+        LineTo, Move, MoveTo, Quadratic, QuadraticTo, Smooth, SmoothQuadratic, SmoothQuadraticTo,
+        SmoothTo, Vertical, VerticalTo,
+    };
+    match cmd {
+        Move(m) => m
+            .iter_mut()
+            .for_each(|motion| step_interpolation_mut(dt, motion)),
+        MoveTo(m) => m
+            .iter_mut()
+            .for_each(|motion| step_interpolation_mut(dt, motion)),
+        Line(m) => m
+            .iter_mut()
+            .for_each(|motion| step_interpolation_mut(dt, motion)),
+        LineTo(m) => m
+            .iter_mut()
+            .for_each(|motion| step_interpolation_mut(dt, motion)),
+        Horizontal(m) => step_interpolation_mut(dt, m),
+        HorizontalTo(m) => step_interpolation_mut(dt, m),
+        Vertical(m) => step_interpolation_mut(dt, m),
+        VerticalTo(m) => step_interpolation_mut(dt, m),
+        Curve(CubicCurveMotion {
+            control1,
+            control2,
+            point,
+        }) => {
+            control1
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+            control2
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+            point
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+        }
+        CurveTo(CubicCurveMotion {
+            control1,
+            control2,
+            point,
+        }) => {
+            control1
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+            control2
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+
+            point
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+        }
+        Quadratic(QuadraticCurveMotion { control, point }) => {
+            control
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+            point
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+        }
+        QuadraticTo(QuadraticCurveMotion { control, point }) => {
+            control
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+            point
+                .iter_mut()
+                .for_each(|motion| step_interpolation_mut(dt, motion));
+        }
+        SmoothQuadratic(coords) => step_coords_ref(dt, coords),
+        SmoothQuadraticTo(coords) => step_coords_ref(dt, coords),
+        Smooth(coords) => step_coords_ref(dt, coords),
+        SmoothTo(coords) => step_coords_ref(dt, coords),
+        ClockwiseArc(arc) => {
+            step_interpolation_mut(dt, &mut arc.x);
+            step_interpolation_mut(dt, &mut arc.y);
+            step_interpolation_mut(dt, &mut arc.radius);
+            step_interpolation_mut(dt, &mut arc.start_angle);
+            step_interpolation_mut(dt, &mut arc.end_angle);
+        }
+        AntiClockwiseArc(arc) => {
+            step_interpolation_mut(dt, &mut arc.x);
+            step_interpolation_mut(dt, &mut arc.y);
+            step_interpolation_mut(dt, &mut arc.radius);
+            step_interpolation_mut(dt, &mut arc.start_angle);
+            step_interpolation_mut(dt, &mut arc.end_angle);
+        }
+        Close => (),
+    };
 }
 #[allow(clippy::too_many_lines)]
 fn step_path(dt: Duration, cmd: PathCommand) -> PathCommand {
@@ -904,6 +1175,92 @@ fn step_path(dt: Duration, cmd: PathCommand) -> PathCommand {
     }
 }
 
+fn step_interpolation_mut(dt: Duration, motion: &mut Motion) {
+    // let has_interpolation_override = motion.interpolation_override.is_some();
+    let interpolation_to_use = motion
+        .interpolation_override
+        .clone()
+        .unwrap_or_else(|| motion.interpolation.clone());
+    match interpolation_to_use {
+        Interpolation::AtSpeed { per_second } => {
+            let (new_pos, finished) = {
+                if motion.position < motion.target {
+                    let new = per_second.mul_add(dt.as_secs_f64() as Precision, *motion.position);
+                    (new, new >= *motion.target)
+                } else {
+                    // let new = motion.position - (per_second * (dt.as_secs_f64() as Precision));
+                    let new =
+                        (-*per_second).mul_add(dt.as_secs_f64() as Precision, *motion.position);
+                    (new, new <= *motion.target)
+                }
+            };
+            if finished {
+                motion.position = motion.target;
+                motion.velocity = NotNan::default();
+            } else {
+                motion.position = NotNan::new(new_pos).unwrap();
+                motion.velocity = per_second * 1000.; // pos/ms,  dis per millisecond
+            };
+        }
+        Interpolation::Spring { stiffness, damping } => {
+            let dt_sec = dt.as_secs_f64() as Precision;
+            let f_spring = stiffness * (motion.target - motion.position);
+
+            let f_damper = (damping * -1.) * motion.velocity;
+
+            let a = f_spring + f_damper;
+            let new_velocity = a.mul_add(dt_sec, *motion.velocity);
+            let new_pos = new_velocity.mul_add(dt_sec, *motion.position);
+
+            let dx = (motion.target - new_pos).abs();
+            if dx < position_error_margin(&motion) && new_velocity.abs() < VELOCITY_ERROR_MARGIN {
+                motion.position = motion.target;
+                motion.velocity = NotNan::default();
+            } else {
+                motion.position = NotNan::new(new_pos).unwrap();
+                motion.velocity = NotNan::new(new_velocity).unwrap();
+            }
+        }
+        Interpolation::Easing(easing) => {
+            let Easing {
+                progress,
+                duration,
+                ease,
+                start,
+            } = easing;
+
+            let new_progress = (progress + dt.div_duration_f64(duration))
+                .into_inner()
+                .min(1.);
+            // let eased = ease(new_progress);
+            let eased = (**ease)(new_progress);
+
+            let distance = motion.target - start;
+            let new_pos = (eased.mul_add(*distance, *start) * 10000.).trunc() * 0.0001;
+            let new_velocity = if (new_progress - 1.).abs() < PROGRESS_ERROR_MARGIN {
+                0.
+            } else {
+                Duration::from_micros(unsafe {
+                    ((new_pos - motion.position.into_inner()).abs() * 1000.)
+                        .round()
+                        .to_int_unchecked()
+                })
+                .div_duration_f64(dt) as Precision
+            };
+
+            motion.position = NotNan::new(new_pos).unwrap();
+            motion.velocity = NotNan::new(new_velocity).unwrap();
+
+            if let Some(Interpolation::Easing(e)) = &mut motion.interpolation_override {
+                e.progress = NotNan::new(new_progress).unwrap();
+            } else {
+                if let Interpolation::Easing(e) = &mut motion.interpolation {
+                    e.progress = NotNan::new(new_progress).unwrap();
+                }
+            }
+        }
+    }
+}
 fn step_interpolation(dt: Duration, mut motion: Motion) -> Motion {
     let has_interpolation_override = motion.interpolation_override.is_some();
     let interpolation_to_use = motion
@@ -1006,6 +1363,31 @@ fn step_interpolation(dt: Duration, mut motion: Motion) -> Motion {
 ///If a property doesn't exist in the current style, issue a warning and do nothing with that property.
 ///If a property doesn't exist as a target, then leave it as is.
 ///Order matters (mostly for transformation stacking)
+// fn start_towards_mut(
+//     override_interpolation: bool,
+//     current: &mut Vector<Property>,
+//     target: Vector<Property>,
+// ) {
+//     // List.filterMap
+//     //     (\propPair ->
+//     //         case propPair of
+//     //             ( cur, Just to ) ->
+//     //                 Just <| setTarget override_interpolation cur to
+
+//     //             ( prop, Nothing ) ->
+//     //                 Just prop
+//     //     )
+//     //     (zip_properties_greedy current target)
+
+//     let zipped = zip_properties_greedy(current, target);
+//     zipped
+//         .into_iter()
+//         .map(|prop_pair| match prop_pair {
+//             (cur, Some(to)) => set_target(override_interpolation, cur, to),
+//             (prop, None) => prop,
+//         })
+//         .collect()
+// }
 fn start_towards(
     override_interpolation: bool,
     current: Vector<Property>,
@@ -1031,10 +1413,209 @@ fn start_towards(
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests_zip_all {
+    use emg_core::{into_tvec, into_vector, Vector};
+    use seed_styles::{height, px, width};
+    use tinyvec::TinyVec;
+
+    use crate::models::zip_properties_greedy;
+
+    use super::zip_properties_greedy_mut;
+
+    use super::Property;
+
+    fn zip_test0() {
+        let mut initial_props: TinyVec<[Property; 2]> =
+            into_tvec![width(px(2)), width(px(0)), width(px(1))];
+        let new_target_props: TinyVec<[Property; 2]> =
+            into_tvec![height(px(1)), width(px(0)), width(px(1))];
+        let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
+
+        for i in &initial_props {
+            println!("{}", i);
+        }
+        println!("===================");
+        for r in &res {
+            if let Some(prop) = r {
+                println!("{}", prop);
+            } else {
+                println!("None");
+            }
+        }
+        let mut res_zip = initial_props.iter().zip(&res);
+
+        let match_a: TinyVec<[Property; 2]> = into_tvec![width(px(2)), width(px(0)), width(px(1))];
+        let match_b: TinyVec<[Property; 2]> = into_tvec![width(px(0)), width(px(1))];
+
+        assert_eq!(
+            res_zip.next(),
+            Some((&match_a[0], &Some(match_b[0].clone())))
+        );
+        assert_eq!(
+            res_zip.next(),
+            Some((&match_a[1], &Some(match_b[1].clone())))
+        );
+        assert_eq!(res_zip.next(), Some((&match_a[2], &None)));
+    }
+    #[test]
+    fn zip_test() {
+        let mut initial_props: TinyVec<[Property; 2]> = into_tvec![width(px(0)), height(px(1))];
+        let new_target_props: TinyVec<[Property; 2]> = into_tvec![width(px(0)), height(px(1))];
+        let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
+
+        for i in initial_props {
+            println!("{:#?}", i);
+        }
+        println!("===================");
+        for r in res {
+            println!("{:#?}", r.map(|x| x.name()));
+        }
+    }
+    #[test]
+    fn zip_test21() {
+        let mut initial_props: TinyVec<[Property; 2]> = into_tvec![height(px(0))];
+        let new_target_props: TinyVec<[Property; 2]> = into_tvec![width(px(0)), height(px(1))];
+        let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
+
+        for i in initial_props {
+            println!("{:#?}", i.name());
+        }
+        println!("===================");
+        for r in res {
+            println!("{:#?}", r.map(|x| x.name()));
+        }
+    }
+    #[test]
+    fn zip_test2() {
+        let mut initial_props: TinyVec<[Property; 2]> = into_tvec![width(px(0))];
+        let new_target_props: TinyVec<[Property; 2]> = into_tvec![width(px(0)), height(px(1))];
+        let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
+
+        for i in initial_props {
+            println!("{:#?}", i.name());
+        }
+        println!("===================");
+        for r in res {
+            println!("{:#?}", r.map(|x| x.name()));
+        }
+    }
+    #[test]
+    fn zip_test3() {
+        let mut initial_props: TinyVec<[Property; 2]> = into_tvec![width(px(0))];
+        let new_target_props: TinyVec<[Property; 2]> = into_tvec![height(px(1))];
+        let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
+
+        for i in initial_props {
+            println!("{:#?}", i.name());
+        }
+        println!("===================");
+        for r in res {
+            println!("{:#?}", r.map(|x| x.name()));
+        }
+    }
+    #[test]
+    fn zip_test4() {
+        let mut initial_props: TinyVec<[Property; 2]> = into_tvec![width(px(0)), height(px(1))];
+        let new_target_props: TinyVec<[Property; 2]> = into_tvec![height(px(1))];
+        let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
+
+        for i in initial_props {
+            println!("{:#?}", i.name());
+        }
+        println!("===================");
+        for r in res {
+            println!("{:#?}", r.map(|x| x.name()));
+        }
+    }
+    #[test]
+    fn zip_test_og_1() {
+        let initial_props: Vector<Property> =
+            into_vector![width(px(2)), width(px(0)), width(px(1))];
+        let new_target_props: Vector<Property> =
+            into_vector![height(px(1)), width(px(0)), width(px(1))];
+        let res = zip_properties_greedy(initial_props, new_target_props);
+
+        println!("===================");
+        for (o, r) in res {
+            println!("{}", o);
+            println!("||||||||||||||||||||");
+
+            if let Some(prop) = r {
+                println!("{}", prop);
+            } else {
+                println!("None");
+            }
+        }
+    }
+}
 /// We match two sets of properties.
 /// If a property is trying to be animated but has no initial value, a warning is logged.
 /// Order from the original list is preserved.
-fn zip_properties_greedy(
+
+pub fn zip_properties_greedy_mut(
+    initial_props: &mut TinyVec<[Property; 2]>,
+    mut new_target_props: TinyVec<[Property; 2]>,
+) -> TinyVec<[Option<Property>; 2]> {
+    // println!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@===================");
+    // for x in initial_props.iter() {
+    //     println!("{}", x);
+    // }
+    // println!(".................................");
+
+    // for x in new_target_props.iter() {
+    //     println!("{}", x);
+    // }
+    // println!("---------------------------------------------------");
+    initial_props.sort_by(|left, right| left.name().cmp(&right.name()));
+    new_target_props.sort_by(|left, right| left.name().cmp(&right.name()));
+    // for x in initial_props.iter() {
+    //     println!("{}", x);
+    // }
+    // println!(".................................");
+
+    // for x in new_target_props.iter() {
+    //     println!("{}", x);
+    // }
+    // println!("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@===================");
+
+    let mut res_props = tiny_vec![];
+    let mut b_iter = new_target_props.into_iter().peekable();
+
+    for current_a in initial_props.iter() {
+        let a_name = current_a.name();
+
+        loop {
+            if let Some(current_b) = b_iter.peek() {
+                if current_b.name() < a_name {
+                    b_iter.next();
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        if let Some(current_b) = b_iter.peek() {
+            if current_b.name() == a_name {
+                res_props.push(b_iter.next());
+                continue;
+            }
+        }
+        res_props.push(None);
+    }
+
+    for b in b_iter {
+        warn!(
+            "{} has no initial value and therefore will not be animated.",
+            b.name()
+        );
+    }
+    res_props
+}
+pub fn zip_properties_greedy(
     initial_props: Vector<Property>,
     new_target_props: Vector<Property>,
 ) -> Vector<(Property, Option<Property>)> {

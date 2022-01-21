@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-01-07 17:38:00
+ * @LastEditTime: 2022-01-20 18:46:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -622,8 +622,8 @@ mod tests {
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
     use emg_animation::models::Property;
     use emg_animation::{interrupt, opacity, style, to, Tick};
-    use emg_core::vector;
     use emg_core::{into_vector, IdStr};
+    use emg_core::{vector, Vector};
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
     };

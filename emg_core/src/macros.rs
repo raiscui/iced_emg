@@ -1,13 +1,20 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 11:58:58
- * @LastEditTime: 2022-01-07 16:16:27
+ * @LastEditTime: 2022-01-21 10:21:35
  * @LastEditors: Rais
  * @Description:
  */
 #[macro_export]
 macro_rules! into_vector {
-    ( $( $element:expr ) , * ) => {
+    (  $element:expr  ) => {
+        {
+             $crate::im_rc::Vector::unit($element.into())
+
+
+        }
+    };
+    ( $( $element:expr ) , + ) => {
         {
             let mut v = $crate::im_rc::Vector::new();
 
@@ -16,6 +23,16 @@ macro_rules! into_vector {
             )*
 
             v
+        }
+    };
+}
+#[macro_export]
+macro_rules! into_tvec {
+
+    ( $( $element:expr ) , * ) => {
+        {
+            $crate::tiny_vec!( $( $element.into() ),*)
+
         }
     };
 }

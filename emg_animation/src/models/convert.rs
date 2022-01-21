@@ -1,4 +1,3 @@
-
 use emg_core::{
     measures::ExactLengthSimplex, GenericSize, TypeCheck, TypeCheckObjectSafe, TypeName,
 };
@@ -11,7 +10,7 @@ use super::{Motion, Property};
 /*
  * @Author: Rais
  * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2022-01-07 16:59:28
+ * @LastEditTime: 2022-01-20 18:28:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -74,6 +73,22 @@ impl From<CssWidth> for Property {
             CssWidth::Gs(gs) => (type_name, gs).into(),
             CssWidth::Length(l) => Self::Prop(type_name, l.into()),
             CssWidth::Auto | CssWidth::Initial | CssWidth::Inherit | CssWidth::StringValue(_) => {
+                todo!()
+            }
+        }
+    }
+}
+#[allow(clippy::fallible_impl_from)]
+impl From<CssHeight> for Property {
+    fn from(v: CssHeight) -> Self {
+        let type_name = v.type_name();
+        match v {
+            CssHeight::Gs(gs) => (type_name, gs).into(),
+            CssHeight::Length(l) => Self::Prop(type_name, l.into()),
+            CssHeight::Auto
+            | CssHeight::Initial
+            | CssHeight::Inherit
+            | CssHeight::StringValue(_) => {
                 todo!()
             }
         }

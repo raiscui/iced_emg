@@ -14,7 +14,8 @@ pub use imbl as im_rc;
 pub use imbl::vector;
 pub use imbl::Vector;
 use ordered_float::NotNan;
-
+pub use tinyvec::tiny_vec;
+pub use tinyvec::TinyVec;
 // ────────────────────────────────────────────────────────────────────────────────
 pub trait TypeCheck {
     fn static_type_name() -> TypeName;
