@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 11:58:58
- * @LastEditTime: 2022-01-21 10:21:35
+ * @LastEditTime: 2022-01-24 09:27:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -32,6 +32,16 @@ macro_rules! into_tvec {
     ( $( $element:expr ) , * ) => {
         {
             $crate::tiny_vec!( $( $element.into() ),*)
+
+        }
+    };
+}
+#[macro_export]
+macro_rules! into_smvec {
+
+    ( $( $element:expr ) , * ) => {
+        {
+            $crate::smallvec![ $( $element.into() ),*]
 
         }
     };

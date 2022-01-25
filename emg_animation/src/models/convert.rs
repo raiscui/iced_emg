@@ -5,12 +5,12 @@ use seed_styles::{CssHeight, CssWidth, LogicLength, Unit};
 
 use crate::init_motion;
 
-use super::{Motion, Property};
+use super::{Motion, Property, PropertySM};
 
 /*
  * @Author: Rais
  * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2022-01-20 18:28:11
+ * @LastEditTime: 2022-01-24 14:37:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -63,6 +63,19 @@ impl From<(TypeName, GenericSize)> for Property {
         }
     }
 }
+#[allow(clippy::match_same_arms)]
+#[allow(clippy::fallible_impl_from)]
+impl From<(TypeName, GenericSize)> for PropertySM {
+    fn from((type_name, gs): (TypeName, GenericSize)) -> Self {
+        match gs {
+            GenericSize::Auto | GenericSize::Initial | GenericSize::Inherit => todo!(),
+            GenericSize::Length(l) => Self::Prop(type_name, l.into()),
+            GenericSize::StringValue(_) => todo!(),
+            GenericSize::Calculation(_) => todo!(),
+            GenericSize::Parent(_) => todo!(),
+        }
+    }
+}
 
 //TODO need implement
 #[allow(clippy::fallible_impl_from)]
@@ -80,6 +93,35 @@ impl From<CssWidth> for Property {
 }
 #[allow(clippy::fallible_impl_from)]
 impl From<CssHeight> for Property {
+    fn from(v: CssHeight) -> Self {
+        let type_name = v.type_name();
+        match v {
+            CssHeight::Gs(gs) => (type_name, gs).into(),
+            CssHeight::Length(l) => Self::Prop(type_name, l.into()),
+            CssHeight::Auto
+            | CssHeight::Initial
+            | CssHeight::Inherit
+            | CssHeight::StringValue(_) => {
+                todo!()
+            }
+        }
+    }
+}
+#[allow(clippy::fallible_impl_from)]
+impl From<CssWidth> for PropertySM {
+    fn from(v: CssWidth) -> Self {
+        let type_name = v.type_name();
+        match v {
+            CssWidth::Gs(gs) => (type_name, gs).into(),
+            CssWidth::Length(l) => Self::Prop(type_name, l.into()),
+            CssWidth::Auto | CssWidth::Initial | CssWidth::Inherit | CssWidth::StringValue(_) => {
+                todo!()
+            }
+        }
+    }
+}
+#[allow(clippy::fallible_impl_from)]
+impl From<CssHeight> for PropertySM {
     fn from(v: CssHeight) -> Self {
         let type_name = v.type_name();
         match v {

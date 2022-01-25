@@ -7,6 +7,9 @@
 #![feature(extend_one)]
 // #![feature(array_map)]
 #![feature(box_patterns)]
+// #![feature(adt_const_params)]
+#![feature(generic_const_exprs)]
+#![feature(slice_take)]
 
 pub mod func;
 pub mod models;
@@ -17,14 +20,18 @@ use std::convert::TryInto;
 // use emg_debuggable::dbg4;
 use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
 
-use emg_core::{vector, Vector};
-use models::{map_to_motion, update_animation, Animation, Interpolation, Property, Step};
+use emg_core::{vector, SmallVec, Vector};
+use models::{
+    map_to_motion, update_animation, Animation, Interpolation, Property, PropertySM, Step, StepSM,
+};
 use ordered_float::NotNan;
 use props::warn_for_double_listed_properties;
 use seed_styles::Unit;
 use tinyvec::tiny_vec;
 use tinyvec::TinyVec;
-
+pub const PROP_SIZE: usize = 3;
+pub const STEP_SIZE: usize = 3;
+pub const MOTION_SIZE: usize = 3;
 // ────────────────────────────────────────────────────────────────────────────────
 pub use crate::models::color::fill;
 pub use crate::models::opacity::opacity;
@@ -208,6 +215,13 @@ where
     model
 }
 
+#[must_use]
+pub fn to_sm<Message>(props: SmallVec<[PropertySM; PROP_SIZE]>) -> StepSM<Message>
+where
+    Message: Clone,
+{
+    StepSM::To(props)
+}
 #[must_use]
 pub fn to<Message>(props: Vector<Property>) -> Step<Message>
 where

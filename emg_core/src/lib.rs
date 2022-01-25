@@ -14,6 +14,8 @@ pub use imbl as im_rc;
 pub use imbl::vector;
 pub use imbl::Vector;
 use ordered_float::NotNan;
+pub use smallvec::smallvec;
+pub use smallvec::SmallVec;
 pub use tinyvec::tiny_vec;
 pub use tinyvec::TinyVec;
 // ────────────────────────────────────────────────────────────────────────────────
