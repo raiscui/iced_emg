@@ -6,6 +6,10 @@ edition = "2021"
 resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+bench = []
+
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
@@ -40,9 +44,14 @@ indexmap = "1.8"
 
 illicit = "1.1.2"
 
-tinyvec = { version = "1.5.1", features = ["alloc"] }
+# tinyvec = { version = "1.5.1", features = ["alloc"] }
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.3.5", features = ["env-filter"] }
 tracing-flame = "0.2.0"
 insta = "1"
+criterion = { version = "0.3", features = ["html_reports", "real_blackbox"] }
+
+[[bench]]
+name = "my_benchmark"
+harness = false

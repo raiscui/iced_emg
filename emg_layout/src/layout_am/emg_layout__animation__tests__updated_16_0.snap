@@ -1,5 +1,6 @@
 ---
 source: emg_layout/src/animation.rs
+assertion_line: 1189
 expression: "&a"
 
 ---
@@ -11,7 +12,9 @@ AnimationEdge {
                 To(
                     [
                         Prop(
-                            "CssWidth",
+                            TypeName(
+                                "CssWidth",
+                            ),
                             Motion {
                                 position: NotNan(
                                     1.0,
@@ -45,7 +48,9 @@ AnimationEdge {
             StateVarProperty(
                 StateVar(
                     Prop(
-                        "CssWidth",
+                        TypeName(
+                            "CssWidth",
+                        ),
                         Motion {
                             position: NotNan(
                                 94.32537399252,

@@ -1,5 +1,6 @@
 ---
 source: emg_layout/src/animation.rs
+assertion_line: 1070
 expression: "&a"
 
 ---
@@ -15,7 +16,9 @@ AnimationEdge {
             StateVarProperty(
                 StateVar(
                     Prop(
-                        "opacity",
+                        TypeName(
+                            "opacity",
+                        ),
                         Motion {
                             position: NotNan(
                                 1.0,
