@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-01-28 12:25:56
+ * @LastEditTime: 2022-01-28 14:04:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -410,82 +410,110 @@ where
                 // &steps_init.store_watch(&store),
                 &pa,
             )
-                .map(|t, i, p| (*t, i.clone(), p.clone()))
+                // .map(|t, i, p| (*t, i.clone(), p.clone()))
                 // .refmap(|t, i, p| (t, i, p))
-                .cutoff(move |(timing, _, _): &(Timing, _, _)| {
-                    let new_t = timing.current();
-                    if let Some(old_t) = &opt_old_current {
-                        if old_t == new_t {
-                            return false;
+                .map_mut(
+                    (
+                        Vector::<(Duration, VecDeque<Step<Message>>)>::new(),
+                        SmallVec::<[Property; PROP_SIZE]>::new(),
+                    ),
+                    move |out, timing, i, p| {
+                        let new_t = timing.current();
+                        if let Some(old_t) = &opt_old_current {
+                            if old_t == new_t {
+                                return false;
+                            }
                         }
-                    }
 
-                    // if let Some(old_interruption) = &opt_old_interruption {
-                    //     // if old_interruption.ptr_eq(new_interruption) {
-                    //     if old_interruption == new_interruption {
-                    //         return false;
-                    //     }
-                    // }
+                        opt_old_current = Some(*new_t);
 
-                    opt_old_current = Some(*new_t);
+                        out.0 = i.clone();
+                        out.1 = p.clone();
+                        true
+                    },
+                )
+            // .cutoff(move |(timing, _, _): &(Timing, _, _)| {
+            //     let new_t = timing.current();
+            //     if let Some(old_t) = &opt_old_current {
+            //         if old_t == new_t {
+            //             return false;
+            //         }
+            //     }
 
-                    // opt_old_interruption = Some(new_interruption.clone());
+            //     // if let Some(old_interruption) = &opt_old_interruption {
+            //     //     // if old_interruption.ptr_eq(new_interruption) {
+            //     //     if old_interruption == new_interruption {
+            //     //         return false;
+            //     //     }
+            //     // }
 
-                    true
-                })
-            // .map(|(_, i, p)| (*i, *p))
+            //     opt_old_current = Some(*new_t);
+
+            //     // opt_old_interruption = Some(new_interruption.clone());
+
+            //     true
+            // })
+            // .map(|(_, i, p)| (i.clone(), p.clone()))
         };
 
-        let revised: SAPropsMessageSteps2<Message> = (&i_p_cut, &steps_init.watch()).map(
-            move |(timing, interruption, props): &(
-                Timing,
-                StepTimeVector<Message>,
-                SmallVec<[Property; PROP_SIZE]>,
-            ),
-                  steps: &VecDeque<Step<Message>>| {
-                //----------------------------------
-                let (mut ready_interruption, queued_interruptions): (
+        let revised: SAPropsMessageSteps2<Message> = (&sa_timing, &i_p_cut, &steps_init.watch())
+            .map(
+                move |//
+                      timing: &Timing,
+                      //
+                      (
+                    // timing,
+                    interruption,
+                    props,
+                ): &(
+                    // Timing,
                     StepTimeVector<Message>,
-                    StepTimeVector<Message>,
-                ) = interruption
-                    .clone()
-                    .into_iter()
-                    .map(|(wait, a_steps)| {
-                        // println!("wait: {:?} , dt: {:?}", &wait, &dt);
-                        (wait.saturating_sub(*timing.dt()), a_steps)
-                    })
-                    .partition(|(wait, _)| wait.is_zero());
+                    SmallVec<[Property; PROP_SIZE]>,
+                ),
+                      steps: &VecDeque<Step<Message>>| {
+                    //----------------------------------
+                    let (mut ready_interruption, queued_interruptions): (
+                        StepTimeVector<Message>,
+                        StepTimeVector<Message>,
+                    ) = interruption
+                        .clone()
+                        .into_iter()
+                        .map(|(wait, a_steps)| {
+                            // println!("wait: {:?} , dt: {:?}", &wait, &dt);
+                            (wait.saturating_sub(*timing.dt()), a_steps)
+                        })
+                        .partition(|(wait, _)| wait.is_zero());
 
-                let mut new_props = props.clone();
+                    let mut new_props = props.clone();
 
-                let mut new_steps = match ready_interruption.pop_front() {
-                    Some((_ /* is zero */, interrupt_steps)) => {
-                        new_props.iter_mut().for_each(|prop| {
-                            map_to_motion(
-                                |m: &mut Motion| {
-                                    *m.interpolation_override_mut() = None;
-                                },
-                                prop,
-                            )
-                        });
+                    let mut new_steps = match ready_interruption.pop_front() {
+                        Some((_ /* is zero */, interrupt_steps)) => {
+                            new_props.iter_mut().for_each(|prop| {
+                                map_to_motion(
+                                    |m: &mut Motion| {
+                                        *m.interpolation_override_mut() = None;
+                                    },
+                                    prop,
+                                )
+                            });
 
-                        interrupt_steps
-                    }
+                            interrupt_steps
+                        }
 
-                    None => steps.clone(),
-                };
-                drop(ready_interruption);
-                let mut sent_messages = MsgBackIsNew::default();
+                        None => steps.clone(),
+                    };
+                    drop(ready_interruption);
+                    let mut sent_messages = MsgBackIsNew::default();
 
-                resolve_steps(
-                    &mut new_props,
-                    &mut new_steps,
-                    &mut sent_messages,
-                    timing.dt(),
-                );
-                (queued_interruptions, new_steps, new_props, sent_messages)
-            },
-        );
+                    resolve_steps(
+                        &mut new_props,
+                        &mut new_steps,
+                        &mut sent_messages,
+                        timing.dt(),
+                    );
+                    (queued_interruptions, new_steps, new_props, sent_messages)
+                },
+            );
 
         // ────────────────────────────────────────────────────────────────────────────────
 
