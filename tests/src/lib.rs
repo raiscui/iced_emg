@@ -10,7 +10,7 @@ mod test {
         time::Duration,
     };
 
-    use emg_animation::{interrupt_og, opacity_og, styleOG, to_og};
+    use emg_animation::{interrupt_og, opacity_og, styleOG, to_og, to};
     use emg_bind::{
         better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
         button, edge_index_no_source, emg_msg,
@@ -18,7 +18,7 @@ mod test {
         subscription, Application, Button, Checkbox, Command, Element, GTreeBuilderElement,
         GraphMethods, GraphType, GraphView, Orders, Subscription, Text, Tick,
     };
-    use emg_core::{into_vector, vector};
+    use emg_core::{into_vector, vector, into_smvec};
     use emg_core::{parent, TypeCheck, TypeCheckObjectSafe};
     use emg_layout::{
         add_values::origin_x,
@@ -172,9 +172,9 @@ mod test {
                         Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
                             On:click move |_root, vdom, _event| {
 
-                                an.interrupt(vector![
-                                    to_og(into_vector![width(px(50))]),
-                                    to_og(into_vector![width(pc(100))]),
+                                an.interrupt([
+                                    to(into_smvec![width(px(50))]),
+                                    to(into_smvec![width(pc(100))]),
                                 ]);
 
                                             a.set(a.get()+1);
@@ -225,55 +225,55 @@ mod test {
 
         let mut tot = 0f64;
 
-        an2.interrupt(vector![
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
-            to_og(into_vector![width(px(50))]),
-            to_og(into_vector![width(pc(10110))]),
+        an2.interrupt([
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
+            to(into_smvec![width(px(50))]),
+            to(into_smvec![width(pc(10110))]),
         ]);
 
         let t1 = p.now();

@@ -438,7 +438,7 @@ mod refresh_test {
 
         let now = global_clock();
 
-        a.interrupt(vector![
+        a.interrupt_og(vector![
             to_og(into_vector![width(px(0))]),
             to_og(into_vector![width(px(1))])
         ]);

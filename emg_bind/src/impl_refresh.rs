@@ -3,7 +3,7 @@ use std::ops::Deref;
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2021-10-25 16:20:33
+ * @LastEditTime: 2022-01-27 23:38:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -101,25 +101,7 @@ impl<Message> RefreshFor<GElement<Message>> for i32 {
         }
     }
 }
-/// `GElement` refresh use X
-/// for Refresher<GElement> many type
-// this is `GElement` refresh use `i32`
-impl<Message> RefreshFor<GElement<Message>> for u32 {
-    fn refresh_for(&self, el: &mut GElement<Message>) {
-        use GElement::Text_;
 
-        match el {
-            Text_(text) => {
-                trace!("==========Text update use u32");
-                text.content(format!("u32:{}", self));
-            }
-
-            other => {
-                warn!("not implemented ====> {} refreshing use u32", other);
-            }
-        }
-    }
-}
 impl<Message> RefreshFor<GElement<Message>> for f64 {
     fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;

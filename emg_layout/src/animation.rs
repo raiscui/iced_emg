@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-01-27 09:41:28
+ * @LastEditTime: 2022-01-28 12:25:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,10 @@ use emg_state::{
 
 use emg_animation::{
     extract_initial_wait,
-    models::{map_to_motion, resolve_steps, Motion, MsgBackIsNew, Property, Step, StepTimeVector},
+    models::{
+        map_to_motion, resolve_steps, Motion, MsgBackIsNew, Precision, Property, Step,
+        StepTimeVector,
+    },
     set_default_interpolation, set_default_interpolation_og, Timing, PROP_SIZE,
 };
 use tracing::{debug, trace, warn};
@@ -235,16 +238,16 @@ where
                 Timing::default(),
                 move |timing: &mut Timing, now: &Duration| {
                     let current = timing.current();
-                    if now == &current {
+                    if now == current {
                         // timing.set_dt(Duration::ZERO);
                         return false;
                     }
                     // • • • • •
 
-                    let dt_tmp = now.saturating_sub(current);
+                    let dt_tmp = now.saturating_sub(*current);
                     let dt = {
                         if current.is_zero() || dt_tmp.as_millis() > 34 {
-                            Duration::from_micros(16666)
+                            Duration::from_micros(16666) //16.666 ms
                         } else {
                             dt_tmp
                         }
@@ -408,9 +411,10 @@ where
                 &pa,
             )
                 .map(|t, i, p| (*t, i.clone(), p.clone()))
-                .cutoff(move |(timing, _, _)| {
+                // .refmap(|t, i, p| (t, i, p))
+                .cutoff(move |(timing, _, _): &(Timing, _, _)| {
                     let new_t = timing.current();
-                    if let Some(old_t) = opt_old_current {
+                    if let Some(old_t) = &opt_old_current {
                         if old_t == new_t {
                             return false;
                         }
@@ -423,65 +427,65 @@ where
                     //     }
                     // }
 
-                    opt_old_current = Some(new_t);
+                    opt_old_current = Some(*new_t);
 
                     // opt_old_interruption = Some(new_interruption.clone());
 
                     true
                 })
-                .map(|(_, i, p)| (i.clone(), p.clone()))
+            // .map(|(_, i, p)| (*i, *p))
         };
 
-        let revised: SAPropsMessageSteps2<Message> = (&sa_timing, &i_p_cut, &steps_init.watch())
-            .map(
-                move |timing: &Timing,
-                      (interruption, props): &(
+        let revised: SAPropsMessageSteps2<Message> = (&i_p_cut, &steps_init.watch()).map(
+            move |(timing, interruption, props): &(
+                Timing,
+                StepTimeVector<Message>,
+                SmallVec<[Property; PROP_SIZE]>,
+            ),
+                  steps: &VecDeque<Step<Message>>| {
+                //----------------------------------
+                let (mut ready_interruption, queued_interruptions): (
                     StepTimeVector<Message>,
-                    SmallVec<[Property; PROP_SIZE]>,
-                ),
-                      steps: &VecDeque<Step<Message>>| {
-                    //----------------------------------
-                    let (mut ready_interruption, queued_interruptions): (
-                        StepTimeVector<Message>,
-                        StepTimeVector<Message>,
-                    ) = interruption
-                        .clone()
-                        .into_iter()
-                        .map(|(wait, a_steps)| {
-                            // println!("wait: {:?} , dt: {:?}", &wait, &dt);
-                            (wait.saturating_sub(timing.dt()), a_steps)
-                        })
-                        .partition(|(wait, _)| wait.is_zero());
+                    StepTimeVector<Message>,
+                ) = interruption
+                    .clone()
+                    .into_iter()
+                    .map(|(wait, a_steps)| {
+                        // println!("wait: {:?} , dt: {:?}", &wait, &dt);
+                        (wait.saturating_sub(*timing.dt()), a_steps)
+                    })
+                    .partition(|(wait, _)| wait.is_zero());
 
-                    let mut new_props = props.clone();
+                let mut new_props = props.clone();
 
-                    let mut new_steps = match ready_interruption.pop_front() {
-                        Some((_ /* is zero */, interrupt_steps)) => {
-                            new_props.iter_mut().for_each(|prop| {
-                                map_to_motion(
-                                    |m: &mut Motion| {
-                                        *m.interpolation_override_mut() = None;
-                                    },
-                                    prop,
-                                )
-                            });
+                let mut new_steps = match ready_interruption.pop_front() {
+                    Some((_ /* is zero */, interrupt_steps)) => {
+                        new_props.iter_mut().for_each(|prop| {
+                            map_to_motion(
+                                |m: &mut Motion| {
+                                    *m.interpolation_override_mut() = None;
+                                },
+                                prop,
+                            )
+                        });
 
-                            interrupt_steps
-                        }
+                        interrupt_steps
+                    }
 
-                        None => steps.clone(),
-                    };
-                    let mut sent_messages = MsgBackIsNew::default();
+                    None => steps.clone(),
+                };
+                drop(ready_interruption);
+                let mut sent_messages = MsgBackIsNew::default();
 
-                    resolve_steps(
-                        &mut new_props,
-                        &mut new_steps,
-                        &mut sent_messages,
-                        timing.dt(),
-                    );
-                    (queued_interruptions, new_steps, new_props, sent_messages)
-                },
-            );
+                resolve_steps(
+                    &mut new_props,
+                    &mut new_steps,
+                    &mut sent_messages,
+                    timing.dt(),
+                );
+                (queued_interruptions, new_steps, new_props, sent_messages)
+            },
+        );
 
         // ────────────────────────────────────────────────────────────────────────────────
 
@@ -536,6 +540,7 @@ where
                     }
                     debug!("after callback running ");
 
+                    //TODO remove clone, 每一次都克隆 比较重 , get_with? sized?
                     let revised_value = revised.get();
                     props_init
                         .iter()
@@ -585,6 +590,24 @@ where
             // trace!("Interrupt: {new_interruption:#?}");
             new_interruption
         });
+    }
+    pub fn replace(&self, steps: impl Into<VecDeque<Step<Message>>>) {
+        let steps_vd = steps.into();
+        self.inside.interruption.set(
+            // trace!("steps_vd: {steps_vd:#?}");
+            vector!(extract_initial_wait(steps_vd)),
+        );
+    }
+
+    /// # Panics
+    /// temp fn ,
+    /// Will panic if p not prop
+    #[must_use]
+    pub fn get_position(&self, prop_index: usize) -> Precision {
+        self.inside.props[prop_index].get_with(|p| match p {
+            Property::Prop(_name, m) => m.position().into_inner(),
+            _ => todo!("not implemented"),
+        })
     }
 }
 
@@ -851,14 +874,14 @@ mod tests {
 
         // let sv_now = use_state(Duration::ZERO);
         let sv_now = global_clock();
-        // for i in 0..4 {
         // let edge_item1 = edge_item.clone();
         sv_now.set(Duration::from_millis(0));
 
         debug!("===================================main loop ");
-        let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(2))]);
-        black_box(many_am_run_for_test(&a, &sv_now));
-        // }
+        let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(0.5))]);
+        for i in 0..4 {
+            black_box(many_am_run_for_test(&a, &sv_now));
+        }
     }
 
     fn many_am_run_for_test(
@@ -867,7 +890,7 @@ mod tests {
         sv_now: &emg_state::StateVar<Duration>,
     ) {
         a.interrupt([
-            to(into_smvec![width(px(0.2))]),
+            to(into_smvec![width(px(0))]),
             to(into_smvec![width(px(2))]),
             to(into_smvec![width(px(2.3))]),
             // to(into_smvec![width(px(0))]),
@@ -888,16 +911,17 @@ mod tests {
             // to(into_smvec![width(px(1))]),
             // to(into_smvec![width(px(0))]),
         ]);
-        warn!("set time ---------------------------------------------------- 16");
-        sv_now.set(Duration::from_millis(0));
+        warn!("set time ---------------------------------------------------- 0");
+        // sv_now.set(Duration::from_millis(0));
         // sv_now.store_set(storeref, Duration::from_millis(16));
         // a.update();
         // for i in 1002..1004 {
-        for i in 1..3 {
-            warn!(
-                "in loop: set time ---------------------------------------------------- loop:{}",
-                &i
-            );
+        for i in 1..60 {
+            // warn!(
+            // "in loop: set time ---------------------------------------------------- loop:{}",
+            // &i
+            // );
+            // sv_now.set(Duration::from_millis(0));
 
             sv_now.set(Duration::from_millis(i * 16));
             // sv_now.store_set(storeref, Duration::from_millis(i * 16));

@@ -355,6 +355,46 @@ where
     model.running = true;
     model
 }
+pub fn replace<Message>(
+    steps: impl Into<VecDeque<Step<Message>>>,
+    model: &mut Animation<Message>,
+) -> &mut Animation<Message>
+where
+    Message: Clone,
+{
+    model.interruption = vector![extract_initial_wait(steps.into())];
+    model.running = true;
+    model
+}
+pub fn replace_og<Message>(
+    steps: Vector<StepOG<Message>>,
+    model: &mut AnimationOG<Message>,
+) -> &mut AnimationOG<Message>
+where
+    Message: Clone,
+{
+    model.interruption = vector![extract_initial_wait_og(steps)];
+    model.running = true;
+    model
+}
+
+// {-| Repeat a number of steps until interrupted.
+//     -}
+//     loop : List (Animation.Model.Step msg) -> Animation.Model.Step msg
+//     loop steps =
+//         Loop steps
+pub fn loop_am<Message>(steps: impl Into<VecDeque<Step<Message>>>) -> Step<Message>
+where
+    Message: Clone,
+{
+    Step::Loop(steps.into())
+}
+pub fn loop_am_og<Message>(steps: Vector<StepOG<Message>>) -> StepOG<Message>
+where
+    Message: Clone,
+{
+    StepOG::Loop(steps)
+}
 
 #[must_use]
 pub fn to<Message>(props: SmallVec<[Property; PROP_SIZE]>) -> Step<Message>

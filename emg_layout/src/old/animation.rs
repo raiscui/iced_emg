@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-01-26 14:10:35
+ * @LastEditTime: 2022-01-28 11:35:53
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,9 @@ use emg_state::{
 
 use emg_animation::{
     extract_initial_wait_og,
-    models::{map_to_motion_og, resolve_steps_og, Motion, PropertyOG, StepOG, StepTimeVectorOG},
+    models::{
+        map_to_motion_og, resolve_steps_og, Motion, Precision, PropertyOG, StepOG, StepTimeVectorOG,
+    },
     set_default_interpolation_og, Timing,
 };
 use tracing::{debug, trace};
@@ -231,13 +233,13 @@ where
                 Timing::default(),
                 move |timing: &mut Timing, now: &Duration| {
                     let current = timing.current();
-                    if now == &current {
+                    if now == current {
                         // timing.set_dt(Duration::ZERO);
                         return false;
                     }
                     // • • • • •
 
-                    let dt_tmp = now.saturating_sub(current);
+                    let dt_tmp = now.saturating_sub(*current);
                     let dt = {
                         if current.is_zero() || dt_tmp.as_millis() > 34 {
                             Duration::from_micros(16666)
@@ -406,7 +408,7 @@ where
                 .map(|t, i, p| (*t, i.clone(), p.clone()))
                 .cutoff(move |(timing, _, _)| {
                     let new_t = timing.current();
-                    if let Some(old_t) = opt_old_current {
+                    if let Some(old_t) = &opt_old_current {
                         if old_t == new_t {
                             return false;
                         }
@@ -419,7 +421,7 @@ where
                     //     }
                     // }
 
-                    opt_old_current = Some(new_t);
+                    opt_old_current = Some(*new_t);
 
                     // opt_old_interruption = Some(new_interruption.clone());
 
@@ -442,7 +444,7 @@ where
                         .into_iter()
                         .map(|(wait, a_steps)| {
                             // println!("wait: {:?} , dt: {:?}", &wait, &dt);
-                            (wait.saturating_sub(timing.dt()), a_steps)
+                            (wait.saturating_sub(*timing.dt()), a_steps)
                         })
                         .partition(|(wait, _)| wait.is_zero());
 
@@ -569,13 +571,31 @@ where
         }
     }
 
-    pub fn interrupt(&self, steps: Vector<StepOG<Message>>) {
+    pub fn interrupt_og(&self, steps: Vector<StepOG<Message>>) {
         self.inside.interruption.set_with_once(|interruption| {
             let mut new_interruption = interruption.clone();
             let xx = extract_initial_wait_og(steps);
             new_interruption.push_front(xx);
             new_interruption
         });
+    }
+
+    pub fn replace_og(&self, steps: Vector<StepOG<Message>>) {
+        self.inside.interruption.set(
+            // trace!("steps_vd: {steps_vd:#?}");
+            vector!(extract_initial_wait_og(steps)),
+        );
+    }
+
+    /// # Panics
+    /// temp fn ,
+    /// Will panic if p not prop
+    #[must_use]
+    pub fn get_position(&self, prop_index: usize) -> Precision {
+        self.inside.props[prop_index].get_with(|p| match p {
+            PropertyOG::Prop(_name, m) => m.position().into_inner(),
+            _ => todo!("not implemented"),
+        })
     }
 }
 
@@ -638,7 +658,8 @@ mod tests {
                     | tracing_subscriber::fmt::format::FmtSpan::ENTER
                     | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
             )
-            .with_max_level(Level::DEBUG)
+            // .with_max_level(Level::DEBUG)
+            .with_max_level(Level::WARN)
             .try_init();
 
         // tracing::subscriber::set_global_default(subscriber)
@@ -757,7 +778,7 @@ mod tests {
         a: &AnimationEOG<Message>,
         sv_now: &emg_state::StateVar<Duration>,
     ) {
-        a.interrupt(vector![
+        a.interrupt_og(vector![
             to_og(into_vector![width(px(0))]),
             to_og(into_vector![width(px(1))]),
             // to(into_vector![width(px(0))]),
@@ -847,12 +868,12 @@ mod tests {
 
         debug!("===================================main loop ");
         let a: AnimationEOG<Message> = AnimationEOG::new_in_topo(into_vector![width(px(2))]);
-        a.interrupt(vector![to_og(into_vector![width(px(0))]),]);
+        a.interrupt_og(vector![to_og(into_vector![width(px(0))]),]);
 
         debug!("===================================main loop--2 ");
 
         let b: AnimationEOG<Message> = AnimationEOG::new_in_topo(into_vector![width(px(99))]);
-        b.interrupt(vector![to_og(into_vector![width(px(888))]),]);
+        b.interrupt_og(vector![to_og(into_vector![width(px(888))]),]);
         sv_now.set(Duration::from_millis(16));
         debug!("a====:\n {:#?}", a.inside.props[0].get());
         debug!("b====:\n {:#?}", b.inside.props[0].get());
@@ -870,12 +891,12 @@ mod tests {
 
         // let sv_now = use_state(Duration::ZERO);
         let sv_now = global_clock();
-        for i in 0..4 {
-            // let edge_item1 = edge_item.clone();
-            sv_now.set(Duration::from_millis(0));
+        // let edge_item1 = edge_item.clone();
+        sv_now.set(Duration::from_millis(0));
 
-            debug!("===================================main loop :{}", i);
-            let a: AnimationEOG<Message> = AnimationEOG::new_in_topo(into_vector![width(px(1))]);
+        debug!("===================================main loop ");
+        let a: AnimationEOG<Message> = AnimationEOG::new_in_topo(into_vector![width(px(0.5))]);
+        for i in 0..4 {
             black_box(many_am_run_for_test(&a, &sv_now));
         }
     }
@@ -885,45 +906,52 @@ mod tests {
         a: &AnimationEOG<Message>,
         sv_now: &emg_state::StateVar<Duration>,
     ) {
-        a.interrupt(vector![
+        a.interrupt_og(vector![
             to_og(into_vector![width(px(0))]),
-            to_og(into_vector![width(px(1))]),
-            to_og(into_vector![width(px(0))]),
-            to_og(into_vector![width(px(1))]),
-            to_og(into_vector![width(px(0))]),
-            to_og(into_vector![width(px(1))]),
-            to_og(into_vector![width(px(0))]),
-            to_og(into_vector![width(px(1))]),
-            to_og(into_vector![width(px(0))]),
-            to_og(into_vector![width(px(1))]),
-            to_og(into_vector![width(px(0))]),
-            to_og(into_vector![width(px(1))]),
-            to_og(into_vector![width(px(0))]),
-            to_og(into_vector![width(px(1))]),
-            to_og(into_vector![width(px(0))]),
-            to_og(into_vector![width(px(1))]),
-            to_og(into_vector![width(px(0))]),
-            to_og(into_vector![width(px(1))]),
-            to_og(into_vector![width(px(0))]),
+            to_og(into_vector![width(px(2))]),
+            to_og(into_vector![width(px(2.3))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
         ]);
-        warn!("set time ---------------------------------------------------- 16");
-        sv_now.set(Duration::from_millis(16));
+        warn!("set time ---------------------------------------------------- 0");
+        // sv_now.set(Duration::from_millis(0));
         // sv_now.store_set(storeref, Duration::from_millis(16));
         // a.update();
         // for i in 1002..1004 {
-        for i in 1..5 {
-            warn!(
-                "in loop: set time ---------------------------------------------------- loop:{}",
-                &i
-            );
+        for i in 1..60 {
+            // warn!(
+            // "in loop: set time ---------------------------------------------------- loop:{}",
+            // &i
+            // );
+            // sv_now.set(Duration::from_millis(0));
 
             sv_now.set(Duration::from_millis(i * 16));
             // sv_now.store_set(storeref, Duration::from_millis(i * 16));
             // a.update();
             // a.inside.props[0].store_get(storeref);
-            a.inside.props[0].get();
+            // if i % 10 == 0 {
+            let _e = a.inside.props[0].get();
+            warn!("i: {i}, pos: {_e}")
+            // }
         }
-        a.inside.props[0].get();
+        let _e = a.inside.props[0].get();
+        warn!("end pos: {_e}")
+
         // a.inside.props[0].store_get(storeref);
     }
 
@@ -932,7 +960,7 @@ mod tests {
         a: &AnimationEOG<Message>,
         sv_now: &emg_state::StateVar<Duration>,
     ) {
-        a.interrupt(vector![
+        a.interrupt_og(vector![
             to_og(into_vector![width(px(0))]),
             to_og(into_vector![width(px(1))]),
             to_og(into_vector![width(px(0))]),
@@ -1004,7 +1032,7 @@ mod tests {
             assert_eq!(a.running.get(), false);
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
-            a.interrupt(vector![
+            a.interrupt_og(vector![
                 to_og(vector![emg_animation::opacity_og(0.)]),
                 to_og(vector![emg_animation::opacity_og(1.)])
             ]);
@@ -1172,7 +1200,7 @@ mod tests {
             assert_eq!(a.running.get(), false);
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
-            a.interrupt(vector![
+            a.interrupt_og(vector![
                 to_og(into_vector![width(px(0))]),
                 to_og(into_vector![width(px(1))])
             ]);
@@ -1333,7 +1361,7 @@ mod tests {
             1080,
         );
         a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
-        a.interrupt(vector![
+        a.interrupt_og(vector![
             to_og(into_vector![width(px(0))]),
             to_og(into_vector![width(px(1))]),
             to_og(into_vector![width(px(0))]),
@@ -1381,7 +1409,7 @@ mod tests {
             1080,
         );
         a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
-        a.interrupt(vector![
+        a.interrupt_og(vector![
             to_og(into_vector![width(px(0))]),
             to_og(into_vector![width(px(1))]),
         ]);
@@ -1478,7 +1506,7 @@ mod tests {
             assert_eq!(a.running.get(), false);
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
-            a.interrupt(vector![
+            a.interrupt_og(vector![
                 to_og(into_vector![width(px(0))]),
                 to_og(into_vector![width(px(1))])
             ]);

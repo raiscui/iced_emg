@@ -364,14 +364,14 @@ impl Timing {
 
     /// Get a reference to the timing's current.
     #[must_use]
-    pub const fn current(&self) -> Duration {
-        self.current
+    pub const fn current(&self) -> &Duration {
+        &self.current
     }
 
     /// Get a reference to the timing's dt.
     #[must_use]
-    pub const fn dt(&self) -> Duration {
-        self.dt
+    pub const fn dt(&self) -> &Duration {
+        &self.dt
     }
 
     /// Set the timing's current.
@@ -801,7 +801,7 @@ pub fn update_animation<Message: std::clone::Clone + std::fmt::Debug>(
         &mut new_props,
         &mut new_steps,
         &mut sent_messages,
-        timing.dt,
+        &timing.dt,
     );
 
     model.timing = timing;
@@ -858,7 +858,7 @@ pub fn update_animation_og<Message: std::clone::Clone + std::fmt::Debug>(
         }
     };
 
-    let (revised_style, _sent_messages, revised_steps) = resolve_steps_og(style, steps, timing.dt);
+    let (revised_style, _sent_messages, revised_steps) = resolve_steps_og(style, steps, &timing.dt);
 
     model.timing = timing;
     model.running = !revised_steps.is_empty() || !queued_interruptions.is_empty();
@@ -918,12 +918,12 @@ mod resolve_steps_test {
         for i in 0..50 {
             println!("== {}", i);
 
-            let (p, m, s) = resolve_steps_og(initial_props, steps, Duration::from_millis(16));
+            let (p, m, s) = resolve_steps_og(initial_props, steps, &Duration::from_millis(16));
             resolve_steps(
                 &mut props2,
                 &mut steps2,
                 &mut msg,
-                Duration::from_millis(16),
+                &Duration::from_millis(16),
             );
             for pp in &p {
                 println!("\t{}", pp);
@@ -956,12 +956,12 @@ mod resolve_steps_test {
         for i in 0..50 {
             println!("== {}", i);
 
-            let (p, m, s) = resolve_steps_og(initial_props, steps, Duration::from_millis(16));
+            let (p, m, s) = resolve_steps_og(initial_props, steps, &Duration::from_millis(16));
             resolve_steps(
                 &mut props2,
                 &mut steps2,
                 &mut msg,
-                Duration::from_millis(16),
+                &Duration::from_millis(16),
             );
             for pp in &p {
                 println!("\t{}", pp);
@@ -989,7 +989,7 @@ pub fn resolve_steps<Message>(
     current_style: &mut SmallVec<[Property; PROP_SIZE]>,
     steps: &mut VecDeque<Step<Message>>,
     msgs: &mut MsgBackIsNew<Message>,
-    dt: Duration,
+    dt: &Duration,
 ) where
     Message: Clone,
 {
@@ -1000,7 +1000,7 @@ pub fn resolve_steps<Message>(
                 if n.is_zero() {
                     resolve_steps(current_style, steps, msgs, dt)
                 } else {
-                    steps.push_front(Step::Wait(n.saturating_sub(dt)));
+                    steps.push_front(Step::Wait(n.saturating_sub(*dt)));
                 }
             }
             Step::Send(msg) => {
@@ -1015,7 +1015,7 @@ pub fn resolve_steps<Message>(
 
                 let mut test_current_style = current_style.clone();
                 start_towards_mut(false, &mut test_current_style, target.clone());
-                step(Duration::ZERO, &mut test_current_style);
+                step(&Duration::ZERO, &mut test_current_style);
                 // assert_eq!(current_style, &mut x);
                 let done = test_current_style.iter().all(is_done_sm);
 
@@ -1031,7 +1031,7 @@ pub fn resolve_steps<Message>(
             }
             Step::ToWith(target) => {
                 start_towards_mut(false, current_style, target.clone());
-                step(Duration::ZERO, current_style);
+                step(&Duration::ZERO, current_style);
                 let done = current_style.iter().all(is_done_sm);
 
                 if !done {
@@ -1052,7 +1052,7 @@ pub fn resolve_steps<Message>(
                 // }
             }
             Step::Set(props) => {
-                replace_props_mut(current_style, props);
+                replace_props(current_style, props);
                 resolve_steps(current_style, steps, msgs, dt);
             }
             Step::_Step => {
@@ -1097,7 +1097,7 @@ pub fn resolve_steps<Message>(
 pub fn resolve_steps_og<Message>(
     current_style: Vector<PropertyOG>,
     mut steps: Vector<StepOG<Message>>,
-    dt: Duration,
+    dt: &Duration,
 ) -> (Vector<PropertyOG>, Vector<Message>, Vector<StepOG<Message>>)
 where
     Message: Clone,
@@ -1109,7 +1109,7 @@ where
                 if n.is_zero() {
                     resolve_steps_og(current_style, steps, dt)
                 } else {
-                    steps.push_front(StepOG::Wait(n.saturating_sub(dt)));
+                    steps.push_front(StepOG::Wait(n.saturating_sub(*dt)));
                     (current_style, vector![], steps)
                 }
             }
@@ -1127,7 +1127,7 @@ where
                 let x = start_towards_og(false, current_style, target);
                 // assert_eq!(x, current_style);
                 //NOTE  px 0.05 会直接变
-                let x0 = step_og(Duration::ZERO, x);
+                let x0 = step_og(&Duration::ZERO, x);
                 // assert_eq!(x0, x);
                 let done = x0.iter().all(is_done_og);
 
@@ -1147,7 +1147,7 @@ where
                 let x = start_towards_og(false, current_style, target.clone());
                 // assert_eq!(x, current_style);
                 //NOTE  px 0.05 会直接变
-                let x0 = step_og(Duration::ZERO, x);
+                let x0 = step_og(&Duration::ZERO, x);
                 // assert_eq!(x0, x);
                 let done = x0.iter().all(is_done_og);
 
@@ -1160,7 +1160,9 @@ where
                     resolve_steps_og(start_towards_og(true, x0, target), steps, dt)
                 }
             }
-            StepOG::Set(props) => resolve_steps_og(replace_props(current_style, &props), steps, dt),
+            StepOG::Set(props) => {
+                resolve_steps_og(replace_props_og(current_style, &props), steps, dt)
+            }
             StepOG::_Step => {
                 let stepped = step_og(dt, current_style);
                 if stepped.iter().all(is_done_og) {
@@ -1212,7 +1214,7 @@ mod replace_props_test {
 
     use crate::{models::Property, PROP_SIZE};
 
-    use super::{replace_props, replace_props_mut, PropertyOG};
+    use super::{replace_props, replace_props_og, PropertyOG};
 
     #[test]
     fn replace_props_test1() {
@@ -1220,12 +1222,12 @@ mod replace_props_test {
             into_smvec![width(px(2)), width(px(0)), width(px(1))];
         let replacements: SmallVec<[Property; PROP_SIZE]> =
             into_smvec![height(px(99)), width(px(99)), width(px(199))];
-        replace_props_mut(&mut props, replacements.clone());
+        replace_props(&mut props, replacements.clone());
 
         let props2: Vector<PropertyOG> = into_vector![width(px(2)), width(px(0)), width(px(1))];
         let replacements2: Vector<PropertyOG> =
             into_vector![height(px(99)), width(px(99)), width(px(199))];
-        let n2 = replace_props(props2, &replacements2);
+        let n2 = replace_props_og(props2, &replacements2);
 
         // for i in &props {
         // println!("{}", i);
@@ -1251,12 +1253,12 @@ mod replace_props_test {
         let mut props: SmallVec<[Property; PROP_SIZE]> =
             into_smvec![height(px(1)), width(px(2)), width(px(0)), width(px(1))];
         let replacements: SmallVec<[Property; PROP_SIZE]> = into_smvec![width(px(99))];
-        replace_props_mut(&mut props, replacements);
+        replace_props(&mut props, replacements);
 
         let props2: Vector<PropertyOG> =
             into_vector![height(px(1)), width(px(2)), width(px(0)), width(px(1))];
         let replacements2: Vector<PropertyOG> = into_vector![width(px(99))];
-        let n2 = replace_props(props2, &replacements2);
+        let n2 = replace_props_og(props2, &replacements2);
 
         let res: SmallVec<[Property; PROP_SIZE]> = into_smvec![height(px(1)), width(px(99))];
         let res2: Vector<PropertyOG> = into_vector![height(px(1)), width(px(99))];
@@ -1273,7 +1275,7 @@ mod replace_props_test {
         }
     }
 }
-fn replace_props_mut(
+fn replace_props(
     props: &mut SmallVec<[Property; PROP_SIZE]>,
     replacements: SmallVec<[Property; PROP_SIZE]>,
 ) {
@@ -1294,7 +1296,7 @@ fn replace_props_mut(
     // }
     props.extend(replacements);
 }
-fn replace_props(
+fn replace_props_og(
     props: Vector<PropertyOG>,
     replacements: &Vector<PropertyOG>,
 ) -> Vector<PropertyOG> {
@@ -1496,7 +1498,7 @@ fn is_cmd_done_og(cmd: &PathCommandOG) -> bool {
     }
 }
 
-pub fn step(dt: Duration, props: &mut SmallVec<[Property; PROP_SIZE]>) {
+pub fn step(dt: &Duration, props: &mut SmallVec<[Property; PROP_SIZE]>) {
     use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     props
         .iter_mut()
@@ -1535,11 +1537,11 @@ pub fn step(dt: Duration, props: &mut SmallVec<[Property; PROP_SIZE]>) {
                 step_interpolation_mut(dt, y);
             }),
 
-            Path(cmds) => cmds.iter_mut().for_each(|cmd| step_path_mut(dt, cmd)),
+            Path(cmds) => cmds.iter_mut().for_each(|cmd| step_path(dt, cmd)),
         });
 }
 
-pub fn step_og(dt: Duration, props: Vector<PropertyOG>) -> Vector<PropertyOG> {
+pub fn step_og(dt: &Duration, props: Vector<PropertyOG>) -> Vector<PropertyOG> {
     use PropertyOG::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     props
         .into_iter() //TODO iter_mut
@@ -1595,27 +1597,21 @@ pub fn step_og(dt: Duration, props: Vector<PropertyOG>) -> Vector<PropertyOG> {
         })
         .collect()
 }
-fn step_coords_mut(dt: Duration, coords: &mut SmallVec<[[Motion; DIM2]; MOTION_SIZE]>) {
+fn step_coords(dt: &Duration, coords: &mut SmallVec<[[Motion; DIM2]; MOTION_SIZE]>) {
     coords.iter_mut().for_each(|[x, y]| {
         step_interpolation_mut(dt, x);
         step_interpolation_mut(dt, y)
     });
 }
-// fn step_coords_mut(dt: Duration, coords: &mut Vector<[Motion; DIM2]>) {
-//     coords.iter_mut().for_each(|[x, y]| {
-//         step_interpolation_mut(dt, x);
-//         step_interpolation_mut(dt, y)
-//     });
-// }
 
-fn step_coords_og(dt: Duration, coords: Vector<[Motion; DIM2]>) -> Vector<[Motion; DIM2]> {
+fn step_coords_og(dt: &Duration, coords: Vector<[Motion; DIM2]>) -> Vector<[Motion; DIM2]> {
     coords
         .into_iter()
         .map(|[x, y]| [step_interpolation_og(dt, x), step_interpolation_og(dt, y)])
         .collect()
 }
 #[allow(clippy::too_many_lines)]
-fn step_path_mut(dt: Duration, cmd: &mut PathCommand) {
+fn step_path(dt: &Duration, cmd: &mut PathCommand) {
     use PathCommand::{
         AntiClockwiseArc, ClockwiseArc, Close, Curve, CurveTo, Horizontal, HorizontalTo, Line,
         LineTo, Move, MoveTo, Quadratic, QuadraticTo, Smooth, SmoothQuadratic, SmoothQuadraticTo,
@@ -1660,7 +1656,7 @@ fn step_path_mut(dt: Duration, cmd: &mut PathCommand) {
         }
 
         SmoothQuadratic(coords) | SmoothQuadraticTo(coords) | Smooth(coords) | SmoothTo(coords) => {
-            step_coords_mut(dt, coords)
+            step_coords(dt, coords)
         }
         ClockwiseArc(arc) | AntiClockwiseArc(arc) => {
             step_interpolation_mut(dt, &mut arc.x);
@@ -1675,7 +1671,7 @@ fn step_path_mut(dt: Duration, cmd: &mut PathCommand) {
 }
 #[allow(clippy::too_many_lines)]
 
-fn step_path_og(dt: Duration, cmd: PathCommandOG) -> PathCommandOG {
+fn step_path_og(dt: &Duration, cmd: PathCommandOG) -> PathCommandOG {
     use PathCommandOG::{
         AntiClockwiseArc, ClockwiseArc, Close, Curve, CurveTo, Horizontal, HorizontalTo, Line,
         LineTo, Move, MoveTo, Quadratic, QuadraticTo, Smooth, SmoothQuadratic, SmoothQuadraticTo,
@@ -1787,8 +1783,9 @@ fn step_path_og(dt: Duration, cmd: PathCommandOG) -> PathCommandOG {
     }
 }
 
-fn step_interpolation_mut(dt: Duration, motion: &mut Motion) {
+fn step_interpolation_mut(dt: &Duration, motion: &mut Motion) {
     // let has_interpolation_override = motion.interpolation_override.is_some();
+
     let interpolation_to_use = motion
         .interpolation_override
         .clone()
@@ -1841,7 +1838,7 @@ fn step_interpolation_mut(dt: Duration, motion: &mut Motion) {
                 start,
             } = easing;
 
-            let new_progress = (progress + dt.div_duration_f64(duration))
+            let new_progress = (progress + (*dt).div_duration_f64(duration))
                 .into_inner()
                 .min(1.);
             // let eased = ease(new_progress);
@@ -1857,7 +1854,7 @@ fn step_interpolation_mut(dt: Duration, motion: &mut Motion) {
                         .round()
                         .to_int_unchecked()
                 })
-                .div_duration_f64(dt) as Precision
+                .div_duration_f64(*dt) as Precision
             };
 
             motion.position = NotNan::new(new_pos).unwrap();
@@ -1876,7 +1873,7 @@ fn step_interpolation_mut(dt: Duration, motion: &mut Motion) {
     }
 }
 
-fn step_interpolation_og(dt: Duration, mut motion: Motion) -> Motion {
+fn step_interpolation_og(dt: &Duration, mut motion: Motion) -> Motion {
     let has_interpolation_override = motion.interpolation_override.is_some();
     let interpolation_to_use = motion
         .interpolation_override
@@ -1945,7 +1942,7 @@ fn step_interpolation_og(dt: Duration, mut motion: Motion) -> Motion {
                 start,
             } = easing;
 
-            let new_progress = (progress + dt.div_duration_f64(duration))
+            let new_progress = (progress + (*dt).div_duration_f64(duration))
                 .into_inner()
                 .min(1.);
             // let eased = ease(new_progress);
@@ -1961,7 +1958,7 @@ fn step_interpolation_og(dt: Duration, mut motion: Motion) -> Motion {
                         .round()
                         .to_int_unchecked()
                 })
-                .div_duration_f64(dt) as Precision
+                .div_duration_f64(*dt) as Precision
             };
 
             motion.position = NotNan::new(new_pos).unwrap();
