@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2022-01-28 12:32:20
+ * @LastEditTime: 2022-01-29 11:46:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -167,10 +167,12 @@ pub fn ame_initd_benchmark(c: &mut Criterion) {
         let sv_now = global_clock();
 
         let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![opacity(1.)]);
+
         a.replace([loop_am([
             to(smallvec![opacity(0.)]),
             to(smallvec![opacity(1.)]),
         ])]);
+
         b.iter(|| {
             sv_now.set_with(|t| {
                 (*t).checked_add(Duration::from_millis(16))
@@ -183,10 +185,12 @@ pub fn ame_initd_benchmark(c: &mut Criterion) {
     group.bench_function("animationE-og-initd-get", |b| {
         let sv_now = global_clock();
         let a: AnimationEOG<Message> = AnimationEOG::new_in_topo(into_vector![opacity_og(1.)]);
+
         a.replace_og(vector![loop_am_og(vector![
             to_og(vector![emg_animation::opacity_og(0.)]),
             to_og(vector![emg_animation::opacity_og(1.)])
         ])]);
+
         b.iter(|| {
             sv_now.set_with(|t| {
                 (*t).checked_add(Duration::from_millis(16))
@@ -197,6 +201,73 @@ pub fn ame_initd_benchmark(c: &mut Criterion) {
     group.finish();
 }
 
+pub fn ame_new_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("animationE-initd-new");
+
+    group
+        .significance_level(0.1)
+        .warm_up_time(Duration::from_secs(6))
+        .sample_size(500)
+        .measurement_time(Duration::from_secs(10));
+
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    group.bench_function("animationE-initd-get", |b| {
+        let sv_now = global_clock();
+
+        let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![opacity(1.)]);
+
+        a.replace([loop_am([
+            to(smallvec![opacity(0.)]),
+            to(smallvec![opacity(1.)]),
+        ])]);
+
+        b.iter(|| {
+            sv_now.set_with(|t| {
+                (*t).checked_add(Duration::from_millis(16))
+                    .unwrap_or(Duration::ZERO)
+            });
+            a.get_position(0);
+        })
+    });
+}
+pub fn ame_old_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("animationE-initd-old");
+
+    group
+        .significance_level(0.1)
+        .warm_up_time(Duration::from_secs(6))
+        .sample_size(500)
+        .measurement_time(Duration::from_secs(10));
+
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    // ────────────────────────────────────────────────────────────────────────────────
+    group.bench_function("animationE-og-initd-get", |b| {
+        let sv_now = global_clock();
+        let a: AnimationEOG<Message> = AnimationEOG::new_in_topo(into_vector![opacity_og(1.)]);
+
+        a.replace_og(vector![loop_am_og(vector![
+            to_og(vector![emg_animation::opacity_og(0.)]),
+            to_og(vector![emg_animation::opacity_og(1.)])
+        ])]);
+
+        b.iter(|| {
+            sv_now.set_with(|t| {
+                (*t).checked_add(Duration::from_millis(16))
+                    .unwrap_or(Duration::ZERO)
+            });
+            a.get_position(0);
+        })
+    });
+    group.finish();
+}
+
 // criterion_group!(benches, resolve_steps_benchmark);
-criterion_group!(benches, ame_initd_benchmark);
+criterion_group!(benches, ame_old_benchmark);
+// criterion_group!(benches, ame_new_benchmark);
 criterion_main!(benches);

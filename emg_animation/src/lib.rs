@@ -389,6 +389,7 @@ where
 {
     Step::Loop(steps.into())
 }
+#[must_use]
 pub fn loop_am_og<Message>(steps: Vector<StepOG<Message>>) -> StepOG<Message>
 where
     Message: Clone,

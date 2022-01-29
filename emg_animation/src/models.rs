@@ -998,7 +998,7 @@ pub fn resolve_steps<Message>(
         Some(current_step) => match current_step {
             Step::Wait(n) => {
                 if n.is_zero() {
-                    resolve_steps(current_style, steps, msgs, dt)
+                    resolve_steps(current_style, steps, msgs, dt);
                 } else {
                     steps.push_front(Step::Wait(n.saturating_sub(*dt)));
                 }
@@ -1078,16 +1078,13 @@ pub fn resolve_steps<Message>(
                 resolve_steps(current_style, steps, msgs, dt);
             }
             Step::Repeat(n, mut sub_steps) => {
-                if n == 0 {
-                    resolve_steps(current_style, steps, msgs, dt);
-                } else {
+                if n != 0 {
                     let old_steps = sub_steps.clone();
                     sub_steps.push_back(Step::Repeat(n - 1, old_steps));
                     sub_steps.append(steps);
                     *steps = sub_steps;
-
-                    resolve_steps(current_style, steps, msgs, dt);
                 }
+                resolve_steps(current_style, steps, msgs, dt);
             }
         },
     }
@@ -2258,6 +2255,7 @@ pub fn zip_properties_greedy_mut(
     //     println!("{}", x);
     // }
     // println!("---------------------------------------------------");
+    //FIXME !!!! 引起 顺序错误  不要改变 initial_props的顺序
     initial_props.sort_by(|left, right| left.name().cmp(&right.name()));
     new_target_props.sort_by(|left, right| left.name().cmp(&right.name()));
     // for x in initial_props.iter() {
@@ -2276,17 +2274,25 @@ pub fn zip_properties_greedy_mut(
     for current_a in initial_props.iter() {
         let a_name = current_a.name();
 
-        loop {
-            if let Some(current_b) = b_iter.peek() {
-                if current_b.name() < a_name {
-                    b_iter.next();
-                } else {
-                    break;
-                }
+        while let Some(current_b) = b_iter.peek() {
+            if current_b.name() < a_name {
+                b_iter.next();
             } else {
                 break;
             }
         }
+
+        // loop {
+        //     if let Some(current_b) = b_iter.peek() {
+        //         if current_b.name() < a_name {
+        //             b_iter.next();
+        //         } else {
+        //             break;
+        //         }
+        //     } else {
+        //         break;
+        //     }
+        // }
 
         if let Some(current_b) = b_iter.peek() {
             if current_b.name() == a_name {

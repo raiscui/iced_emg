@@ -1,6 +1,6 @@
 ---
 source: emg_layout/src/animation.rs
-assertion_line: 1179
+assertion_line: 1180
 expression: "&a"
 
 ---

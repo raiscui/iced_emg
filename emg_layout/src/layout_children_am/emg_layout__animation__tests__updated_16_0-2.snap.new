@@ -1,6 +1,6 @@
 ---
 source: emg_layout/src/animation.rs
-assertion_line: 1179
+assertion_line: 1629
 expression: "&a"
 
 ---
@@ -14,7 +14,7 @@ AnimationEdge {
                         [
                             Prop(
                                 TypeName(
-                                    "opacity",
+                                    "CssWidth",
                                 ),
                                 Motion {
                                     position: NotNan(
@@ -34,7 +34,7 @@ AnimationEdge {
                                             26.0,
                                         ),
                                     },
-                                    unit: Empty,
+                                    unit: Px,
                                     interpolation_override: None,
                                 },
                             ),
@@ -51,14 +51,14 @@ AnimationEdge {
                 StateVar(
                     Prop(
                         TypeName(
-                            "opacity",
+                            "CssWidth",
                         ),
                         Motion {
                             position: NotNan(
-                                0.8790954727392676,
+                                94.32537399252,
                             ),
                             velocity: NotNan(
-                                -4.334475455337199,
+                                -280.48878,
                             ),
                             target: NotNan(
                                 0.0,
@@ -71,7 +71,7 @@ AnimationEdge {
                                     26.0,
                                 ),
                             },
-                            unit: Empty,
+                            unit: Px,
                             interpolation_override: None,
                         },
                     ),
@@ -81,8 +81,8 @@ AnimationEdge {
     },
     timing: StateAnchor(
         Timing {
-            current: 33ms,
-            dt: 17ms,
+            current: 16ms,
+            dt: 16.666ms,
         },
     ),
     running: StateAnchor(

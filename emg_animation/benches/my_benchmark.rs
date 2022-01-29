@@ -1,11 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2022-01-25 14:32:09
+ * @LastEditTime: 2022-01-29 11:39:47
  * @LastEditors: Rais
  * @Description:
  */
 
+#[derive(Debug, Clone, PartialEq)]
+enum Message {
+    A,
+}
 mod need {
 
     use emg_animation::models::PropertyOG;
@@ -134,11 +138,11 @@ mod need {
         res_props
     }
 }
-use std::{collections::VecDeque, time::Duration};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc, time::Duration};
 const PROP_SIZE: usize = 3;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 use emg_animation::{
-    fill, init_motion,
+    fill, init_motion, loop_am, loop_am_og,
     models::{
         color::{fill_sm, Color},
         resolve_steps, resolve_steps_og, step, step_og, zip_properties_greedy_mut,
@@ -241,7 +245,7 @@ pub fn step_benchmark(c: &mut Criterion) {
             );
             let vp = vector![p];
 
-            step_og(Duration::from_millis(black_box(16)), vp);
+            step_og(&Duration::from_millis(black_box(16)), vp);
         })
     });
     // group.bench_function("step2-mut", |b| {
@@ -261,7 +265,7 @@ pub fn step_benchmark(c: &mut Criterion) {
         );
         let mut vp: SmallVec<[Property; PROP_SIZE]> = smallvec![p];
         b.iter(|| {
-            step(Duration::from_millis(black_box(16)), &mut vp);
+            step(&Duration::from_millis(black_box(16)), &mut vp);
         })
     });
 
@@ -387,64 +391,38 @@ pub fn resolve_steps_benchmark(c: &mut Criterion) {
         .sample_size(1000)
         .measurement_time(Duration::from_secs(10));
 
-    group.bench_function("resolve_steps-og-1->0", |b| {
-        b.iter(|| {
-            let mut initial_props: Vector<PropertyOG> = into_vector![width(px(black_box(1)))];
-            let mut steps: Vector<StepOG<i32>> =
-                vector![to_og(into_vector![width(px(black_box(0)))])];
-            for i in 0..300 {
-                let (p, _, s) =
-                    resolve_steps_og(initial_props, steps, Duration::from_millis(black_box(16)));
-
-                if s.len() == 0 {
-                    break;
-                } else {
-                    initial_props = p;
-                    steps = s;
-                }
-            }
-        })
-    });
-    group.bench_function("resolve_steps-mut-1->0", |b| {
-        b.iter(|| {
-            let mut props2: SmallVec<[Property; PROP_SIZE]> = into_smvec![width(px(black_box(1)))];
-            let mut steps2: VecDeque<Step<i32>> = [to(into_smvec![width(px(black_box(0)))])].into();
-            let mut msg = MsgBackIsNew::default();
-
-            for i in 0..300 {
-                resolve_steps(
-                    &mut props2,
-                    &mut steps2,
-                    &mut msg,
-                    Duration::from_millis(black_box(16)),
-                );
-                if steps2.len() == 0 {
-                    break;
-                }
-            }
-        })
-    });
     group.bench_function("resolve_steps-og-once", |b| {
-        b.iter(|| {
-            let initial_props: Vector<PropertyOG> = into_vector![width(px(black_box(1)))];
-            let steps: Vector<StepOG<i32>> = vector![to_og(into_vector![width(px(black_box(0)))])];
-            let (p, _, s) =
-                resolve_steps_og(initial_props, steps, Duration::from_millis(black_box(16)));
-        })
+        let initial_props: Vector<PropertyOG> = into_vector![width(px(black_box(1)))];
+        let steps: Vector<StepOG<Message>> = vector![to_og(into_vector![width(px(black_box(0)))])];
+        b.iter_batched(
+            || (initial_props.clone(), steps.clone()),
+            |(i, s)| {
+                let (ps, _, ss) = resolve_steps_og(i, s, &Duration::from_millis(black_box(16)));
+            },
+            BatchSize::SmallInput,
+        )
     });
     group.bench_function("resolve_steps-mut-once", |b| {
-        b.iter(|| {
-            let mut props2: SmallVec<[Property; PROP_SIZE]> = into_smvec![width(px(black_box(1)))];
-            let mut steps2: VecDeque<Step<i32>> = [to(into_smvec![width(px(black_box(0)))])].into();
-            let mut msg = MsgBackIsNew::default();
+        let props2: SmallVec<[Property; PROP_SIZE]> = into_smvec![width(px(black_box(1)))];
+        let steps2: VecDeque<Step<Message>> = [loop_am([
+            to(into_smvec![width(px(black_box(0)))]),
+            to(into_smvec![width(px(black_box(1)))]),
+        ])]
+        .into();
 
-            resolve_steps(
-                &mut props2,
-                &mut steps2,
-                &mut msg,
-                Duration::from_millis(black_box(16)),
-            );
-        })
+        b.iter_batched(
+            || {
+                (
+                    props2.clone(),
+                    steps2.clone(),
+                    MsgBackIsNew::<Message>::default(),
+                )
+            },
+            |(mut p, mut i, mut m)| {
+                resolve_steps(&mut p, &mut i, &mut m, &Duration::from_millis(16));
+            },
+            BatchSize::SmallInput,
+        )
     });
 
     group.finish();
@@ -453,9 +431,9 @@ pub fn resolve_steps_benchmark(c: &mut Criterion) {
 // criterion_group!(benches, resolve_steps_benchmark);
 criterion_group!(
     benches,
-    clone_benchmark,
-    step_benchmark,
-    zip_properties_benchmark,
+    // clone_benchmark,
+    // step_benchmark,
+    // zip_properties_benchmark,
     resolve_steps_benchmark
 );
 criterion_main!(benches);
