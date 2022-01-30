@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2022-01-27 11:27:11
+ * @LastEditTime: 2022-01-30 19:32:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -406,7 +406,7 @@ mod refresh_test {
     use crate::old::EPath;
     use crate::old::GraphEdgesDict;
     use crate::old::{AnimationEOG, EmgEdgeItem};
-    use crate::{anima_og, old::animation::global_clock};
+    use crate::{anima_og, global_clock};
 
     #[allow(dead_code)]
     #[derive(Debug, Clone, PartialEq)]

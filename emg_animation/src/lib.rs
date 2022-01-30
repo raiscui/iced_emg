@@ -405,6 +405,17 @@ where
     Step::To(props)
 }
 
+#[macro_export]
+macro_rules! to {
+
+    ( $( $element:expr ) , * ) => {
+        {
+            $crate::models::Step::To( emg_core::smallvec![ $( $element ),*])
+
+        }
+    };
+}
+
 #[must_use]
 pub fn to_og<Message>(props: Vector<PropertyOG>) -> StepOG<Message>
 where

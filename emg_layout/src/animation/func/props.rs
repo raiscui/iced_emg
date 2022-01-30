@@ -11,7 +11,7 @@ pub fn warn_for_double_listed_properties(props: &SmallVec<[StateVarProperty; PRO
         .iter()
         .filter_map(|prop| {
             prop.get_with(|p| {
-                if is_transformation(&p) {
+                if is_transformation(p) {
                     None
                 } else {
                     Some(p.name())

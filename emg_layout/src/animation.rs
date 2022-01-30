@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-01-30 18:28:53
+ * @LastEditTime: 2022-01-30 19:29:59
  * @LastEditors: Rais
  * @Description:
  */
@@ -439,7 +439,8 @@ where
 
                     //     None => steps.clone(),
                     // };
-                    drop(ready_interruption);
+                    //--------
+                    //drop(ready_interruption);
                     let mut sent_messages = MsgBackIsNew::default();
                     resolve_steps(
                         &mut new_props,

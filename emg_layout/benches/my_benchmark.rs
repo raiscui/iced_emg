@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2022-01-30 18:29:29
+ * @LastEditTime: 2022-01-30 19:26:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -168,10 +168,7 @@ pub fn ame_initd_benchmark(c: &mut Criterion) {
 
         let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![opacity(1.)]);
 
-        a.replace([loop_am([
-            to(smallvec![opacity(0.)]),
-            to(smallvec![opacity(1.)]),
-        ])]);
+        a.replace([loop_am([to![opacity(0.)], to![opacity(1.)]])]);
 
         b.iter(|| {
             sv_now.set_with(|t| {
@@ -219,10 +216,7 @@ pub fn ame_new_benchmark(c: &mut Criterion) {
 
         let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![opacity(1.)]);
 
-        a.replace([loop_am([
-            to(smallvec![opacity(0.)]),
-            to(smallvec![opacity(1.)]),
-        ])]);
+        a.replace([loop_am([to![opacity(0.)], to![opacity(1.)]])]);
 
         b.iter(|| {
             sv_now.set_with(|t| {
