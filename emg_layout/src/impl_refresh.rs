@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2022-01-27 11:30:50
+ * @LastEditTime: 2022-01-30 18:27:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -403,7 +403,7 @@ mod refresh_test {
     #[allow(unused)]
     use styles::{pc, width};
 
-    use crate::animation::global_clock;
+    use crate::global_clock;
     use crate::EPath;
     use crate::GraphEdgesDict;
     use crate::{anima, AnimationE, EmgEdgeItem};

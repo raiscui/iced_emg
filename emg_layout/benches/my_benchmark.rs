@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2022-01-29 11:46:15
+ * @LastEditTime: 2022-01-30 18:29:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,7 @@ use emg_animation::{
     opacity, opacity_og, replace, replace_og, style, styleOG, to, to_og, AmState, AmStateOG, Tick,
 };
 use emg_core::{into_smvec, into_vector, smallvec, tiny_vec, vector, IdStr, SmallVec, Vector};
-use emg_layout::{animation::global_clock, old::AnimationEOG, AnimationE};
+use emg_layout::{global_clock, old::AnimationEOG, AnimationE};
 use emg_state::{topo, CloneStateVar};
 use seed_styles::{height, px, width, Unit};
 
@@ -267,7 +267,7 @@ pub fn ame_old_benchmark(c: &mut Criterion) {
     group.finish();
 }
 
-// criterion_group!(benches, resolve_steps_benchmark);
-criterion_group!(benches, ame_old_benchmark);
+criterion_group!(benches, ame_initd_benchmark);
+// criterion_group!(benches, ame_old_benchmark);
 // criterion_group!(benches, ame_new_benchmark);
 criterion_main!(benches);

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-01-29 11:44:33
+ * @LastEditTime: 2022-01-30 18:28:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -27,7 +27,11 @@ use emg_animation::{
 };
 use tracing::{debug, trace};
 
-use crate::old::{EPath, EmgEdgeItem};
+use crate::{
+    global_anima_running_add, global_clock,
+    old::{EPath, EmgEdgeItem},
+    G_CLOCK,
+};
 
 use self::{define::StateVarPropertyOG, func::props::warn_for_double_listed_properties};
 
@@ -70,44 +74,6 @@ where
             props,
         }
     }
-}
-thread_local! {
-    static G_CLOCK: StateVar<Duration> = use_state(Duration::ZERO);
-}
-
-thread_local! {
-    static G_ANIMA_RUNNING_STORE: StateVar<Vector<Anchor<bool>>> = use_state(vector![]);
-}
-thread_local! {
-    static G_AM_RUNING: StateAnchor<bool> = global_anima_running_build();
-}
-pub fn global_anima_running_add(running: &StateAnchor<bool>) {
-    G_ANIMA_RUNNING_STORE.with(|sv| sv.update(|v| v.push_back(running.get_anchor())));
-}
-
-#[must_use]
-pub fn global_anima_running_sa() -> StateAnchor<bool> {
-    G_AM_RUNING.with(std::clone::Clone::clone)
-}
-#[must_use]
-pub fn global_anima_running() -> bool {
-    G_AM_RUNING.with(emg_state::CloneStateAnchor::get)
-}
-#[must_use]
-pub fn global_anima_running_build() -> StateAnchor<bool> {
-    let watch: Anchor<Vector<bool>> = G_ANIMA_RUNNING_STORE.with(|am| {
-        am.watch().anchor().then(|v: &Vector<Anchor<bool>>| {
-            v.clone().into_iter().collect::<Anchor<Vector<bool>>>()
-        })
-    });
-    watch.map(|list: &Vector<bool>| list.contains(&true)).into()
-}
-#[must_use]
-pub fn global_clock() -> StateVar<Duration> {
-    G_CLOCK.with(|c| *c)
-}
-pub fn global_clock_set(now: Duration) {
-    G_CLOCK.with(|c| c.set(now));
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
