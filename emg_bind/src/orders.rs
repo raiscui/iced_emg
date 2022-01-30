@@ -2,16 +2,13 @@ use crate::{window::observe_size, Orders};
 use emg_animation::Tick;
 // use fxhash::FxBuildHasher;
 use emg_hasher::CustomHasher;
-use emg_layout::{
-    animation::{global_anima_running_sa, global_clock},
-    global_height, global_width,
-};
+use emg_layout::{global_anima_running_sa, global_clock, global_height, global_width};
 use emg_state::{state_store, CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2022-01-10 12:43:17
+ * @LastEditTime: 2022-01-30 20:36:06
  * @LastEditors: Rais
  * @Description:
  */

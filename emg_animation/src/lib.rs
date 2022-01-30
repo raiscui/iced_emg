@@ -410,7 +410,7 @@ macro_rules! to {
 
     ( $( $element:expr ) , * ) => {
         {
-            $crate::models::Step::To( emg_core::smallvec![ $( $element ),*])
+            $crate::models::Step::To( emg_core::smallvec![ $( $element.into() ),*])
 
         }
     };
