@@ -229,7 +229,7 @@ where
     initial_state(props)
 }
 #[must_use]
-pub fn styleOG<Message>(props: Vector<PropertyOG>) -> AnimationOG<Message>
+pub fn style_og<Message>(props: Vector<PropertyOG>) -> AnimationOG<Message>
 where
     Message: Clone,
 {
@@ -499,7 +499,7 @@ mod tests {
     use crate::{
         extract_initial_wait_og, fill, interrupt_og,
         models::{color::Color, opacity::opacity_og, update_animation_og, StepOG},
-        styleOG, to_og, AmStateOG, Tick,
+        style_og, to_og, AmStateOG, Tick,
     };
 
     #[derive(Clone, Debug)]
@@ -509,7 +509,7 @@ mod tests {
     }
     #[test]
     fn it_works() {
-        let styles: AmStateOG<Message> = styleOG(vector![fill(Color::new(0, 0, 0, 1.))]);
+        let styles: AmStateOG<Message> = style_og(vector![fill(Color::new(0, 0, 0, 1.))]);
         println!("{:#?}", styles);
     }
     #[test]
@@ -534,7 +534,7 @@ mod tests {
     }
     #[test]
     fn test_update_animation() {
-        let mut am_state: AmStateOG<Message> = styleOG(vector![opacity_og(1.)]);
+        let mut am_state: AmStateOG<Message> = style_og(vector![opacity_og(1.)]);
         insta::assert_debug_snapshot!("init", &am_state);
 
         interrupt_og(
@@ -567,7 +567,7 @@ mod tests {
     }
     #[test]
     fn test_interrupt() {
-        let mut am_state: AmStateOG<Message> = styleOG(vector![opacity_og(1.)]);
+        let mut am_state: AmStateOG<Message> = style_og(vector![opacity_og(1.)]);
         let interrupt1 = interrupt_og(
             vector![
                 to_og(vector![opacity_og(0.)]),

@@ -17,7 +17,7 @@ use emg_animation::{
         zip_properties_greedy_mut, zip_properties_greedy_og, Animation, MsgBackIsNew, PropName,
         Property, PropertyOG, Step, StepOG,
     },
-    opacity, opacity_og, replace, replace_og, style, styleOG, to, to_og, AmState, AmStateOG, Tick,
+    opacity, opacity_og, replace, replace_og, style, style_og, to, to_og, AmState, AmStateOG, Tick,
 };
 use emg_core::{into_smvec, into_vector, smallvec, tiny_vec, vector, IdStr, SmallVec, Vector};
 use emg_layout::{global_clock, old::AnimationEOG, AnimationE};
@@ -59,7 +59,7 @@ pub fn ame_benchmark(c: &mut Criterion) {
     });
     group.bench_function("animation-og-get", |b| {
         b.iter(|| {
-            let mut am_state: AmStateOG<Message> = styleOG(vector![opacity_og(1.)]);
+            let mut am_state: AmStateOG<Message> = style_og(vector![opacity_og(1.)]);
             let mut now = Duration::from_millis(10000);
 
             interrupt_og(
@@ -148,7 +148,7 @@ pub fn ame_initd_benchmark(c: &mut Criterion) {
         })
     });
     group.bench_function("animation-og-initd-get", |b| {
-        let mut am_state: AmStateOG<Message> = styleOG(vector![opacity_og(1.)]);
+        let mut am_state: AmStateOG<Message> = style_og(vector![opacity_og(1.)]);
         let mut now = Duration::from_millis(10000);
 
         replace_og(

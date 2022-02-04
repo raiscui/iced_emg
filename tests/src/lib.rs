@@ -10,7 +10,7 @@ mod test {
         time::Duration,
     };
 
-    use emg_animation::{interrupt_og, opacity_og, styleOG, to_og, to};
+    use emg_animation::{interrupt_og, opacity_og, style_og, to_og, to};
     use emg_bind::{
         better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
         button, edge_index_no_source, emg_msg,
