@@ -339,7 +339,7 @@ where
 {
     /// # Errors
     ///
-    /// Will return `Err` if `self` does not is 'Step::Wait(Duration)'
+    /// Will return `Err` if `self` does not is `Step::Wait(Duration)`
     /// permission to read it.
     pub fn try_into_wait(self) -> Result<Duration, Self> {
         if let Self::Wait(v) = self {
@@ -918,7 +918,7 @@ mod resolve_steps_test {
         for i in 0..50 {
             println!("== {}", i);
 
-            let (p, m, s) = resolve_steps_og(initial_props, steps, &Duration::from_millis(16));
+            let (p, _m, s) = resolve_steps_og(initial_props, steps, &Duration::from_millis(16));
             resolve_steps(
                 &mut props2,
                 &mut steps2,

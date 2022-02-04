@@ -8,8 +8,9 @@
 // #![feature(array_map)]
 #![feature(box_patterns)]
 // #![feature(adt_const_params)]
-#![feature(generic_const_exprs)]
+// #![feature(generic_const_exprs)]
 #![feature(slice_take)]
+#![allow(clippy::used_underscore_binding)]
 
 pub mod func;
 pub mod models;

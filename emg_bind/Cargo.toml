@@ -61,8 +61,8 @@ indexmap = "1.8.0"
 emg_core = { path = "../emg_core" }
 emg_hasher = { path = "../emg_hasher" }
 
-tinyvec = { version = "1.5.1", features = ["alloc"] }
-smallvec = { version = "1.8.0", features = ["const_generics", "union"] }
+# tinyvec = { version = "1.5.1", features = ["alloc"] }
+# smallvec = { version = "1.8.0", features = ["const_generics", "union"] }
 
 # emg_debuggable = { path = "../emg_debuggable" }
 # stream_throttle ={ version = "0.4.0",default-features = false, features = ["timer-futures-timer"], path = "../../stream-throttle"}
