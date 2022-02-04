@@ -14,9 +14,10 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 ordered-float = "2"
 derive_more = "0.99"
-# im-rc = "15.0.0"
+im-rc = "15.0.0"
+# imbl = { path = "../../imbl" }
 smol_str = "0.1.21"
 # compact_str = "0.2.0"
-imbl = { path = "../../imbl" }
 tinyvec = { version = "1.5.1", features = ["alloc"] }
-smallvec = { version = "1.8.0", features = ["const_generics", "union"] }
+# smallvec = { version = "1.8.0", features = ["const_generics", "union"] }
+smallvec = { version = "1.8.0" }
