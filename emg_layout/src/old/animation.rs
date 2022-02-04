@@ -594,7 +594,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
     use emg_animation::models::PropertyOG;
-    use emg_animation::{interrupt_og, opacity_og, styleOG, to_og, Tick};
+    use emg_animation::{interrupt_og, opacity_og, style_og, to_og, Tick};
     use emg_core::{into_vector, IdStr};
     use emg_core::{vector, Vector};
     use emg_state::{
@@ -672,13 +672,13 @@ mod tests {
     #[bench]
     fn bench_nom_am(b: &mut Bencher) {
         b.iter(|| {
-            let mut am = styleOG::<Message>(into_vector![width(px(1))]);
+            let mut am = style_og::<Message>(into_vector![width(px(1))]);
             black_box(nom_am_run(&mut am));
         });
     }
     #[test]
     fn nom_am() {
-        let mut am = styleOG::<Message>(into_vector![width(px(1))]);
+        let mut am = style_og::<Message>(into_vector![width(px(1))]);
         nom_am_run(&mut am);
     }
 
