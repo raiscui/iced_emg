@@ -485,7 +485,7 @@ fn map_path_motion(func: &impl Fn(&mut Motion), cmd: &mut PathCommand) {
     let map_coords = |coords: &mut SmallVec<[[Motion; DIM2]; MOTION_SIZE]>| {
         coords
             .iter_mut()
-            .for_each(move |m| m.iter_mut().for_each(func))
+            .for_each(move |m| m.iter_mut().for_each(func));
     };
     // use arraymap::ArrayMap;
 
@@ -493,7 +493,7 @@ fn map_path_motion(func: &impl Fn(&mut Motion), cmd: &mut PathCommand) {
         Move(m) | MoveTo(m) | Line(m) | LineTo(m) => m.iter_mut().for_each(func),
 
         Horizontal(motion) | HorizontalTo(motion) | Vertical(motion) | VerticalTo(motion) => {
-            func(motion)
+            func(motion);
         }
 
         Curve(CubicCurveMotion {
@@ -896,7 +896,7 @@ impl<Message> DerefMut for MsgBackIsNew<Message> {
 #[cfg(test)]
 mod resolve_steps_test {
     use std::{
-        collections::{vec_deque, VecDeque},
+        collections::{VecDeque},
         time::Duration,
     };
 
@@ -956,7 +956,7 @@ mod resolve_steps_test {
         for i in 0..50 {
             println!("== {}", i);
 
-            let (p, m, s) = resolve_steps_og(initial_props, steps, &Duration::from_millis(16));
+            let (p, _m, s) = resolve_steps_og(initial_props, steps, &Duration::from_millis(16));
             resolve_steps(
                 &mut props2,
                 &mut steps2,
