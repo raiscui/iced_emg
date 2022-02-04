@@ -10,7 +10,7 @@ pub use smol_str::SmolStr as IdStr;
 use derive_more::Display;
 use derive_more::From;
 // pub use im_rc;
-pub use imbl as im_rc;
+// pub use imbl;
 pub use imbl::vector;
 pub use imbl::Vector;
 use ordered_float::NotNan;

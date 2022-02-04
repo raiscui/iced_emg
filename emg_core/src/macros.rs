@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 11:58:58
- * @LastEditTime: 2022-01-24 09:27:06
+ * @LastEditTime: 2022-01-30 21:25:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,14 +9,14 @@
 macro_rules! into_vector {
     (  $element:expr  ) => {
         {
-             $crate::im_rc::Vector::unit($element.into())
+             $crate::Vector::unit($element.into())
 
 
         }
     };
     ( $( $element:expr ) , + ) => {
         {
-            let mut v = $crate::im_rc::Vector::new();
+            let mut v = $crate::Vector::new();
 
             $(
                 v.push_back($element.into());

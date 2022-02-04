@@ -892,7 +892,7 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use GElement::*;
             #[allow(unused)]
-            use emg_core::{TypeCheck,im_rc::Vector,IdStr};
+            use emg_core::{TypeCheck,Vector,IdStr};
             // #[allow(unused)]
             // pub use emg_bind::serde_closure;
 
