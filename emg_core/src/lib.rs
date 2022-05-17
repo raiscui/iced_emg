@@ -11,7 +11,7 @@ pub use crate::SVec::{smallvec, SmallVec};
 pub use ::smallvec as SVec;
 pub use im_rc::{vector, Vector};
 use ordered_float::NotNan;
-pub use tinyvec::{tiny_vec, TinyVec};
+// pub use tinyvec::{tiny_vec, TinyVec};
 // ────────────────────────────────────────────────────────────────────────────────
 pub trait TypeCheck {
     fn static_type_name() -> TypeName;

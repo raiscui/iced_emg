@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2022-01-30 19:26:44
+ * @LastEditTime: 2022-05-16 15:34:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,7 @@ use emg_animation::{
     },
     opacity, opacity_og, replace, replace_og, style, style_og, to, to_og, AmState, AmStateOG, Tick,
 };
-use emg_core::{into_smvec, into_vector, smallvec, tiny_vec, vector, IdStr, SmallVec, Vector};
+use emg_core::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
 use emg_layout::{global_clock, old::AnimationEOG, AnimationE};
 use emg_state::{topo, CloneStateVar};
 use seed_styles::{height, px, width, Unit};

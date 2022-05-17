@@ -341,6 +341,7 @@ where
     ///
     /// Will return `Err` if `self` does not is `Step::Wait(Duration)`
     /// permission to read it.
+    #[allow(clippy::missing_const_for_fn)]
     pub fn try_into_wait(self) -> Result<Duration, Self> {
         if let Self::Wait(v) = self {
             Ok(v)
@@ -518,7 +519,7 @@ fn map_path_motion(func: &impl Fn(&mut Motion), cmd: &mut PathCommand) {
         }
 
         SmoothQuadratic(coords) | SmoothQuadraticTo(coords) | Smooth(coords) | SmoothTo(coords) => {
-            map_coords(coords)
+            map_coords(coords);
         }
         // SmoothQuadratic <| map_coords coords
         ClockwiseArc(arc) | AntiClockwiseArc(arc) => {
@@ -642,12 +643,12 @@ fn map_path_motion_og(func: &dyn Fn(Motion) -> Motion, cmd: PathCommandOG) -> Pa
 }
 
 // mapToMotion : (Motion -> Motion) -> Property -> Property
-pub fn map_to_motion(ref func: impl Fn(&mut Motion), prop: &mut Property) {
+pub fn map_to_motion(func: &impl Fn(&mut Motion), prop: &mut Property) {
     use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     match prop {
         Exact(..) => (),
 
-        Color(_, m) => m.iter_mut().for_each(func),
+        Color(_, m) | Prop4(_, m) => m.iter_mut().for_each(func),
 
         Shadow(_, _, box shadow) => {
             let ShadowMotion {
@@ -670,16 +671,14 @@ pub fn map_to_motion(ref func: impl Fn(&mut Motion), prop: &mut Property) {
             func(blue);
             func(alpha);
         }
-        Prop(_, m) => func(m),
+        Prop(_, m) | Angle(_, m) => func(m),
 
         Prop2(_, m) => m.iter_mut().for_each(func),
 
         Prop3(_, m) => m.iter_mut().for_each(func),
 
-        Prop4(_, m) => m.iter_mut().for_each(func),
-
-        Angle(_, m) => func(m),
-
+        // Prop4(_, m) => m.iter_mut().for_each(func),
+        // Angle(_, m) => func(m),
         Points(ms) => ms.iter_mut().for_each(|m| m.iter_mut().for_each(func)),
 
         Path(cmds) => cmds
@@ -688,7 +687,7 @@ pub fn map_to_motion(ref func: impl Fn(&mut Motion), prop: &mut Property) {
     }
 }
 
-pub fn map_to_motion_og(ref func: impl Fn(Motion) -> Motion, prop: PropertyOG) -> PropertyOG {
+pub fn map_to_motion_og(func: &impl Fn(Motion) -> Motion, prop: PropertyOG) -> PropertyOG {
     use PropertyOG::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     match prop {
         Exact(..) => prop,
@@ -784,11 +783,11 @@ pub fn update_animation<Message: std::clone::Clone + std::fmt::Debug>(
         Some((_ /* is zero */, interrupt_steps)) => {
             new_props.iter_mut().for_each(|prop| {
                 map_to_motion(
-                    |m: &mut Motion| {
+                    &|m: &mut Motion| {
                         m.interpolation_override = None;
                     },
                     prop,
-                )
+                );
             });
             interrupt_steps
         }
@@ -895,10 +894,7 @@ impl<Message> DerefMut for MsgBackIsNew<Message> {
 
 #[cfg(test)]
 mod resolve_steps_test {
-    use std::{
-        collections::{VecDeque},
-        time::Duration,
-    };
+    use std::{collections::VecDeque, time::Duration};
 
     use emg_core::{into_smvec, into_vector, vector, SmallVec, Vector};
     use seed_styles::{px, width};
@@ -984,7 +980,9 @@ mod resolve_steps_test {
         }
     }
 }
-
+/// # Panics
+///
+/// Will panic if `Step::ToWith` done
 pub fn resolve_steps<Message>(
     current_style: &mut SmallVec<[Property; PROP_SIZE]>,
     steps: &mut VecDeque<Step<Message>>,
@@ -1019,14 +1017,14 @@ pub fn resolve_steps<Message>(
                 // assert_eq!(current_style, &mut x);
                 let done = test_current_style.iter().all(is_done_sm);
 
-                if !done {
+                if done {
+                    warn!("step::to , done!");
+                } else {
                     warn!("not done yet");
                     steps.push_front(Step::_Step);
                     start_towards_mut(false, current_style, target);
 
                     resolve_steps(current_style, steps, msgs, dt);
-                } else {
-                    warn!("step::to , done!");
                 }
             }
             Step::ToWith(target) => {
@@ -1034,7 +1032,9 @@ pub fn resolve_steps<Message>(
                 step(&Duration::ZERO, current_style);
                 let done = current_style.iter().all(is_done_sm);
 
-                if !done {
+                if done {
+                    todo!("not implemented");
+                } else {
                     steps.push_front(Step::_Step);
                     // TODO ("check start_towards(true ");
                     start_towards_mut(true, current_style, target);
@@ -1043,6 +1043,7 @@ pub fn resolve_steps<Message>(
                     resolve_steps(current_style, steps, msgs, dt);
                 }
 
+                //
                 // if already_there(current_style.clone(), target.clone()) {
                 //     (current_style, vector![], steps)
                 // } else {
@@ -1060,7 +1061,7 @@ pub fn resolve_steps<Message>(
                 if current_style.iter().all(is_done_sm) {
                     current_style.iter_mut().for_each(|prop| {
                         map_to_motion(
-                            |m: &mut Motion| {
+                            &|m: &mut Motion| {
                                 m.interpolation_override = None;
                             },
                             prop,
@@ -1354,8 +1355,8 @@ fn is_done_sm(property: &Property) -> bool {
         Prop2(_, m) => m.iter().all(motion_is_done),
         Prop3(_, m) => m.iter().all(motion_is_done),
 
-        Prop4(_, m) => m.iter().all(motion_is_done),
-        Color(_, m) => m.iter().all(motion_is_done),
+        Prop4(_, m) | Color(_, m) => m.iter().all(motion_is_done),
+        // Color(_, m) => m.iter().all(motion_is_done),
         Shadow(_, _, box shadow) => [
             &shadow.offset_x,
             &shadow.offset_y,
@@ -1538,6 +1539,7 @@ pub fn step(dt: &Duration, props: &mut SmallVec<[Property; PROP_SIZE]>) {
         });
 }
 
+#[must_use]
 pub fn step_og(dt: &Duration, props: Vector<PropertyOG>) -> Vector<PropertyOG> {
     use PropertyOG::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     props
@@ -1597,7 +1599,7 @@ pub fn step_og(dt: &Duration, props: Vector<PropertyOG>) -> Vector<PropertyOG> {
 fn step_coords(dt: &Duration, coords: &mut SmallVec<[[Motion; DIM2]; MOTION_SIZE]>) {
     coords.iter_mut().for_each(|[x, y]| {
         step_interpolation_mut(dt, x);
-        step_interpolation_mut(dt, y)
+        step_interpolation_mut(dt, y);
     });
 }
 
@@ -1619,7 +1621,7 @@ fn step_path(dt: &Duration, cmd: &mut PathCommand) {
             .iter_mut()
             .for_each(|motion| step_interpolation_mut(dt, motion)),
         Horizontal(m) | HorizontalTo(m) | Vertical(m) | VerticalTo(m) => {
-            step_interpolation_mut(dt, m)
+            step_interpolation_mut(dt, m);
         }
         Curve(CubicCurveMotion {
             control1,
@@ -1653,7 +1655,7 @@ fn step_path(dt: &Duration, cmd: &mut PathCommand) {
         }
 
         SmoothQuadratic(coords) | SmoothQuadraticTo(coords) | Smooth(coords) | SmoothTo(coords) => {
-            step_coords(dt, coords)
+            step_coords(dt, coords);
         }
         ClockwiseArc(arc) | AntiClockwiseArc(arc) => {
             step_interpolation_mut(dt, &mut arc.x);
@@ -1819,7 +1821,7 @@ fn step_interpolation_mut(dt: &Duration, motion: &mut Motion) {
             let new_pos = new_velocity.mul_add(dt_sec, *motion.position);
 
             let dx = (motion.target - new_pos).abs();
-            if dx < position_error_margin(&motion) && new_velocity.abs() < VELOCITY_ERROR_MARGIN {
+            if dx < position_error_margin(motion) && new_velocity.abs() < VELOCITY_ERROR_MARGIN {
                 motion.position = motion.target;
                 motion.velocity = NotNan::default();
             } else {
@@ -1861,10 +1863,8 @@ fn step_interpolation_mut(dt: &Duration, motion: &mut Motion) {
                 if let Some(Interpolation::Easing(e)) = &mut motion.interpolation_override {
                     e.progress = NotNan::new(new_progress).unwrap();
                 }
-            } else {
-                if let Interpolation::Easing(e) = &mut motion.interpolation {
-                    e.progress = NotNan::new(new_progress).unwrap();
-                }
+            } else if let Interpolation::Easing(e) = &mut motion.interpolation {
+                e.progress = NotNan::new(new_progress).unwrap();
             }
         }
     }
@@ -2092,12 +2092,12 @@ fn start_towards_og(
 #[cfg(test)]
 mod tests_zip_all {
     use emg_core::{into_smvec, into_vector, SmallVec, Vector};
-    use seed_styles::{height, px, width};
 
     use crate::{
         models::{zip_properties_greedy_og, Property},
         PROP_SIZE,
     };
+    use seed_styles::{height, px, width};
 
     use super::zip_properties_greedy_mut;
 
@@ -2312,6 +2312,7 @@ pub fn zip_properties_greedy_mut(
     res_props
 }
 
+#[must_use]
 pub fn zip_properties_greedy_og(
     initial_props: Vector<PropertyOG>,
     new_target_props: Vector<PropertyOG>,
@@ -2413,9 +2414,10 @@ fn set_target_mut(override_interpolation: bool, current: &mut Property, new_targ
         (Prop(_, m), Prop(_, t)) | (Angle(_, m), Angle(_, t)) => set_motion_target((m, t)),
         (Prop2(_, box m), Prop2(_, box t)) => m.iter_mut().zip(t).for_each(set_motion_target),
         (Prop3(_, box m), Prop3(_, box t)) => m.iter_mut().zip(t).for_each(set_motion_target),
-        (Prop4(_, box m), Prop4(_, box t)) => m.iter_mut().zip(t).for_each(set_motion_target),
-        (Color(_, box m), Color(_, box t)) => m.iter_mut().zip(t).for_each(set_motion_target),
-
+        (Prop4(_, box m), Prop4(_, box t)) | (Color(_, box m), Color(_, box t)) => {
+            m.iter_mut().zip(t).for_each(set_motion_target);
+        }
+        // (Color(_, box m), Color(_, box t)) => m.iter_mut().zip(t).for_each(set_motion_target),
         (Points(box current_pts), Points(box mut target_pts)) => {
             match_points_refmut(current_pts, &mut target_pts);
 
@@ -2428,7 +2430,7 @@ fn set_target_mut(override_interpolation: bool, current: &mut Property, new_targ
                 });
         }
         (Path(box cmds), Path(box targets)) => {
-            cmds.iter_mut().zip(targets).for_each(set_path_target_mut)
+            cmds.iter_mut().zip(targets).for_each(set_path_target_mut);
         }
         (a, b) => panic!("{:?} \n and {:?} \n not match any set target", a, b),
     };

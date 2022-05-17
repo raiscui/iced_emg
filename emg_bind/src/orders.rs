@@ -8,7 +8,7 @@ use emg_state::{state_store, CloneStateAnchor, CloneStateVar, StateAnchor, State
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2022-01-30 20:36:06
+ * @LastEditTime: 2022-05-16 11:46:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -178,12 +178,10 @@ impl<Message> OrdersContainer<Message>
                     BuildHasherDefault::<CustomHasher>::default(),
                 )),
                 now: global_clock(),
-                am_running:global_anima_running_sa(),
-                width:global_width(),
-                height:global_height()
-
-                //
-                // render_info: Cell::new(None),
+                am_running: global_anima_running_sa(),
+                width: global_width(),
+                height: global_height(), //
+                                         // render_info: Cell::new(None),
             }),
             bus,
             re_render_msg: Rc::new(RefCell::new(None)),

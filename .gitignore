@@ -5,3 +5,4 @@ Cargo.lock
 
 emg_layout/tracing/
 .vscode/settings.json
+.history

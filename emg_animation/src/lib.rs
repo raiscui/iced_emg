@@ -209,7 +209,7 @@ pub fn set_default_interpolation(prop: &mut Property) {
     let i = default_interpolation_by_property(prop);
 
     map_to_motion(
-        |m: &mut Motion| {
+        &|m: &mut Motion| {
             m.interpolation = i.clone();
         },
         prop,
@@ -391,7 +391,7 @@ where
     Step::Loop(steps.into())
 }
 #[must_use]
-pub fn loop_am_og<Message>(steps: Vector<StepOG<Message>>) -> StepOG<Message>
+pub const fn loop_am_og<Message>(steps: Vector<StepOG<Message>>) -> StepOG<Message>
 where
     Message: Clone,
 {
@@ -399,7 +399,7 @@ where
 }
 
 #[must_use]
-pub fn to<Message>(props: SmallVec<[Property; PROP_SIZE]>) -> Step<Message>
+pub const fn to<Message>(props: SmallVec<[Property; PROP_SIZE]>) -> Step<Message>
 where
     Message: Clone,
 {
@@ -418,7 +418,7 @@ macro_rules! to {
 }
 
 #[must_use]
-pub fn to_og<Message>(props: Vector<PropertyOG>) -> StepOG<Message>
+pub const fn to_og<Message>(props: Vector<PropertyOG>) -> StepOG<Message>
 where
     Message: Clone,
 {

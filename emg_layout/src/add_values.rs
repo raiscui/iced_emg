@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-04-25 19:56:42
- * @LastEditTime: 2021-08-31 11:28:59
+ * @LastEditTime: 2022-05-16 15:46:27
  * @LastEditors: Rais
  * @Description:
  */
-
+#![allow(clippy::use_self)]
 use seed_style_macros::AddStyleMacro;
 
 use crate::{styles::LogicLength, GenericSize};

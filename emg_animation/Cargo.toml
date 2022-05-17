@@ -32,9 +32,45 @@ derive_more = "0.99"
 
 [dev-dependencies]
 insta = "1"
-criterion = { version = "0.3", features = ["html_reports", "real_blackbox"] }
+easybench = "1.1.0"
+criterion = { version = "0.3", features = ["real_blackbox"] }
+# criterion = { git = "https://github.com/bheisler/criterion.rs", branch = "version-0.4", default-features = false }
+# criterion = { git = "https://github.com/bheisler/criterion.rs", branch = "version-0.4", features = [
+#     "html_reports",
+#     "real_blackbox",
+# ] }
 # plotters = "0.3.1"
+
+# [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies.criterion]
+# # git = "https://github.com/bheisler/criterion.rs"
+# # branch = "version-0.4"
+# version = "0.3"
+# features = ["html_reports", "real_blackbox"]
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+easybench-wasm = "0.2"
+wasm-bindgen-test = "0.3"
+
+
 [[bench]]
 name = "my_benchmark"
 harness = false
 # required-features = ["bench"]
+
+
+# required-features = ["bench"]
+# for app
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+version = "^0.3"
+features = [
+    "Window",
+    "console",
+    "Document",
+    "HtmlElement",
+    "HtmlInputElement",
+    "Event",
+    "EventTarget",
+    "InputEvent",
+    "KeyboardEvent",
+    "IdleRequestOptions",
+]

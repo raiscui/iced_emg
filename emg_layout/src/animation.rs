@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-01-30 19:29:59
+ * @LastEditTime: 2022-05-16 15:33:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,11 +16,10 @@ use std::{
     time::Duration,
 };
 
-use emg_core::{smallvec, vector, SmallVec, Vector};
+use emg_core::{vector, SmallVec, Vector};
 use emg_state::{
-    state_store, topo, use_state,
-    use_state_impl::{TopoKey, Var},
-    Anchor, CloneStateAnchor, CloneStateVar, StateAnchor, StateMultiAnchor, StateVar,
+    state_store, topo, use_state, use_state_impl::TopoKey, Anchor, CloneStateAnchor, CloneStateVar,
+    StateAnchor, StateMultiAnchor, StateVar,
 };
 
 use emg_animation::{
@@ -29,9 +28,9 @@ use emg_animation::{
         map_to_motion, resolve_steps, Motion, MsgBackIsNew, Precision, Property, Step,
         StepTimeVector,
     },
-    set_default_interpolation, set_default_interpolation_og, Timing, PROP_SIZE,
+    set_default_interpolation, Timing, PROP_SIZE,
 };
-use tracing::{debug, trace, warn};
+use tracing::{debug, trace};
 
 use crate::{global_anima_running_add, global_clock, EPath, EmgEdgeItem, G_CLOCK};
 
@@ -73,7 +72,7 @@ where
                 let mut new_p = p.clone();
                 set_default_interpolation(&mut new_p);
                 new_p
-            })
+            });
         });
         Self {
             steps: use_state(Rc::new(RefCell::new(VecDeque::new()))),
@@ -414,11 +413,11 @@ where
                     {
                         new_props.iter_mut().for_each(|prop| {
                             map_to_motion(
-                                |m: &mut Motion| {
+                                &|m: &mut Motion| {
                                     *m.interpolation_override_mut() = None;
                                 },
                                 prop,
-                            )
+                            );
                         });
                         steps.replace(interrupt_steps);
                     }

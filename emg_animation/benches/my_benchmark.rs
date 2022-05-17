@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2022-01-29 11:39:47
+ * @LastEditTime: 2022-05-17 13:18:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,7 @@ enum Message {
 mod need {
 
     use emg_animation::models::PropertyOG;
-    use emg_core::{smallvec, tiny_vec, SmallVec};
+    use emg_core::{smallvec, SmallVec};
     use tracing::warn;
     pub fn zip_properties_greedy_mut_8(
         initial_props: &mut SmallVec<[PropertyOG; 8]>,
@@ -150,7 +150,7 @@ use emg_animation::{
     },
     to, to_og,
 };
-use emg_core::{into_smvec, into_vector, smallvec, tiny_vec, vector, IdStr, SmallVec, Vector};
+use emg_core::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
 use need::{zip_properties_greedy_mut_3, zip_properties_greedy_mut_8};
 use seed_styles::{height, px, width, Unit};
 
@@ -388,28 +388,32 @@ pub fn resolve_steps_benchmark(c: &mut Criterion) {
     group
         .significance_level(0.1)
         .warm_up_time(Duration::from_secs(6))
-        .sample_size(1000)
-        .measurement_time(Duration::from_secs(10));
+        .sample_size(100)
+        .measurement_time(Duration::from_secs(1));
+
+    let initial_props: Vector<PropertyOG> = into_vector![width(px(black_box(1)))];
+    let steps: Vector<StepOG<Message>> = vector![to_og(into_vector![width(px(black_box(0)))])];
+
+    // ─────────────────────────────────────────────────────────────────
+
+    let props2: SmallVec<[Property; PROP_SIZE]> = into_smvec![width(px(black_box(1)))];
+    let steps2: VecDeque<Step<Message>> = [loop_am([
+        to(into_smvec![width(px(black_box(0)))]),
+        to(into_smvec![width(px(black_box(1)))]),
+    ])]
+    .into();
+    // ─────────────────────────────────────────────────────────────────
 
     group.bench_function("resolve_steps-og-once", |b| {
-        let initial_props: Vector<PropertyOG> = into_vector![width(px(black_box(1)))];
-        let steps: Vector<StepOG<Message>> = vector![to_og(into_vector![width(px(black_box(0)))])];
         b.iter_batched(
             || (initial_props.clone(), steps.clone()),
             |(i, s)| {
                 let (ps, _, ss) = resolve_steps_og(i, s, &Duration::from_millis(black_box(16)));
             },
-            BatchSize::SmallInput,
+            BatchSize::PerIteration,
         )
     });
     group.bench_function("resolve_steps-mut-once", |b| {
-        let props2: SmallVec<[Property; PROP_SIZE]> = into_smvec![width(px(black_box(1)))];
-        let steps2: VecDeque<Step<Message>> = [loop_am([
-            to(into_smvec![width(px(black_box(0)))]),
-            to(into_smvec![width(px(black_box(1)))]),
-        ])]
-        .into();
-
         b.iter_batched(
             || {
                 (
@@ -419,9 +423,14 @@ pub fn resolve_steps_benchmark(c: &mut Criterion) {
                 )
             },
             |(mut p, mut i, mut m)| {
-                resolve_steps(&mut p, &mut i, &mut m, &Duration::from_millis(16));
+                resolve_steps(
+                    &mut p,
+                    &mut i,
+                    &mut m,
+                    &Duration::from_millis(black_box(16)),
+                );
             },
-            BatchSize::SmallInput,
+            BatchSize::PerIteration,
         )
     });
 
