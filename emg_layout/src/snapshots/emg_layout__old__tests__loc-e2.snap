@@ -1,6 +1,6 @@
 ---
 source: emg_layout/src/old.rs
-assertion_line: 1231
+assertion_line: 1230
 expression: "&e2"
 
 ---
@@ -114,10 +114,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/calc.rs:153:29",
-                                    "emg_layout/src/calc.rs:153:33",
-                                    "emg_layout/src/calc.rs:153:52",
-                                    "emg_layout/src/calc.rs:153:71",
+                                    "emg_layout/src/calc.rs:151:29",
+                                    "emg_layout/src/calc.rs:151:33",
+                                    "emg_layout/src/calc.rs:151:52",
+                                    "emg_layout/src/calc.rs:151:71",
                                 ],
                                 pseudo: None,
                                 media: None,
@@ -229,10 +229,10 @@ EmgEdgeItem {
                                         },
                                     ],
                                     updated_at: [
-                                        "emg_layout/src/lib.rs:963:13",
-                                        "emg_layout/src/lib.rs:963:17",
-                                        "emg_layout/src/lib.rs:963:31",
-                                        "emg_layout/src/lib.rs:963:45",
+                                        "emg_layout/src/lib.rs:1007:13",
+                                        "emg_layout/src/lib.rs:1007:17",
+                                        "emg_layout/src/lib.rs:1007:31",
+                                        "emg_layout/src/lib.rs:1007:45",
                                     ],
                                     pseudo: None,
                                     media: None,
@@ -396,7 +396,7 @@ EmgEdgeItem {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:736:41",
+                "emg_layout/src/lib.rs:781:41",
             ],
             pseudo: None,
             media: None,
@@ -513,10 +513,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/calc.rs:153:29",
-                                    "emg_layout/src/calc.rs:153:33",
-                                    "emg_layout/src/calc.rs:153:52",
-                                    "emg_layout/src/calc.rs:153:71",
+                                    "emg_layout/src/calc.rs:151:29",
+                                    "emg_layout/src/calc.rs:151:33",
+                                    "emg_layout/src/calc.rs:151:52",
+                                    "emg_layout/src/calc.rs:151:71",
                                 ],
                                 pseudo: None,
                                 media: None,
@@ -628,10 +628,10 @@ EmgEdgeItem {
                                         },
                                     ],
                                     updated_at: [
-                                        "emg_layout/src/calc.rs:153:29",
-                                        "emg_layout/src/calc.rs:153:33",
-                                        "emg_layout/src/calc.rs:153:52",
-                                        "emg_layout/src/calc.rs:153:71",
+                                        "emg_layout/src/calc.rs:151:29",
+                                        "emg_layout/src/calc.rs:151:33",
+                                        "emg_layout/src/calc.rs:151:52",
+                                        "emg_layout/src/calc.rs:151:71",
                                     ],
                                     pseudo: None,
                                     media: None,

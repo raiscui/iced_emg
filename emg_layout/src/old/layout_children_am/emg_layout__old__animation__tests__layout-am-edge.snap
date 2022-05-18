@@ -1,6 +1,6 @@
 ---
 source: emg_layout/src/old/animation.rs
-assertion_line: 1450
+assertion_line: 1444
 expression: "&e1"
 
 ---
@@ -113,10 +113,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/old.rs:946:13",
-                                    "emg_layout/src/old.rs:946:17",
-                                    "emg_layout/src/old.rs:946:31",
-                                    "emg_layout/src/old.rs:946:45",
+                                    "emg_layout/src/old.rs:945:13",
+                                    "emg_layout/src/old.rs:945:17",
+                                    "emg_layout/src/old.rs:945:31",
+                                    "emg_layout/src/old.rs:945:45",
                                 ],
                                 pseudo: None,
                                 media: None,
@@ -514,10 +514,10 @@ EmgEdgeItem {
                                         },
                                     ],
                                     updated_at: [
-                                        "emg_layout/src/old.rs:946:13",
-                                        "emg_layout/src/old.rs:946:17",
-                                        "emg_layout/src/old.rs:946:31",
-                                        "emg_layout/src/old.rs:946:45",
+                                        "emg_layout/src/old.rs:945:13",
+                                        "emg_layout/src/old.rs:945:17",
+                                        "emg_layout/src/old.rs:945:31",
+                                        "emg_layout/src/old.rs:945:45",
                                     ],
                                     pseudo: None,
                                     media: None,

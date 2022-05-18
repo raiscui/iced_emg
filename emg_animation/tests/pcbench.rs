@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-17 11:30:44
- * @LastEditTime: 2022-05-17 11:47:34
+ * @LastEditTime: 2022-05-18 17:02:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,8 @@
  * @Description:
  */
 #[cfg(test)]
-mod pcBench {
+#[cfg(not(target_arch = "wasm32"))]
+mod pc_bench {
     use easybench::{bench, bench_env};
 
     #[derive(Debug, Clone, PartialEq)]
@@ -155,7 +156,12 @@ mod pcBench {
             res_props
         }
     }
-    use std::{cell::RefCell, collections::VecDeque, rc::Rc, time::Duration};
+    use std::{
+        cell::RefCell,
+        collections::VecDeque,
+        rc::Rc,
+        time::{Duration, Instant},
+    };
     const PROP_SIZE: usize = 3;
     use emg_animation::{
         fill, init_motion, loop_am, loop_am_og,
@@ -201,7 +207,7 @@ mod pcBench {
                     MsgBackIsNew::<Message>::default(),
                 ),
                 |(p, i, m)| {
-                    resolve_steps(p, i, m, &Duration::from_millis(16));
+                    let f = resolve_steps(p, i, m, &Duration::from_millis(16));
                 }
             )
         );

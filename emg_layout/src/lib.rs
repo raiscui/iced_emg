@@ -985,8 +985,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
     let calculated_size:StateAnchor<Vector2<f64>> = (&w,&h).then(|sa_w: &GenericSizeAnchor,sa_h: &GenericSizeAnchor| {
             (&**sa_w,&**sa_h).map(|w:&GenericSize,h:&GenericSize|->Vector2<f64>{
                 //TODO check editor display error 
-                Vector2::<f64>::from_vec(vec![w.get_length_value(), h.get_length_value()])
-                // Vector2::<f64>::new(w.get_length_value(), h.get_length_value())
+                Vector2::<f64>::new(w.get_length_value(), h.get_length_value())
             }).into()    
             
         });

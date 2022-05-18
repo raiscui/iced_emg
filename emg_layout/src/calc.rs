@@ -2,7 +2,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-01-07 13:39:01
+ * @LastEditTime: 2022-05-17 21:59:15
  * @LastEditors: Rais
 * @Description:
 */
@@ -60,9 +60,7 @@ where
                         ).entered();
                      (&**sa_w,&**sa_h).map(move |w:&GenericSize,h:&GenericSize|->Vector2<f64>{
                         //TODO check editor display error 
-                        let new_size = Vector2::<f64>::from_vec(vec![calculation_w(&p_calc_size, w), calculation_h(&p_calc_size, h)]);
-                        // let new_size = Vector2::<f64>::from_vec(vec![calculation_w(p_calc_size, w), calculation_h(p_calc_size, h)]);
-                        // Vector2::<f64>::new(w.get_length_value(), h.get_length_value())
+                        let new_size = Vector2::<f64>::new(calculation_w(&p_calc_size, w), calculation_h(&p_calc_size, h));
                         trace!("new size: {}",&new_size);
                         new_size
 

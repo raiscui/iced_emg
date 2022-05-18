@@ -28,6 +28,12 @@ impl ExactLengthSimplex {
     }
 }
 
+// impl From<ExactLengthSimplex> for NotNan<f64> {
+//     fn from(v: ExactLengthSimplex) -> Self {
+//         v.value
+//     }
+// }
+
 //TODO full this
 impl ::core::ops::Mul<f64> for LogicLength {
     type Output = LogicLength;

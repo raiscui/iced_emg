@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-16 17:12:23
- * @LastEditTime: 2022-05-17 11:43:20
+ * @LastEditTime: 2022-05-17 13:49:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -153,7 +153,12 @@ mod wasmBench {
             res_props
         }
     }
-    use std::{cell::RefCell, collections::VecDeque, rc::Rc, time::Duration};
+    use std::{
+        cell::RefCell,
+        collections::VecDeque,
+        rc::Rc,
+        time::{Duration, Instant},
+    };
     const PROP_SIZE: usize = 3;
     use emg_animation::{
         fill, init_motion, loop_am, loop_am_og,
@@ -187,7 +192,7 @@ mod wasmBench {
                     let (ps, _, ss) = resolve_steps_og(
                         initial_props.clone(),
                         steps.clone(),
-                        &Duration::from_millis(1),
+                        &Duration::from_millis(16),
                     );
                 })
             )

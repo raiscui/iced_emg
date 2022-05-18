@@ -53,7 +53,7 @@ pub type AmState<Message> = models::Animation<Message>;
 /// # Panics
 ///
 /// Will panic if 'position' is NaN
-pub fn init_motion(position: impl TryInto<NotNan<f64>>, unit: Unit) -> Motion {
+pub fn init_motion<T: TryInto<NotNan<f64>>>(position: T, unit: Unit) -> Motion {
     let p: NotNan<f64> = position.try_into().ok().unwrap();
     Motion {
         position: p,

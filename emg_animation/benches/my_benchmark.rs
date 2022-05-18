@@ -1,15 +1,17 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2022-05-17 13:18:31
+ * @LastEditTime: 2022-05-18 18:12:42
  * @LastEditors: Rais
  * @Description:
  */
 
+use std::time::Instant;
 #[derive(Debug, Clone, PartialEq)]
 enum Message {
     A,
 }
+
 mod need {
 
     use emg_animation::models::PropertyOG;
@@ -140,6 +142,7 @@ mod need {
 }
 use std::{cell::RefCell, collections::VecDeque, rc::Rc, time::Duration};
 const PROP_SIZE: usize = 3;
+#[cfg(not(target_arch = "wasm32"))]
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 use emg_animation::{
     fill, init_motion, loop_am, loop_am_og,
@@ -388,8 +391,8 @@ pub fn resolve_steps_benchmark(c: &mut Criterion) {
     group
         .significance_level(0.1)
         .warm_up_time(Duration::from_secs(6))
-        .sample_size(100)
-        .measurement_time(Duration::from_secs(1));
+        .sample_size(500)
+        .measurement_time(Duration::from_secs(3));
 
     let initial_props: Vector<PropertyOG> = into_vector![width(px(black_box(1)))];
     let steps: Vector<StepOG<Message>> = vector![to_og(into_vector![width(px(black_box(0)))])];
@@ -438,6 +441,7 @@ pub fn resolve_steps_benchmark(c: &mut Criterion) {
 }
 
 // criterion_group!(benches, resolve_steps_benchmark);
+#[cfg(not(target_arch = "wasm32"))]
 criterion_group!(
     benches,
     // clone_benchmark,
@@ -445,4 +449,5 @@ criterion_group!(
     // zip_properties_benchmark,
     resolve_steps_benchmark
 );
+#[cfg(not(target_arch = "wasm32"))]
 criterion_main!(benches);

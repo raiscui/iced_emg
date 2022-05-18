@@ -1,13 +1,15 @@
 ---
 source: emg_layout/src/animation.rs
-assertion_line: 1163
+assertion_line: 1290
 expression: "&a"
 
 ---
 AnimationEdge {
     inside: AnimationInside {
         steps: StateVar(
-            [],
+            RefCell {
+                value: [],
+            },
         ),
         interruption: StateVar(
             [],

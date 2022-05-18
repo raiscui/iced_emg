@@ -20,12 +20,12 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 iced = { path = "../../iced" }
 emg = { path = "../../emg" }
-functionate = { path = "../../functionate" }
-overloadf = { path = "../../overloadf" }
+# functionate = { path = "../../functionate" }
+# overloadf = { path = "../../overloadf" }
 illicit = "1.1.2"
 # log = "0.4"
 # lazy_static = "1.4.0"
-dyn-clone = "1.0.4"
+dyn-clone = "1.0.5"
 # downcast-rs = "1.2.0"
 dyn-clonable = "0.9.0"
 
@@ -35,8 +35,8 @@ better_any = { path = "../../better_any/better_any", features = [
 ] }
 emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
 
-strum = "0.23.0"
-strum_macros = "0.23.1"
+strum = "0.24.0"
+strum_macros = "0.24.0"
 
 match_any = "1.0.1"
 
@@ -45,18 +45,17 @@ emg_refresh = { path = "../emg_refresh" }
 emg_layout = { path = "../emg_layout" }
 emg_animation = { path = "../emg_animation" }
 emg_orders = { path = "../emg_orders" }
-# for app
 
 
 iced_style = { path = "../../iced/style" }
 # from_variants = "0.5.0"
 derive_more = "0.99"
-delegate = "0.6.1"
+# delegate = "0.6.1"
 
 
 tracing = "0.1"
 
-indexmap = "1.8.0"
+indexmap = "1.8"
 # rustc-hash = "1.1.0"
 emg_core = { path = "../emg_core" }
 emg_hasher = { path = "../emg_hasher" }
@@ -75,8 +74,8 @@ emg_hasher = { path = "../emg_hasher" }
 # version = "3.4.0"
 # features = ["allocator_api"] 
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.4", features = ["js"] }
+# [target.'cfg(target_arch = "wasm32")'.dependencies]
+# getrandom = { version = "0.2.4", features = ["js"] }
 
 wasm-bindgen-futures = "^0.4"
 dodrio = { path = "../../dodrio" }
@@ -88,7 +87,6 @@ iced_web = { path = "../../iced/web" }
 # tracing-wasm = "0.2.0"
 # console_error_panic_hook = "0.1.6"
 wasm-bindgen = "0.2"
-gloo-timers = "0.2.1"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "^0.3"
