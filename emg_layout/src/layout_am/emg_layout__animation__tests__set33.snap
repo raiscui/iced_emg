@@ -1,42 +1,47 @@
 ---
 source: emg_layout/src/animation.rs
+assertion_line: 1338
 expression: "&a"
 
 ---
 AnimationEdge {
     inside: AnimationInside {
         steps: StateVar(
-            [
-                _Step,
-                To(
-                    [
-                        Prop(
-                            "CssWidth",
-                            Motion {
-                                position: NotNan(
-                                    1.0,
+            RefCell {
+                value: [
+                    _Step,
+                    To(
+                        [
+                            Prop(
+                                TypeName(
+                                    "CssWidth",
                                 ),
-                                velocity: NotNan(
-                                    0.0,
-                                ),
-                                target: NotNan(
-                                    1.0,
-                                ),
-                                interpolation: Spring {
-                                    stiffness: NotNan(
-                                        170.0,
+                                Motion {
+                                    position: NotNan(
+                                        1.0,
                                     ),
-                                    damping: NotNan(
-                                        26.0,
+                                    velocity: NotNan(
+                                        0.0,
                                     ),
+                                    target: NotNan(
+                                        1.0,
+                                    ),
+                                    interpolation: Spring {
+                                        stiffness: NotNan(
+                                            170.0,
+                                        ),
+                                        damping: NotNan(
+                                            26.0,
+                                        ),
+                                    },
+                                    unit: Px,
+                                    interpolation_override: None,
                                 },
-                                unit: Px,
-                                interpolation_override: None,
-                            },
-                        ),
-                    ],
-                ),
-            ],
+                            ),
+                        ],
+                    ),
+                ],
+            },
         ),
         interruption: StateVar(
             [],
@@ -45,7 +50,9 @@ AnimationEdge {
             StateVarProperty(
                 StateVar(
                     Prop(
-                        "CssWidth",
+                        TypeName(
+                            "CssWidth",
+                        ),
                         Motion {
                             position: NotNan(
                                 87.0304518011875,

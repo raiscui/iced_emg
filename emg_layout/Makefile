@@ -1,0 +1,2 @@
+bench:
+	cargo criterion

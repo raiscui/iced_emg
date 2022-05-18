@@ -20,7 +20,7 @@
 // #![feature(trivial_bounds)]
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
-use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc};
+use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc, time::Duration};
 use emg_hasher::CustomHasher;
 
 use calc::layout_calculating;
@@ -46,7 +46,6 @@ use styles::{CssHeightTrait, CssTransformTrait, CssWidthTrait};
 // ────────────────────────────────────────────────────────────────────────────────
 
 use indented::indented;
-use tinyvec::TinyVec;
 use tracing::{span, trace_span,error,instrument, trace, Level};
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -55,6 +54,53 @@ mod impl_refresh;
 pub mod animation;
 pub mod add_values;
 pub use animation::AnimationE;
+
+pub mod old;
+
+// ────────────────────────────────────────────────────────────────────────────────
+
+
+
+thread_local! {
+    static G_CLOCK: StateVar<Duration> = use_state(Duration::ZERO);
+}
+
+thread_local! {
+    static G_ANIMA_RUNNING_STORE: StateVar<Vector<Anchor<bool>>> = use_state(Vector::new());
+}
+thread_local! {
+    static G_AM_RUNING: StateAnchor<bool> = global_anima_running_build();
+}
+pub fn global_anima_running_add(running: &StateAnchor<bool>) {
+    G_ANIMA_RUNNING_STORE.with(|sv| sv.update(|v| v.push_back(running.get_anchor())));
+}
+
+#[must_use]
+pub fn global_anima_running_sa() -> StateAnchor<bool> {
+    G_AM_RUNING.with(std::clone::Clone::clone)
+}
+#[must_use]
+pub fn global_anima_running() -> bool {
+    G_AM_RUNING.with(emg_state::CloneStateAnchor::get)
+}
+#[must_use]
+pub fn global_anima_running_build() -> StateAnchor<bool> {
+    let watch: Anchor<Vector<bool>> = G_ANIMA_RUNNING_STORE.with(|am| {
+        am.watch().anchor().then(|v: &Vector<Anchor<bool>>| {
+            v.clone().into_iter().collect::<Anchor<Vector<bool>>>()
+        })
+    });
+    watch.map(|list: &Vector<bool>| list.contains(&true)).into()
+}
+#[must_use]
+pub fn global_clock() -> StateVar<Duration> {
+    G_CLOCK.with(|c| *c)
+}
+pub fn global_clock_set(now: Duration) {
+    G_CLOCK.with(|c| c.set(now));
+}
+
+
 
 // ────────────────────────────────────────────────────────────────────────────────
 thread_local! {
@@ -939,8 +985,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
     let calculated_size:StateAnchor<Vector2<f64>> = (&w,&h).then(|sa_w: &GenericSizeAnchor,sa_h: &GenericSizeAnchor| {
             (&**sa_w,&**sa_h).map(|w:&GenericSize,h:&GenericSize|->Vector2<f64>{
                 //TODO check editor display error 
-                Vector2::<f64>::from_vec(vec![w.get_length_value(), h.get_length_value()])
-                // Vector2::<f64>::new(w.get_length_value(), h.get_length_value())
+                Vector2::<f64>::new(w.get_length_value(), h.get_length_value())
             }).into()    
             
         });

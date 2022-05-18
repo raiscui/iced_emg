@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-01-19 13:24:54
+ * @LastEditTime: 2022-01-27 11:24:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -192,7 +192,7 @@ where
         let _g = trace_span!("graph view-", ?cix);
         {
             let edges = self.raw_edges().store_get_rc(&self.store());
-            let paths = EPath::new(vector![edge_index_no_source(cix.clone())]);
+            let paths = EPath::<IdStr>::new(vector![edge_index_no_source(cix.clone())]);
             // TODO add store in gelement_refresh_and_comb
             let gel = self.gelement_refresh_and_comb(&edges, &cix, &paths);
             gel.replace(GElement::EmptyNeverUse).try_into().unwrap()

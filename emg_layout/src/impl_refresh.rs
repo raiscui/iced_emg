@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2022-01-18 16:14:21
+ * @LastEditTime: 2022-01-30 18:27:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -377,8 +377,11 @@ where
             illicit::Snapshot::get()
         );
         if let Ok(path) = illicit::get::<EPath<Ix>>() {
+            debug!("effecting_edge_path in refresh_for");
             let p = (*path).clone();
             self.effecting_edge_path(&*edge, p);
+        } else {
+            panic!(" cannot get illicit env EPath for animationE::effecting_edge_path");
         }
     }
 }
@@ -387,14 +390,11 @@ where
 mod refresh_test {
     use std::time::Duration;
 
-    use emg::edge_index_no_source;
-    use emg::node_index;
+    use emg::{edge_index_no_source, node_index};
     use emg_animation::to;
-    use emg_core::vector;
-    use emg_core::{into_vector, IdStr};
+    use emg_core::{into_smvec, vector, IdStr};
     use emg_refresh::RefreshForUse;
-    use emg_state::CloneStateVar;
-    use emg_state::{use_state, Dict, StateVar};
+    use emg_state::{use_state, CloneStateVar, Dict, StateVar};
     use seed_styles as styles;
     use seed_styles::CssWidth;
 
@@ -403,7 +403,7 @@ mod refresh_test {
     #[allow(unused)]
     use styles::{pc, width};
 
-    use crate::animation::global_clock;
+    use crate::global_clock;
     use crate::EPath;
     use crate::GraphEdgesDict;
     use crate::{anima, AnimationE, EmgEdgeItem};
@@ -430,7 +430,7 @@ mod refresh_test {
         let css_w: StateVar<CssWidth> = use_state(width(px(99)));
         let a: AnimationE<Message> = anima![css_w];
         illicit::Layer::new()
-            .offer(EPath::<String>(vector![edge_index_no_source("root")]))
+            .offer(EPath::<IdStr>(vector![edge_index_no_source("root")]))
             .enter(|| {
                 root_e.refresh_for_use(&a);
                 // root_e.refresh_use(&a);
@@ -438,10 +438,7 @@ mod refresh_test {
 
         let now = global_clock();
 
-        a.interrupt(vector![
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))])
-        ]);
+        a.interrupt([to(into_smvec![width(px(0))]), to(into_smvec![width(px(1))])]);
 
         now.set(Duration::from_millis(16));
         insta::assert_debug_snapshot!("anima_refresh_edge_16", &a);

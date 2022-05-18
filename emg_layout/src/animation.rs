@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-01-20 18:46:04
+ * @LastEditTime: 2022-05-17 22:06:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,47 +9,56 @@
 mod define;
 mod func;
 
-use std::{cell::Cell, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    collections::VecDeque,
+    rc::Rc,
+    time::Duration,
+};
 
-use emg_core::{vector, Vector};
+use emg_core::{vector, SmallVec, Vector};
 use emg_state::{
-    topo, use_state,
-    use_state_impl::{TopoKey, Var},
-    Anchor, CloneStateAnchor, CloneStateVar, StateAnchor, StateMultiAnchor, StateVar,
+    state_store, topo, use_state, use_state_impl::TopoKey, Anchor, CloneStateAnchor, CloneStateVar,
+    StateAnchor, StateMultiAnchor, StateVar,
 };
 
 use emg_animation::{
     extract_initial_wait,
-    models::{map_to_motion, resolve_steps, Motion, Property, Step, StepTimeVector},
-    set_default_interpolation, Timing,
+    models::{
+        map_to_motion, resolve_steps, Motion, MsgBackIsNew, Precision, Property, Step,
+        StepTimeVector,
+    },
+    set_default_interpolation, Timing, PROP_SIZE,
 };
 use tracing::{debug, trace};
 
-use crate::{EPath, EmgEdgeItem};
+use crate::{global_anima_running_add, global_clock, EPath, EmgEdgeItem, G_CLOCK};
 
 use self::{define::StateVarProperty, func::props::warn_for_double_listed_properties};
 
 // ────────────────────────────────────────────────────────────────────────────────
-#[allow(dead_code)]
-type SAPropsMessageSteps<Message> =
-    StateAnchor<(Vector<Property>, Vector<Message>, Vector<Step<Message>>)>;
+// #[allow(dead_code)]
+// type SAPropsMessageSteps<Message> =
+//     StateAnchor<(Vector<Property>, Vector<Message>, Vector<StepOG<Message>>)>;
+
 #[allow(dead_code)]
 type SAPropsMessageSteps2<Message> = StateAnchor<(
     StepTimeVector<Message>,
-    Vector<Step<Message>>,
-    Vector<Property>,
-    Vector<Message>,
+    // VecDeque<Step<Message>>,
+    Rc<RefCell<VecDeque<Step<Message>>>>,
+    SmallVec<[Property; PROP_SIZE]>,
+    MsgBackIsNew<Message>,
 )>;
-// ────────────────────────────────────────────────────────────────────────────────
 
+// ────────────────────────────────────────────────────────────────────────────────
 #[derive(Debug, Clone)]
 struct AnimationInside<Message>
 where
     Message: Clone + std::fmt::Debug + 'static,
 {
-    pub(crate) steps: StateVar<Vector<Step<Message>>>,
+    pub(crate) steps: StateVar<Rc<RefCell<VecDeque<Step<Message>>>>>,
     pub(crate) interruption: StateVar<StepTimeVector<Message>>,
-    pub(crate) props: Vector<StateVarProperty>,
+    pub(crate) props: SmallVec<[StateVarProperty; PROP_SIZE]>,
 }
 
 impl<Message> AnimationInside<Message>
@@ -57,54 +66,20 @@ where
     Message: Clone + std::fmt::Debug + 'static,
 {
     #[topo::nested]
-    fn new_in_topo(props: Vector<StateVarProperty>) -> Self {
-        props
-            .iter()
-            .for_each(|prop| prop.set_with_once(|p| set_default_interpolation(p.clone())));
+    fn new_in_topo(props: SmallVec<[StateVarProperty; PROP_SIZE]>) -> Self {
+        props.iter().for_each(|prop| {
+            prop.set_with_once(|p| {
+                let mut new_p = p.clone();
+                set_default_interpolation(&mut new_p);
+                new_p
+            });
+        });
         Self {
-            steps: use_state(vector![]),
+            steps: use_state(Rc::new(RefCell::new(VecDeque::new()))),
             interruption: use_state(vector![]),
             props,
         }
     }
-}
-thread_local! {
-    static G_CLOCK: StateVar<Duration> = use_state(Duration::ZERO);
-}
-
-thread_local! {
-    static G_ANIMA_RUNNING_STORE: StateVar<Vector<Anchor<bool>>> = use_state(vector![]);
-}
-thread_local! {
-    static G_AM_RUNING: StateAnchor<bool> = global_anima_running_build();
-}
-pub fn global_anima_running_add(running: &StateAnchor<bool>) {
-    G_ANIMA_RUNNING_STORE.with(|sv| sv.update(|v| v.push_back(running.get_anchor())));
-}
-
-#[must_use]
-pub fn global_anima_running_sa() -> StateAnchor<bool> {
-    G_AM_RUNING.with(std::clone::Clone::clone)
-}
-#[must_use]
-pub fn global_anima_running() -> bool {
-    G_AM_RUNING.with(emg_state::CloneStateAnchor::get)
-}
-#[must_use]
-pub fn global_anima_running_build() -> StateAnchor<bool> {
-    let watch: Anchor<Vector<bool>> = G_ANIMA_RUNNING_STORE.with(|am| {
-        am.watch().anchor().then(|v: &Vector<Anchor<bool>>| {
-            v.clone().into_iter().collect::<Anchor<Vector<bool>>>()
-        })
-    });
-    watch.map(|list: &Vector<bool>| list.contains(&true)).into()
-}
-#[must_use]
-pub fn global_clock() -> StateVar<Duration> {
-    G_CLOCK.with(|c| *c)
-}
-pub fn global_clock_set(now: Duration) {
-    G_CLOCK.with(|c| c.set(now));
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -114,10 +89,10 @@ pub fn global_clock_set(now: Duration) {
 macro_rules! anima {
     ( $( $element:expr ) , * ) => {
         {
-            let mut v = emg_core::Vector::new();
+            let mut v = emg_core::SmallVec::new();
 
             $(
-                v.push_back($element.into());
+                v.push($element.into());
             )*
 
             $crate::AnimationE::new_in_topo(v)
@@ -205,22 +180,7 @@ where
 impl<Message> AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-    // Ix: Clone + std::hash::Hash + Eq + Default + Ord + std::fmt::Display + 'static,
 {
-    /// # Panics
-    ///
-    /// if not implemented
-    // #[must_use]
-    // pub fn get_position(&self, style_i: usize) -> Precision {
-    //     self.inside.props.get_with(|props| {
-    //         let p = props.get(style_i).unwrap();
-    //         match p {
-    //             Property::Prop(_name, m) => **m.position(),
-    //             _ => todo!("not implemented"),
-    //         }
-    //     })
-    // }
-
     fn set_timer(sv_now: StateVar<Duration>) -> StateAnchor<Timing> {
         // let mut timing = Timing::default();
         // let mut opt_old_current: Option<Timing> = None;
@@ -245,16 +205,16 @@ where
                 Timing::default(),
                 move |timing: &mut Timing, now: &Duration| {
                     let current = timing.current();
-                    if now == &current {
+                    if now == current {
                         // timing.set_dt(Duration::ZERO);
                         return false;
                     }
                     // • • • • •
 
-                    let dt_tmp = now.saturating_sub(current);
+                    let dt_tmp = now.saturating_sub(*current);
                     let dt = {
                         if current.is_zero() || dt_tmp.as_millis() > 34 {
-                            Duration::from_micros(16666)
+                            Duration::from_micros(16666) //16.666 ms
                         } else {
                             dt_tmp
                         }
@@ -335,7 +295,7 @@ where
     #[topo::nested]
     #[must_use]
     pub fn new_in_topo(
-        props: Vector<StateVarProperty>,
+        props: SmallVec<[StateVarProperty; PROP_SIZE]>,
         // sv_now: StateVar<Duration>,
         // edge_path: Option<(EmgEdgeItem<Ix>, EPath<Ix>)>,
     ) -> Self
@@ -387,8 +347,6 @@ where
 
         let sv_inside: AnimationInside<Message> = AnimationInside::<Message>::new_in_topo(props);
 
-        // let store = rc_store2.borrow();
-
         let sa_timing = Self::set_timer(sv_now);
 
         let AnimationInside {
@@ -399,54 +357,44 @@ where
 
         trace!("||@@@@@@@@@@@@@@@@@@@@ step id:{:#?}", &steps_init.id());
 
-        let i_p_cut = {
-            let mut opt_old_current: Option<Duration> = None;
-            // let mut opt_old_interruption: Option<StepTimeVector<Message>> = None;
-            // interruption_init.store_watch(&store)
-            let pa: StateAnchor<Vector<Property>> = props_init
-                .iter()
-                .map(|sv| sv.get_var_with(Var::watch))
-                // .map(|sv| sv.store_get_var_with(&store, Var::watch))
-                .collect::<Anchor<Vector<_>>>()
-                .into();
-
-            (
-                &sa_timing,
-                &interruption_init.watch(),
-                // &steps_init.store_watch(&store),
-                &pa,
+        let mut opt_old_current: Option<Duration> = None;
+        // let mut opt_old_interruption: Option<StepTimeVector<Message>> = None;
+        // interruption_init.store_watch(&store)
+        let pa: StateAnchor<SmallVec<[Property; PROP_SIZE]>> = props_init
+            .iter()
+            .map(
+                |sv| sv.watch().get_anchor(), //  .get_var_with(Var::watch)
             )
-                .map(|t, i, p| (*t, i.clone(), p.clone()))
-                .cutoff(move |(timing, _, _)| {
+            .collect::<Anchor<SmallVec<[Property; PROP_SIZE]>>>()
+            .into();
+
+        let revised: SAPropsMessageSteps2<Message> = (
+            &sa_timing,
+            &interruption_init.watch(),
+            // &steps_init.store_watch(&store),
+            &pa,
+            &steps_init.watch(),
+        )
+            // .map(|t, i, p| (*t, i.clone(), p.clone()))
+            // .refmap(|t, i, p| (t, i, p))
+            .map_mut(
+                (
+                    Vector::<(Duration, VecDeque<Step<Message>>)>::new(),
+                    Rc::new(RefCell::new(VecDeque::<Step<Message>>::new())),
+                    SmallVec::<[Property; PROP_SIZE]>::new(),
+                    MsgBackIsNew::<Message>::default(),
+                ),
+                move |out, timing, interruption, props, steps| {
                     let new_t = timing.current();
-                    if let Some(old_t) = opt_old_current {
+                    if let Some(old_t) = &opt_old_current {
                         if old_t == new_t {
                             return false;
                         }
                     }
 
-                    // if let Some(old_interruption) = &opt_old_interruption {
-                    //     // if old_interruption.ptr_eq(new_interruption) {
-                    //     if old_interruption == new_interruption {
-                    //         return false;
-                    //     }
-                    // }
-
-                    opt_old_current = Some(new_t);
-
-                    // opt_old_interruption = Some(new_interruption.clone());
-
-                    true
-                })
-                .map(|(_, i, p)| (i.clone(), p.clone()))
-        };
-
-        let revised: SAPropsMessageSteps2<Message> = (&sa_timing, &i_p_cut, &steps_init.watch())
-            .map(
-                move |timing: &Timing,
-                      (interruption, props): &(StepTimeVector<Message>, Vector<Property>),
-                      steps: &Vector<Step<Message>>| {
-                    //----------------------------------
+                    opt_old_current = Some(*new_t);
+                    // • • • • •
+                    // ────────────────────────────────────────────────────────────────────────────────
                     let (mut ready_interruption, queued_interruptions): (
                         StepTimeVector<Message>,
                         StepTimeVector<Message>,
@@ -455,40 +403,144 @@ where
                         .into_iter()
                         .map(|(wait, a_steps)| {
                             // println!("wait: {:?} , dt: {:?}", &wait, &dt);
-                            (wait.saturating_sub(timing.dt()), a_steps)
+                            (wait.saturating_sub(*timing.dt()), a_steps)
                         })
                         .partition(|(wait, _)| wait.is_zero());
 
-                    let (new_steps, new_props) = match ready_interruption.pop_front() {
-                        Some((_ /* is zero */, interrupt_steps)) => (
-                            interrupt_steps,
-                            props
-                                .clone()
-                                .into_iter()
-                                .map(|prop| {
-                                    map_to_motion(
-                                        Rc::new(|mut m: Motion| {
-                                            *m.interpolation_override_mut() = None;
-                                            m
-                                        })
-                                        .as_ref(),
-                                        prop,
-                                    )
-                                })
-                                .collect::<Vector<_>>(),
-                        ),
-                        None => (steps.clone(), props.clone()),
-                    };
-                    let (revised_props, sent_messages, revised_steps) =
-                        resolve_steps(new_props, new_steps, timing.dt());
-                    (
+                    let mut new_props = props.clone();
+
+                    if let Some((_ /* is zero */, interrupt_steps)) = ready_interruption.pop_front()
+                    {
+                        new_props.iter_mut().for_each(|prop| {
+                            map_to_motion(
+                                &|m: &mut Motion| {
+                                    *m.interpolation_override_mut() = None;
+                                },
+                                prop,
+                            );
+                        });
+                        steps.replace(interrupt_steps);
+                    }
+
+                    // let mut new_steps = match ready_interruption.pop_front() {
+                    //     Some((_ /* is zero */, interrupt_steps)) => {
+                    //         new_props.iter_mut().for_each(|prop| {
+                    //             map_to_motion(
+                    //                 |m: &mut Motion| {
+                    //                     *m.interpolation_override_mut() = None;
+                    //                 },
+                    //                 prop,
+                    //             )
+                    //         });
+
+                    //         interrupt_steps
+                    //     }
+
+                    //     None => steps.clone(),
+                    // };
+                    //--------
+                    //drop(ready_interruption);
+                    let mut sent_messages = MsgBackIsNew::default();
+                    resolve_steps(
+                        &mut new_props,
+                        &mut steps.borrow_mut(),
+                        &mut sent_messages,
+                        timing.dt(),
+                    );
+                    *out = (
                         queued_interruptions,
-                        revised_steps,
-                        revised_props,
+                        steps.clone(),
+                        new_props,
                         sent_messages,
-                    )
+                    );
+                    true
+
+                    // out.0 = i.clone();
+                    // out.1 = p.clone();
+                    // true
                 },
             );
+        // .cutoff(move |(timing, _, _): &(Timing, _, _)| {
+        //     let new_t = timing.current();
+        //     if let Some(old_t) = &opt_old_current {
+        //         if old_t == new_t {
+        //             return false;
+        //         }
+        //     }
+
+        //     // if let Some(old_interruption) = &opt_old_interruption {
+        //     //     // if old_interruption.ptr_eq(new_interruption) {
+        //     //     if old_interruption == new_interruption {
+        //     //         return false;
+        //     //     }
+        //     // }
+
+        //     opt_old_current = Some(*new_t);
+
+        //     // opt_old_interruption = Some(new_interruption.clone());
+
+        //     true
+        // })
+        // .map(|(_, i, p)| (i.clone(), p.clone()))
+
+        // let revised: SAPropsMessageSteps2<Message> = (&sa_timing, &i_p_cut, &steps_init.watch())
+        //     .map(
+        //         move |//
+        //               timing: &Timing,
+        //               //
+        //               (
+        //             // timing,
+        //             interruption,
+        //             props,
+        //         ): &(
+        //             // Timing,
+        //             StepTimeVector<Message>,
+        //             SmallVec<[Property; PROP_SIZE]>,
+        //         ),
+        //               steps: &VecDeque<Step<Message>>| {
+        //             //----------------------------------
+        //             let (mut ready_interruption, queued_interruptions): (
+        //                 StepTimeVector<Message>,
+        //                 StepTimeVector<Message>,
+        //             ) = interruption
+        //                 .clone()
+        //                 .into_iter()
+        //                 .map(|(wait, a_steps)| {
+        //                     // println!("wait: {:?} , dt: {:?}", &wait, &dt);
+        //                     (wait.saturating_sub(*timing.dt()), a_steps)
+        //                 })
+        //                 .partition(|(wait, _)| wait.is_zero());
+
+        //             let mut new_props = props.clone();
+
+        //             let mut new_steps = match ready_interruption.pop_front() {
+        //                 Some((_ /* is zero */, interrupt_steps)) => {
+        //                     new_props.iter_mut().for_each(|prop| {
+        //                         map_to_motion(
+        //                             |m: &mut Motion| {
+        //                                 *m.interpolation_override_mut() = None;
+        //                             },
+        //                             prop,
+        //                         )
+        //                     });
+
+        //                     interrupt_steps
+        //                 }
+
+        //                 None => steps.clone(),
+        //             };
+        //             drop(ready_interruption);
+        //             let mut sent_messages = MsgBackIsNew::default();
+
+        //             resolve_steps(
+        //                 &mut new_props,
+        //                 &mut new_steps,
+        //                 &mut sent_messages,
+        //                 timing.dt(),
+        //             );
+        //             (queued_interruptions, new_steps, new_props, sent_messages)
+        //         },
+        //     );
 
         // ────────────────────────────────────────────────────────────────────────────────
 
@@ -508,7 +560,7 @@ where
         trace!("=======|||||||||||||||||||||||--> topo id:{:?}", &id);
 
         let sa_running = (&interruption_init.watch(), &steps_init.watch())
-            .map(|q, r| !q.is_empty() || !r.is_empty());
+            .map(|q, r| !q.is_empty() || !r.borrow().is_empty());
 
         // state_store()
         //     .borrow()
@@ -543,13 +595,22 @@ where
                     }
                     debug!("after callback running ");
 
-                    let revised_value = revised.get();
-                    props_init
-                        .iter()
-                        .zip(revised_value.2.iter())
-                        .for_each(|(sv, prop)| sv.seting_in_b_a_callback(skip, prop));
-                    interruption_init.seting_in_b_a_callback(skip, &revised_value.0);
-                    steps_init.seting_in_b_a_callback(skip, &revised_value.1);
+                    //TODO remove clone, 每一次都克隆 比较重 , get_with? sized?
+                    // let revised_value = revised.get();
+                    revised.store_get_with(&state_store().borrow(), |(a, b, c, _d)| {
+                        props_init
+                            .iter()
+                            .zip(c.iter())
+                            .for_each(|(sv, prop)| sv.seting_in_b_a_callback(skip, prop));
+                        interruption_init.seting_in_b_a_callback(skip, a);
+                        steps_init.seting_in_b_a_callback(skip, b);
+                    });
+                    // props_init
+                    //     .iter()
+                    //     .zip(revised_value.2.iter())
+                    //     .for_each(|(sv, prop)| sv.seting_in_b_a_callback(skip, prop));
+                    // interruption_init.seting_in_b_a_callback(skip, &revised_value.0);
+                    // steps_init.seting_in_b_a_callback(skip, &revised_value.1);
                 },
                 false,
             )
@@ -582,13 +643,34 @@ where
         }
     }
 
-    pub fn interrupt(&self, steps: Vector<Step<Message>>) {
+    pub fn interrupt(&self, steps: impl Into<VecDeque<Step<Message>>>) {
         self.inside.interruption.set_with_once(|interruption| {
             let mut new_interruption = interruption.clone();
-            let xx = extract_initial_wait(steps);
-            new_interruption.push_front(xx);
+            let steps_vd = steps.into();
+            // trace!("steps_vd: {steps_vd:#?}");
+
+            new_interruption.push_front(extract_initial_wait(steps_vd));
+            // trace!("Interrupt: {new_interruption:#?}");
             new_interruption
         });
+    }
+    pub fn replace(&self, steps: impl Into<VecDeque<Step<Message>>>) {
+        let steps_vd = steps.into();
+        self.inside.interruption.set(
+            // trace!("steps_vd: {steps_vd:#?}");
+            vector!(extract_initial_wait(steps_vd)),
+        );
+    }
+
+    /// # Panics
+    /// temp fn ,
+    /// Will panic if p not prop
+    #[must_use]
+    pub fn get_position(&self, prop_index: usize) -> Precision {
+        self.inside.props[prop_index].get_with(|p| match p {
+            Property::Prop(_name, m) => m.position().into_inner(),
+            _ => todo!("not implemented"),
+        })
     }
 }
 
@@ -620,10 +702,8 @@ mod tests {
     use std::time::Duration;
 
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
-    use emg_animation::models::Property;
-    use emg_animation::{interrupt, opacity, style, to, Tick};
-    use emg_core::{into_vector, IdStr};
-    use emg_core::{vector, Vector};
+    use emg_animation::{interrupt, models::Property, opacity, style, to, Tick};
+    use emg_core::{into_smvec, smallvec, vector, IdStr, Vector};
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
     };
@@ -651,42 +731,14 @@ mod tests {
                     | tracing_subscriber::fmt::format::FmtSpan::ENTER
                     | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
             )
-            .with_max_level(Level::DEBUG)
+            .with_max_level(Level::WARN)
+            // .with_max_level(Level::DEBUG)
             .try_init();
 
         // tracing::subscriber::set_global_default(subscriber)
         // .expect("setting default subscriber failed");
     }
 
-    #[allow(dead_code)]
-    fn setup_global_subscriber() -> impl Drop {
-        std::env::set_var("RUST_LOG", "trace");
-        std::env::set_var("RUST_LOG", "warn");
-
-        // let _el = env_logger::try_init();
-
-        let filter_layer = EnvFilter::try_from_default_env()
-            .or_else(|_| EnvFilter::try_new("trace"))
-            .unwrap();
-
-        let fmt_layer = fmt::Layer::default()
-            .with_target(false)
-            .with_test_writer()
-            .with_span_events(
-                tracing_subscriber::fmt::format::FmtSpan::ENTER
-                    // |tracing_subscriber::fmt::format::FmtSpan::FULL
-                    | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
-            );
-
-        let (flame_layer, _guard) = FlameLayer::with_file("./tracing/tracing.folded").unwrap();
-
-        let _s = tracing_subscriber::registry()
-            .with(filter_layer)
-            .with(fmt_layer)
-            .with(flame_layer)
-            .try_init();
-        _guard
-    }
     #[allow(dead_code)]
     #[derive(Debug, Clone, PartialEq)]
     enum Message {
@@ -698,46 +750,48 @@ mod tests {
     #[bench]
     fn bench_nom_am(b: &mut Bencher) {
         b.iter(|| {
-            let mut am = style::<Message>(into_vector![width(px(1))]);
+            let mut am = style::<Message>(into_smvec![width(px(1))]);
             black_box(nom_am_run(&mut am));
         });
     }
     #[test]
     fn nom_am() {
-        let mut am = style::<Message>(into_vector![width(px(1))]);
+        let mut am = style::<Message>(into_smvec![width(px(1))]);
         nom_am_run(&mut am);
     }
 
     fn nom_am_run(am: &mut emg_animation::models::Animation<Message>) {
         interrupt(
-            vector![
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))]),
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))]),
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))]),
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))]),
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))]),
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))]),
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))]),
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))]),
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))]),
-                to(into_vector![width(px(0))]),
+            [
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))]),
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))]),
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))]),
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))]),
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))]),
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))]),
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))]),
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))]),
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))]),
+                to(into_smvec![width(px(0))]),
             ],
             am,
         );
         for i in 1002..2000 {
             emg_animation::update(Tick(Duration::from_millis(i * 16)), am);
             let _e = am.get_position(0);
+            // println!("pos: {_e}")
         }
         let _e = am.get_position(0);
+        // println!("pos: {_e}")
     }
 
     #[bench]
@@ -760,7 +814,7 @@ mod tests {
             sv_now.set(Duration::from_millis(0));
 
             // let edge_item1 = edge_item.clone();
-            let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(1))]);
+            let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(1))]);
             black_box(less_am_run(&state_store().borrow(), &a, &sv_now));
         });
     }
@@ -770,47 +824,47 @@ mod tests {
         a: &AnimationE<Message>,
         sv_now: &emg_state::StateVar<Duration>,
     ) {
-        a.interrupt(vector![
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
-            // to(into_vector![width(px(0))]),
-            // to(into_vector![width(px(1))]),
+        a.interrupt([
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
         ]);
 
         sv_now.store_set(storeref, Duration::from_millis(16));
@@ -843,8 +897,8 @@ mod tests {
             sv_now.set(Duration::from_millis(0));
             // let edge_item1 = edge_item.clone();
 
-            let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(1))]);
-            // AnimationE::new_in_topo(into_vector![width(px(1))], sv_now);
+            let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(1))]);
+            // AnimationE::new_in_topo(into_smvec![width(px(1))], sv_now);
             black_box(many_am_run(&a, &sv_now));
         });
     }
@@ -859,13 +913,13 @@ mod tests {
         sv_now.set(Duration::from_millis(0));
 
         debug!("===================================main loop ");
-        let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(2))]);
-        a.interrupt(vector![to(into_vector![width(px(0))]),]);
+        let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(2))]);
+        a.interrupt([to(into_smvec![width(px(0))])]);
 
         debug!("===================================main loop--2 ");
 
-        let b: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(99))]);
-        b.interrupt(vector![to(into_vector![width(px(888))]),]);
+        let b: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(99))]);
+        b.interrupt([to(into_smvec![width(px(888))])]);
         sv_now.set(Duration::from_millis(16));
         debug!("a====:\n {:#?}", a.inside.props[0].get());
         debug!("b====:\n {:#?}", b.inside.props[0].get());
@@ -883,12 +937,12 @@ mod tests {
 
         // let sv_now = use_state(Duration::ZERO);
         let sv_now = global_clock();
-        for i in 0..4 {
-            // let edge_item1 = edge_item.clone();
-            sv_now.set(Duration::from_millis(0));
+        // let edge_item1 = edge_item.clone();
+        sv_now.set(Duration::from_millis(0));
 
-            debug!("===================================main loop :{}", i);
-            let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![width(px(1))]);
+        debug!("===================================main loop ");
+        let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(0.5))]);
+        for i in 0..4 {
             black_box(many_am_run_for_test(&a, &sv_now));
         }
     }
@@ -898,45 +952,52 @@ mod tests {
         a: &AnimationE<Message>,
         sv_now: &emg_state::StateVar<Duration>,
     ) {
-        a.interrupt(vector![
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
+        a.interrupt([
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(2))]),
+            to(into_smvec![width(px(2.3))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
+            // to(into_smvec![width(px(1))]),
+            // to(into_smvec![width(px(0))]),
         ]);
-        warn!("set time ---------------------------------------------------- 16");
-        sv_now.set(Duration::from_millis(16));
+        warn!("set time ---------------------------------------------------- 0");
+        // sv_now.set(Duration::from_millis(0));
         // sv_now.store_set(storeref, Duration::from_millis(16));
         // a.update();
         // for i in 1002..1004 {
-        for i in 1..5 {
-            warn!(
-                "in loop: set time ---------------------------------------------------- loop:{}",
-                &i
-            );
+        for i in 1..60 {
+            // warn!(
+            // "in loop: set time ---------------------------------------------------- loop:{}",
+            // &i
+            // );
+            // sv_now.set(Duration::from_millis(0));
 
             sv_now.set(Duration::from_millis(i * 16));
             // sv_now.store_set(storeref, Duration::from_millis(i * 16));
             // a.update();
             // a.inside.props[0].store_get(storeref);
-            a.inside.props[0].get();
+            // if i % 10 == 0 {
+            let _e = a.inside.props[0].get();
+            warn!("i: {i}, pos: {_e}")
+            // }
         }
-        a.inside.props[0].get();
+        let _e = a.inside.props[0].get();
+        warn!("end pos: {_e}")
+
         // a.inside.props[0].store_get(storeref);
     }
 
@@ -945,26 +1006,26 @@ mod tests {
         a: &AnimationE<Message>,
         sv_now: &emg_state::StateVar<Duration>,
     ) {
-        a.interrupt(vector![
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
+        a.interrupt([
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
         ]);
         warn!("set time ---------------------------------------------------- 16");
         sv_now.set(Duration::from_millis(16));
@@ -981,7 +1042,10 @@ mod tests {
             // sv_now.store_set(storeref, Duration::from_millis(i * 16));
             // a.update();
             // a.inside.props[0].store_get(storeref);
-            a.inside.props[0].get();
+            // if i % 40 == 0 {
+            let _e = a.inside.props[0].get();
+
+            // }
         }
         assert_eq!(a.inside.props[0].get(), Property::from(width(px(0))));
         // a.inside.props[0].store_get(storeref);
@@ -1010,16 +1074,16 @@ mod tests {
             let sv_now = global_clock();
             sv_now.set(Duration::from_millis(0));
 
-            let a: AnimationE<Message> = AnimationE::new_in_topo(into_vector![opacity(1.)]);
+            let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![opacity(1.)]);
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
             insta::assert_debug_snapshot!("new2", &a);
             assert_eq!(a.running.get(), false);
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
-            a.interrupt(vector![
-                to(vector![emg_animation::opacity(0.)]),
-                to(vector![emg_animation::opacity(1.)])
+            a.interrupt([
+                to(smallvec![emg_animation::opacity(0.)]),
+                to(smallvec![emg_animation::opacity(1.)]),
             ]);
             // println!("over interrupt");
 
@@ -1120,11 +1184,11 @@ mod tests {
             let root_e_source =use_state( None);
             let root_e_target = use_state(Some(node_index("root")));
             let  root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
-            e_dict_sv.set_with(|d|{
-                let mut nd = d .clone();
-                nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
-                nd
-            });
+            // e_dict_sv.set_with(|d|{
+            //     let mut nd = d .clone();
+            //     nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
+            //     nd
+            // });
 
             // let e1_source =use_state( Some(node_index("root")));
             // let e1_target = use_state(Some(node_index("1")));
@@ -1172,8 +1236,8 @@ mod tests {
             sv_now.set(Duration::from_millis(0));
 
             let a: AnimationE< Message> =
-                // AnimationEdge::new_in_topo(into_vector![width(px(1))], e1, sv_now);
-                AnimationE::new_in_topo(into_vector![css_w]);
+                // AnimationEdge::new_in_topo(into_smvec![width(px(1))], e1, sv_now);
+                AnimationE::new_in_topo(into_smvec![css_w]);
                 a.effecting_edge_path( &root_e,EPath(vector![edge_index_no_source("root")]));
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
@@ -1185,9 +1249,9 @@ mod tests {
             assert_eq!(a.running.get(), false);
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
-            a.interrupt(vector![
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))])
+            a.interrupt([
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))])
             ]);
             // println!("over interrupt");
 
@@ -1346,26 +1410,26 @@ mod tests {
             1080,
         );
         a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
-        a.interrupt(vector![
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-            to(into_vector![width(px(0))]),
+        a.interrupt([
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
+            to(into_smvec![width(px(1))]),
+            to(into_smvec![width(px(0))]),
         ]);
         for i in 1..1000 {
             sv_now.set(Duration::from_millis(i * 16));
@@ -1394,10 +1458,7 @@ mod tests {
             1080,
         );
         a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
-        a.interrupt(vector![
-            to(into_vector![width(px(0))]),
-            to(into_vector![width(px(1))]),
-        ]);
+        a.interrupt([to(into_smvec![width(px(0))]), to(into_smvec![width(px(1))])]);
         insta::assert_debug_snapshot!("anima_macro_interrupt", &a);
 
         for i in 1..100 {
@@ -1477,8 +1538,8 @@ mod tests {
             sv_now.set(Duration::from_millis(0));
 
             let a: AnimationE< Message> =
-                // AnimationEdge::new_in_topo(into_vector![width(px(1))], e1, sv_now);
-                AnimationE::new_in_topo(into_vector![css_w]);
+                // AnimationEdge::new_in_topo(into_smvec![width(px(1))], e1, sv_now);
+                AnimationE::new_in_topo(into_smvec![css_w]);
                 a.effecting_edge_path(&e1,EPath(vector![edge_index_no_source("root"),edge_index("root","1")]));
 
             // println!("a:{:#?}", &a);
@@ -1491,9 +1552,9 @@ mod tests {
             assert_eq!(a.running.get(), false);
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
-            a.interrupt(vector![
-                to(into_vector![width(px(0))]),
-                to(into_vector![width(px(1))])
+            a.interrupt([
+                to(into_smvec![width(px(0))]),
+                to(into_smvec![width(px(1))])
             ]);
             // println!("over interrupt");
 

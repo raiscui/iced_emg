@@ -1,12 +1,15 @@
 ---
 source: emg_layout/src/animation.rs
+assertion_line: 1593
 expression: "&a"
 
 ---
 AnimationEdge {
     inside: AnimationInside {
         steps: StateVar(
-            [],
+            RefCell {
+                value: [],
+            },
         ),
         interruption: StateVar(
             [],
@@ -15,7 +18,9 @@ AnimationEdge {
             StateVarProperty(
                 StateVar(
                     Prop(
-                        "CssWidth",
+                        TypeName(
+                            "CssWidth",
+                        ),
                         Motion {
                             position: NotNan(
                                 99.0,

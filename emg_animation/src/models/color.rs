@@ -4,11 +4,15 @@ use seed_styles::Unit;
 /*
  * @Author: Rais
  * @Date: 2021-05-10 15:31:40
- * @LastEditTime: 2022-01-10 12:31:48
+ * @LastEditTime: 2022-01-25 17:58:53
  * @LastEditors: Rais
  * @Description:
  */
-use crate::{init_motion, models::Property};
+use crate::init_motion;
+
+use crate::models::PropertyOG;
+
+use super::Property;
 
 pub struct Color {
     red: u8,
@@ -29,6 +33,25 @@ impl Color {
     }
 }
 
+fn custom_color_og(
+    name: &str,
+    Color {
+        red,
+        green,
+        blue,
+        alpha,
+    }: Color,
+) -> PropertyOG {
+    PropertyOG::Color(
+        name.into(),
+        vector![
+            init_motion(f64::from(red), Unit::Empty),
+            init_motion(f64::from(green), Unit::Empty),
+            init_motion(f64::from(blue), Unit::Empty),
+            init_motion(alpha, Unit::Empty),
+        ],
+    )
+}
 fn custom_color(
     name: &str,
     Color {
@@ -40,15 +63,20 @@ fn custom_color(
 ) -> Property {
     Property::Color(
         name.into(),
-        vector![
+        Box::new([
             init_motion(f64::from(red), Unit::Empty),
             init_motion(f64::from(green), Unit::Empty),
             init_motion(f64::from(blue), Unit::Empty),
             init_motion(alpha, Unit::Empty),
-        ],
+        ]),
     )
 }
 #[must_use]
-pub fn fill(color: Color) -> Property {
+pub fn fill_sm(color: Color) -> Property {
     custom_color("fill", color)
+}
+
+#[must_use]
+pub fn fill(color: Color) -> PropertyOG {
+    custom_color_og("fill", color)
 }

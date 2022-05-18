@@ -1,5 +1,6 @@
 ---
 source: emg_layout/src/lib.rs
+assertion_line: 1292
 expression: "&e2"
 
 ---
@@ -20,84 +21,62 @@ EmgEdgeItem {
                 EdgeData {
                     calculated: LayoutCalculated {
                         size: StateAnchor(
-                            Matrix {
-                                data: [
-                                    [
-                                        50.0,
-                                        50.0,
-                                    ],
+                            [
+                                [
+                                    50.0,
+                                    50.0,
                                 ],
-                            },
+                            ],
                         ),
                         origin: StateAnchor(
-                            Translation {
-                                vector: Matrix {
-                                    data: [
-                                        [
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                    ],
-                                },
-                            },
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
                         ),
                         align: StateAnchor(
-                            Translation {
-                                vector: Matrix {
-                                    data: [
-                                        [
-                                            50.0,
-                                            50.0,
-                                            0.0,
-                                        ],
-                                    ],
-                                },
-                            },
+                            [
+                                50.0,
+                                50.0,
+                                0.0,
+                            ],
                         ),
                         coordinates_trans: StateAnchor(
-                            Translation {
-                                vector: Matrix {
-                                    data: [
-                                        [
-                                            50.0,
-                                            50.0,
-                                            0.0,
-                                        ],
-                                    ],
-                                },
-                            },
+                            [
+                                50.0,
+                                50.0,
+                                0.0,
+                            ],
                         ),
                         matrix: StateAnchor(
                             Mat4(
-                                Matrix {
-                                    data: [
-                                        [
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                        [
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                        [
-                                            0.0,
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                        ],
-                                        [
-                                            50.0,
-                                            50.0,
-                                            0.0,
-                                            1.0,
-                                        ],
+                                [
+                                    [
+                                        1.0,
+                                        0.0,
+                                        0.0,
+                                        0.0,
                                     ],
-                                },
+                                    [
+                                        0.0,
+                                        1.0,
+                                        0.0,
+                                        0.0,
+                                    ],
+                                    [
+                                        0.0,
+                                        0.0,
+                                        1.0,
+                                        0.0,
+                                    ],
+                                    [
+                                        50.0,
+                                        50.0,
+                                        0.0,
+                                        1.0,
+                                    ],
+                                ],
                             ),
                         ),
                         loc_styles: StateAnchor(
@@ -135,10 +114,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/calc.rs:153:29",
-                                    "emg_layout/src/calc.rs:153:33",
-                                    "emg_layout/src/calc.rs:153:52",
-                                    "emg_layout/src/calc.rs:153:71",
+                                    "emg_layout/src/calc.rs:151:29",
+                                    "emg_layout/src/calc.rs:151:33",
+                                    "emg_layout/src/calc.rs:151:52",
+                                    "emg_layout/src/calc.rs:151:71",
                                 ],
                                 pseudo: None,
                                 media: None,
@@ -157,84 +136,62 @@ EmgEdgeItem {
                     opt_p_calculated: Some(
                         LayoutCalculated {
                             size: StateAnchor(
-                                Matrix {
-                                    data: [
-                                        [
-                                            100.0,
-                                            100.0,
-                                        ],
+                                [
+                                    [
+                                        100.0,
+                                        100.0,
                                     ],
-                                },
+                                ],
                             ),
                             origin: StateAnchor(
-                                Translation {
-                                    vector: Matrix {
-                                        data: [
-                                            [
-                                                0.0,
-                                                0.0,
-                                                0.0,
-                                            ],
-                                        ],
-                                    },
-                                },
+                                [
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                ],
                             ),
                             align: StateAnchor(
-                                Translation {
-                                    vector: Matrix {
-                                        data: [
-                                            [
-                                                0.0,
-                                                0.0,
-                                                0.0,
-                                            ],
-                                        ],
-                                    },
-                                },
+                                [
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                ],
                             ),
                             coordinates_trans: StateAnchor(
-                                Translation {
-                                    vector: Matrix {
-                                        data: [
-                                            [
-                                                0.0,
-                                                0.0,
-                                                0.0,
-                                            ],
-                                        ],
-                                    },
-                                },
+                                [
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                ],
                             ),
                             matrix: StateAnchor(
                                 Mat4(
-                                    Matrix {
-                                        data: [
-                                            [
-                                                1.0,
-                                                0.0,
-                                                0.0,
-                                                0.0,
-                                            ],
-                                            [
-                                                0.0,
-                                                1.0,
-                                                0.0,
-                                                0.0,
-                                            ],
-                                            [
-                                                0.0,
-                                                0.0,
-                                                1.0,
-                                                0.0,
-                                            ],
-                                            [
-                                                0.0,
-                                                0.0,
-                                                0.0,
-                                                1.0,
-                                            ],
+                                    [
+                                        [
+                                            1.0,
+                                            0.0,
+                                            0.0,
+                                            0.0,
                                         ],
-                                    },
+                                        [
+                                            0.0,
+                                            1.0,
+                                            0.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            0.0,
+                                            0.0,
+                                            1.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            0.0,
+                                            0.0,
+                                            0.0,
+                                            1.0,
+                                        ],
+                                    ],
                                 ),
                             ),
                             loc_styles: StateAnchor(
@@ -272,10 +229,10 @@ EmgEdgeItem {
                                         },
                                     ],
                                     updated_at: [
-                                        "emg_layout/src/lib.rs:958:13",
-                                        "emg_layout/src/lib.rs:958:17",
-                                        "emg_layout/src/lib.rs:958:31",
-                                        "emg_layout/src/lib.rs:958:45",
+                                        "emg_layout/src/lib.rs:1007:13",
+                                        "emg_layout/src/lib.rs:1007:17",
+                                        "emg_layout/src/lib.rs:1007:31",
+                                        "emg_layout/src/lib.rs:1007:45",
                                     ],
                                     pseudo: None,
                                     media: None,
@@ -439,7 +396,7 @@ EmgEdgeItem {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:731:41",
+                "emg_layout/src/lib.rs:781:41",
             ],
             pseudo: None,
             media: None,
@@ -463,84 +420,62 @@ EmgEdgeItem {
                 EdgeData {
                     calculated: LayoutCalculated {
                         size: StateAnchor(
-                            Matrix {
-                                data: [
-                                    [
-                                        20.0,
-                                        20.0,
-                                    ],
+                            [
+                                [
+                                    20.0,
+                                    20.0,
                                 ],
-                            },
+                            ],
                         ),
                         origin: StateAnchor(
-                            Translation {
-                                vector: Matrix {
-                                    data: [
-                                        [
-                                            -20.0,
-                                            -20.0,
-                                            0.0,
-                                        ],
-                                    ],
-                                },
-                            },
+                            [
+                                -20.0,
+                                -20.0,
+                                0.0,
+                            ],
                         ),
                         align: StateAnchor(
-                            Translation {
-                                vector: Matrix {
-                                    data: [
-                                        [
-                                            50.0,
-                                            50.0,
-                                            0.0,
-                                        ],
-                                    ],
-                                },
-                            },
+                            [
+                                50.0,
+                                50.0,
+                                0.0,
+                            ],
                         ),
                         coordinates_trans: StateAnchor(
-                            Translation {
-                                vector: Matrix {
-                                    data: [
-                                        [
-                                            30.0,
-                                            30.0,
-                                            0.0,
-                                        ],
-                                    ],
-                                },
-                            },
+                            [
+                                30.0,
+                                30.0,
+                                0.0,
+                            ],
                         ),
                         matrix: StateAnchor(
                             Mat4(
-                                Matrix {
-                                    data: [
-                                        [
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                        [
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                        [
-                                            0.0,
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                        ],
-                                        [
-                                            30.0,
-                                            30.0,
-                                            0.0,
-                                            1.0,
-                                        ],
+                                [
+                                    [
+                                        1.0,
+                                        0.0,
+                                        0.0,
+                                        0.0,
                                     ],
-                                },
+                                    [
+                                        0.0,
+                                        1.0,
+                                        0.0,
+                                        0.0,
+                                    ],
+                                    [
+                                        0.0,
+                                        0.0,
+                                        1.0,
+                                        0.0,
+                                    ],
+                                    [
+                                        30.0,
+                                        30.0,
+                                        0.0,
+                                        1.0,
+                                    ],
+                                ],
                             ),
                         ),
                         loc_styles: StateAnchor(
@@ -578,10 +513,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/calc.rs:153:29",
-                                    "emg_layout/src/calc.rs:153:33",
-                                    "emg_layout/src/calc.rs:153:52",
-                                    "emg_layout/src/calc.rs:153:71",
+                                    "emg_layout/src/calc.rs:151:29",
+                                    "emg_layout/src/calc.rs:151:33",
+                                    "emg_layout/src/calc.rs:151:52",
+                                    "emg_layout/src/calc.rs:151:71",
                                 ],
                                 pseudo: None,
                                 media: None,
@@ -600,84 +535,62 @@ EmgEdgeItem {
                     opt_p_calculated: Some(
                         LayoutCalculated {
                             size: StateAnchor(
-                                Matrix {
-                                    data: [
-                                        [
-                                            50.0,
-                                            50.0,
-                                        ],
+                                [
+                                    [
+                                        50.0,
+                                        50.0,
                                     ],
-                                },
+                                ],
                             ),
                             origin: StateAnchor(
-                                Translation {
-                                    vector: Matrix {
-                                        data: [
-                                            [
-                                                0.0,
-                                                0.0,
-                                                0.0,
-                                            ],
-                                        ],
-                                    },
-                                },
+                                [
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                ],
                             ),
                             align: StateAnchor(
-                                Translation {
-                                    vector: Matrix {
-                                        data: [
-                                            [
-                                                50.0,
-                                                50.0,
-                                                0.0,
-                                            ],
-                                        ],
-                                    },
-                                },
+                                [
+                                    50.0,
+                                    50.0,
+                                    0.0,
+                                ],
                             ),
                             coordinates_trans: StateAnchor(
-                                Translation {
-                                    vector: Matrix {
-                                        data: [
-                                            [
-                                                50.0,
-                                                50.0,
-                                                0.0,
-                                            ],
-                                        ],
-                                    },
-                                },
+                                [
+                                    50.0,
+                                    50.0,
+                                    0.0,
+                                ],
                             ),
                             matrix: StateAnchor(
                                 Mat4(
-                                    Matrix {
-                                        data: [
-                                            [
-                                                1.0,
-                                                0.0,
-                                                0.0,
-                                                0.0,
-                                            ],
-                                            [
-                                                0.0,
-                                                1.0,
-                                                0.0,
-                                                0.0,
-                                            ],
-                                            [
-                                                0.0,
-                                                0.0,
-                                                1.0,
-                                                0.0,
-                                            ],
-                                            [
-                                                50.0,
-                                                50.0,
-                                                0.0,
-                                                1.0,
-                                            ],
+                                    [
+                                        [
+                                            1.0,
+                                            0.0,
+                                            0.0,
+                                            0.0,
                                         ],
-                                    },
+                                        [
+                                            0.0,
+                                            1.0,
+                                            0.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            0.0,
+                                            0.0,
+                                            1.0,
+                                            0.0,
+                                        ],
+                                        [
+                                            50.0,
+                                            50.0,
+                                            0.0,
+                                            1.0,
+                                        ],
+                                    ],
                                 ),
                             ),
                             loc_styles: StateAnchor(
@@ -715,10 +628,10 @@ EmgEdgeItem {
                                         },
                                     ],
                                     updated_at: [
-                                        "emg_layout/src/calc.rs:153:29",
-                                        "emg_layout/src/calc.rs:153:33",
-                                        "emg_layout/src/calc.rs:153:52",
-                                        "emg_layout/src/calc.rs:153:71",
+                                        "emg_layout/src/calc.rs:151:29",
+                                        "emg_layout/src/calc.rs:151:33",
+                                        "emg_layout/src/calc.rs:151:52",
+                                        "emg_layout/src/calc.rs:151:71",
                                     ],
                                     pseudo: None,
                                     media: None,

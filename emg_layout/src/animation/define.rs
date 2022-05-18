@@ -56,21 +56,27 @@ impl From<StateVarProperty> for StateVar<GenericSizeAnchor> {
 
         use_state(
             //
-            GenericSizeAnchor(sv.get_var_with(|v| v.watch().map(|p| p.clone().into()).into())),
+            //TODO impl new_from
+            GenericSizeAnchor(sv.watch().map(|p| p.clone().into())),
         )
     }
 }
 impl std::ops::ShlAssign<&StateVarProperty> for StateVar<GenericSizeAnchor> {
     fn shl_assign(&mut self, rhs: &StateVarProperty) {
         self.set(GenericSizeAnchor(
-            rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
+            // rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
+            //TODO impl new_from
+            rhs.watch().map(|p| p.clone().into()),
         ));
     }
 }
 impl std::ops::ShlAssign<StateVarProperty> for StateVar<GenericSizeAnchor> {
     fn shl_assign(&mut self, rhs: StateVarProperty) {
         self.set(GenericSizeAnchor(
-            rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
+            //TODO impl new_from
+            //TODO check performance
+            // rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
+            rhs.watch().map(|p| p.clone().into()),
         ));
     }
 }

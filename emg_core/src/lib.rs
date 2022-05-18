@@ -1,21 +1,17 @@
 mod func;
 mod macros;
 pub mod measures;
-use measures::{px, LogicLength};
-use measures::{ExactLengthSimplex, Unit};
+use measures::{px, ExactLengthSimplex, LogicLength, Unit};
 
 // ────────────────────────────────────────────────────────────────────────────────
+use derive_more::{Display, From};
 pub use smol_str::SmolStr as IdStr;
-// pub use compact_str::CompactStr as IdStr;
-use derive_more::Display;
-use derive_more::From;
-// pub use im_rc;
-pub use imbl as im_rc;
-pub use imbl::vector;
-pub use imbl::Vector;
+
+pub use crate::SVec::{smallvec, SmallVec};
+pub use ::smallvec as SVec;
+pub use im_rc::{vector, Vector};
 use ordered_float::NotNan;
-pub use tinyvec::tiny_vec;
-pub use tinyvec::TinyVec;
+// pub use tinyvec::{tiny_vec, TinyVec};
 // ────────────────────────────────────────────────────────────────────────────────
 pub trait TypeCheck {
     fn static_type_name() -> TypeName;
@@ -189,7 +185,7 @@ impl GenericSize {
 
 #[cfg(test)]
 mod tests {
-    use imbl::Vector;
+    use crate::Vector;
 
     use crate::into_vector;
 

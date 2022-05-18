@@ -4,9 +4,15 @@ version = "0.1.0"
 edition = "2021"
 resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["bench"]
+bench = []
 
 [profile.dev]
 split-debuginfo = "unpacked"
+[profile.bench]
+lto = true
+
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -20,17 +26,49 @@ tracing = "0.1"
 emg_state = { path = "../emg_state" }
 emg_core = { path = "../emg_core" }
 seed_styles = { path = "../../styles_hooks/seed_styles" }
-ordered-float = "2"
+ordered-float = "3.0.0"
 derive_more = "0.99"
-
-tinyvec = { version = "1.5.1", features = ["alloc"] }
-smallvec = { version = "1.7.0", features = ["const_generics", "union"] }
 
 
 [dev-dependencies]
 insta = "1"
-criterion = { version = "0.3", features = ["html_reports", "real_blackbox"] }
+# criterion = { version = "0.3", features = ["real_blackbox"] }
+# criterion = { git = "https://github.com/bheisler/criterion.rs", branch = "version-0.4", default-features = false }
+# criterion = { git = "https://github.com/bheisler/criterion.rs", branch = "version-0.4", features = [
+#     "real_blackbox",
+# ] }
 # plotters = "0.3.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+easybench = "1.1.0"
+criterion = { git = "https://github.com/bheisler/criterion.rs", branch = "version-0.4", features = [
+    "real_blackbox",
+] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+easybench-wasm = "0.2"
+wasm-bindgen-test = "0.3"
+
+
 [[bench]]
 name = "my_benchmark"
 harness = false
+# required-features = ["bench"]
+
+
+# required-features = ["bench"]
+# for app
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies.web-sys]
+version = "^0.3"
+features = [
+    "Window",
+    "console",
+    "Document",
+    "HtmlElement",
+    "HtmlInputElement",
+    "Event",
+    "EventTarget",
+    "InputEvent",
+    "KeyboardEvent",
+    "IdleRequestOptions",
+]

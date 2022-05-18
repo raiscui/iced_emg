@@ -2,16 +2,13 @@ use crate::{window::observe_size, Orders};
 use emg_animation::Tick;
 // use fxhash::FxBuildHasher;
 use emg_hasher::CustomHasher;
-use emg_layout::{
-    animation::{global_anima_running_sa, global_clock},
-    global_height, global_width,
-};
+use emg_layout::{global_anima_running_sa, global_clock, global_height, global_width};
 use emg_state::{state_store, CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 
 /*
  * @Author: Rais
  * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2022-01-10 12:43:17
+ * @LastEditTime: 2022-05-16 11:46:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -181,12 +178,10 @@ impl<Message> OrdersContainer<Message>
                     BuildHasherDefault::<CustomHasher>::default(),
                 )),
                 now: global_clock(),
-                am_running:global_anima_running_sa(),
-                width:global_width(),
-                height:global_height()
-
-                //
-                // render_info: Cell::new(None),
+                am_running: global_anima_running_sa(),
+                width: global_width(),
+                height: global_height(), //
+                                         // render_info: Cell::new(None),
             }),
             bus,
             re_render_msg: Rc::new(RefCell::new(None)),

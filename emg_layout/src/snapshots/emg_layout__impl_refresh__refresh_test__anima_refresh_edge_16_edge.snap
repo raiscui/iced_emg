@@ -1,5 +1,6 @@
 ---
 source: emg_layout/src/impl_refresh.rs
+assertion_line: 445
 expression: "&root_e"
 
 ---
@@ -302,7 +303,7 @@ EmgEdgeItem {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:731:41",
+                "emg_layout/src/lib.rs:781:41",
             ],
             pseudo: None,
             media: None,
@@ -324,84 +325,62 @@ EmgEdgeItem {
                 EdgeData {
                     calculated: LayoutCalculated {
                         size: StateAnchor(
-                            Matrix {
-                                data: [
-                                    [
-                                        94.32537399252,
-                                        1080.0,
-                                    ],
+                            [
+                                [
+                                    94.32537399252,
+                                    1080.0,
                                 ],
-                            },
+                            ],
                         ),
                         origin: StateAnchor(
-                            Translation {
-                                vector: Matrix {
-                                    data: [
-                                        [
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                    ],
-                                },
-                            },
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
                         ),
                         align: StateAnchor(
-                            Translation {
-                                vector: Matrix {
-                                    data: [
-                                        [
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                    ],
-                                },
-                            },
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
                         ),
                         coordinates_trans: StateAnchor(
-                            Translation {
-                                vector: Matrix {
-                                    data: [
-                                        [
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                    ],
-                                },
-                            },
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
                         ),
                         matrix: StateAnchor(
                             Mat4(
-                                Matrix {
-                                    data: [
-                                        [
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                        [
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                            0.0,
-                                        ],
-                                        [
-                                            0.0,
-                                            0.0,
-                                            1.0,
-                                            0.0,
-                                        ],
-                                        [
-                                            0.0,
-                                            0.0,
-                                            0.0,
-                                            1.0,
-                                        ],
+                                [
+                                    [
+                                        1.0,
+                                        0.0,
+                                        0.0,
+                                        0.0,
                                     ],
-                                },
+                                    [
+                                        0.0,
+                                        1.0,
+                                        0.0,
+                                        0.0,
+                                    ],
+                                    [
+                                        0.0,
+                                        0.0,
+                                        1.0,
+                                        0.0,
+                                    ],
+                                    [
+                                        0.0,
+                                        0.0,
+                                        0.0,
+                                        1.0,
+                                    ],
+                                ],
                             ),
                         ),
                         loc_styles: StateAnchor(
@@ -439,10 +418,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/lib.rs:958:13",
-                                    "emg_layout/src/lib.rs:958:17",
-                                    "emg_layout/src/lib.rs:958:31",
-                                    "emg_layout/src/lib.rs:958:45",
+                                    "emg_layout/src/lib.rs:1007:13",
+                                    "emg_layout/src/lib.rs:1007:17",
+                                    "emg_layout/src/lib.rs:1007:31",
+                                    "emg_layout/src/lib.rs:1007:45",
                                 ],
                                 pseudo: None,
                                 media: None,

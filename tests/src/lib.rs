@@ -10,7 +10,7 @@ mod test {
         time::Duration,
     };
 
-    use emg_animation::{interrupt, opacity, style, to};
+    use emg_animation::{interrupt_og, opacity_og, style_og, to_og, to};
     use emg_bind::{
         better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
         button, edge_index_no_source, emg_msg,
@@ -18,12 +18,13 @@ mod test {
         subscription, Application, Button, Checkbox, Command, Element, GTreeBuilderElement,
         GraphMethods, GraphType, GraphView, Orders, Subscription, Text, Tick,
     };
-    use emg_core::{into_vector, vector};
+    use emg_core::{into_vector, vector, into_smvec};
     use emg_core::{parent, TypeCheck, TypeCheckObjectSafe};
     use emg_layout::{
+        global_clock,
         add_values::origin_x,
         anima,
-        animation::{global_clock, AnimationE},
+        animation::{ AnimationE},
         styles::{pc, px, width, CssWidth},
         EmgEdgeItem,
     };
@@ -172,9 +173,9 @@ mod test {
                         Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
                             On:click move |_root, vdom, _event| {
 
-                                an.interrupt(vector![
-                                    to(into_vector![width(px(50))]),
-                                    to(into_vector![width(pc(100))]),
+                                an.interrupt([
+                                    to![width(px(50))],
+                                    to![width(pc(100))],
                                 ]);
 
                                             a.set(a.get()+1);
@@ -225,55 +226,55 @@ mod test {
 
         let mut tot = 0f64;
 
-        an2.interrupt(vector![
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
-            to(into_vector![width(px(50))]),
-            to(into_vector![width(pc(10110))]),
+        an2.interrupt([
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
+            to![width(px(50))],
+            to![width(pc(10110))],
         ]);
 
         let t1 = p.now();

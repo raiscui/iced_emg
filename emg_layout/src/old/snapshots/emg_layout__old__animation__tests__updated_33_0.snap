@@ -1,0 +1,89 @@
+---
+source: emg_layout/src/old/animation.rs
+assertion_line: 1051
+expression: "&a"
+
+---
+AnimationEdge {
+    inside: AnimationInsideOG {
+        steps: StateVar(
+            [
+                _Step,
+                To(
+                    [
+                        Prop(
+                            TypeName(
+                                "opacity",
+                            ),
+                            Motion {
+                                position: NotNan(
+                                    1.0,
+                                ),
+                                velocity: NotNan(
+                                    0.0,
+                                ),
+                                target: NotNan(
+                                    1.0,
+                                ),
+                                interpolation: Spring {
+                                    stiffness: NotNan(
+                                        170.0,
+                                    ),
+                                    damping: NotNan(
+                                        26.0,
+                                    ),
+                                },
+                                unit: Empty,
+                                interpolation_override: None,
+                            },
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        interruption: StateVar(
+            [],
+        ),
+        props: [
+            StateVarPropertyOG(
+                StateVar(
+                    Prop(
+                        TypeName(
+                            "opacity",
+                        ),
+                        Motion {
+                            position: NotNan(
+                                0.8790954727392676,
+                            ),
+                            velocity: NotNan(
+                                -4.334475455337199,
+                            ),
+                            target: NotNan(
+                                0.0,
+                            ),
+                            interpolation: Spring {
+                                stiffness: NotNan(
+                                    170.0,
+                                ),
+                                damping: NotNan(
+                                    26.0,
+                                ),
+                            },
+                            unit: Empty,
+                            interpolation_override: None,
+                        },
+                    ),
+                ),
+            ),
+        ],
+    },
+    timing: StateAnchor(
+        Timing {
+            current: 33ms,
+            dt: 17ms,
+        },
+    ),
+    running: StateAnchor(
+        true,
+    ),
+}

@@ -6,13 +6,21 @@ edition = "2021"
 resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+bench = []
+
 [profile.dev]
 split-debuginfo = "unpacked"
+[profile.bench]
+lto = true
 [lib]
 crate-type = ["cdylib", "rlib"]
+bench = false
+
 
 [dependencies]
-nalgebra = "0.30"
+nalgebra = "0.31.0"
 # nalgebra = "0.29.0"
 derive_more = "0.99"
 seed_styles = { path = "../../styles_hooks/seed_styles" }
@@ -34,15 +42,20 @@ emg_animation = { path = "../emg_animation" }
 emg_core = { path = "../emg_core" }
 emg_hasher = { path = "../emg_hasher" }
 
-
+# ownref = "0.3.1"
 # ahash = "0.7.6"
 indexmap = "1.8"
 
 illicit = "1.1.2"
 
-tinyvec = { version = "1.5.1", features = ["alloc"] }
+# tinyvec = { version = "1.5.1", features = ["alloc"] }
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.3.5", features = ["env-filter"] }
 tracing-flame = "0.2.0"
 insta = "1"
+criterion = { version = "0.3", features = ["html_reports", "real_blackbox"] }
+
+[[bench]]
+name = "my_benchmark"
+harness = false

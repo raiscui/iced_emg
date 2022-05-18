@@ -1,10 +1,12 @@
+#![allow(clippy::all)]
+
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 
 /*
  * @Author: Rais
  * @Date: 2021-06-26 16:46:18
- * @LastEditTime: 2021-08-18 19:18:48
+ * @LastEditTime: 2022-05-16 15:37:14
  * @LastEditors: Rais
  * @Description:
  */
