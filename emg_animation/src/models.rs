@@ -351,7 +351,7 @@ where
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Timing {
     pub(crate) current: Duration,
     pub(crate) dt: Duration,
@@ -459,7 +459,7 @@ where
         }
     }
 }
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Tick(pub Duration);
 
 impl Tick {
@@ -933,12 +933,12 @@ mod resolve_steps_test {
                 }
             }
             println!("=============================");
-            if s.len() == 0 {
-                break;
-            } else {
-                initial_props = p;
-                steps = s;
-            }
+            // if s.len() == 0 {
+            //     break;
+            // } else {
+            initial_props = p;
+            steps = s;
+            // }
         }
     }
     #[test]
@@ -1010,17 +1010,24 @@ pub fn resolve_steps<Message>(
                 for x in &target {
                     warn!("to {x}");
                 }
+                // println!("to- {:?}", current_style);
 
                 let mut test_current_style = current_style.clone();
                 start_towards_mut(false, &mut test_current_style, target.clone());
                 step(&Duration::ZERO, &mut test_current_style);
+                // println!("to-test_current_style {:?}", test_current_style);
+
                 // assert_eq!(current_style, &mut x);
                 let done = test_current_style.iter().all(is_done_sm);
 
                 if done {
                     warn!("step::to , done!");
+                    // println!("to-done {:?}", test_current_style);
+                    *current_style = test_current_style;
                 } else {
                     warn!("not done yet");
+                    // println!("to-not done {:?}", test_current_style);
+
                     steps.push_front(Step::_Step);
                     start_towards_mut(false, current_style, target);
 
@@ -1293,6 +1300,7 @@ fn replace_props(
     //     println!("==== : {}", &p.name());
     // }
     props.extend(replacements);
+    // props.append(&mut replacements);
 }
 fn replace_props_og(
     props: Vector<PropertyOG>,
@@ -1789,6 +1797,7 @@ fn step_interpolation_mut(dt: &Duration, motion: &mut Motion) {
         .interpolation_override
         .clone()
         .unwrap_or_else(|| motion.interpolation.clone());
+    // println!("interpolation_to_use: {:?}", interpolation_to_use);
     match interpolation_to_use {
         Interpolation::AtSpeed { per_second } => {
             let (new_pos, finished) = {
@@ -1821,7 +1830,18 @@ fn step_interpolation_mut(dt: &Duration, motion: &mut Motion) {
             let new_pos = new_velocity.mul_add(dt_sec, *motion.position);
 
             let dx = (motion.target - new_pos).abs();
+
+            // println!(
+            //     "dx < position_error_margin(motion): {:?} v:{:?}",
+            //     dx < position_error_margin(motion),
+            //     new_velocity.abs()
+            // );
+
             if dx < position_error_margin(motion) && new_velocity.abs() < VELOCITY_ERROR_MARGIN {
+                // println!(
+                //     "motion.position: {:?} v:{:?}",
+                //     motion.position, motion.target
+                // );
                 motion.position = motion.target;
                 motion.velocity = NotNan::default();
             } else {
@@ -2037,7 +2057,6 @@ fn step_interpolation_og(dt: &Duration, mut motion: Motion) -> Motion {
 //         .collect()
 // }
 
-//TODO work here
 fn start_towards_mut(
     override_interpolation: bool,
     current: &mut SmallVec<[Property; PROP_SIZE]>,
@@ -2917,7 +2936,8 @@ fn match_points_refmut(
             None => (),
             Some(last2) => {
                 let diff = points1.len() - points2.len();
-                let repeat_last2 = vec![last2.clone(); diff].into_iter();
+                let repeat_last2: SmallVec<[[Motion; DIM2]; 1]> = smallvec![last2.clone(); diff];
+                // let repeat_last2 = vec![last2.clone(); diff];
                 points2.extend(repeat_last2);
             }
         },
@@ -2925,7 +2945,7 @@ fn match_points_refmut(
             None => (),
             Some(last1) => {
                 let diff = points2.len() - points1.len();
-                let repeat_last1 = vec![last1.clone(); diff].into_iter();
+                let repeat_last1: SmallVec<[[Motion; DIM2]; 1]> = smallvec![last1.clone(); diff];
                 points1.extend(repeat_last1);
             }
         },

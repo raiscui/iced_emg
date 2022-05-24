@@ -259,7 +259,7 @@ struct EdgeDataOutput {
 //         )
 //     }
 // }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq,Eq)]
 pub struct Layout
 {
     w:StateVar<GenericSizeAnchor>,

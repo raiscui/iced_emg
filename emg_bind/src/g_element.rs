@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-05-16 09:36:06
+ * @LastEditTime: 2022-05-23 18:24:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,6 +20,7 @@ use std::{cell::RefCell, convert::TryFrom, rc::Rc};
 use strum_macros::Display;
 use tracing::debug;
 pub trait GenerateElement<Message> {
+    //TODO remove ref? not clone?
     fn generate_element(&self) -> Element<Message>;
 }
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-01-19 16:21:55
+ * @LastEditTime: 2022-05-23 13:03:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -318,7 +318,7 @@ where
             BuilderWidget::Dyn(x) => x.generate_element_builder(bump, bus, style_sheet),
         };
 
-        warn!("node_builder_widget index:{}", self.id.as_str());
+        debug!("node_builder_widget index:{}", self.id.as_str());
 
         element_builder = element_builder
             .attr(

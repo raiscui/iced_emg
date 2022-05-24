@@ -1,0 +1,6 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory `/Users/cuiluming/Nextcloud/dev_chaoway/rust/iced_emg'
+make: Leaving directory `/Users/cuiluming/Nextcloud/dev_chaoway/rust/iced_emg'
+ 
+make: *** No targets specified and no makefile found.  Stop.
+

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-01-19 16:18:29
+ * @LastEditTime: 2022-05-23 18:24:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -193,6 +193,7 @@ where
     Message: 'static + Clone,
 {
     fn generate_element(&self) -> Element<Message> {
+        //TODO remove ref? not clone?
         Element::new(self.clone())
     }
 }
@@ -287,6 +288,8 @@ where
         };
     }
 }
+
+//TODO use macro
 impl<Message> TypeCheckObjectSafe for Checkbox<Message> {
     fn type_name(&self) -> TypeName {
         TypeName::new(IdStr::new_inline("Checkbox"))

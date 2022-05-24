@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-01-28 12:08:57
+ * @LastEditTime: 2022-05-23 13:59:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -507,7 +507,9 @@ fn start_set_var_and_before_after<T: Clone + 'static>(
     after_fns_run(&skip, &data, after_fns);
 }
 // ────────────────────────────────────────────────────────────────────────────────
-
+//TODO check PartialEq use
+// https://docs.rs/graph_safe_compare/latest/graph_safe_compare/
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(PartialEq, Eq)]
 pub struct StateVar<T> {
     id: TopoKey,
@@ -1062,6 +1064,7 @@ where
 //     }
 // }
 
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, Eq)]
 pub struct StateAnchor<T>(Anchor<T>);
 

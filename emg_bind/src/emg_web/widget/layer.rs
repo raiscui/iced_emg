@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::emg_runtime::{
     dodrio::{
@@ -150,7 +150,7 @@ impl<Message> NodeBuilder<Message> for Layer<Message>
         bumpalo::collections::Vec<'b, Attribute<'b>>,
         bumpalo::collections::Vec<'b, Node<'b>>,
     > {
-        warn!("Layer index:{}", self.id.as_str());
+        debug!("Layer index:{}", self.id.as_str());
 
         let children = self
             .children
@@ -168,10 +168,11 @@ impl<Message> NodeBuilder<Message> for Layer<Message>
         //     bumpalo::format!(in bump, "{} {}", spacing_class, padding_class)
         //         .into_bump_str(),
         // )
-        .attr(
-            "index",
-            bumpalo::collections::String::from_str_in(self.id.as_str(), bump).into_bump_str(),
-        )
+        //TODO remove this check tests
+        // .attr(
+        //     "index",
+        //     bumpalo::collections::String::from_str_in(self.id.as_str(), bump).into_bump_str(),
+        // )
         .attr(
             "style",
             bumpalo::collections::String::from_str_in("display: block; position: absolute;", bump)
