@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-05-23 17:58:59
+ * @LastEditTime: 2022-05-24 18:27:37
  * @LastEditors: Rais
  * @Description: 
  */
@@ -226,7 +226,7 @@ mod wasm_test {
     }
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    use easybench_wasm::{bench, bench_env};
+    use easybench_wasm::{bench, bench_env,bench_limit};
 
     fn view()->Element<Message> {
         console_error_panic_hook::set_once();
@@ -328,7 +328,7 @@ mod wasm_test {
         console::log_1(
             &format!(
                 "view: {}",
-                bench(|| {
+                bench_limit(10.,|| {
                     let _f = view();
                 })
             )

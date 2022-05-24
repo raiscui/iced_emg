@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-05-23 18:24:30
+ * @LastEditTime: 2022-05-24 17:16:59
  * @LastEditors: Rais
  * @Description:
  */
@@ -229,7 +229,7 @@ where
                 unimplemented!();
             }
             GElement::Builder_(gel, _) => {
-                gel.borrow().deref().refresh_for(who_checkbox);
+                gel.deref().refresh_for(who_checkbox);
             }
             GElement::Text_(t) => {
                 who_checkbox.label = t.get_content(); //TODO text.get_content directly return IdStr
@@ -267,7 +267,7 @@ where
                 l.ref_push(self.clone());
             }
             GElement::Builder_(gel, _) => {
-                self.refresh_for(&mut *gel.borrow_mut());
+                self.refresh_for(gel.as_mut());
             }
             GElement::Text_(_)
             | GElement::Button_(_)

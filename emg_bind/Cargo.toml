@@ -18,6 +18,7 @@ split-debuginfo = "unpacked"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+qcell = "0.5.1"
 iced = { path = "../../iced" }
 emg = { path = "../../emg" }
 # functionate = { path = "../../functionate" }

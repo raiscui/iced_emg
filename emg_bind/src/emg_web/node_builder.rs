@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-05-23 13:03:24
+ * @LastEditTime: 2022-05-24 17:20:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -267,15 +267,15 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
     ///
     /// Will Panics if `gel` is Refresher_ | Event_
     /// permission to read it.
-    pub fn set_widget(&mut self, gel: &Rc<RefCell<GElement<Message>>>) {
+    pub fn set_widget(&mut self, gel: GElement<Message>) {
         // use match_any::match_any;
         use GElement::{
             Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
         };
-        let gel_take = gel.replace(GElement::EmptyNeverUse);
+        let gel_take = gel;
         match gel_take {
-            Builder_(ref gel_in, mut builder) => {
-                builder.set_widget(gel_in);
+            Builder_(gel_in, mut builder) => {
+                builder.set_widget(*gel_in);
             }
             Layer_(x) => {
                 self.widget = Some(BuilderWidget::Static(Rc::new(x)));

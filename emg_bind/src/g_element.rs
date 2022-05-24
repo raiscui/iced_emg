@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-05-23 18:24:23
+ * @LastEditTime: 2022-05-24 17:20:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -68,7 +68,7 @@ where
     Message: 'static,
 {
     //TODO cow
-    Builder_(Rc<RefCell<Self>>, NodeBuilderWidget<Message>),
+    Builder_(Box<Self>, NodeBuilderWidget<Message>),
     Layer_(Layer<Message>),
     Text_(Text),
     Button_(Button<Message>),
@@ -174,9 +174,9 @@ where
         // }
 
         match_any!(ge,
-            Builder_(ref gel, mut builder) => {
+            Builder_(gel, mut builder) => {
 
-                builder.set_widget(gel);
+                builder.set_widget(*gel);
                 Ok(builder.into())
             },
             Layer_(x) | Text_(x) | Button_(x) => Ok(x.into()),
