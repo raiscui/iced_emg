@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-01-19 12:44:14
+ * @LastEditTime: 2022-05-25 15:09:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -256,7 +256,8 @@ where
         w: T,
         h: T,
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
-        self.borrow_mut()
+        let mut g = self.borrow_mut();
+        g
             .nodes_connect_eix(&ei)
             .ok_or("node insert eix fails")?;
         let source = use_state(ei.source_nix().as_ref().cloned());
@@ -268,7 +269,7 @@ where
             w,
             h,
         );
-        self.borrow_mut()
+        g
             .just_insert_edge(ei, Edge::new(source, target, edge_item.clone()));
 
         Ok(edge_item)
@@ -283,7 +284,8 @@ where
         origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
         align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
-        self.borrow_mut()
+        let mut g = self.borrow_mut();
+        g
             .nodes_connect_eix(&ei)
             .ok_or("node insert eix fails")?;
 
@@ -292,12 +294,12 @@ where
         let edge_item = EmgEdgeItem::new_in_topo(
             source.watch(),
             target.watch(),
-            self.borrow().get_raw_edges_watch(),
+            g.get_raw_edges_watch(),
             size,
             origin,
             align,
         );
-        self.borrow_mut()
+        g
             .just_insert_edge(ei, Edge::new(source, target, edge_item.clone()));
         Ok(edge_item)
     }
@@ -309,7 +311,8 @@ where
         ei: EdgeIndex<Self::Ix>,
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
 
-        self.borrow_mut()
+        let mut g = self.borrow_mut();
+        g
             .nodes_connect_eix(&ei)
             .ok_or("node insert eix fails")?;
             trace!("\n setup_default_edge_in_topo:\n nodes_connect_eix: {:#?}",&ei);
@@ -324,10 +327,10 @@ where
         let edge_item = EmgEdgeItem::default_in_topo(
             source.watch(),
             target.watch(),
-            self.borrow().get_raw_edges_watch(),
+            g.get_raw_edges_watch(),
         );
         let edge = Edge::new(source, target, edge_item.clone());
-        self.borrow_mut()
+       g
             .just_insert_edge(ei, edge);
         Ok(edge_item)
     }

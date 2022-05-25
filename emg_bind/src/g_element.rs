@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-05-24 17:20:46
+ * @LastEditTime: 2022-05-25 17:07:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,7 +16,7 @@ use emg_refresh::{RefreshFor, RefreshUse};
 // extern crate derive_more;
 use derive_more::From;
 use dyn_clonable::clonable;
-use std::{cell::RefCell, convert::TryFrom, rc::Rc};
+use std::{convert::TryFrom, rc::Rc};
 use strum_macros::Display;
 use tracing::debug;
 pub trait GenerateElement<Message> {
@@ -106,18 +106,18 @@ pub fn node_ref<Message>(str: impl Into<IdStr>) -> GElement<Message> {
 impl<Message: std::clone::Clone + 'static> GElement<Message> {
     /// Returns `true` if the `g_element` is [`EventCallBack_`].
     #[must_use]
-    pub fn is_event_(&self) -> bool {
+    pub const fn is_event_(&self) -> bool {
         matches!(self, Self::Event_(..))
     }
 
     /// Returns `true` if the g element is [`NodeIndex_`].
     ///
     /// [`NodeIndex_`]: GElement::NodeIndex_
-    pub fn is_node_ref_(&self) -> bool {
+    pub const fn is_node_ref_(&self) -> bool {
         matches!(self, Self::NodeRef_(..))
     }
 
-    pub fn as_node_ref_(&self) -> Option<&IdStr> {
+    pub const fn as_node_ref_(&self) -> Option<&IdStr> {
         if let Self::NodeRef_(v) = self {
             Some(v)
         } else {
@@ -128,7 +128,9 @@ impl<Message: std::clone::Clone + 'static> GElement<Message> {
 
 impl<Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElement<Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use GElement::{Builder_, Button_, Event_, Generic_, Layer_, Refresher_, Text_};
+        use GElement::{
+            Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
+        };
         let nbw = "NodeBuilderWidget< Message>".to_string();
 
         match self {
@@ -147,10 +149,10 @@ impl<Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElement<
                 write!(f, "GElement::Button_")
             }
             Generic_(_) => write!(f, "GElement::Generic_"),
-            GElement::NodeRef_(nid) => {
+            NodeRef_(nid) => {
                 write!(f, "GElement::NodeIndex({})", nid)
             }
-            GElement::EmptyNeverUse => write!(f, "GElement::EmptyNeverUse"),
+            EmptyNeverUse => write!(f, "GElement::EmptyNeverUse"),
         }
     }
 }

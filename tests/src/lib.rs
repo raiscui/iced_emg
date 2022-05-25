@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-05-24 18:27:37
+ * @LastEditTime: 2022-05-24 18:54:52
  * @LastEditors: Rais
  * @Description: 
  */
@@ -46,7 +46,7 @@ mod wasm_test {
 
     use gtree::gtree;
     use seed_styles::{w, GlobalStyleSV};
-    use tracing::{debug, debug_span, trace, warn};
+    use tracing::{debug, debug_span, trace, warn, error};
     use tracing::{info, trace_span};
     use web_sys::Performance;
 
@@ -342,7 +342,6 @@ mod wasm_test {
         
         console_error_panic_hook::set_once();
         // ─────────────────────────────────────────────────────────────────
-
         let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
         config.set_max_level(tracing::Level::WARN);
         config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
@@ -350,6 +349,7 @@ mod wasm_test {
 
         tracing_wasm::set_as_global_default_with_config(config.build());
         // ────────────────────────────────────────────────────────────────────────────────
+
         let (sender, _receiver) = futures::channel::mpsc::unbounded();
         let bus = Bus::new(sender);
         let css = GlobalStyleSV::default_topo();

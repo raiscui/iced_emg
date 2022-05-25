@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-05-24 17:20:21
+ * @LastEditTime: 2022-05-25 17:08:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,9 +14,9 @@ use derive_more::From;
 
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
-use tracing::{debug, trace, warn};
+use tracing::{debug, error, trace};
 
-use std::{cell::RefCell, collections::VecDeque, rc::Rc, string::String};
+use std::{collections::VecDeque, rc::Rc, string::String};
 
 use crate::{
     dodrio::{
@@ -258,7 +258,7 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
 
     /// Get a reference to the node builder widgets event callbacks.
     #[must_use]
-    pub fn event_callbacks(&self) -> &VecDeque<EventNode<Message>> {
+    pub const fn event_callbacks(&self) -> &VecDeque<EventNode<Message>> {
         &self.event_callbacks
     }
 
@@ -275,6 +275,7 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
         let gel_take = gel;
         match gel_take {
             Builder_(gel_in, mut builder) => {
+                error!("Builder in builder");
                 builder.set_widget(*gel_in);
             }
             Layer_(x) => {
