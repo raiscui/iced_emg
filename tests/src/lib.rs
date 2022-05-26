@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-05-24 18:54:52
+ * @LastEditTime: 2022-05-25 18:21:05
  * @LastEditors: Rais
  * @Description: 
  */
@@ -343,7 +343,7 @@ mod wasm_test {
         console_error_panic_hook::set_once();
         // ─────────────────────────────────────────────────────────────────
         let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::WARN);
+        config.set_max_level(tracing::Level::DEBUG);
         config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
         // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 

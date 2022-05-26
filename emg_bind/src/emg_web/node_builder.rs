@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-05-25 17:08:38
+ * @LastEditTime: 2022-05-25 18:20:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -349,6 +349,7 @@ where
                         use dodrio::bumpalo::collections::String;
                         String::from_str_in(event.as_str(), bump).into_bump_str()
                     };
+                    debug!("{}", &event_bump_string);
 
                     // element_builder = element_builder.on(event_bump_string, callback);
                     element_builder = element_builder.on(
@@ -365,6 +366,7 @@ where
                         use dodrio::bumpalo::collections::String;
                         String::from_str_in(event.as_str(), bump).into_bump_str()
                     };
+                    debug!("{}", &event_bump_string);
 
                     element_builder = element_builder.on(
                         event_bump_string,

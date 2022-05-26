@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-05-25 12:02:50
+ * @LastEditTime: 2022-05-26 18:15:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,10 +25,13 @@ pub type N<Message> = StateAnchor<GElement<Message>>;
 pub type E<Ix> = EmgEdgeItem<Ix>;
 pub type GraphType<Message, Ix = IdStr> = Graph<N<Message>, E<Ix>, Ix>;
 
-pub trait GraphView<Message> {
+pub trait GraphView {
     type N;
     type Ix: std::fmt::Debug + std::fmt::Display;
     type E;
+    type Message;
+
+
 
     fn gelement_refresh_and_comb(
         &self,
@@ -38,7 +41,7 @@ pub trait GraphView<Message> {
         // opt_parent_e: Option<Self::E>,
         // opt_eix: Option<&EdgeIndex<Ix>>,
         // current_node: &RefCell<GElement< Message>>,
-    ) -> GElement<Message>
+    ) -> GElement<Self::Message>
     where
         // <Self as GraphView<Message>>::Ix: Clone + Hash + Eq + Ord + Default;
         Self::Ix: Clone + Hash + Eq + Ord + Default;
@@ -48,23 +51,25 @@ pub trait GraphView<Message> {
         edges: &GraphEdgesDict<Self::Ix>,
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
-    ) -> Vec<GElement<Message>>
+    ) -> Vec<GElement<Self::Message>>
     where
         // <Self as GraphView<Message>>::Ix: Clone + Hash + Eq + Ord + Default;
         Self::Ix: Clone + Hash + Eq + Ord + Default;
 
-    fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<Message>;
+    fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<Self::Message>;
     // fn global_view(ix: Ix) -> Element< Message>;
 }
 
 // impl<Message> GraphView<Message> for GraphType<Message>
-impl<Message> GraphView<Message> for GraphType<Message>
+impl<Message> GraphView for GraphType<Message>
 where
     Message: 'static + Clone + std::fmt::Debug,
 {
     type Ix = IdStr;
-    type N = N<Message>;
-    type E = E<IdStr>;
+    type E = E<Self::Ix>;
+    type Message = Message;
+    type N = N<Self::Message>;
+
 
     // #[instrument(skip(self, edges))]
     fn gelement_refresh_and_comb(
@@ -74,8 +79,9 @@ where
         paths: &EPath<Self::Ix>,
         // edge_for_cix: &Edge<Self::E, Ix>,
         // current_node: &RefCell<GElement< Message>>,
-    ) -> GElement<Message> {
+    ) -> GElement<Self::Message> {
         // debug!("run here 01");
+        //TODO 取 node 直接有 edge信息 , 不要取 node.item
         //TODO has no drop clone for AnimationE inside,need bumpalo do drop
         let mut current_node_clone = 
             //TODO maybe no need rc RefCell
@@ -105,7 +111,7 @@ where
         //TODO edge gel 一起 refresh?
         // The const / dyn child node performs the change
         // TODO: cache.    use edge type?
-        for child in & children_s {
+        for child in &children_s {
             //  TODO use COW
             current_node_clone
                 .refresh_for_use(child);
@@ -179,7 +185,7 @@ where
             .collect() //TODO use iter
     }
 
-    fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<Message> {
+    fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<Self::Message> {
         let cix: Self::Ix = into_ix.into();
         let _g = trace_span!("graph view-", ?cix);
         {

@@ -270,7 +270,7 @@ impl ToTokens for GOnEvent {
             event_name,
             closure,
         } = self;
-        let id_token = id.get(format!("Event-{}", event_name).as_str());
+        let id_token = id.get(format!("Event-{}", event_name).as_str());//just emg graph node id
 
         let token = if closure.inputs.is_empty() {
             quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(IdStr::new_inline(#event_name), #closure ).into()) )

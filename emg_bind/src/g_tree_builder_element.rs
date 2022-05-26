@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-05-25 15:09:11
+ * @LastEditTime: 2022-05-25 18:25:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -651,6 +651,7 @@ where
 
             // TODO make RC remove most clones
             GTreeBuilderElement::Event(org_id, callback) => {
+                debug!("GTreeBuilderElement::Event : {:?} {:?}", org_id,replace_id);
                 let id = replace_id.unwrap_or(org_id);
 
                 let _span =
