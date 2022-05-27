@@ -1,34 +1,37 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-06 14:13:04
- * @LastEditTime: 2021-09-27 21:49:50
+ * @LastEditTime: 2022-05-26 18:07:43
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg::EdgeIndex;
 use emg_layout::GenericSizeAnchor;
+use emg_state::{topo, use_state, StateVar};
 
 use crate::GraphType;
 use std::hash::Hash;
 
-pub trait GraphMethods<Ix> {
+pub trait GraphMethods {
+    type Ix;
     fn edge_item_set_size(
         &self,
-        e: &EdgeIndex<Ix>,
+        e: &EdgeIndex<Self::Ix>,
         w: impl Into<GenericSizeAnchor>,
         h: impl Into<GenericSizeAnchor>,
     );
 }
-impl<Message, Ix> GraphMethods<Ix> for GraphType<Message, Ix>
+impl<Message, Ix> GraphMethods for GraphType<Message, Ix>
 where
-    Ix: Clone + Hash + Eq + std::fmt::Debug + Ord + Default,
+    Ix: Clone + Hash + Eq + std::fmt::Debug + Ord + Default + Send,
     // E: Clone + std::fmt::Debug,
     Message: 'static + Clone,
 {
+    type Ix = Ix;
     fn edge_item_set_size(
         &self,
-        e: &EdgeIndex<Ix>,
+        e: &EdgeIndex<Self::Ix>,
         w: impl Into<GenericSizeAnchor>,
         h: impl Into<GenericSizeAnchor>,
     ) {
