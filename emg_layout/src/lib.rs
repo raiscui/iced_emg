@@ -649,6 +649,7 @@ where
     #[must_use]
     fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
       
+        //TODO not get(), use ref
         self.edge_nodes
             .get()
             .get(key)
@@ -1133,7 +1134,8 @@ mod tests {
 
     fn setup_global_subscriber() -> impl Drop {
         std::env::set_var("RUST_LOG", "trace");
-        std::env::set_var("RUST_LOG", "warn");
+        // std::env::set_var("RUST_LOG", "warn");
+        std::env::set_var("RUST_LOG", "info");
 
         let _el = env_logger::try_init();
 
@@ -2017,6 +2019,7 @@ mod tests {
                 .get(),
                 Translation3::<f64>::new(10.0, 00.0, 0.)
             );
+            info!("================= e_dict_sv: {:#?}",&e_dict_sv);
 
             // e2.id
             //     .set_with(|id| id.clone().use_incoming(node_index("root")));
