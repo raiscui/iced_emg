@@ -3,7 +3,7 @@ use std::ops::Deref;
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-01-27 23:38:50
+ * @LastEditTime: 2022-05-24 17:14:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -65,7 +65,7 @@ where
                 who.content(us_it.get_content());
             }
             (who, Builder_(us_gel, _)) => {
-                us_gel.borrow().deref().refresh_for(who);
+                us_gel.deref().refresh_for(who);
             }
 
             // @ any not match ─────────────────────────────────────────────────────────────────

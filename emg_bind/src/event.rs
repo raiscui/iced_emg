@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-04-29 10:03:54
- * @LastEditTime: 2021-05-26 15:09:21
+ * @LastEditTime: 2022-05-25 17:08:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -58,8 +58,8 @@ impl Status {
     #[must_use]
     pub const fn merge(self, b: Self) -> Self {
         match self {
-            Status::Ignored => b,
-            Status::Captured => Self::Captured,
+            Self::Ignored => b,
+            Self::Captured => Self::Captured,
         }
     }
 }

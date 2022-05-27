@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-05-23 13:03:24
+ * @LastEditTime: 2022-05-25 18:20:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,9 +14,9 @@ use derive_more::From;
 
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
-use tracing::{debug, trace, warn};
+use tracing::{debug, error, trace};
 
-use std::{cell::RefCell, collections::VecDeque, rc::Rc, string::String};
+use std::{collections::VecDeque, rc::Rc, string::String};
 
 use crate::{
     dodrio::{
@@ -258,7 +258,7 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
 
     /// Get a reference to the node builder widgets event callbacks.
     #[must_use]
-    pub fn event_callbacks(&self) -> &VecDeque<EventNode<Message>> {
+    pub const fn event_callbacks(&self) -> &VecDeque<EventNode<Message>> {
         &self.event_callbacks
     }
 
@@ -267,15 +267,16 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
     ///
     /// Will Panics if `gel` is Refresher_ | Event_
     /// permission to read it.
-    pub fn set_widget(&mut self, gel: &Rc<RefCell<GElement<Message>>>) {
+    pub fn set_widget(&mut self, gel: GElement<Message>) {
         // use match_any::match_any;
         use GElement::{
             Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
         };
-        let gel_take = gel.replace(GElement::EmptyNeverUse);
+        let gel_take = gel;
         match gel_take {
-            Builder_(ref gel_in, mut builder) => {
-                builder.set_widget(gel_in);
+            Builder_(gel_in, mut builder) => {
+                error!("Builder in builder");
+                builder.set_widget(*gel_in);
             }
             Layer_(x) => {
                 self.widget = Some(BuilderWidget::Static(Rc::new(x)));
@@ -348,6 +349,7 @@ where
                         use dodrio::bumpalo::collections::String;
                         String::from_str_in(event.as_str(), bump).into_bump_str()
                     };
+                    debug!("{}", &event_bump_string);
 
                     // element_builder = element_builder.on(event_bump_string, callback);
                     element_builder = element_builder.on(
@@ -364,6 +366,7 @@ where
                         use dodrio::bumpalo::collections::String;
                         String::from_str_in(event.as_str(), bump).into_bump_str()
                     };
+                    debug!("{}", &event_bump_string);
 
                     element_builder = element_builder.on(
                         event_bump_string,

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-05-23 17:58:59
+ * @LastEditTime: 2022-05-25 18:21:05
  * @LastEditors: Rais
  * @Description: 
  */
@@ -46,7 +46,7 @@ mod wasm_test {
 
     use gtree::gtree;
     use seed_styles::{w, GlobalStyleSV};
-    use tracing::{debug, debug_span, trace, warn};
+    use tracing::{debug, debug_span, trace, warn, error};
     use tracing::{info, trace_span};
     use web_sys::Performance;
 
@@ -226,7 +226,7 @@ mod wasm_test {
     }
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    use easybench_wasm::{bench, bench_env};
+    use easybench_wasm::{bench, bench_env,bench_limit};
 
     fn view()->Element<Message> {
         console_error_panic_hook::set_once();
@@ -328,7 +328,7 @@ mod wasm_test {
         console::log_1(
             &format!(
                 "view: {}",
-                bench(|| {
+                bench_limit(10.,|| {
                     let _f = view();
                 })
             )
@@ -342,14 +342,14 @@ mod wasm_test {
         
         console_error_panic_hook::set_once();
         // ─────────────────────────────────────────────────────────────────
-
         let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::WARN);
+        config.set_max_level(tracing::Level::DEBUG);
         config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
         // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
         tracing_wasm::set_as_global_default_with_config(config.build());
         // ────────────────────────────────────────────────────────────────────────────────
+
         let (sender, _receiver) = futures::channel::mpsc::unbounded();
         let bus = Bus::new(sender);
         let css = GlobalStyleSV::default_topo();

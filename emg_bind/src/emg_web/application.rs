@@ -19,6 +19,7 @@ use emg_orders::Orders;
 use std::{cell::RefCell, fmt, rc::Rc};
 
 use dodrio::{self, bumpalo};
+
 /// An EMG edition interactive web application.
 ///
 pub trait Application {

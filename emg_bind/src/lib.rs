@@ -30,6 +30,7 @@ mod g_tree_builder_element;
 // mod graph_store;
 mod animation;
 mod bind_view;
+mod build_view;
 // mod gid;
 mod graph_layout;
 mod impl_refresh;
