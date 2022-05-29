@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-05-26 18:15:38
+ * @LastEditTime: 2022-05-29 11:58:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@ use crate::{Element, GElement, NodeBuilderWidget};
 pub use emg::EdgeIndex;
 pub use emg::Graph;
 pub use emg::NodeIndex;
-use emg::{edge_index_no_source, Outgoing};
+use emg::{edge_index_no_source, Node, Outgoing};
 use emg_core::vector;
 use emg_core::IdStr;
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
@@ -31,8 +31,6 @@ pub trait GraphView {
     type E;
     type Message;
 
-
-
     fn gelement_refresh_and_comb(
         &self,
         edges: &GraphEdgesDict<Self::Ix>,
@@ -48,6 +46,7 @@ pub trait GraphView {
 
     fn children_to_elements(
         &self,
+        node: &Node<Self::N, Self::Ix>,
         edges: &GraphEdgesDict<Self::Ix>,
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
@@ -70,7 +69,6 @@ where
     type Message = Message;
     type N = N<Self::Message>;
 
-
     // #[instrument(skip(self, edges))]
     fn gelement_refresh_and_comb(
         &self,
@@ -81,15 +79,12 @@ where
         // current_node: &RefCell<GElement< Message>>,
     ) -> GElement<Self::Message> {
         // debug!("run here 01");
-        //TODO 取 node 直接有 edge信息 , 不要取 node.item
         //TODO has no drop clone for AnimationE inside,need bumpalo do drop
-        let mut current_node_clone = 
-            //TODO maybe no need rc RefCell
-            self.get_node_weight_use_ix(cix).unwrap().get()
-        ; //TODO cache
-            // debug!("run here 01.1");
+        let node: &Node<Self::N, Self::Ix> = self.get_node_use_ix(cix).unwrap();
+        let mut current_node_item_clone = node.item.get(); //TODO cache
+                                                           // debug!("run here 01.1");
 
-        let mut children_s = self.children_to_elements(edges, cix, paths);
+        let mut children_s = self.children_to_elements(node, edges, cix, paths);
 
         let event_callbacks = children_s
             .drain_filter(|gel| gel.is_event_())
@@ -103,21 +98,22 @@ where
             .iter_mut()
             .filter(|gel| gel.is_node_ref_())
             .for_each(|gel| {
-                *gel =   gel.as_node_ref_().and_then(|str| self.get_node_weight_use_ix(str))
-                .cloned()
-                .expect("expect get node id").get();
-               
+                *gel = gel
+                    .as_node_ref_()
+                    .and_then(|str| self.get_node_weight_use_ix(str))
+                    .cloned()
+                    .expect("expect get node id")
+                    .get();
             });
         //TODO edge gel 一起 refresh?
         // The const / dyn child node performs the change
         // TODO: cache.    use edge type?
         for child in &children_s {
             //  TODO use COW
-            current_node_clone
-                .refresh_for_use(child);
+            current_node_item_clone.refresh_for_use(child);
         }
         if let Ok(mut node_builder_widget) =
-            NodeBuilderWidget::<Message>::try_new_use(&current_node_clone)
+            NodeBuilderWidget::<Message>::try_new_use(&current_node_item_clone)
         {
             let _g = trace_span!("-> in NodeBuilderWidget").entered();
             {
@@ -150,28 +146,29 @@ where
                     }
                 }
 
-                GElement::Builder_(
-                    Box::new(current_node_clone),
-                    node_builder_widget,
-                )
+                GElement::Builder_(Box::new(current_node_item_clone), node_builder_widget)
             }
         } else {
             trace!(
                 "NodeBuilderWidget::<Message>::try_from  error use:",
                 // current_node_clone.borrow()
             );
-            current_node_clone
+            current_node_item_clone
         }
     }
 
     #[instrument(skip(self, edges))]
     fn children_to_elements(
         &self,
+        node: &Node<Self::N, Self::Ix>,
         edges: &GraphEdgesDict<Self::Ix>,
         cix: &Self::Ix,
         paths: &EPath<Self::Ix>,
     ) -> Vec<GElement<Message>> {
-        self.edges_iter(cix, Outgoing)
+        node.edge_out_ixs()
+            .as_ref()
+            .iter()
+            // self.edges_consuming_iter(cix, Outgoing)
             .filter_map(|eix| {
                 let opt_this_child_nix = eix.nix_by_dir(Outgoing).as_ref();
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-05-23 13:59:02
+ * @LastEditTime: 2022-05-27 16:09:53
  * @LastEditors: Rais
  * @Description:
  */
@@ -1955,5 +1955,77 @@ mod state_test {
         let dc = ddw.map(|x| format!("{}", x));
 
         let ddw3 = ddw.then(move |x| if *x > 1 { ddw2.clone() } else { dcadd.clone() });
+    }
+
+    #[test]
+    fn test_map_eq() {
+        let mut dict = Dict::new();
+        let a = use_state(dict.clone());
+        let a_node1 = use_state(1);
+        let a_node2 = use_state(2);
+        let a_node0 = use_state(0);
+
+        let b = a.watch().map_(|_, x: &StateVar<i32>| {
+            x.set(x.get() + 1);
+            x.clone()
+        });
+
+        dict.insert("a".to_string(), a_node1.clone());
+        dict.insert("b".to_string(), a_node2.clone());
+        a.set(dict.clone());
+
+        println!("a:{:#?}", &a);
+        println!("b:{:#?}", &b);
+        a_node1.set(33);
+        println!("a-edit:{:#?}", &a);
+        println!("b-edit:{:#?}", &b);
+
+        a_node1.set(333);
+        println!("=========2 a-edit:{:#?}", &a);
+        println!("=========2 b-edit:{:#?}", &b);
+
+        if let Some(av) = dict.get_mut("a") {
+            println!("get a");
+            *av = a_node0.clone();
+            a.set(dict.clone());
+        }
+        println!("=========3 a-edit:{:#?}", &a);
+        println!("=========3 b-edit:{:#?}", &b);
+        println!("===================");
+        println!("=========3 a-edit:{:#?}", &a);
+        println!("=========3 b-edit:{:#?}", &b);
+    }
+
+    #[test]
+    fn test_map_anchor_eq() {
+        let mut dict = Dict::new();
+        let a = use_state(dict.clone());
+        let a_node1 = use_state(1);
+        let a_node2 = use_state(2);
+        let a_node0 = use_state(0);
+
+        let b = a.watch().map_(|_, x: &StateAnchor<i32>| x.map(|xx| xx + 1));
+
+        dict.insert("a".to_string(), a_node1.watch());
+        dict.insert("b".to_string(), a_node2.watch());
+        a.set(dict.clone());
+
+        println!("a->:{:#?}", &a);
+        println!("b->:{:#?}", &b);
+        a_node1.set(33);
+        println!("a-edit:{:#?}", &a);
+        println!("b-edit:{:#?}", &b);
+
+        a_node1.set(333);
+        println!("=========2 a-edit:{:#?}", &a);
+        println!("=========2 b-edit:{:#?}", &b);
+        if let Some(av) = dict.get_mut("a") {
+            println!("get a");
+            *av = a_node0.watch();
+            a.set(dict.clone());
+        }
+
+        println!("=========3 a-edit:{:#?}", &a);
+        println!("=========3 b-edit:{:#?}", &b);
     }
 }

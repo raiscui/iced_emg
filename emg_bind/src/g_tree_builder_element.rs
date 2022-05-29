@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-05-26 18:24:35
+ * @LastEditTime: 2022-05-28 23:10:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -346,7 +346,7 @@ where
                 trace!("{:?}==>{:#?}", &root_id, &children_list);
                 // ─────────────────────────────────────────────────────────────────
 
-                let nix = self.borrow_mut().insert_node(
+                let nix = self.borrow_mut().insert_node_in_topo(
                     root_id.clone(),
                     StateAnchor::constant(Layer::<Message>::default().into()),
                 );
@@ -394,10 +394,10 @@ where
         };
     }
     #[topo::nested]
-    fn handle_children_in_topo(&self,replace_id:Option<&Self::Ix>, tree_layer: &GTreeBuilderElement<Message>) {
+    fn handle_children_in_topo(&self,replace_id:Option<&Self::Ix>, tree_element: &GTreeBuilderElement<Message>) {
         debug!("handle_children");
         let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
-        match tree_layer {
+        match tree_element {
             //
             GTreeBuilderElement::Layer(org_id, edge_refreshers, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
@@ -423,7 +423,8 @@ where
                 }
                 // node index
                 //NOTE current node 因为`or_insert_node` 1个ID 只插入一次
-                let nix = self.borrow_mut().or_insert_node(
+                //TODO all use or_insert_node?
+                let nix = self.borrow_mut().or_insert_node_in_topo(
                     id.clone(),
                     ||StateAnchor::constant(Layer::<Message>::new(id.clone()).into()),
                 );
@@ -483,7 +484,7 @@ where
                 //node index
                 let nix = self
                     .borrow_mut()
-                    .insert_node(id.clone(), StateAnchor::constant(gel.clone()));
+                    .insert_node_in_topo(id.clone(), StateAnchor::constant(gel.clone()));
 
                 //edge
                 let mut new_def_ei = self
@@ -629,7 +630,7 @@ where
                 //node index
                 let nix = self
                     .borrow_mut()
-                    .insert_node(id.clone(), StateAnchor::constant(u.clone().into()));
+                    .insert_node_in_topo(id.clone(), StateAnchor::constant(u.clone().into()));
 
                 let _ei = self
                     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix, nix))
@@ -661,7 +662,7 @@ where
                 // node index
                 let nix = self
                     .borrow_mut()
-                    .insert_node(id.clone(), StateAnchor::constant(callback.clone().into()));
+                    .insert_node_in_topo(id.clone(), StateAnchor::constant(callback.clone().into()));
 
                 //edge
                 // let e = format!("{} -> {}", parent_nix.index(), nix.index()).into();
