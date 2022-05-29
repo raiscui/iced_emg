@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-05-25 18:21:05
+ * @LastEditTime: 2022-05-29 22:59:16
  * @LastEditors: Rais
  * @Description: 
  */
@@ -321,6 +321,7 @@ mod wasm_test {
         // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
     }
 
+    // 4us 789ns 
     #[wasm_bindgen_test]
     fn benchmark(){
         use web_sys::console;
