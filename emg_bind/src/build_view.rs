@@ -8,10 +8,11 @@ use crate::GraphType;
 /*
  * @Author: Rais
  * @Date: 2022-05-26 18:22:22
- * @LastEditTime: 2022-05-26 18:40:16
+ * @LastEditTime: 2022-05-28 23:20:57
  * @LastEditors: Rais
  * @Description:
  */
+#[allow(clippy::module_name_repetitions)]
 pub trait GraphBuildView<Message> {
     type Ix;
 
@@ -25,7 +26,7 @@ where
     type Ix = IdStr;
 
     fn build_view_state(&self, root_ix_var: &StateVar<Self::Ix>) {
-        let this = Rc::clone(&self);
+        let this = self.clone();
         root_ix_var.watch().map(move |r_ix| {
             let g = this.borrow();
             let current_node = g.get_node_use_ix(r_ix).unwrap();
