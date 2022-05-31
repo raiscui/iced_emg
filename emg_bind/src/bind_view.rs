@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-05-29 11:58:28
+ * @LastEditTime: 2022-05-31 10:06:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -108,6 +108,7 @@ where
         //TODO edge gel 一起 refresh?
         // The const / dyn child node performs the change
         // TODO: cache.    use edge type?
+        //TODO illicit::Layer path
         for child in &children_s {
             //  TODO use COW
             current_node_item_clone.refresh_for_use(child);
