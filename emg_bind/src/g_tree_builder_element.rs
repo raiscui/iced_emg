@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-05-28 23:10:56
+ * @LastEditTime: 2022-06-01 17:59:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,7 +24,7 @@ use tracing::{debug, instrument, trace, trace_span, warn};
 pub enum GTreeBuilderElement<Message, Ix = IdStr>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
-    Message: 'static,
+    Message: 'static + std::cmp::PartialEq,
 {
     Layer(
         Ix,
@@ -80,7 +80,7 @@ where
 impl<Message, Ix> From<StateVar<Dict<Ix, Self>>> for GTreeBuilderElement<Message, Ix>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
-    Message: 'static,
+    Message: 'static + std::cmp::PartialEq,
 {
     fn from(value: StateVar<Dict<Ix, Self>>) -> Self {
         Self::Dyn(Ix::default(), vec![], value)
@@ -128,9 +128,8 @@ impl< Message>
 }
 */
 
-impl<Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
-    for GTreeBuilderElement<Message>
-{
+impl<Message> std::fmt::Debug for GTreeBuilderElement<Message>
+where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             GTreeBuilderElement::Layer(id, _, children_list) => {
@@ -196,7 +195,7 @@ impl<Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug
 
 pub trait GTreeBuilderFn<Message>
 where
-    Self::Ix: Clone + Default + std::hash::Hash + Ord,
+    Self::Ix: Clone + Default + std::hash::Hash + Ord, Message: std::cmp::PartialEq
 {
     type Ix;
 
@@ -237,7 +236,7 @@ where
 
 impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
 where
-    Message: std::clone::Clone + std::fmt::Debug + 'static,
+    Message: std::clone::Clone + std::fmt::Debug + 'static + std::cmp::PartialEq,
     // Ix: Clone + Default + std::hash::Hash + Ord+std::fmt::Debug+std::fmt::Display,
 
     // Ix: std::hash::Hash
@@ -438,7 +437,7 @@ where
                 trace!("\nhandle_children:\n inserted edge: {:#?}",&nix);
 
 
-                let path = (&*illicit::expect::<EPath<Self::Ix>>()).link(nix.clone());
+                let path = (&*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
@@ -491,7 +490,7 @@ where
                     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix, nix.clone()))
                     .unwrap();
 
-                let path = (&*illicit::expect::<EPath<Self::Ix>>()).link(nix.clone());
+                let path = (&*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());

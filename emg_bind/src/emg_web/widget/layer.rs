@@ -1,5 +1,6 @@
-use std::convert::TryInto;
+use std::{clone::Clone, cmp::PartialEq, convert::TryInto};
 
+use dyn_partial_eq::*;
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
 use tracing::{debug, warn};
@@ -24,11 +25,29 @@ use crate::emg_runtime::dodrio::builder::div;
 ///
 /// A [`Layer`] will try to fill the horizontal space of its container.
 #[allow(missing_debug_implementations)]
-#[derive(Clone, Debug)]
+#[derive(Clone, DynPartialEq, Eq, Debug)]
+#[eq_opt(where_add = "Message: PartialEq + 'static,")]
 pub struct Layer<Message> {
     id: IdStr,
     children: Vec<Element<Message>>,
 }
+impl<Message> PartialEq for Layer<Message>
+where
+    Message: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.children == other.children
+    }
+}
+
+// impl<Message> DynPartialEq for Layer<Message> {
+//     fn as_any(&self) -> &dyn core::any::Any {
+//         self
+//     }
+//     fn box_eq(&self, other: &dyn core::any::Any) -> bool {
+//         other.downcast_ref::<Self>().map_or(false, |a| self == a)
+//     }
+// }
 
 impl<Message> Default for Layer<Message> {
     fn default() -> Self {
@@ -135,8 +154,8 @@ where
 // ────────────────────────────────────────────────────────────────────────────────
 
 impl<Message> NodeBuilder<Message> for Layer<Message>
-// where
-// Message: 'static,
+where
+    Message: PartialEq + 'static,
 {
     fn generate_element_builder<'b>(
         &self,
@@ -185,7 +204,7 @@ impl<Message> NodeBuilder<Message> for Layer<Message>
 
 impl<Message> Widget<Message> for Layer<Message>
 where
-    Message: Clone,
+    Message: Clone + PartialEq + 'static,
 {
     fn node<'b>(
         &self,
@@ -200,7 +219,7 @@ where
 
 impl<Message> From<Layer<Message>> for Element<Message>
 where
-    Message: 'static + Clone,
+    Message: Clone + 'static + PartialEq,
 {
     fn from(layer: Layer<Message>) -> Self {
         Self::new(layer)

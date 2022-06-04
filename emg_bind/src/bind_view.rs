@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-05-31 10:06:26
+ * @LastEditTime: 2022-06-02 18:32:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -29,7 +29,7 @@ pub trait GraphView {
     type N;
     type Ix: std::fmt::Debug + std::fmt::Display;
     type E;
-    type Message;
+    type Message: PartialEq;
 
     fn gelement_refresh_and_comb(
         &self,
@@ -62,7 +62,7 @@ pub trait GraphView {
 // impl<Message> GraphView<Message> for GraphType<Message>
 impl<Message> GraphView for GraphType<Message>
 where
-    Message: 'static + Clone + std::fmt::Debug,
+    Message: 'static + Clone + std::fmt::Debug + std::cmp::PartialEq,
 {
     type Ix = IdStr;
     type E = E<Self::Ix>;

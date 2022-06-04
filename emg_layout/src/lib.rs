@@ -442,7 +442,7 @@ pub struct LayoutCalculated {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EdgeData {
     calculated: LayoutCalculated,
-    styles_string: StateAnchor<String>, 
+    pub styles_string: StateAnchor<String>, 
     opt_p_calculated:Option<LayoutCalculated>,//TODO check need ? use for what?
     // matrix: M4Data,
                                         // transforms_am: Transforms,
@@ -528,16 +528,24 @@ impl<Ix: Clone + Hash + Eq + PartialEq + Default> std::ops::DerefMut for EPath<I
 }
 
 impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
-    #[must_use] pub fn new(vec:Vector<EdgeIndex<Ix>>)->Self{
+    #[must_use] 
+    pub const fn new(vec:Vector<EdgeIndex<Ix>>)->Self{
         Self(vec)
     }
 
     #[must_use]
-        pub fn link(&self, target_nix:NodeIndex<Ix>)-> Self {
-        let last = self.last().and_then(|e|e.target_nix().as_ref());
+        pub fn link_ref(&self, target_nix:NodeIndex<Ix>)-> Self {
+        let last = self.last().and_then(|e|e.target_nix().as_ref()).cloned();
         let mut new_e = self.clone();
-        new_e.push_back(EdgeIndex::new(last.cloned(),target_nix));
+        new_e.push_back(EdgeIndex::new(last,target_nix));
         new_e
+        
+    }
+    #[must_use]
+    pub fn link(mut self, target_nix:NodeIndex<Ix>)-> Self {
+        let last = self.last().and_then(|e|e.target_nix().as_ref()).cloned();
+        self.push_back(EdgeIndex::new(last,target_nix));
+        self
         
     }
 }

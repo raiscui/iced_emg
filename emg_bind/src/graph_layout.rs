@@ -1,14 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-06 14:13:04
- * @LastEditTime: 2022-05-26 18:07:43
+ * @LastEditTime: 2022-06-01 17:52:48
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg::EdgeIndex;
 use emg_layout::GenericSizeAnchor;
-use emg_state::{topo, use_state, StateVar};
 
 use crate::GraphType;
 use std::hash::Hash;
@@ -26,7 +25,7 @@ impl<Message, Ix> GraphMethods for GraphType<Message, Ix>
 where
     Ix: Clone + Hash + Eq + std::fmt::Debug + Ord + Default + Send,
     // E: Clone + std::fmt::Debug,
-    Message: 'static + Clone,
+    Message: 'static + Clone + std::cmp::PartialEq,
 {
     type Ix = Ix;
     fn edge_item_set_size(

@@ -2,7 +2,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2022-05-20 18:04:43
+ * @LastEditTime: 2022-06-01 18:00:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -27,7 +27,7 @@ pub trait Application {
     type Executor: Executor;
 
     /// The type of __messages__ your [`Application`] will produce.
-    type Message: Send + Clone + fmt::Debug;
+    type Message: Send + Clone + fmt::Debug + PartialEq;
 
     /// The data needed to initialize your [`Application`].
     type Flags;

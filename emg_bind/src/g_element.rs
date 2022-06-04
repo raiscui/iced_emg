@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-05-25 17:07:41
+ * @LastEditTime: 2022-06-02 14:40:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,6 +11,7 @@ use crate::{
 };
 pub use better_any;
 use better_any::{Tid, TidAble};
+use dyn_partial_eq::*;
 use emg_core::{IdStr, TypeCheckObjectSafe};
 use emg_refresh::{RefreshFor, RefreshUse};
 // extern crate derive_more;
@@ -34,9 +35,24 @@ pub trait DynGElement<Message>:
     + GenerateElement<Message>
     + NodeBuilder<Message>
     + TypeCheckObjectSafe
+    +DynPartialEq
     + Clone
-    where Message: 'static
+    where Message: 'static + std::cmp::PartialEq
 {
+}
+impl<Message> core::cmp::Eq for dyn DynGElement<Message> + '_ {}
+
+impl<Message> core::cmp::PartialEq for dyn DynGElement<Message> + '_ {
+    fn eq(&self, other: &Self) -> bool {
+        self.box_eq(other.as_any())
+    }
+}
+impl<Message> core::cmp::PartialEq<dyn DynGElement<Message> + '_>
+    for Box<dyn DynGElement<Message> + '_>
+{
+    fn eq(&self, other: &dyn DynGElement<Message>) -> bool {
+        self.box_eq(other.as_any())
+    }
 }
 pub trait MessageTid<'a>: TidAble<'a> {}
 // pub trait AsRefreshFor<T> {
@@ -65,7 +81,7 @@ pub trait MessageTid<'a>: TidAble<'a> {}
 #[derive(Clone, Display, From)]
 pub enum GElement<Message>
 where
-    Message: 'static,
+    Message: 'static + PartialEq,
 {
     //TODO cow
     Builder_(Box<Self>, NodeBuilderWidget<Message>),
@@ -81,7 +97,26 @@ where
     EmptyNeverUse,
 }
 
-pub fn node_ref<Message>(str: impl Into<IdStr>) -> GElement<Message> {
+impl<Message> PartialEq for GElement<Message>
+where
+    Message: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Builder_(l0, l1), Self::Builder_(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::Layer_(l0), Self::Layer_(r0)) => l0 == r0,
+            (Self::Text_(l0), Self::Text_(r0)) => l0 == r0,
+            (Self::Button_(l0), Self::Button_(r0)) => l0 == r0,
+            (Self::Refresher_(l0), Self::Refresher_(r0)) => Rc::ptr_eq(&l0, &r0),
+            (Self::Event_(l0), Self::Event_(r0)) => l0 == r0,
+            (Self::Generic_(l0), Self::Generic_(r0)) => l0 == r0,
+            (Self::NodeRef_(l0), Self::NodeRef_(r0)) => l0 == r0,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
+}
+
+pub fn node_ref<Message: PartialEq>(str: impl Into<IdStr>) -> GElement<Message> {
     GElement::NodeRef_(str.into())
 }
 
@@ -103,7 +138,10 @@ pub fn node_ref<Message>(str: impl Into<IdStr>) -> GElement<Message> {
 //     })
 // }
 
-impl<Message: std::clone::Clone + 'static> GElement<Message> {
+impl<Message> GElement<Message>
+where
+    Message: std::clone::Clone + 'static + PartialEq,
+{
     /// Returns `true` if the `g_element` is [`EventCallBack_`].
     #[must_use]
     pub const fn is_event_(&self) -> bool {
@@ -126,7 +164,10 @@ impl<Message: std::clone::Clone + 'static> GElement<Message> {
     }
 }
 
-impl<Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElement<Message> {
+impl<Message> std::fmt::Debug for GElement<Message>
+where
+    Message: std::fmt::Debug + std::clone::Clone + PartialEq,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use GElement::{
             Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
@@ -159,7 +200,7 @@ impl<Message: std::fmt::Debug + std::clone::Clone> std::fmt::Debug for GElement<
 
 impl<Message> TryFrom<GElement<Message>> for Element<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + PartialEq,
 {
     type Error = ();
 

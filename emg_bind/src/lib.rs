@@ -11,6 +11,7 @@
 #![feature(negative_impls)] // NOTE for Gid refresh
 #![feature(min_specialization)] // NOTE for Gid refresh
 #![feature(box_patterns)]
+// #![feature(associated_type_bounds)]
 // bumpalo
 // #![feature(allocator_api)]
 // #![feature(generic_associated_types)]
@@ -30,7 +31,7 @@ mod g_tree_builder_element;
 // mod graph_store;
 mod animation;
 mod bind_view;
-mod build_view;
+mod g_node;
 // mod gid;
 mod graph_layout;
 mod impl_refresh;

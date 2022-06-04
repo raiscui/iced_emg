@@ -2,6 +2,7 @@
 //!
 //! A [`Button`] has some local [`State`].
 
+use dyn_partial_eq::DynPartialEq;
 pub use iced_style::button::{Style, StyleSheet};
 use seed_styles::GlobalStyleSV;
 
@@ -22,7 +23,8 @@ use crate::iced_runtime::{css, Background, Length};
 ///     .on_press(Message::ButtonPressed);
 /// ```
 #[allow(missing_debug_implementations)]
-#[derive(Clone)]
+#[derive(Clone, DynPartialEq, PartialEq)]
+#[eq_opt(where_add = "Message: PartialEq + 'static,")]
 pub struct Button<Message> {
     // id: String,
     content: Element<Message>,
@@ -34,7 +36,7 @@ pub struct Button<Message> {
     #[allow(dead_code)]
     min_height: u32,
     padding: u16,
-    style: Box<dyn StyleSheet>,
+    // style: Box<dyn StyleSheet>,
 }
 // impl< Message> RefreshWhoNoWarper for Button< Message> {}
 // impl< Message> RefreshFor<Button< Message>> for Gid {
@@ -60,7 +62,7 @@ impl<Message> Button<Message> {
             min_width: 0,
             min_height: 0,
             padding: 5,
-            style: std::boxed::Box::default(),
+            // style: std::boxed::Box::default(),
         }
     }
 
@@ -99,12 +101,12 @@ impl<Message> Button<Message> {
         self
     }
 
-    /// Sets the style of the [`Button`].
-    #[must_use]
-    pub fn style(mut self, style: impl Into<Box<dyn StyleSheet>>) -> Self {
-        self.style = style.into();
-        self
-    }
+    // /// Sets the style of the [`Button`].
+    // #[must_use]
+    // pub fn style(mut self, style: impl Into<Box<dyn StyleSheet>>) -> Self {
+    //     self.style = style.into();
+    //     self
+    // }
 
     /// Sets the message that will be produced when the [`Button`] is pressed.
     #[allow(clippy::missing_const_for_fn)]
@@ -132,7 +134,7 @@ use dodrio::{builder::ElementBuilder, bumpalo, Attribute, Listener, Node};
 
 impl<Message> NodeBuilder<Message> for Button<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + std::cmp::PartialEq,
 {
     fn generate_element_builder<'b>(
         &self,
@@ -148,16 +150,16 @@ where
         use dodrio::builder::button;
 
         // TODO: State-based styling
-        let style = self.style.active();
+        // let style = self.style.active();
 
         // let padding_class = style_sheet.insert(bump, css::Rule::Padding(self.padding));
 
-        let background = match style.background {
-            None => String::from("none"),
-            Some(background) => match background {
-                Background::Color(color) => css::color(color),
-            },
-        };
+        // let background = match style.background {
+        //     None => String::from("none"),
+        //     Some(background) => match background {
+        //         Background::Color(color) => css::color(color),
+        //     },
+        // };
 
         // let class = {
         //     use dodrio::bumpalo::collections::String;
@@ -166,21 +168,22 @@ where
         // };
 
         let mut node = button(bump)
+            //TODO button style
             // .attr("class", class)
-            .attr(
-                "style",
-                bumpalo::format!(
-                    in bump,
-                    "background: {}; border-radius: {}px; width:{}; \
-                    min-width: {}; color: {};",
-                    background,
-                    style.border_radius,
-                    css::length(self.width),
-                    css::min_length(self.min_width),
-                    css::color(style.text_color)
-                )
-                .into_bump_str(),
-            )
+            // .attr(
+            //     "style",
+            //     bumpalo::format!(
+            //         in bump,
+            //         "background: {}; border-radius: {}px; width:{}; \
+            //         min-width: {}; color: {};",
+            //         background,
+            //         style.border_radius,
+            //         css::length(self.width),
+            //         css::min_length(self.min_width),
+            //         css::color(style.text_color)
+            //     )
+            //     .into_bump_str(),
+            // )
             .attr(
                 "style",
                 bumpalo::collections::String::from_str_in(
@@ -204,7 +207,7 @@ where
 
 impl<Message> Widget<Message> for Button<Message>
 where
-    Message: 'static + Clone,
+    Message: Clone + std::cmp::PartialEq + 'static,
 {
     fn node<'b>(
         &self,
@@ -219,7 +222,7 @@ where
 
 impl<Message> From<Button<Message>> for Element<Message>
 where
-    Message: 'static + Clone,
+    Message: Clone + 'static + PartialEq,
 {
     fn from(button: Button<Message>) -> Self {
         Self::new(button)

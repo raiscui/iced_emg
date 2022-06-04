@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-05-24 17:16:59
+ * @LastEditTime: 2022-06-02 13:01:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,6 +15,7 @@ use crate::{
 #[allow(unused_imports)]
 use better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt};
 
+use dyn_partial_eq::DynPartialEq;
 use emg_core::{IdStr, TypeCheckObjectSafe, TypeName};
 use emg_refresh::RefreshFor;
 pub use iced_style::checkbox::{Style, StyleSheet};
@@ -42,19 +43,38 @@ use std::{ops::Deref, rc::Rc};
 ///
 /// ![Checkbox drawn by Coffee's renderer](https://github.com/hecrj/coffee/blob/bda9818f823dfcb8a7ad0ff4940b4d4b387b5208/images/ui/checkbox.png?raw=true)
 #[allow(missing_debug_implementations)]
-#[derive(Clone, Tid)]
-pub struct Checkbox<Message> {
+#[derive(Clone, Tid, DynPartialEq)]
+#[eq_opt(where_add = "Message: PartialEq + 'static,")]
+pub struct Checkbox<Message>
+// where
+//     dyn std::ops::Fn(bool) -> Message + 'static: std::cmp::PartialEq,
+{
     is_checked: bool,
     //FIXME use cow for Rc 防止 克隆对象和 原始对象使用同一个 callback
     on_toggle: Rc<dyn Fn(bool) -> Message>,
     label: IdStr,
     id: Option<IdStr>,
     width: Length,
-    #[allow(dead_code)]
-    style: Box<dyn StyleSheet>,
+    // #[allow(dead_code)]
+    // style: Box<dyn StyleSheet>,
+}
+impl<Message> PartialEq for Checkbox<Message>
+where
+    Message: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.is_checked == other.is_checked
+            && Rc::ptr_eq(&self.on_toggle, &other.on_toggle)
+            && self.label == other.label
+            && self.id == other.id
+            && self.width == other.width
+    }
 }
 
-impl<Message> Checkbox<Message> {
+impl<Message> Checkbox<Message>
+// where
+//     dyn std::ops::Fn(bool) -> Message + 'static: std::cmp::PartialEq,
+{
     /// Creates a new [`Checkbox`].
     ///
     /// It expects:
@@ -73,7 +93,7 @@ impl<Message> Checkbox<Message> {
             label: label.into(),
             id: None,
             width: Length::Shrink,
-            style: std::boxed::Box::default(),
+            // style: std::boxed::Box::default(),
         }
     }
 
@@ -84,12 +104,12 @@ impl<Message> Checkbox<Message> {
         self
     }
 
-    /// Sets the style of the [`Checkbox`].
-    #[must_use]
-    pub fn style(mut self, style: impl Into<Box<dyn StyleSheet>>) -> Self {
-        self.style = style.into();
-        self
-    }
+    // /// Sets the style of the [`Checkbox`].
+    // #[must_use]
+    // pub fn style(mut self, style: impl Into<Box<dyn StyleSheet>>) -> Self {
+    //     self.style = style.into();
+    //     self
+    // }
 
     /// Sets the id of the [`Checkbox`].
     #[must_use]
@@ -101,7 +121,7 @@ impl<Message> Checkbox<Message> {
 
 impl<Message> NodeBuilder<Message> for Checkbox<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + std::cmp::PartialEq,
 {
     fn generate_element_builder<'b>(
         &self,
@@ -166,7 +186,7 @@ where
 
 impl<Message> Widget<Message> for Checkbox<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + std::cmp::PartialEq,
 {
     fn node<'b>(
         &self,
@@ -181,7 +201,7 @@ where
 
 impl<Message> From<Checkbox<Message>> for Element<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + std::cmp::PartialEq,
 {
     fn from(checkbox: Checkbox<Message>) -> Self {
         Self::new(checkbox)
@@ -190,7 +210,7 @@ where
 
 impl<Message> GenerateElement<Message> for Checkbox<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + std::cmp::PartialEq,
 {
     fn generate_element(&self) -> Element<Message> {
         //TODO remove ref? not clone?
@@ -221,7 +241,7 @@ where
 // @ 被GElement更新 ------------------------------------
 impl<Message> RefreshFor<Checkbox<Message>> for GElement<Message>
 where
-    Message: 'static + Clone + for<'a> MessageTid<'a>,
+    Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
     fn refresh_for(&self, who_checkbox: &mut Checkbox<Message>) {
         match self {
@@ -258,7 +278,7 @@ where
 // @ 更新who -GElement ------------------------------------
 impl<Message> RefreshFor<GElement<Message>> for Checkbox<Message>
 where
-    Message: 'static + Clone + for<'a> MessageTid<'a>,
+    Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
     fn refresh_for(&self, who: &mut GElement<Message>) {
         match who {
@@ -297,13 +317,13 @@ impl<Message> TypeCheckObjectSafe for Checkbox<Message> {
 }
 
 impl<Message> DynGElement<Message> for Checkbox<Message> where
-    Message: Clone + 'static + for<'a> MessageTid<'a>
+    Message: Clone + 'static + for<'a> MessageTid<'a> + std::cmp::PartialEq
 {
 }
 
 impl<Message> From<Checkbox<Message>> for GElement<Message>
 where
-    Message: Clone + for<'a> MessageTid<'a>,
+    Message: Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
     fn from(checkbox: Checkbox<Message>) -> Self {
         Self::Generic_(Box::new(checkbox))

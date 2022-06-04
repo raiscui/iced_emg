@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:14:26
- * @LastEditTime: 2021-10-12 13:31:58
+ * @LastEditTime: 2022-06-02 10:22:07
  * @LastEditors: Rais
  * @Description:
  */
-use std::rc::Rc;
-
+use dyn_partial_eq::*;
 use seed_styles::GlobalStyleSV;
+use std::rc::Rc;
 
 use crate::emg_runtime::{Bus, Widget};
 use crate::iced_runtime::Color;
@@ -24,6 +24,7 @@ use crate::emg_runtime::dodrio::bumpalo;
 ///
 /// [built-in widget]: mod@crate::widget
 #[allow(missing_debug_implementations)]
+#[derive(PartialEq, Eq)]
 pub struct Element<Message> {
     pub(crate) widget: Box<dyn Widget<Message>>,
 }
@@ -86,6 +87,23 @@ impl<Message> Element<Message> {
 struct Map<A, B> {
     widget: Box<dyn Widget<A>>,
     mapper: Rc<dyn Fn(A) -> B>,
+}
+impl<A, B> PartialEq for Map<A, B> {
+    fn eq(&self, other: &Self) -> bool {
+        self.widget == other.widget && Rc::ptr_eq(&self.mapper, &other.mapper)
+    }
+}
+impl<A, B> DynPartialEq for Map<A, B>
+where
+    A: 'static,
+    B: 'static,
+{
+    fn as_any(&self) -> &dyn core::any::Any {
+        self
+    }
+    fn box_eq(&self, other: &dyn core::any::Any) -> bool {
+        other.downcast_ref::<Self>().map_or(false, |a| self == a)
+    }
 }
 
 impl<A, B> Map<A, B> {

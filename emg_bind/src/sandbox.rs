@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2021-09-27 21:52:50
+ * @LastEditTime: 2022-06-01 18:00:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ use crate::{Application, Command, Element, GTreeBuilderElement, GraphType, Subsc
 
 pub trait Sandbox {
     /// The type of __messages__ your [`Sandbox`] will produce.
-    type Message: std::fmt::Debug + Send + Clone;
+    type Message: std::fmt::Debug + Send + Clone + PartialEq;
 
     /// Initializes the [`Sandbox`].
     ///

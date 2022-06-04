@@ -1,12 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-05-25 18:20:02
+ * @LastEditTime: 2022-06-02 09:56:08
  * @LastEditors: Rais
  * @Description:
  */
-
-mod gelement2nodebuilderwidget;
+use dyn_partial_eq::*;
 // use dyn_clone::DynClone;
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -16,18 +15,18 @@ use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
 use tracing::{debug, error, trace};
 
-use std::{collections::VecDeque, rc::Rc, string::String};
-
 use crate::{
     dodrio::{
         self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
     },
     map_fn_callback_return_to_option_ms, Bus, DynGElement, Element, GElement, Widget,
 };
+use std::{collections::VecDeque, rc::Rc, string::String};
 // use emg_core::Vector;
 // ────────────────────────────────────────────────────────────────────────────────
 //TODO move out to global
-pub trait NodeBuilder<Message> // where
+// #[dyn_partial_eq]
+pub trait NodeBuilder<Message>: DynPartialEq // DynPartialEq
 // Message: 'static,
 {
     fn generate_element_builder<'b>(
@@ -42,6 +41,44 @@ pub trait NodeBuilder<Message> // where
         bumpalo::collections::Vec<'b, Node<'b>>,
     >;
 }
+
+impl<Message> core::cmp::Eq for dyn NodeBuilder<Message> + '_ {}
+
+impl<Message> core::cmp::PartialEq for dyn NodeBuilder<Message> + '_ {
+    fn eq(&self, other: &Self) -> bool {
+        self.box_eq(other.as_any())
+    }
+}
+impl<Message> core::cmp::PartialEq<dyn NodeBuilder<Message> + '_>
+    for Box<dyn NodeBuilder<Message> + '_>
+{
+    fn eq(&self, other: &dyn NodeBuilder<Message>) -> bool {
+        self.box_eq(other.as_any())
+    }
+}
+
+// impl<Message> core::cmp::PartialEq<dyn NodeBuilder<Message> + '_>
+//     for Rc<dyn NodeBuilder<Message> + '_>
+// {
+//     fn eq(&self, other: &dyn NodeBuilder<Message>) -> bool {
+//         self.box_eq(other.as_any())
+//     }
+// }
+
+// ────────────────────────────────────────────────────────────────────────────────
+// impl<Message> core::cmp::PartialEq for Box<dyn NodeBuilder<Message> + '_> {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.box_eq(other.as_any())
+//     }
+// }
+
+// impl<Message> core::cmp::PartialEq<&Self> for Box<dyn NodeBuilder<Message> + '_> {
+//     fn eq(&self, other: &&Self) -> bool {
+//         self.box_eq(other.as_any())
+//     }
+// }
+// ────────────────────────────────────────────────────────────────────────────────
+
 // pub type ListenerCallback = Box<dyn EventCallbackClone + 'static>;
 
 // pub trait EventCallbackClone: Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) + DynClone {}
@@ -102,6 +139,7 @@ pub trait NodeBuilder<Message> // where
 //         Self(f)
 //     }
 // }
+
 type EventNameString = IdStr;
 
 #[derive(Clone)]
@@ -109,6 +147,14 @@ pub struct EventCallback<Message>(
     EventNameString,
     Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>,
 );
+impl<Message> PartialEq for EventCallback<Message>
+where
+    Message: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && Rc::ptr_eq(&self.1, &other.1)
+    }
+}
 
 impl<Message> EventCallback<Message> {
     #[must_use]
@@ -122,6 +168,15 @@ impl<Message> EventCallback<Message> {
 
 #[derive(Clone)]
 pub struct EventMessage<Message>(EventNameString, Rc<dyn Fn() -> Option<Message>>);
+impl<Message> PartialEq for EventMessage<Message>
+where
+    Message: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && Rc::ptr_eq(&self.1, &other.1)
+    }
+}
+
 impl<Message> EventMessage<Message>
 where
     Message: 'static,
@@ -147,7 +202,18 @@ pub enum EventNode<Message> {
     Cb(EventCallback<Message>),
     CbMessage(EventMessage<Message>),
 }
-
+impl<Message> Eq for EventNode<Message> where Message: PartialEq {}
+impl<Message> PartialEq for EventNode<Message>
+where
+    Message: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Cb(l0), Self::Cb(r0)) => l0 == r0,
+            (Self::CbMessage(l0), Self::CbMessage(r0)) => l0 == r0,
+        }
+    }
+}
 // impl<Message> From<(EventNameString, Box<dyn EventCbClone>)> for EventNode<Message> {
 //     fn from(v: (EventNameString, Box<dyn EventCbClone>)) -> Self {
 //         Self::Cb(EventCallback(v.0, v.1))
@@ -180,20 +246,19 @@ where
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 enum BuilderWidget<Message>
 where
-    Message: 'static,
+    Message: 'static + PartialEq,
 {
-    Static(Rc<dyn NodeBuilder<Message>>),
+    Static(Rc<dyn NodeBuilder<Message>>), //TODO use g_element impl trait
     Dyn(Box<dyn DynGElement<Message>>),
 }
 
-#[allow(clippy::module_name_repetitions)]
-#[derive(Clone)]
+#[derive(Clone, DynPartialEq, PartialEq, Eq)]
 pub struct NodeBuilderWidget<Message>
 where
-    Message: 'static,
+    Message: 'static + PartialEq,
 {
     id: IdStr,
     //TODO : instead use GElement
@@ -206,7 +271,7 @@ where
 
 impl<Message> std::fmt::Debug for NodeBuilderWidget<Message>
 where
-    Message: std::clone::Clone + std::fmt::Debug,
+    Message: std::clone::Clone + std::fmt::Debug + PartialEq,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let widget = if self.widget.is_none() {
@@ -223,7 +288,10 @@ where
     }
 }
 
-impl<Message: Clone + 'static> Default for NodeBuilderWidget<Message> {
+impl<Message> Default for NodeBuilderWidget<Message>
+where
+    Message: Clone + 'static + PartialEq,
+{
     fn default() -> Self {
         Self {
             id: IdStr::new_inline(""),
@@ -233,7 +301,10 @@ impl<Message: Clone + 'static> Default for NodeBuilderWidget<Message> {
         }
     }
 }
-impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
+impl<Message> NodeBuilderWidget<Message>
+where
+    Message: std::clone::Clone + 'static + PartialEq,
+{
     /// # Errors
     ///
     /// Will return `Err` if `gel` does not Layer_(_) | Button_(_) | Text_(_)
@@ -279,7 +350,9 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
                 builder.set_widget(*gel_in);
             }
             Layer_(x) => {
-                self.widget = Some(BuilderWidget::Static(Rc::new(x)));
+                self.widget = Some(BuilderWidget::Static(
+                    Rc::new(x) as Rc<dyn NodeBuilder<Message>>
+                ));
             }
             Text_(x) => {
                 self.widget = Some(BuilderWidget::Static(Rc::new(x)));
@@ -305,7 +378,7 @@ impl<Message: std::clone::Clone + 'static> NodeBuilderWidget<Message> {
 
 impl<Message> Widget<Message> for NodeBuilderWidget<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + PartialEq,
 {
     #[allow(late_bound_lifetime_arguments)]
     fn node<'b>(
@@ -390,7 +463,7 @@ where
 
 impl<Message> From<NodeBuilderWidget<Message>> for Element<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + PartialEq,
 {
     fn from(node_builder_widget: NodeBuilderWidget<Message>) -> Self {
         Self::new(node_builder_widget)

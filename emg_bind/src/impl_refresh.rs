@@ -3,7 +3,7 @@ use std::ops::Deref;
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-05-24 17:14:28
+ * @LastEditTime: 2022-06-01 19:03:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,9 +13,9 @@ use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Message> RefreshWhoNoWarper for GElement<Message> {}
-impl<Message> RefreshUseNoWarper for GElement<Message> {}
-impl<Message> RefreshFor<Self> for GElement<Message>
+impl<Message: PartialEq> RefreshWhoNoWarper for GElement<Message> {}
+impl<Message: PartialEq> RefreshUseNoWarper for GElement<Message> {}
+impl<Message: PartialEq> RefreshFor<Self> for GElement<Message>
 where
     Message: 'static + Clone,
 {
@@ -85,7 +85,7 @@ where
 /// `GElement` refresh use X
 /// for Refresher<GElement> many type
 // this is `GElement` refresh use `i32`
-impl<Message> RefreshFor<GElement<Message>> for i32 {
+impl<Message: std::cmp::PartialEq> RefreshFor<GElement<Message>> for i32 {
     fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
@@ -102,7 +102,7 @@ impl<Message> RefreshFor<GElement<Message>> for i32 {
     }
 }
 
-impl<Message> RefreshFor<GElement<Message>> for f64 {
+impl<Message: std::cmp::PartialEq> RefreshFor<GElement<Message>> for f64 {
     fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
@@ -122,7 +122,7 @@ impl<Message> RefreshFor<GElement<Message>> for f64 {
 
 impl<Message> RefreshFor<NodeBuilderWidget<Message>> for GElement<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + PartialEq,
 {
     fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<Message>) {
         use GElement::Event_;
