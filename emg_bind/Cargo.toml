@@ -87,7 +87,7 @@ iced_web = { path = "../../iced/web" }
 # console_error_panic_hook = "0.1.6"
 wasm-bindgen = "0.2"
 dyn_partial_eq = { path = "../../dyn_partial_eq" }
-
+either = "1.6.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2.6", features = ["js"] }

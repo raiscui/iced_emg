@@ -3,11 +3,11 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-02-04 21:44:58
+ * @LastEditTime: 2022-06-07 18:42:16
  * @LastEditors: Rais
  * @Description:
  */
-use crate::RefreshFor;
+use crate::{EqRefreshFor, RefreshFor};
 
 use crate::{RefreshForUse, Refresher, RefresherFor};
 use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
@@ -211,6 +211,12 @@ where
         // self.get()().refresh_for(who);
         who.refresh_for_use(&self.get());
     }
+}
+impl<Who, Use> EqRefreshFor<Who> for Refresher<'static, Use>
+where
+    Who: RefreshWhoNoWarper,
+    Use: RefreshUseNoWarper + RefreshFor<Who> + 'static,
+{
 }
 
 // ────────────────────────────────────────────────────────────────────────────────

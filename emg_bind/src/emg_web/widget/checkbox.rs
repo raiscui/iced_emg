@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-02 13:01:09
+ * @LastEditTime: 2022-06-07 19:09:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -64,7 +64,10 @@ where
 {
     fn eq(&self, other: &Self) -> bool {
         self.is_checked == other.is_checked
-            && Rc::ptr_eq(&self.on_toggle, &other.on_toggle)
+            && std::ptr::eq(
+                (std::ptr::addr_of!(*self.on_toggle)).cast::<u8>(),
+                (std::ptr::addr_of!(*other.on_toggle)).cast::<u8>(),
+            )
             && self.label == other.label
             && self.id == other.id
             && self.width == other.width

@@ -1,10 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2021-05-22 09:07:44
+ * @LastEditTime: 2022-06-07 20:43:20
  * @LastEditors: Rais
  * @Description:
  */
+use dyn_partial_eq::DynPartialEq;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -19,6 +20,24 @@ impl<'a, Use> Refresher<'a, Use> {
         // Rc::clone(&self.0)()
     }
 }
+impl<'a, Use> Eq for Refresher<'a, Use> {}
+impl<'a, Use> PartialEq for Refresher<'a, Use> {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(
+            (std::ptr::addr_of!(*self.0)).cast::<u8>(),
+            (std::ptr::addr_of!(*other.0)).cast::<u8>(),
+        )
+    }
+}
+impl<Use: 'static> DynPartialEq for Refresher<'static, Use> {
+    fn as_any(&self) -> &dyn core::any::Any {
+        self
+    }
+    fn box_eq(&self, other: &dyn core::any::Any) -> bool {
+        other.downcast_ref::<Self>().map_or(false, |a| self == a)
+    }
+}
+
 #[derive(Clone)]
 pub struct RefresherFor<'a, Who>(Rc<dyn Fn(&mut Who) + 'a>);
 
@@ -50,6 +69,20 @@ impl<'a, Who> RefresherFor<'a, Who> {
 // refresh
 pub trait RefreshFor<Who> {
     fn refresh_for(&self, who: &mut Who);
+}
+pub trait EqRefreshFor<Who>: RefreshFor<Who> + DynPartialEq {}
+
+impl<Who> core::cmp::Eq for dyn EqRefreshFor<Who> + '_ {}
+
+impl<Who> core::cmp::PartialEq for dyn EqRefreshFor<Who> + '_ {
+    fn eq(&self, other: &Self) -> bool {
+        self.box_eq(other.as_any())
+    }
+}
+impl<Who> core::cmp::PartialEq<dyn EqRefreshFor<Who> + '_> for Box<dyn EqRefreshFor<Who> + '_> {
+    fn eq(&self, other: &dyn EqRefreshFor<Who>) -> bool {
+        self.box_eq(other.as_any())
+    }
 }
 // ────────────────────────────────────────────────────────────────────────────────
 

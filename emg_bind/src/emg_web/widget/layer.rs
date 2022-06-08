@@ -1,6 +1,6 @@
 use std::{clone::Clone, cmp::PartialEq, convert::TryInto};
 
-use dyn_partial_eq::*;
+use dyn_partial_eq::DynPartialEq;
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
 use tracing::{debug, warn};
@@ -105,17 +105,14 @@ impl<Message> Layer<Message> {
     }
 
     /// `GElement::Refresher_(_)` `GElement::Event_(_)` can't convert to Element
-    pub fn try_ref_push<E>(&mut self, child: E) -> Option<&mut Self>
+    pub fn try_ref_push<E>(&mut self, child: E)
     where
-        E: TryInto<Element<Message>, Error = ()>,
+        E: TryInto<Element<Message>>,
     {
         //TODO type error,  show error if need;
         if let Ok(e) = child.try_into() {
             self.children.push(e);
-        } else {
-            return None;
         }
-        Some(self)
     }
 
     // pub fn update_use<T>(mut self, updater: T) -> Self

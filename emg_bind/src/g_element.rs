@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-02 14:40:04
+ * @LastEditTime: 2022-06-08 19:21:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,9 +11,9 @@ use crate::{
 };
 pub use better_any;
 use better_any::{Tid, TidAble};
-use dyn_partial_eq::*;
+use dyn_partial_eq::DynPartialEq;
 use emg_core::{IdStr, TypeCheckObjectSafe};
-use emg_refresh::{RefreshFor, RefreshUse};
+use emg_refresh::{EqRefreshFor, RefreshFor, RefreshUse};
 // extern crate derive_more;
 use derive_more::From;
 use dyn_clonable::clonable;
@@ -78,7 +78,8 @@ pub trait MessageTid<'a>: TidAble<'a> {}
 //     }
 // }
 
-#[derive(Clone, Display, From)]
+#[derive(Clone, Display, DynPartialEq, From)]
+#[eq_opt(no_self_where, where_add = "Message: PartialEq,")]
 pub enum GElement<Message>
 where
     Message: 'static + PartialEq,
@@ -88,7 +89,7 @@ where
     Layer_(Layer<Message>),
     Text_(Text),
     Button_(Button<Message>),
-    Refresher_(Rc<dyn RefreshFor<Self>>),
+    Refresher_(Rc<dyn EqRefreshFor<Self>>),
     Event_(EventNode<Message>),
     //internal
     Generic_(Box<dyn DynGElement<Message>>), //范型
@@ -107,7 +108,7 @@ where
             (Self::Layer_(l0), Self::Layer_(r0)) => l0 == r0,
             (Self::Text_(l0), Self::Text_(r0)) => l0 == r0,
             (Self::Button_(l0), Self::Button_(r0)) => l0 == r0,
-            (Self::Refresher_(l0), Self::Refresher_(r0)) => Rc::ptr_eq(&l0, &r0),
+            (Self::Refresher_(l0), Self::Refresher_(r0)) => (**l0) == (**r0),
             (Self::Event_(l0), Self::Event_(r0)) => l0 == r0,
             (Self::Generic_(l0), Self::Generic_(r0)) => l0 == r0,
             (Self::NodeRef_(l0), Self::NodeRef_(r0)) => l0 == r0,
@@ -175,7 +176,7 @@ where
         let nbw = "NodeBuilderWidget< Message>".to_string();
 
         match self {
-            Layer_(l) => f.debug_tuple("GElement::GContainer").field(l).finish(),
+            Layer_(l) => f.debug_tuple("GElement::Layer").field(l).finish(),
             Text_(t) => f.debug_tuple("GElement::Text").field(t).finish(),
             Refresher_(_) => f
                 .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement< Message>>>)")
@@ -191,7 +192,7 @@ where
             }
             Generic_(_) => write!(f, "GElement::Generic_"),
             NodeRef_(nid) => {
-                write!(f, "GElement::NodeIndex({})", nid)
+                write!(f, "GElement::NodeIndex(\"{}\")", nid)
             }
             EmptyNeverUse => write!(f, "GElement::EmptyNeverUse"),
         }

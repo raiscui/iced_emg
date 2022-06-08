@@ -3,21 +3,24 @@ use std::ops::Deref;
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-01 19:03:54
+ * @LastEditTime: 2022-06-07 18:59:41
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{GElement, NodeBuilderWidget};
-use emg_refresh::{RefreshFor, RefreshForUse, RefreshUseNoWarper, RefreshWhoNoWarper};
+use emg_refresh::{
+    EqRefreshFor, RefreshFor, RefreshForUse, RefreshUseNoWarper, RefreshWhoNoWarper,
+};
 use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
 impl<Message: PartialEq> RefreshWhoNoWarper for GElement<Message> {}
 impl<Message: PartialEq> RefreshUseNoWarper for GElement<Message> {}
-impl<Message: PartialEq> RefreshFor<Self> for GElement<Message>
+impl<Message: PartialEq + Clone> EqRefreshFor<Self> for GElement<Message> {}
+impl<Message> RefreshFor<Self> for GElement<Message>
 where
-    Message: 'static + Clone,
+    Message: 'static + Clone + PartialEq,
 {
     fn refresh_for(&self, el: &mut Self) {
         use GElement::{Builder_, Event_, Generic_, Layer_, Refresher_, Text_};
@@ -45,7 +48,7 @@ where
             //refreshing use any impl RefreshFor
             (gel, Refresher_(refresher)) => {
                 trace!("{} refresh use refresher", gel);
-                gel.refresh_for_use(refresher.as_ref());
+                gel.refresh_for_use(refresher.as_ref() as &dyn RefreshFor<Self>);
             }
             // TODO: do not many clone event_callback
 
@@ -85,7 +88,7 @@ where
 /// `GElement` refresh use X
 /// for Refresher<GElement> many type
 // this is `GElement` refresh use `i32`
-impl<Message: std::cmp::PartialEq> RefreshFor<GElement<Message>> for i32 {
+impl<Message: PartialEq> RefreshFor<GElement<Message>> for i32 {
     fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 

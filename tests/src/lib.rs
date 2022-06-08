@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-05-31 11:55:40
+ * @LastEditTime: 2022-06-08 19:14:50
  * @LastEditors: Rais
  * @Description: 
  */
@@ -227,6 +227,110 @@ mod wasm_test {
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     use easybench_wasm::{bench, bench_env,bench_limit, bench_env_limit};
+
+    #[wasm_bindgen_test]
+    fn graph_build() {
+
+        console_error_panic_hook::set_once();
+        // ─────────────────────────────────────────────────────────────────
+        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        config.set_max_level(tracing::Level::DEBUG);
+        config.set_max_level(tracing::Level::INFO);
+        config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        tracing_wasm::set_as_global_default_with_config(config.build());
+        
+        let an: AnimationE<Message> = anima![width(px(80))];
+        let a = use_state(9999);
+        
+        let emg_graph =Rc::new(RefCell::new( emg_bind::g_node::GraphType::<Message>::default()));
+
+        let root: GTreeBuilderElement<Message> = gtree! {
+            @=a
+            Layer [
+                 @=b @E=[w(w(pc(50))),h(pc(50)),origin_x(pc(50)),align_x(pc(50))]
+                 Layer [
+                    @=c @E=[w(px(150)),h(px(50)),origin_x(pc(50)),origin_y(pc(50)),align_x(pc(50)),align_y(pc(50))]
+                    Layer [
+                        node_ref("b"),
+
+                        Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
+                            Checkbox::new(false,"222",|_|Message::IncrementPressed)=>[
+                                Text::new(format!("checkbox-text")),
+                            ],
+                        ]
+                    ],
+                    @=temp @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
+                    Text::new(format!("temp----------")),
+
+                    Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
+
+                    @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
+                    Text::new(format!("in quote.. {}", "b")) => [
+                        RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
+
+                    ],
+
+                    @E=[w(px(150)),origin_x(pc(100)),align_x(pc(100))]
+                    Text::new(format!("in quote.. {}", "b")) => [
+                        RefreshUse ||{100},
+                    ],
+                    @E=[w(px(150)),origin_x(pc(0)),align_x(pc(0))]
+                    Text::new(format!("dt.. {}", "b")) => [
+                    ],
+                    @E=[w(px(250)),origin_x(pc(0)),align_y(pc(140))]
+                    Text::new(format!("dt.. {}", "b")) => [
+                    ],
+                    @=e @E=[w(pc(100)),h(px(40)),css(background_color("red")),origin_x(pc(50)),align_y(pc(70))]
+                    Layer [
+                        @=eb @E=[w(px(150)),h(px(30)),origin_x(pc(60)),align_y(pc(250))]
+                        Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+                            On:click move||{
+
+                                trace!("bbbbbbbbbbbbb");
+
+                                a.set_with(|v|v+1);
+                                Option::<Message>::None
+
+                            },
+                            // On:dblclick move||{
+                            //     // a.set((*a.get()).clone()+1);
+                            //     // a.set(a.get()+1);
+                            //     trace!("ccccccccccccc");
+                            //     a.set_with(|v|v+1);
+                            //     // this.borrow_mut().ddd +=1;
+                            //     Message::None
+                            // }
+                        ],
+                        @=b2 @E=[an.clone(),h(parent!(CssWidth)+px(30)),origin_x(pc(60)),align_y(pc(300))]
+                        Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+                            On:click move |_root, vdom, _event| {
+
+                                an.interrupt([
+                                    to![width(px(50))],
+                                    to![width(pc(100))],
+                                ]);
+
+                                            a.set(a.get()+1);
+
+                                            debug!("will render");
+
+                                        Option::<Message>::None
+                                }
+                        ]
+                    ],
+                ]
+            ]
+        };
+        emg_graph.handle_root_in_topo(&root);
+        let root_gel = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+        warn!("{:#?}",&root_gel);
+
+
+        
+    }
+
 
     fn view()->Element<Message> {
         let emg_graph = Rc::new(RefCell::new(GraphType::<Message>::default()));

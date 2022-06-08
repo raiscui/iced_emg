@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-06-01 17:59:04
+ * @LastEditTime: 2022-06-07 15:14:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,7 @@ use emg_core::{vector,IdStr};
 use emg_core::{GenericSize};
 // use emg_core::{GenericSize, Vector};
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
-use emg_refresh::{RefreshFor, RefreshForUse};
+use emg_refresh::{RefreshFor, RefreshForUse, EqRefreshFor};
 use emg_state::{CloneStateVar, Dict, StateAnchor, StateVar, topo::{self, call_in_slot}, use_state, use_state_impl::TopoKey};
 use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, instrument, trace, trace_span, warn};
@@ -38,7 +38,7 @@ where
         GElement<Message>,
         Vec<GTreeBuilderElement<Message, Ix>>,
     ),
-    RefreshUse(Ix, Rc<dyn RefreshFor<GElement<Message>>>),
+    RefreshUse(Ix, Rc<dyn EqRefreshFor<GElement<Message>>>),
     Cl(Ix, Rc<dyn Fn()>),
     Event(Ix, EventNode<Message>),
     Dyn(
@@ -230,8 +230,8 @@ where
         edge_index: EdgeIndex<Self::Ix>,
     ) -> Result<EmgEdgeItem<Self::Ix>, String>;
 
-    fn handle_root_in_topo(&self, tree_layer: &GTreeBuilderElement<Message>);
-    fn handle_children_in_topo(&self, replace_id:Option<&Self::Ix>, tree_layer: &'_ GTreeBuilderElement<Message>);
+    fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message>);
+    fn handle_children_in_topo(&self, replace_id:Option<&Self::Ix>, tree_element: &'_ GTreeBuilderElement<Message>);
 }
 
 impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
@@ -278,18 +278,18 @@ where
     #[instrument(skip(self, size, origin, align))]
     fn setup_edge_in_topo(
         &self,
-        ei: EdgeIndex<Self::Ix>,
+        edge_index: EdgeIndex<Self::Ix>,
         size: (GenericSizeAnchor, GenericSizeAnchor),
         origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
         align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
         let mut g = self.borrow_mut();
         g
-            .nodes_connect_eix(&ei)
+            .nodes_connect_eix(&edge_index)
             .ok_or("node insert eix fails")?;
 
-        let source = use_state(ei.source_nix().as_ref().cloned());
-        let target = use_state(ei.target_nix().as_ref().cloned());
+        let source = use_state(edge_index.source_nix().as_ref().cloned());
+        let target = use_state(edge_index.target_nix().as_ref().cloned());
         let edge_item = EmgEdgeItem::new_in_topo(
             source.watch(),
             target.watch(),
@@ -299,7 +299,7 @@ where
             align,
         );
         g
-            .just_insert_edge(ei, Edge::new(source, target, edge_item.clone()));
+            .just_insert_edge(edge_index, Edge::new(source, target, edge_item.clone()));
         Ok(edge_item)
     }
     // TODO: use builder ?
@@ -307,20 +307,20 @@ where
     #[instrument(skip(self))]
     fn setup_default_edge_in_topo(
         &self,
-        ei: EdgeIndex<Self::Ix>,
+        edge_index: EdgeIndex<Self::Ix>,
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
 
         let mut g = self.borrow_mut();
         g
-            .nodes_connect_eix(&ei)
+            .nodes_connect_eix(&edge_index)
             .ok_or("node insert eix fails")?;
-            trace!("\n setup_default_edge_in_topo:\n nodes_connect_eix: {:#?}",&ei);
+            trace!("\n setup_default_edge_in_topo:\n nodes_connect_eix: {:#?}",&edge_index);
 
 
-        let source = use_state(ei.source_nix().as_ref().cloned());
+        let source = use_state(edge_index.source_nix().as_ref().cloned());
         trace!("\n setup_default_edge_in_topo:\n cloned sv e source");
 
-        let target = use_state(ei.target_nix().as_ref().cloned());
+        let target = use_state(edge_index.target_nix().as_ref().cloned());
         trace!("\n setup_default_edge_in_topo:\n cloned sv e target");
 
         let edge_item = EmgEdgeItem::default_in_topo(
@@ -330,7 +330,7 @@ where
         );
         let edge = Edge::new(source, target, edge_item.clone());
        g
-            .just_insert_edge(ei, edge);
+            .just_insert_edge(edge_index, edge);
         Ok(edge_item)
     }
 

@@ -11,6 +11,7 @@
 #![feature(negative_impls)] // NOTE for Gid refresh
 #![feature(min_specialization)] // NOTE for Gid refresh
 #![feature(box_patterns)]
+#![feature(trait_upcasting)]
 // #![feature(associated_type_bounds)]
 // bumpalo
 // #![feature(allocator_api)]
@@ -28,10 +29,11 @@ pub use emg_web as emg_runtime;
 
 mod g_element;
 mod g_tree_builder_element;
+mod g_tree_builder_fn_for_NodeItem;
 // mod graph_store;
 mod animation;
 mod bind_view;
-mod g_node;
+pub mod g_node;
 // mod gid;
 mod graph_layout;
 mod impl_refresh;

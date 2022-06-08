@@ -19,6 +19,7 @@ pub use impl_refresh::RefreshUseNoWarper;
 pub use impl_refresh::RefreshWhoNoWarper;
 pub use refresh_use::RefreshUse;
 pub use refresh_use_for::RefreshForUse;
+pub use refreshers::EqRefreshFor;
 pub use refreshers::RefreshFor;
 pub use refreshers::Refresher;
 pub use refreshers::RefresherFor;

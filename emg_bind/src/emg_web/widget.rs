@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2022-06-02 09:12:50
+ * @LastEditTime: 2022-06-07 19:05:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,7 +25,7 @@ use crate::Bus;
 use dodrio::bumpalo;
 
 use dyn_clone::DynClone;
-use dyn_partial_eq::*;
+use dyn_partial_eq::DynPartialEq;
 
 pub trait Widget<Message>: DynClone + DynPartialEq // where
 //     Message: Clone,

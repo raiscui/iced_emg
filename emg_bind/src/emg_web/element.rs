@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:14:26
- * @LastEditTime: 2022-06-02 10:22:07
+ * @LastEditTime: 2022-06-07 19:07:32
  * @LastEditors: Rais
  * @Description:
  */
-use dyn_partial_eq::*;
+use dyn_partial_eq::DynPartialEq;
 use seed_styles::GlobalStyleSV;
 use std::rc::Rc;
 
@@ -24,6 +24,7 @@ use crate::emg_runtime::dodrio::bumpalo;
 ///
 /// [built-in widget]: mod@crate::widget
 #[allow(missing_debug_implementations)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(PartialEq, Eq)]
 pub struct Element<Message> {
     pub(crate) widget: Box<dyn Widget<Message>>,
@@ -90,7 +91,11 @@ struct Map<A, B> {
 }
 impl<A, B> PartialEq for Map<A, B> {
     fn eq(&self, other: &Self) -> bool {
-        self.widget == other.widget && Rc::ptr_eq(&self.mapper, &other.mapper)
+        self.widget == other.widget
+            && std::ptr::eq(
+                (std::ptr::addr_of!(*self.mapper)).cast::<u8>(),
+                (std::ptr::addr_of!(*other.mapper)).cast::<u8>(),
+            )
     }
 }
 impl<A, B> DynPartialEq for Map<A, B>

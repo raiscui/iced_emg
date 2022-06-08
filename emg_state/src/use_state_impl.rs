@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-06-02 16:21:46
+ * @LastEditTime: 2022-06-07 14:09:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -66,7 +66,7 @@ impl Default for GStateStore {
             id_to_key_map: HashMap::default(),
             primary_slotmap: SlotMap::new(),
             // engine: RefCell::new(Engine::new()),
-            engine: RefCell::new(Engine::new_with_max_height(64)),
+            engine: RefCell::new(Engine::new_with_max_height(256)),
         }
     }
 }
@@ -1111,6 +1111,8 @@ where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
+    fn get_with<F: FnOnce(&T) -> R, R>(&self, func: F) -> R;
+
     fn store_get(&self, store: &GStateStore) -> T;
     fn store_get_with<F: FnOnce(&T) -> R, R>(&self, store: &GStateStore, func: F) -> R;
     fn engine_get_with<F: FnOnce(&T) -> R, R>(&self, engine: &mut Engine, func: F) -> R;
@@ -1121,6 +1123,9 @@ where
 {
     fn get(&self) -> T {
         global_engine_get_anchor_val(&self.0)
+    }
+    fn get_with<F: FnOnce(&T) -> R, R>(&self, func: F) -> R {
+        global_engine_get_anchor_val_with(&self.0, func)
     }
     fn store_get(&self, store: &GStateStore) -> T {
         store.engine_get(&self.0)
@@ -1446,6 +1451,15 @@ fn global_engine_get_anchor_val<O: Clone + 'static>(anchor: &Anchor<O>) -> O {
     trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
 
     G_STATE_STORE.with(|g_state_store_refcell| g_state_store_refcell.borrow().engine_get(anchor))
+}
+fn global_engine_get_anchor_val_with<O: Clone + 'static, F: FnOnce(&O) -> R, R>(
+    anchor: &Anchor<O>,
+    func: F,
+) -> R {
+    trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
+
+    G_STATE_STORE
+        .with(|g_state_store_refcell| g_state_store_refcell.borrow().engine_get_with(anchor, func))
 }
 
 ///

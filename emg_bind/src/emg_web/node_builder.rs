@@ -1,11 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-06-02 09:56:08
+ * @LastEditTime: 2022-06-07 18:12:38
  * @LastEditors: Rais
  * @Description:
  */
-use dyn_partial_eq::*;
+
+#![allow(clippy::borrow_as_ptr)]
+#![allow(clippy::ptr_as_ptr)]
+#![allow(clippy::ptr_eq)]
+use dyn_partial_eq::DynPartialEq;
 // use dyn_clone::DynClone;
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -147,12 +151,37 @@ pub struct EventCallback<Message>(
     EventNameString,
     Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>,
 );
+
 impl<Message> PartialEq for EventCallback<Message>
 where
     Message: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0 && Rc::ptr_eq(&self.1, &other.1)
+        if self.0 == other.0 {
+            assert_eq!(
+                &*self.1 as *const _ as *const u8,
+                &*other.1 as *const _ as *const u8
+            );
+
+            assert!(std::ptr::eq(
+                &*self.1 as *const _ as *const u8,
+                &*other.1 as *const _ as *const u8
+            ));
+        } else {
+            assert_ne!(
+                &*self.1 as *const _ as *const u8,
+                &*other.1 as *const _ as *const u8
+            );
+            assert!(!std::ptr::eq(
+                &*self.1 as *const _ as *const u8,
+                &*other.1 as *const _ as *const u8
+            ));
+        }
+        self.0 == other.0
+            && std::ptr::eq(
+                &*self.1 as *const _ as *const u8,
+                &*other.1 as *const _ as *const u8,
+            )
     }
 }
 
@@ -168,14 +197,6 @@ impl<Message> EventCallback<Message> {
 
 #[derive(Clone)]
 pub struct EventMessage<Message>(EventNameString, Rc<dyn Fn() -> Option<Message>>);
-impl<Message> PartialEq for EventMessage<Message>
-where
-    Message: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0 && Rc::ptr_eq(&self.1, &other.1)
-    }
-}
 
 impl<Message> EventMessage<Message>
 where
@@ -197,23 +218,42 @@ where
         Self(name, rc_callback)
     }
 }
-#[derive(Clone, From)]
+
+impl<Message> PartialEq for EventMessage<Message>
+where
+    Message: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+        //FIXME comparing trait object pointers compares a non-unique vtable address
+        //comparing trait object pointers compares a non-unique vtable address
+        // consider extracting and comparing data pointers only
+        // for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#vtable_address_comparisons
+        //
+        //&& Rc::ptr_eq(&self.1, &other.1)
+    }
+}
+#[derive(Clone, PartialEq, From)]
 pub enum EventNode<Message> {
     Cb(EventCallback<Message>),
     CbMessage(EventMessage<Message>),
 }
 impl<Message> Eq for EventNode<Message> where Message: PartialEq {}
-impl<Message> PartialEq for EventNode<Message>
-where
-    Message: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Cb(l0), Self::Cb(r0)) => l0 == r0,
-            (Self::CbMessage(l0), Self::CbMessage(r0)) => l0 == r0,
-        }
-    }
-}
+// impl<Message> PartialEq for EventNode<Message>
+// where
+//     Message: PartialEq,
+// {
+//     fn eq(&self, other: &Self) -> bool {
+//         match (self, other) {
+//             (Self::Cb(l0), Self::Cb(r0)) => l0 == r0,
+//             (Self::CbMessage(l0), Self::CbMessage(r0)) => l0 == r0,
+//             (EventNode::Cb(_), EventNode::Cb(_)) => todo!(),
+//             (EventNode::Cb(_), EventNode::CbMessage(_)) => todo!(),
+//             (EventNode::CbMessage(_), EventNode::Cb(_)) => todo!(),
+//             (EventNode::CbMessage(_), EventNode::CbMessage(_)) => todo!(),
+//         }
+//     }
+// }
 // impl<Message> From<(EventNameString, Box<dyn EventCbClone>)> for EventNode<Message> {
 //     fn from(v: (EventNameString, Box<dyn EventCbClone>)) -> Self {
 //         Self::Cb(EventCallback(v.0, v.1))
@@ -246,7 +286,7 @@ where
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Eq)]
 enum BuilderWidget<Message>
 where
     Message: 'static + PartialEq,
@@ -254,7 +294,25 @@ where
     Static(Rc<dyn NodeBuilder<Message>>), //TODO use g_element impl trait
     Dyn(Box<dyn DynGElement<Message>>),
 }
+impl<Message> PartialEq for BuilderWidget<Message>
+where
+    Message: 'static + PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Static(l0), Self::Static(r0)) =>
+            // (&**l0).box_eq((&**r0).as_any())
+            {
+                (**l0) == (**r0)
+            }
 
+            (Self::Dyn(l0), Self::Dyn(r0)) => l0 == r0,
+            _ => false,
+        }
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, DynPartialEq, PartialEq, Eq)]
 pub struct NodeBuilderWidget<Message>
 where
