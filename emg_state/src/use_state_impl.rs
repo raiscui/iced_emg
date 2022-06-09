@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-06-07 14:09:42
+ * @LastEditTime: 2022-06-09 11:54:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,7 +17,7 @@ use anchors::{
     singlethread::MultiAnchor,
 };
 use anymap::any::Any;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 use std::{hash::BuildHasherDefault, panic::Location};
 // use im::HashMap;
@@ -359,7 +359,7 @@ impl GStateStore {
     ///
     /// Will return `Err` if `fns.contains_key(after_fn_id)`
     /// permission to read it.
-    pub fn insert_after_fn<T: 'static>(
+    pub fn store_insert_after_fn<T: 'static>(
         &mut self,
         current_id: &StorageKey,
         after_fn_id: &StorageKey,
@@ -382,7 +382,10 @@ impl GStateStore {
         //TODO is need check both after_fns_map before_fns_map ??
 
         if fns.contains_key(after_fn_id) {
-            return Err("after_fns already has this fn".to_string());
+            return Err(format!(
+                "after_fns already has this fn,in [store_insert_after_fn] \n id {:?}",
+                &after_fn_id
+            ));
         }
 
         debug!("|||||||||||||||||-> fns:{:?}", &fns.keys());
@@ -1659,7 +1662,10 @@ fn insert_after_fn<T: 'static + std::clone::Clone>(
                 .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 
             if fns.contains_key(after_id) {
-                return Err("after_fns already has this fn".to_string());
+                return Err(format!(
+                    "after_fns already has this fn,in init \n id {:?}",
+                    &after_id
+                ));
             }
 
             let key_collection = vec![StorageKey::TopoKey(sv.id)];
@@ -1671,7 +1677,7 @@ fn insert_after_fn<T: 'static + std::clone::Clone>(
         }
         trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
 
-        g_state_store_refcell.borrow_mut().insert_after_fn(
+        g_state_store_refcell.borrow_mut().store_insert_after_fn(
             &StorageKey::TopoKey(sv.id),
             after_id,
             func,
@@ -1722,9 +1728,18 @@ pub fn state_store() -> Rc<RefCell<GStateStore>> {
 #[allow(clippy::if_not_else)]
 pub fn use_state<T>(data: T) -> StateVar<T>
 where
-    T: 'static,
+    T: 'static + std::fmt::Debug,
 {
-    trace!("use_state::({})", &std::any::type_name::<T>());
+    info!(
+        "use_state::({}) \n data: {:?}",
+        &std::any::type_name::<T>(),
+        &data
+    );
+    trace!(
+        "use_state::({}) \n data: {:?}",
+        &std::any::type_name::<T>(),
+        &data
+    );
     trace!("use_state::at:\n{}", Location::caller());
 
     let id = topo::CallId::current();
@@ -1734,8 +1749,9 @@ where
         insert_var_with_topo_id::<T>(Var::new(data), id);
     } else {
         warn!(
-            "this is checker: use_state call again, StateVar already settled state ->{}",
-            &std::any::type_name::<T>()
+            "this is checker: use_state call again, StateVar already settled state ->{} \n v:{:?}",
+            &std::any::type_name::<T>(),
+            &data
         );
     }
     StateVar::new(id)

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-06-07 15:14:29
+ * @LastEditTime: 2022-06-09 13:28:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -347,7 +347,8 @@ where
 
                 let nix = self.borrow_mut().insert_node_in_topo(
                     root_id.clone(),
-                    StateAnchor::constant(Layer::<Message>::default().into()),
+                    StateAnchor::constant(Layer::<Message>::new(root_id.clone()).into()),
+                    // StateAnchor::constant(Layer::<Message>::default().into()),
                 );
 
                 let width = global_width();

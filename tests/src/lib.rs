@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-06-08 19:14:50
+ * @LastEditTime: 2022-06-09 16:44:01
  * @LastEditors: Rais
  * @Description: 
  */
@@ -37,7 +37,7 @@ mod wasm_test {
         styles::{pc, px, width, CssWidth},
         EmgEdgeItem, EPath,
     };
-    use emg_state::{topo, CloneStateVar, Dict, StateAnchor, CloneStateAnchor};
+    use emg_state::{topo::{self, call, call_in_slot}, CloneStateVar, Dict, StateAnchor, CloneStateAnchor};
 
     use emg_state::{use_state, StateVar};
 
@@ -93,6 +93,16 @@ mod wasm_test {
         let cx = &mut RenderContext::new(bump, cached_set, templates);
         let node = r.render(cx);
         warn!("node = {:#?}", node);
+
+    }
+    fn render2string<R: for<'a> Render<'a>>( r: &R)->String{
+        let cached_set = &RefCell::new(CachedSet::default());
+        let bump = &Bump::new();
+        let templates = &mut FxHashMap::default();
+        let cx = &mut RenderContext::new(bump, cached_set, templates);
+        let node = r.render(cx);
+        let res = format!("{:#?}", node);
+        res
 
     }
 
@@ -226,12 +236,11 @@ mod wasm_test {
     }
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    use easybench_wasm::{bench, bench_env,bench_limit, bench_env_limit};
+    use easybench_wasm::{bench, bench_env,bench_limit, bench_env_limit, bench_env_limit_ref};
 
     #[wasm_bindgen_test]
-    fn graph_build() {
-
-        console_error_panic_hook::set_once();
+    fn new_graph_build_test(){
+           console_error_panic_hook::set_once();
         // ─────────────────────────────────────────────────────────────────
         let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
         config.set_max_level(tracing::Level::DEBUG);
@@ -241,7 +250,274 @@ mod wasm_test {
 
         tracing_wasm::set_as_global_default_with_config(config.build());
         
-        let an: AnimationE<Message> = anima![width(px(80))];
+
+        use web_sys::console;
+
+        let  g=  new_graph_build();
+        let root_gel:Element<Message> = g.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+                   
+        let  g2=  new_graph_build();
+        let root_gel2:Element<Message> = g2.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+                   
+    }
+    #[wasm_bindgen_test]
+    fn new_old_comp(){
+
+        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        config.set_max_level(tracing::Level::WARN);
+        config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        tracing_wasm::set_as_global_default_with_config(config.build());
+        
+        let new_str = render_new_string();
+        let old_str = render_old_string();
+        warn!("new_str: \n {}",new_str);
+        warn!("==================================\n");
+        warn!("old_str: \n {}",old_str);
+        warn!("==================================\n");
+
+        assert_eq!(new_str, old_str);
+    }
+    #[wasm_bindgen_test]
+    fn new_str(){
+        let new_str = render_new_string();
+        warn!("new_str: \n {}",new_str);
+    }
+    #[wasm_bindgen_test]
+    fn old_str(){
+        let old_str = render_old_string();
+        warn!("old_str: \n {}",old_str);
+    }
+
+    fn render_new_string()->String {
+        
+        console_error_panic_hook::set_once();
+        // ─────────────────────────────────────────────────────────────────
+        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        // config.set_max_level(tracing::Level::WARN);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        // tracing_wasm::set_as_global_default_with_config(config.build());
+        // ────────────────────────────────────────────────────────────────────────────────
+
+        let (sender, _receiver) = futures::channel::mpsc::unbounded();
+        let bus = Bus::new(sender);
+        let css = GlobalStyleSV::default_topo();
+
+        let  g=  new_graph_build();
+        let root_elm:Element<Message> = g.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
+        render2string(&root_elm_render_fn)
+
+
+    }
+    #[wasm_bindgen_test]
+    fn render_new() {
+        
+        console_error_panic_hook::set_once();
+        // ─────────────────────────────────────────────────────────────────
+        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        config.set_max_level(tracing::Level::WARN);
+        config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        tracing_wasm::set_as_global_default_with_config(config.build());
+        // ────────────────────────────────────────────────────────────────────────────────
+
+        let (sender, _receiver) = futures::channel::mpsc::unbounded();
+        let bus = Bus::new(sender);
+        let css = GlobalStyleSV::default_topo();
+
+        let  g=  new_graph_build();
+        let root_elm:Element<Message> = g.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
+        render2text(&root_elm_render_fn);
+
+
+    }
+    fn render_old_string() ->String {
+        
+        console_error_panic_hook::set_once();
+        // ─────────────────────────────────────────────────────────────────
+        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        // config.set_max_level(tracing::Level::WARN);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        // tracing_wasm::set_as_global_default_with_config(config.build());
+        // ────────────────────────────────────────────────────────────────────────────────
+
+        let (sender, _receiver) = futures::channel::mpsc::unbounded();
+        let bus = Bus::new(sender);
+        let css = GlobalStyleSV::default_topo();
+
+       
+        let g = build();
+       let root_elm=  g.borrow().view("a");
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
+        render2string(&root_elm_render_fn)
+
+
+    }
+
+    #[wasm_bindgen_test]
+    fn render_old()  {
+        
+        console_error_panic_hook::set_once();
+        // ─────────────────────────────────────────────────────────────────
+        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        config.set_max_level(tracing::Level::WARN);
+        config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        tracing_wasm::set_as_global_default_with_config(config.build());
+        // ────────────────────────────────────────────────────────────────────────────────
+
+        let (sender, _receiver) = futures::channel::mpsc::unbounded();
+        let bus = Bus::new(sender);
+        let css = GlobalStyleSV::default_topo();
+
+       
+        let g = build();
+       let root_elm=  g.borrow().view("a");
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
+        render2text(&root_elm_render_fn);
+
+
+    }
+
+    
+
+    
+    // new graph build view:  12- 14 us 317ns (R²=0.737, 1054 iterations in 48 samples)
+    // view:   6 - 9 us 470ns (R²=0.992, 1549 iterations in 52 samples)
+
+    // new graph build view2:          0s (R²=1.000, 12154142 iterations in 146 samples)
+    // view2:        23ns (R²=1.000, 432483 iterations in 111 samples)
+    
+    #[wasm_bindgen_test]
+    fn b2enchmark(){
+        console_error_panic_hook::set_once();
+
+        use web_sys::console;
+        let g = build();
+
+        console::log_1(
+            &format!(
+                "view2: {}",
+                bench_limit(10.,|| {
+                    let root_elm = g.borrow().view("a");
+
+                    root_elm
+                })
+            )
+            .into(),
+        );
+
+    }
+       // 4us 789ns 
+    #[wasm_bindgen_test]
+    fn benchmark(){
+        console_error_panic_hook::set_once();
+
+        use web_sys::console;
+
+        console::log_1(
+            &format!(
+                "view: {}",
+                bench_limit(10.,|| {
+                    let g = build();
+                    let root_elm = g.borrow().view("a");
+
+                    root_elm
+                })
+            )
+            .into(),
+        );
+
+    }
+    #[wasm_bindgen_test]
+    fn b2enchmark_new_graph_build(){
+        console_error_panic_hook::set_once();
+
+        use web_sys::console;
+
+        //    console_error_panic_hook::set_once();
+        // // ─────────────────────────────────────────────────────────────────
+        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        // config.set_max_level(tracing::Level::DEBUG);
+        // config.set_max_level(tracing::Level::INFO);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        // tracing_wasm::set_as_global_default_with_config(config.build());
+        let  g=  new_graph_build();
+        
+        console::log_1(
+            &format!(
+                "new graph build view2: {}",
+                bench_limit(10.,|| {
+                    let _root_gel:Element<Message> = g.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+                    _root_gel
+                    })
+    
+            )
+            .into(),
+        );
+
+    }
+       
+
+    #[wasm_bindgen_test]
+    fn benchmark_new_graph_build(){
+        console_error_panic_hook::set_once();
+
+        use web_sys::console;
+
+        //    console_error_panic_hook::set_once();
+        // // ─────────────────────────────────────────────────────────────────
+        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        // config.set_max_level(tracing::Level::DEBUG);
+        // config.set_max_level(tracing::Level::INFO);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        // tracing_wasm::set_as_global_default_with_config(config.build());
+        
+        console::log_1(
+            &format!(
+                "new graph build view: {}",
+                bench_limit(10.,|| {
+                    let  g=  new_graph_build();
+                    let _root_gel:Element<Message> = g.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+                    _root_gel
+                    })
+    
+            )
+            .into(),
+        );
+
+    }
+    #[topo::nested]
+    fn new_graph_build() ->Rc< RefCell< emg_bind::g_node::GraphType<Message>>>{
+
+        // console_error_panic_hook::set_once();
+        // // ─────────────────────────────────────────────────────────────────
+        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        // config.set_max_level(tracing::Level::DEBUG);
+        // config.set_max_level(tracing::Level::INFO);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        // tracing_wasm::set_as_global_default_with_config(config.build());
+        
+        let an: AnimationE<Message> =call(||anima![width(px(80))]) ;
         let a = use_state(9999);
         
         let emg_graph =Rc::new(RefCell::new( emg_bind::g_node::GraphType::<Message>::default()));
@@ -264,6 +540,7 @@ mod wasm_test {
                     @=temp @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
                     Text::new(format!("temp----------")),
 
+                    @=t1
                     Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
 
                     @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
@@ -272,13 +549,16 @@ mod wasm_test {
 
                     ],
 
+                    @=t2
                     @E=[w(px(150)),origin_x(pc(100)),align_x(pc(100))]
                     Text::new(format!("in quote.. {}", "b")) => [
                         RefreshUse ||{100},
                     ],
+                    @=t3
                     @E=[w(px(150)),origin_x(pc(0)),align_x(pc(0))]
                     Text::new(format!("dt.. {}", "b")) => [
                     ],
+                    @=t4
                     @E=[w(px(250)),origin_x(pc(0)),align_y(pc(140))]
                     Text::new(format!("dt.. {}", "b")) => [
                     ],
@@ -324,15 +604,15 @@ mod wasm_test {
             ]
         };
         emg_graph.handle_root_in_topo(&root);
-        let root_gel = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
-        warn!("{:#?}",&root_gel);
-
-
+        // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+        // warn!("{:#?}",&root_gel);
+        emg_graph
         
     }
 
 
-    fn view()->Element<Message> {
+    #[topo::nested]
+    fn build()->Rc<RefCell<GraphType<Message>>> {
         let emg_graph = Rc::new(RefCell::new(GraphType::<Message>::default()));
         let an: AnimationE<Message> = anima![width(px(80))];
         let a = use_state(9999);
@@ -355,6 +635,7 @@ mod wasm_test {
                     @=temp @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
                     Text::new(format!("temp----------")),
 
+                    @=t1
                     Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
 
                     @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
@@ -363,13 +644,16 @@ mod wasm_test {
 
                     ],
 
+                    @=t2
                     @E=[w(px(150)),origin_x(pc(100)),align_x(pc(100))]
                     Text::new(format!("in quote.. {}", "b")) => [
                         RefreshUse ||{100},
                     ],
+                    @=t3
                     @E=[w(px(150)),origin_x(pc(0)),align_x(pc(0))]
                     Text::new(format!("dt.. {}", "b")) => [
                     ],
+                    @=t4
                     @E=[w(px(250)),origin_x(pc(0)),align_y(pc(140))]
                     Text::new(format!("dt.. {}", "b")) => [
                     ],
@@ -418,33 +702,15 @@ mod wasm_test {
         // ─────────────────────────────────────────────────────────────────
 
         emg_graph.handle_root_in_topo(&root);
-        let root_elm = emg_graph.borrow().view("a");
-        root_elm
+        emg_graph
 
         // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
     }
 
-    // 4us 789ns 
-    #[wasm_bindgen_test]
-    fn benchmark(){
-        console_error_panic_hook::set_once();
-
-        use web_sys::console;
-
-        console::log_1(
-            &format!(
-                "view: {}",
-                bench_limit(10.,|| {
-                    let _f = view();
-                })
-            )
-            .into(),
-        );
-
-    }
+ 
 
     #[wasm_bindgen_test]
-    fn benchmark_edge_get(){
+    fn x_benchmark_edge_get(){
         use web_sys::console;
         console_error_panic_hook::set_once();
 
@@ -588,7 +854,8 @@ mod wasm_test {
         let css = GlobalStyleSV::default_topo();
 
        
-        let root_elm = view();
+        let g = build();
+       let root_elm=  g.borrow().view("a");
         let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
         // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
         render2text(&root_elm_render_fn);

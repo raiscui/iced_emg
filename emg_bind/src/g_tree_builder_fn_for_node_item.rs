@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-05 19:54:16
- * @LastEditTime: 2022-06-08 19:15:56
+ * @LastEditTime: 2022-06-08 22:43:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -176,7 +176,9 @@ where
         match tree_element {
             GTreeBuilderElement::Layer(root_id, edge_refreshers, children_list) => {
                 let _span = trace_span!("=> handle_root [layer] ",%root_id).entered();
-                info!("handle_root_in_topo: {:?}==>{:#?}", &root_id, &children_list);
+                trace!("handle_root_in_topo: {:?}==>{:#?}", &root_id, &children_list);
+                info!("handle_root_in_topo: {:?}", &root_id);
+
                 // ─────────────────────────────────────────────────────────────────
 
             
@@ -185,7 +187,7 @@ where
                 let edge_index = edge_index_no_source(root_id.clone());
                 GraphNodeBuilder::new(self.clone())
                 .set_key(root_id.clone())
-                .set_gel_sa(StateAnchor::constant(Layer::<Message>::default().into()))
+                .set_gel_sa(StateAnchor::constant(Layer::<Message>::new(root_id.clone()).into()))
                 .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .set_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     5,
@@ -256,7 +258,7 @@ where
             //
             GTreeBuilderElement::Layer(org_id, edge_refreshers, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
-
+                info!("\n handle children [Layer]: org_id: {:?},  id : {:?}", org_id, id);
                 let _span =
                     trace_span!("-> handle_children_in_topo [layer] ", ?id, ?parent_nix).entered();
 
@@ -342,6 +344,8 @@ where
             // }
             GTreeBuilderElement::GElementTree(org_id, edge_refreshers, gel, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
+                info!("\n handle children [GElementTree]: org_id: {:?},  id : {:?}", org_id, id);
+
 
                 let _span =
                     trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
@@ -385,6 +389,7 @@ where
             //TODO _edge_refresher use for  inject element
             GTreeBuilderElement::Dyn(org_id,_edge_refresher,sa_dict_gbe) => {
                 let id = replace_id.unwrap_or(org_id);
+                info!("\n handle children [Dyn]: org_id: {:?},  id : {:?}", org_id, id);
 
                 let _span = trace_span!("-> handle_children [SA] ", ?parent_nix).entered();
                 debug!("builder:: GTreeBuilderElement::Dyn id:{:?}",id);
@@ -446,7 +451,7 @@ where
                                 .offer(cur_path)
                                 .enter(|| {
                                     value.iter().for_each(|(k, v)| {
-                                    debug!("builder::after_fn >> illicit env , \n ---- run handle_children_in_topo for key:{}",k);
+                                    info!("builder::after_fn >> illicit env , \n ---- run handle_children_in_topo for key:{}",k);
                                      trace_span!( 
                                         "builder::illicit ",
                                         ).in_scope(||{
@@ -496,6 +501,7 @@ where
 
             GTreeBuilderElement::RefreshUse(org_id, u) => {
                 let id = replace_id.unwrap_or(org_id);
+                info!("\n handle children [RefreshUse]: org_id: {:?},  id : {:?}", org_id, id);
 
                 let _span =
                     trace_span!("-> handle_children_in_topo [RefreshUse] ", ?id, ?parent_nix)
@@ -521,6 +527,7 @@ where
 
             GTreeBuilderElement::Cl(org_id, dyn_fn) => {
                 let id = replace_id.unwrap_or(org_id);
+                info!("\n handle children [Cl]: org_id: {:?},  id : {:?}", org_id, id);
 
                 let _span = trace_span!(
                     "-> handle_children_in_topo [Cl] dyn_fn running",
@@ -536,6 +543,7 @@ where
             GTreeBuilderElement::Event(org_id, callback) => {
                 debug!("GTreeBuilderElement::Event : {:?} {:?}", org_id,replace_id);
                 let id = replace_id.unwrap_or(org_id);
+                info!("\n handle children [Event]: org_id: {:?},  id : {:?}", org_id, id);
 
                 let _span =
                     trace_span!("-> handle_children_in_topo [Event] ", ?id, ?parent_nix).entered();

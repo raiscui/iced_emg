@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-05-17 22:06:54
+ * @LastEditTime: 2022-06-09 12:10:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -30,7 +30,7 @@ use emg_animation::{
     },
     set_default_interpolation, Timing, PROP_SIZE,
 };
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 
 use crate::{global_anima_running_add, global_clock, EPath, EmgEdgeItem, G_CLOCK};
 
@@ -587,7 +587,7 @@ where
                 id,
                 move |skip, _| {
                     // println!("call update after set timing {:?}", v);
-                    debug!("====[insert_after_fn] calling --> topo id:{:?}", &id);
+                    info!("====[insert_after_fn] calling --> topo id:{:?}", &id);
                     // anima_clone.update_in_callback(skip);
                     if !sa_running_clone.get() {
                         debug!("not running , return");
@@ -614,8 +614,8 @@ where
                 },
                 false,
             )
-            // .ok();
-            .expect("find same id already in after_fn map");
+            .ok();
+        // .unwrap_or_else(|_| panic!("find same id already in after_fn map \n id:{:?}", &id));
 
         // let update_id = TopoKey::new(topo::call(topo::CallId::current));
 

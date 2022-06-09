@@ -6,7 +6,8 @@ edition = "2021"
 publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
+[profile.bench]
+lto = true
 [dependencies]
 emg_bind = { path = "../emg_bind" }
 # emg_hasher = { path = "../emg_hasher" }

@@ -29,7 +29,7 @@ pub use emg_web as emg_runtime;
 
 mod g_element;
 mod g_tree_builder_element;
-mod g_tree_builder_fn_for_NodeItem;
+mod g_tree_builder_fn_for_node_item;
 // mod graph_store;
 mod animation;
 mod bind_view;
