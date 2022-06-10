@@ -100,7 +100,7 @@ where
             .for_each(|gel| {
                 *gel = gel
                     .as_node_ref_()
-                    .and_then(|str| self.get_node_weight_use_ix(str))
+                    .and_then(|str| self.get_node_item_use_ix(str))
                     .cloned()
                     .expect("expect get node id")
                     .get();

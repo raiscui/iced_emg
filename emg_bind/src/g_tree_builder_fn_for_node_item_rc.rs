@@ -1,5 +1,12 @@
 /*
  * @Author: Rais
+ * @Date: 2022-06-10 22:34:38
+ * @LastEditTime: 2022-06-10 22:47:18
+ * @LastEditors: Rais
+ * @Description:
+ */
+/*
+ * @Author: Rais
  * @Date: 2022-06-05 19:54:16
  * @LastEditTime: 2022-06-10 22:30:40
  * @LastEditors: Rais
@@ -7,7 +14,7 @@
  */
 use crate::{
     emg_runtime::{EventNode, Layer},
-    g_node::{EmgNodeItem, GraphType, NItem},
+    g_node::{EmgNodeItem, node_item_rc::{GraphType, NItem}},
     GTreeBuilderElement, GTreeBuilderFn,
 };
 use crate::{GElement, NodeIndex};
@@ -35,7 +42,7 @@ Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default 
     graph_rc: Rc<RefCell<GraphType<Message,Ix>>>,
 
     key:Option< Ix>,
-    gel_sa:Option<StateAnchor<GElement<Message>>>,
+    gel_sa:Option<NItem<Message>>,
     incoming_eix_set:Option<EdgeCollect<Ix>>,
     outgoing_eix_set:Option<EdgeCollect<Ix>>,
 
@@ -53,7 +60,7 @@ Message: std::cmp::PartialEq + std::clone::Clone + 'static,
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    fn set_gel_sa(mut self, gel_sa: StateAnchor<GElement<Message>>) -> Self {
+    fn set_gel_sa(mut self, gel_sa: NItem<Message>) -> Self {
         self.gel_sa =Some( gel_sa);
         self
     }
@@ -187,7 +194,7 @@ where
                 let edge_index = edge_index_no_source(root_id.clone());
                 GraphNodeBuilder::new(self.clone())
                 .set_key(root_id.clone())
-                .set_gel_sa(StateAnchor::constant(Layer::<Message>::new(root_id.clone()).into()))
+                .set_gel_sa(StateAnchor::constant(Rc::new(Layer::<Message>::new(root_id.clone()).into())))
                 .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .set_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     5,
@@ -286,7 +293,7 @@ where
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
                 GraphNodeBuilder::new(self.clone())
                 .set_key(id.clone())
-                .set_gel_sa(StateAnchor::constant(Layer::<Message>::new(id.clone()).into()))
+                .set_gel_sa(StateAnchor::constant(Rc::new(Layer::<Message>::new(id.clone()).into())))
                 .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .set_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     2,
@@ -356,7 +363,8 @@ where
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
                 GraphNodeBuilder::new(self.clone())
                 .set_key(id.clone())
-                .set_gel_sa(StateAnchor::constant(gel.clone()))
+                //TODO GTreeBuilderElement use Rc
+                .set_gel_sa(StateAnchor::constant(Rc::new(gel.clone())))
                 .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .set_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     2,
@@ -513,7 +521,7 @@ where
                 let edge_index = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(self.clone())
                 .set_key(id.clone())
-                .set_gel_sa(StateAnchor::constant(u.clone().into()))
+                .set_gel_sa(StateAnchor::constant(Rc::new(u.clone().into())))
                 .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .set_outgoing_eix_set(IndexSet::with_hasher(
                     BuildHasherDefault::<CustomHasher>::default(),
@@ -555,7 +563,7 @@ where
                 let edge_index = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(self.clone())
                 .set_key(id.clone())
-                .set_gel_sa(StateAnchor::constant(callback.clone().into()))
+                .set_gel_sa(StateAnchor::constant(Rc::new(callback.clone().into())))
                 .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .set_outgoing_eix_set(IndexSet::with_hasher(
                     BuildHasherDefault::<CustomHasher>::default(),

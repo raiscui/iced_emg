@@ -1,29 +1,27 @@
-/*
- * @Author: Rais
- * @Date: 2022-05-26 18:22:22
- * @LastEditTime: 2022-06-11 00:34:22
- * @LastEditors: Rais
- * @Description:
- */
-
-mod index;
-pub mod node_item_rc;
-
 use std::{cell::RefCell, rc::Rc};
-
-use crate::{GElement, NodeBuilderWidget};
 
 use either::Either::{self, Left, Right};
 use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_core::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
-use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem, GraphEdgesDict};
+use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_refresh::RefreshForUse;
 use emg_state::{Anchor, CloneStateAnchor, Dict, StateAnchor, StateMultiAnchor};
-use tracing::{trace, trace_span, warn};
+use tracing::{trace, trace_span};
 
+use crate::{GElement, NodeBuilderWidget};
+
+use super::EmgNodeItem;
+
+/*
+ * @Author: Rais
+ * @Date: 2022-06-10 21:38:26
+ * @LastEditTime: 2022-06-10 21:42:38
+ * @LastEditors: Rais
+ * @Description:
+ */
 const POOL_SIZE: usize = 1;
 
-type GelType<Message> = GElement<Message>;
+type GelType<Message> = Rc<GElement<Message>>;
 
 pub type NItem<Message> = StateAnchor<GelType<Message>>;
 pub type N<Message, Ix> = EmgNodeItem<NItem<Message>, Ix>;
@@ -33,22 +31,6 @@ type PathDict<Ix> = Dict<EPath<Ix>, bool>;
 
 type CurrentPathChildrenEixGElSA<Message> =
     StateAnchor<(EdgeIndex<IdStr>, Either<GelType<Message>, GelType<Message>>)>;
-
-#[derive(Clone)]
-pub struct EmgNodeItem<NItem, Ix = IdStr>
-where
-    // Message: 'static + Clone + std::cmp::PartialEq,
-    Ix: std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default,
-    // Dict<EPath<Ix>, EmgNodeItem<Message, Ix>>: PartialEq,
-{
-    gel_sa: NItem,
-    //TODO maybe indexSet
-    // paths_sa: StateAnchor<Vector<EPath<Ix>>>, //NOTE: has self
-    paths_sa: StateAnchor<PathDict<Ix>>, //NOTE: has self
-    // incoming_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
-    // outgoing_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
-    paths_view_gel_sa: StateAnchor<Dict<EPath<Ix>, NItem>>,
-}
 
 impl<Message> EmgNodeItem<NItem<Message>>
 where
@@ -83,23 +65,21 @@ where
                                     .get_node_item(self_source_nix)
                                     .unwrap()
                                     .paths_sa
-                                    .get_anchor()
                                     .map(move |vec_e_path| {
                                         let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool2);
-                                        // let mut pd = PathDict::<IdStr>::new();
                                         let vec_e_path_clone = vec_e_path.clone();
                                         vec_e_path_clone
                                             .into_iter()
                                             .map(|(ep, v)| (ep.link_ref(nix2.clone().into()), v))
                                             .collect_into(&mut pd);
                                         pd
-                                    }),
+                                    })
+                                    .get_anchor(),
                             )
                         },
                     );
                     res.right_or_else(|no_source_self_eix| {
                         let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool);
-                        // let mut pd = PathDict::<IdStr>::new();
                         pd.insert(EPath::new(vector![no_source_self_eix]), false);
                         Anchor::constant(pd)
                     })
@@ -109,7 +89,6 @@ where
                     vd.clone()
                         .into_iter()
                         .fold(PathDict::<IdStr>::with_pool(&ord_map_pool), Dict::union)
-                    // .fold(PathDict::<IdStr>::new(), Dict::union)
                 })
         });
 
@@ -208,31 +187,6 @@ where
                             });
 
                         Some(gel_l_r)
-                        // let gel_l_r_clone = gel_l_r.clone();
-
-                        // Some(gel_l_r.then(move |(k, x)| {
-                        //     let kc = k.clone();
-                        //     match x {
-                        //         Left(_) => gel_l_r_clone.get_anchor(),
-                        //         Right(r) => {
-                        //             if r.is_node_ref_() {
-                        //                 r.as_node_ref_()
-                        //                     .and_then(|str| {
-                        //                         graph_rc5
-                        //                             .borrow()
-                        //                             .get_node_weight_use_ix(str)
-                        //                             .cloned()
-                        //                     })
-                        //                     .expect("expect get node id")
-                        //                     .gel_sa
-                        //                     .map(move |g| (kc.clone(), Right(g.clone())))
-                        //                     .get_anchor()
-                        //             } else {
-                        //                 gel_l_r_clone.get_anchor()
-                        //             }
-                        //         }
-                        //     }
-                        // }))
                     } else {
                         None
                     }
@@ -249,20 +203,13 @@ where
                         .map(move |v| {
                             let mut dict = Dict::<
                                 EdgeIndex<IdStr>,
-                                Either<GElement<Message>, GElement<Message>>,
+                                Either<GelType<Message>, GelType<Message>>,
                             >::with_pool(
                                 &children_either_ord_map_pool_2
                             );
-                            v.clone().into_iter().collect_into::<Dict<
-                                EdgeIndex<IdStr>,
-                                Either<GElement<Message>, GElement<Message>>,
-                            >>(&mut dict);
+                            v.clone().into_iter().collect_into(&mut dict);
                             dict
                         })
-                    // .collect::<Dict<
-                    //     EdgeIndex<IdStr>,
-                    //     StateAnchor<Either<GElement<Message>, GElement<Message>>>,
-                    // >>()
                 });
 
             let path2 = current_path.clone();
@@ -298,13 +245,13 @@ where
                 &styles_string_sa,
             )
                 .map(move |out_eix_s, children, gel, edge_styles| {
-                    let mut gel_clone = gel.clone();
+                    let mut gel_clone = (&**gel).clone();
 
                     for eix in out_eix_s {
                         if let Some(child_gel) =
                             children.get(eix).and_then(|child| child.as_ref().right())
                         {
-                            gel_clone.refresh_for_use(child_gel);
+                            gel_clone.refresh_for_use(child_gel.as_ref());
                         }
                     }
                     // for child in children {
@@ -340,7 +287,7 @@ where
                                 if let Some(event_gel) =
                                     children.get(eix).and_then(|child| child.as_ref().left())
                                 {
-                                    node_builder_widget.refresh_for_use(event_gel);
+                                    node_builder_widget.refresh_for_use(event_gel.as_ref());
                                 }
                             }
 
@@ -350,158 +297,17 @@ where
                             //     }
                             // }
 
-                            GElement::Builder_(Box::new(gel_clone), node_builder_widget)
+                            Rc::new(GElement::Builder_(Box::new(gel_clone), node_builder_widget))
                         }
                     } else {
                         trace!(
                             "NodeBuilderWidget::<Message>::try_from  error use:",
                             // current_node_clone.borrow()
                         );
-                        gel_clone
+                        Rc::new(gel_clone)
                     }
                 })
         });
-
-        // let paths_view_gel_sa =
-        //     (&paths_sa, &children_view_gel_sa).then(move |paths, children_view_gel| {
-        //         // let current_nix = paths
-        //         //     .last()
-        //         //     .and_then(|x| x.last())
-        //         //     .and_then(|x| x.target_nix().as_ref())
-        //         //     .cloned()
-        //         //     .unwrap();
-
-        //         // let children_view_gel_sa: StateAnchor<Dict<EPath<IdStr>, GElement<Message>>> = outs
-        //         //     .iter()
-        //         //     .filter_map(|out_eix| out_eix.target_nix().as_ref())
-        //         //     .filter_map(|target_nix| graph_rc3.borrow().nodes.get(target_nix.index()).cloned())
-        //         //     .map(|child_node| {
-        //         //         let nix3 = nix.clone();
-
-        //         //         child_node.item.paths_view_gel_sa.filter(move |path, _gel| {
-        //         //             path.last()
-        //         //                 .and_then(|p| p.source_nix().as_ref())
-        //         //                 .map(|x| x.index().clone())
-        //         //                 .unwrap()
-        //         //                 == nix3
-        //         //         })
-        //         //     })
-        //         //     .map(|x| x.get_anchor())
-        //         //     .collect::<Anchor<Vector<_>>>()
-        //         //     .map(|v: &Vector<_>| Dict::unions(v.clone()))
-        //         //     .into();
-
-        //         paths
-        //             .clone()
-        //             .into_iter()
-        //             .map(|path| {
-        //                 let path2 = path.clone();
-        //                 let this_path_children_sa = children_view_gel_sa
-        //                     .filter(move |k, _v| {
-        //                         let mut for_current_ep = k.clone();
-        //                         for_current_ep.pop_back();
-        //                         for_current_ep == path2
-        //                     })
-        //                     .map(|d| d.values().cloned().collect::<Vec<_>>());
-        //                 let children_no_cb_sa = this_path_children_sa.map(|this_path_children| {
-        //                     this_path_children
-        //                         .iter()
-        //                         .filter(|gel| !gel.is_event_())
-        //                         .cloned()
-        //                         .collect::<Vec<_>>()
-        //                 });
-        //                 let event_callbacks_sa = this_path_children_sa.map(|this_path_children| {
-        //                     this_path_children
-        //                         .iter()
-        //                         .filter(|gel| gel.is_event_())
-        //                         .cloned()
-        //                         .collect::<Vec<_>>()
-        //                 });
-
-        //                 let path3 = path.clone();
-
-        //                 //TODO use filter
-        //                 let styles_string_sa = graph_rc.borrow().edges.watch().then(move |es| {
-        //                     let path4 = path3.clone();
-
-        //                     es.get(path3.last().unwrap())
-        //                         .unwrap()
-        //                         .item
-        //                         .edge_nodes
-        //                         .then(move |e_nodes| {
-        //                             e_nodes
-        //                                 .get(&path4)
-        //                                 .and_then(EdgeItemNode::as_edge_data)
-        //                                 .unwrap_or_else(|| {
-        //                                     panic!("not find EdgeData for path:{}", &path4)
-        //                                 })
-        //                                 .styles_string
-        //                                 .get_anchor()
-        //                         })
-        //                         .get_anchor()
-        //                 });
-
-        //                 let path4 = path;
-        //                 let nix4 = nix.clone();
-
-        //                 let view_gel_sa: StateAnchor<(EPath<IdStr>, GElement<Message>)> = (
-        //                     &gel_sa2,
-        //                     &styles_string_sa,
-        //                     &children_no_cb_sa,
-        //                     &event_callbacks_sa,
-        //                 )
-        //                     .map(move |gel, edge_styles, children, event_callbacks| {
-        //                         let mut gel_clone = gel.clone();
-        //                         //TODO illicit::Layer path
-        //                         for child in children {
-        //                             gel_clone.refresh_for_use(child);
-        //                         }
-
-        //                         if let Ok(mut node_builder_widget) =
-        //                             NodeBuilderWidget::<Message>::try_new_use(&gel_clone)
-        //                         {
-        //                             let _g = trace_span!("-> in NodeBuilderWidget").entered();
-        //                             {
-        //                                 trace!("NodeBuilderWidget::<Message>::try_from  OK");
-        //                                 // node_builder_widget.set_id(format!("{}", cix));
-        //                                 node_builder_widget.set_id(nix4.clone());
-
-        //                                 //TODO use StateAnchor ? for child edge change
-        //                                 trace!("edge::path:  {}", &path4);
-
-        //                                 trace!("styles---------------> {}", &edge_styles);
-
-        //                                 node_builder_widget.add_styles_string(edge_styles.as_str());
-
-        //                                 if !event_callbacks.is_empty() {
-        //                                     for callback in event_callbacks {
-        //                                         //TODO maybe just directly push event
-        //                                         node_builder_widget.refresh_for_use(callback);
-        //                                     }
-        //                                 }
-
-        //                                 (
-        //                                     path4.clone(),
-        //                                     GElement::Builder_(
-        //                                         Box::new(gel_clone),
-        //                                         node_builder_widget,
-        //                                     ),
-        //                                 )
-        //                             }
-        //                         } else {
-        //                             trace!(
-        //                                 "NodeBuilderWidget::<Message>::try_from  error use:",
-        //                                 // current_node_clone.borrow()
-        //                             );
-        //                             (path4.clone(), gel_clone)
-        //                         }
-        //                     });
-
-        //                 view_gel_sa.get_anchor()
-        //             })
-        //             .collect::<Anchor<Vector<_>>>()
-        //             .map(|x| Dict::<EPath<IdStr>, GElement<Message>>::from_iter(x.clone()))
-        //     });
 
         Self {
             gel_sa,

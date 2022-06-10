@@ -29,8 +29,9 @@ pub use iced_web as iced_runtime;
 pub use emg_web as emg_runtime;
 
 mod g_element;
-mod g_tree_builder_element;
+mod g_tree_builder;
 mod g_tree_builder_fn_for_node_item;
+mod g_tree_builder_fn_for_node_item_rc;
 // mod graph_store;
 mod animation;
 mod bind_view;
@@ -57,7 +58,7 @@ pub use emg::{edge_index_no_source, Outgoing};
 pub use emg_msg_macro::emg_msg;
 pub use emg_runtime::*;
 pub use g_element::*;
-pub use g_tree_builder_element::*;
+pub use g_tree_builder::*;
 pub use graph_layout::*;
 pub use sandbox::Sandbox;
 
