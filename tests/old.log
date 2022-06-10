@@ -100,8 +100,8 @@ Node {
                                                                                         Listener {
                                                                                             event: "click",
                                                                                             callback: (
-                                                                                                0x0030a980,
-                                                                                                0x001082a0,
+                                                                                                0x001d5030,
+                                                                                                0x001082e0,
                                                                                             ),
                                                                                         },
                                                                                     ],
@@ -373,8 +373,8 @@ Node {
                                                                         Listener {
                                                                             event: "click",
                                                                             callback: (
-                                                                                0x003b9c60,
-                                                                                0x001135b0,
+                                                                                0x003eece0,
+                                                                                0x00113af0,
                                                                             ),
                                                                         },
                                                                     ],
@@ -432,8 +432,8 @@ Node {
                                                                         Listener {
                                                                             event: "click",
                                                                             callback: (
-                                                                                0x003bc854,
-                                                                                0x00113598,
+                                                                                0x003f18e4,
+                                                                                0x00113ad8,
                                                                             ),
                                                                         },
                                                                     ],

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-26 18:22:22
- * @LastEditTime: 2022-06-09 22:02:46
+ * @LastEditTime: 2022-06-10 14:56:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,8 +12,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{GElement, NodeBuilderWidget};
 
-use either::Either::{Left, Right};
-use emg::{Graph, NodeEdgeCollect};
+use either::Either::{self, Left, Right};
+use emg::{EdgeIndex, Graph, NodeEdgeCollect};
 use emg_core::{vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshForUse;
@@ -40,11 +40,15 @@ where
     //TODO maybe indexSet
     // paths_sa: StateAnchor<Vector<EPath<Ix>>>, //NOTE: has self
     paths_sa: StateAnchor<PathDict<Ix>>, //NOTE: has self
-    incoming_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
-    outgoing_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
+    // incoming_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
+    // outgoing_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
     paths_view_gel_sa: StateAnchor<Dict<EPath<Ix>, StateAnchor<GElement<Message>>>>,
 }
-type GraphEdges<Ix> = StateAnchor<GraphEdgesDict<Ix>>;
+
+type CurrentPathChildrenEixGElSA<Message> = StateAnchor<(
+    EdgeIndex<IdStr>,
+    Either<GElement<Message>, GElement<Message>>,
+)>;
 
 impl<Message> EmgNodeItem<Message>
 where
@@ -60,6 +64,7 @@ where
         outgoing_eix_sa: StateAnchor<NodeEdgeCollect<IdStr>>,
         graph_rc: Rc<RefCell<GraphType<Message>>>,
     ) -> Self {
+        let pool = graph_rc.borrow().nodes.;
         let graph_rc2 = graph_rc.clone();
         let nix2 = nix.clone();
         let paths_sa = incoming_eix_sa.then(move |ins| {
@@ -102,25 +107,29 @@ where
             outgoing_eix_sa.then(move |outs| {
                 outs.iter()
                     .filter_map(|out_eix| out_eix.target_nix().as_ref())
-                    .filter_map(|target_nix| {
+                    .filter_map(|out_target_nix| {
                         graph_rc3
                             .borrow()
-                            .get_node_use_ix(target_nix.index())
+                            .get_node_use_ix(out_target_nix.index())
                             .cloned()
                     })
                     .map(|child_node| {
                         let nix4 = nix3.clone();
 
-                        child_node.item.paths_view_gel_sa.filter(move |path, _gel| {
-                            path.last()
-                                .and_then(|p| p.source_nix().as_ref())
-                                .map(|x| x.index().clone())
-                                .unwrap()
-                                == nix4
-                        })
+                        child_node
+                            .item
+                            .paths_view_gel_sa
+                            .filter(move |path, _gel| {
+                                path.last()
+                                    .and_then(|p| p.source_nix().as_ref())
+                                    .map(emg::NodeIndex::index)
+                                    .unwrap()//child source nix
+                                    == &nix4
+                            })
+                            .get_anchor()
                     })
-                    .map(|x| x.get_anchor())
-                    .collect::<Anchor<Vector<_>>>()
+                    // .map(|x| x.get_anchor())
+                    .collect::<Anchor<Vector<_>>>() //each edge-child vec --<  diff paths dict
                     .map(|v: &Vector<_>| Dict::unions(v.clone()))
             });
         // let children_count = children_view_gel_sa.map(Dict::len).get();
@@ -129,55 +138,98 @@ where
         // @────────────────────────────────────────────────────────────────────────────────
         let gel_sa_clone1 = gel_sa.clone();
         let graph_rc3 = graph_rc.clone();
-        let paths_view_gel_sa = paths_sa.map_(move |path, _v| {
-            let path2 = path.clone();
+        let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
+        let paths_view_gel_sa = paths_sa.map_(move |current_path, _v| {
+            let current_path2 = current_path.clone();
             let graph_rc4 = graph_rc3.clone();
 
             let this_path_children_sa = children_view_gel_sa
-                .filter_map(move |child_path, child_gel_sa| {
-                    let mut child_path_clone = child_path.clone();
-                    child_path_clone.pop_back();
-                    if child_path_clone == path2 {
-                        let gel_l_r = child_gel_sa.map(|gel| {
-                            if gel.is_event_() {
-                                //Left event
-                                Left(gel.clone())
-                            } else {
-                                Right(gel.clone())
-                            }
-                        });
-                        let gel_l_r_clone = gel_l_r.clone();
+                .filter_map(move |k_child_path, v_child_gel_sa| {
+                    let mut child_path_clone = k_child_path.clone();
+                    //TODO check [current_child_ei] only one
+                    let current_child_ei = child_path_clone.pop_back().unwrap();
+                    let child_path_clone_popped = child_path_clone;
+                    if child_path_clone_popped == current_path2 {
+                        //
                         let graph_rc5 = graph_rc4.clone();
+                        let v_child_gel_sa_clone = v_child_gel_sa.clone();
+                        let gel_l_r: CurrentPathChildrenEixGElSA<Message> = v_child_gel_sa
+                            .then(move |gel| {
+                                // NOTE handle note_ref
 
-                        Some(gel_l_r.then(move |x| match x {
-                            Left(_) => gel_l_r_clone.get_anchor(),
-                            Right(r) => {
-                                if r.is_node_ref_() {
-                                    r.as_node_ref_()
+                                if gel.is_node_ref_() {
+                                    gel.as_node_ref_()
                                         .and_then(|str| {
-                                            graph_rc5.borrow().get_node_weight_use_ix(str).cloned()
+                                            graph_rc5
+                                                .borrow()
+                                                .get_node_weight_use_ix(str)
+                                                .map(|x| x.gel_sa.get_anchor())
                                         })
                                         .expect("expect get node id")
-                                        .gel_sa
-                                        .map(|g| Right(g.clone()))
-                                        .get_anchor()
+                                    // .map(move |g| g.clone())
                                 } else {
-                                    gel_l_r_clone.get_anchor()
+                                    v_child_gel_sa_clone.get_anchor()
                                 }
-                            }
-                        }))
+                            })
+                            .map(move |gel| {
+                                if gel.is_event_() {
+                                    //Left event
+                                    (current_child_ei.clone(), Left(gel.clone()))
+                                } else {
+                                    (current_child_ei.clone(), Right(gel.clone()))
+                                }
+                            });
+
+                        Some(gel_l_r)
+                        // let gel_l_r_clone = gel_l_r.clone();
+
+                        // Some(gel_l_r.then(move |(k, x)| {
+                        //     let kc = k.clone();
+                        //     match x {
+                        //         Left(_) => gel_l_r_clone.get_anchor(),
+                        //         Right(r) => {
+                        //             if r.is_node_ref_() {
+                        //                 r.as_node_ref_()
+                        //                     .and_then(|str| {
+                        //                         graph_rc5
+                        //                             .borrow()
+                        //                             .get_node_weight_use_ix(str)
+                        //                             .cloned()
+                        //                     })
+                        //                     .expect("expect get node id")
+                        //                     .gel_sa
+                        //                     .map(move |g| (kc.clone(), Right(g.clone())))
+                        //                     .get_anchor()
+                        //             } else {
+                        //                 gel_l_r_clone.get_anchor()
+                        //             }
+                        //         }
+                        //     }
+                        // }))
                     } else {
                         None
                     }
                 })
                 .then(|children| {
+                    // .map(|children| {
                     children
                         .values()
+                        // .cloned()
                         .map(emg_state::StateAnchor::get_anchor)
                         .collect::<Anchor<Vector<_>>>()
+                        .map(|v| {
+                            v.clone().into_iter().collect::<Dict<
+                                    EdgeIndex<IdStr>,
+                                    Either<GElement<Message>, GElement<Message>>,
+                                >>()
+                        })
+                    // .collect::<Dict<
+                    //     EdgeIndex<IdStr>,
+                    //     StateAnchor<Either<GElement<Message>, GElement<Message>>>,
+                    // >>()
                 });
 
-            let path2 = path.clone();
+            let path2 = current_path.clone();
 
             let styles_string_sa = graph_rc.borrow().edges.watch().then(move |es| {
                 let path3 = path2.clone();
@@ -198,18 +250,32 @@ where
             });
 
             let nix4 = nix.clone();
-            let path3 = path.clone();
+            let path3 = current_path.clone();
             let gel_sa_clone = gel_sa_clone1.clone();
 
-            (&this_path_children_sa, &gel_sa_clone, &styles_string_sa).map(
-                move |children, gel, edge_styles| {
+            //TODO children Dict 细化 reduce, use diffitem 更新 gel_clone
+
+            (
+                &outgoing_eix_sa_clone,
+                &this_path_children_sa,
+                &gel_sa_clone,
+                &styles_string_sa,
+            )
+                .map(move |out_eix_s, children, gel, edge_styles| {
                     let mut gel_clone = gel.clone();
 
-                    for child in children {
-                        if let Some(child_gel) = child.as_ref().right() {
+                    for eix in out_eix_s {
+                        if let Some(child_gel) =
+                            children.get(eix).and_then(|child| child.as_ref().right())
+                        {
                             gel_clone.refresh_for_use(child_gel);
                         }
                     }
+                    // for child in children {
+                    //     if let Some(child_gel) = child.as_ref().right() {
+                    //         gel_clone.refresh_for_use(child_gel);
+                    //     }
+                    // }
 
                     if let Ok(mut node_builder_widget) =
                         NodeBuilderWidget::<Message>::try_new_use(&gel_clone)
@@ -233,11 +299,20 @@ where
                             //         node_builder_widget.refresh_for_use(callback);
                             //     }
                             // }
-                            for child in children {
-                                if let Some(event_gel) = child.as_ref().left() {
+
+                            for eix in out_eix_s {
+                                if let Some(event_gel) =
+                                    children.get(eix).and_then(|child| child.as_ref().left())
+                                {
                                     node_builder_widget.refresh_for_use(event_gel);
                                 }
                             }
+
+                            // for child in children {
+                            //     if let Some(event_gel) = child.as_ref().left() {
+                            //         node_builder_widget.refresh_for_use(event_gel);
+                            //     }
+                            // }
 
                             GElement::Builder_(Box::new(gel_clone), node_builder_widget)
                         }
@@ -248,11 +323,8 @@ where
                         );
                         gel_clone
                     }
-                },
-            )
+                })
         });
-
-        //TODO children_path_map /paths_render_gel map
 
         // let paths_view_gel_sa =
         //     (&paths_sa, &children_view_gel_sa).then(move |paths, children_view_gel| {
