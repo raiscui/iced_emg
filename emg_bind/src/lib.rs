@@ -12,6 +12,7 @@
 #![feature(min_specialization)] // NOTE for Gid refresh
 #![feature(box_patterns)]
 #![feature(trait_upcasting)]
+#![feature(iter_collect_into)]
 // #![feature(associated_type_bounds)]
 // bumpalo
 // #![feature(allocator_api)]

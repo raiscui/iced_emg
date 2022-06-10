@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-06-10 14:49:59
+ * @LastEditTime: 2022-06-10 17:47:52
  * @LastEditors: Rais
  * @Description: 
  */
@@ -395,7 +395,7 @@ mod wasm_test {
     
 
     
-    // new graph build view:  12- 14,new 15 us 170ns (R²=0.737, 1054 iterations in 48 samples)
+    // new graph build view:  12- 14,new 15 us 170ns,new 17us (R²=0.737, 1054 iterations in 48 samples)
     // view:   6 - 9 us 470ns (R²=0.992, 1549 iterations in 52 samples)
 
     // new graph build view2:          0s (R²=1.000, 12154142 iterations in 146 samples)

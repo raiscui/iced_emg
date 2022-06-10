@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-26 18:22:22
- * @LastEditTime: 2022-06-10 14:56:37
+ * @LastEditTime: 2022-06-10 17:00:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,11 +14,13 @@ use crate::{GElement, NodeBuilderWidget};
 
 use either::Either::{self, Left, Right};
 use emg::{EdgeIndex, Graph, NodeEdgeCollect};
-use emg_core::{vector, IdStr, Vector};
+use emg_core::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshForUse;
 use emg_state::{Anchor, CloneStateAnchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{trace, trace_span, warn};
+
+const POOL_SIZE: usize = 1;
 
 pub type N<Message, Ix> = EmgNodeItem<Message, Ix>;
 pub type NDate<Message> = StateAnchor<GElement<Message>>;
@@ -60,21 +62,23 @@ where
     pub fn new(
         nix: IdStr,
         gel_sa: NDate<Message>,
-        incoming_eix_sa: StateAnchor<NodeEdgeCollect<IdStr>>,
-        outgoing_eix_sa: StateAnchor<NodeEdgeCollect<IdStr>>,
+        incoming_eix_sa: &StateAnchor<NodeEdgeCollect<IdStr>>,
+        outgoing_eix_sa: &StateAnchor<NodeEdgeCollect<IdStr>>,
         graph_rc: Rc<RefCell<GraphType<Message>>>,
     ) -> Self {
-        let pool = graph_rc.borrow().nodes.;
         let graph_rc2 = graph_rc.clone();
         let nix2 = nix.clone();
+        let paths_ord_map_pool_0 = OrdMapPool::new(POOL_SIZE);
+
         let paths_sa = incoming_eix_sa.then(move |ins| {
+            let ord_map_pool = paths_ord_map_pool_0.clone();
             ins.iter()
                 .map(|in_eix| {
                     let res = in_eix.source_nix().as_ref().map_or(
                         Left(in_eix.clone()),
                         |self_source_nix| {
                             let nix2 = nix2.clone();
-
+                            let ord_map_pool2 = ord_map_pool.clone();
                             Right(
                                 graph_rc2
                                     .borrow()
@@ -83,28 +87,39 @@ where
                                     .paths_sa
                                     .get_anchor()
                                     .map(move |vec_e_path| {
+                                        let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool2);
                                         let vec_e_path_clone = vec_e_path.clone();
                                         vec_e_path_clone
                                             .into_iter()
                                             .map(|(ep, v)| (ep.link_ref(nix2.clone().into()), v))
-                                            .collect::<PathDict<IdStr>>()
+                                            .collect_into(&mut pd);
+                                        pd
                                     }),
                             )
                         },
                     );
                     res.right_or_else(|no_source_self_eix| {
-                        Anchor::constant(Dict::unit(EPath::new(vector![no_source_self_eix]), false))
+                        let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool);
+                        pd.insert(EPath::new(vector![no_source_self_eix]), false);
+                        Anchor::constant(pd)
                     })
                 })
                 .collect::<Anchor<Vector<_>>>()
-                .map(|vd: &Vector<_>| Dict::unions(vd.clone()))
+                .map(move |vd: &Vector<_>| {
+                    vd.clone()
+                        .into_iter()
+                        .fold(PathDict::<IdStr>::with_pool(&ord_map_pool), Dict::union)
+                })
         });
 
         let graph_rc3 = graph_rc.clone();
         let nix3 = nix.clone();
 
+        let children_ord_map_pool_0 = OrdMapPool::new(POOL_SIZE);
+
         let children_view_gel_sa: StateAnchor<Dict<EPath<IdStr>, StateAnchor<GElement<Message>>>> =
             outgoing_eix_sa.then(move |outs| {
+                let children_ord_map_pool = children_ord_map_pool_0.clone();
                 outs.iter()
                     .filter_map(|out_eix| out_eix.target_nix().as_ref())
                     .filter_map(|out_target_nix| {
@@ -130,7 +145,15 @@ where
                     })
                     // .map(|x| x.get_anchor())
                     .collect::<Anchor<Vector<_>>>() //each edge-child vec --<  diff paths dict
-                    .map(|v: &Vector<_>| Dict::unions(v.clone()))
+                    // .map(|v: &Vector<_>| Dict::unions(v.clone()))
+                    .map(move |vd: &Vector<_>| {
+                        vd.clone().into_iter().fold(
+                            Dict::<EPath<IdStr>, StateAnchor<GElement<Message>>>::with_pool(
+                                &children_ord_map_pool,
+                            ),
+                            Dict::union,
+                        )
+                    })
             });
         // let children_count = children_view_gel_sa.map(Dict::len).get();
         // warn!("children count:{}", children_count);
@@ -139,9 +162,14 @@ where
         let gel_sa_clone1 = gel_sa.clone();
         let graph_rc3 = graph_rc.clone();
         let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
+
+        let children_either_ord_map_pool_0 = OrdMapPool::new(POOL_SIZE);
+
         let paths_view_gel_sa = paths_sa.map_(move |current_path, _v| {
             let current_path2 = current_path.clone();
             let graph_rc4 = graph_rc3.clone();
+
+            let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 
             let this_path_children_sa = children_view_gel_sa
                 .filter_map(move |k_child_path, v_child_gel_sa| {
@@ -210,18 +238,27 @@ where
                         None
                     }
                 })
-                .then(|children| {
+                .then(move |children| {
                     // .map(|children| {
+                    let children_either_ord_map_pool_2 = children_either_ord_map_pool_1.clone();
+
                     children
                         .values()
                         // .cloned()
                         .map(emg_state::StateAnchor::get_anchor)
                         .collect::<Anchor<Vector<_>>>()
-                        .map(|v| {
-                            v.clone().into_iter().collect::<Dict<
-                                    EdgeIndex<IdStr>,
-                                    Either<GElement<Message>, GElement<Message>>,
-                                >>()
+                        .map(move |v| {
+                            let mut dict = Dict::<
+                                EdgeIndex<IdStr>,
+                                Either<GElement<Message>, GElement<Message>>,
+                            >::with_pool(
+                                &children_either_ord_map_pool_2
+                            );
+                            v.clone().into_iter().collect_into::<Dict<
+                                EdgeIndex<IdStr>,
+                                Either<GElement<Message>, GElement<Message>>,
+                            >>(&mut dict);
+                            dict
                         })
                     // .collect::<Dict<
                     //     EdgeIndex<IdStr>,
@@ -470,8 +507,8 @@ where
         Self {
             gel_sa,
             paths_sa,
-            incoming_eix_sa,
-            outgoing_eix_sa,
+            // incoming_eix_sa,
+            // outgoing_eix_sa,
             paths_view_gel_sa,
         }
     }

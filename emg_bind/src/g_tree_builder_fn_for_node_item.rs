@@ -76,8 +76,8 @@ Message: std::cmp::PartialEq + std::clone::Clone + 'static,
         let node_item = EmgNodeItem::<Message,IdStr>::new(
             self.key.clone().unwrap(),
             self.gel_sa.unwrap(),
-            incoming_eix_set.watch(),
-            outgoing_eix_set.watch(),
+            &incoming_eix_set.watch(),
+            &outgoing_eix_set.watch(),
             self.graph_rc.clone(),
         );
                 //TODO all use or_insert_node?
