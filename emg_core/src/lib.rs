@@ -9,6 +9,7 @@ pub use smol_str::SmolStr as IdStr;
 
 pub use crate::SVec::{smallvec, SmallVec};
 pub use ::smallvec as SVec;
+pub use im_rc as im;
 pub use im_rc::{vector, Vector};
 use ordered_float::NotNan;
 // pub use tinyvec::{tiny_vec, TinyVec};

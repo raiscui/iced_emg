@@ -1,12 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-26 18:22:22
- * @LastEditTime: 2022-06-09 10:52:15
+ * @LastEditTime: 2022-06-09 22:02:46
  * @LastEditors: Rais
  * @Description:
  */
 
-pub mod index;
+mod index;
 
 use std::{cell::RefCell, rc::Rc};
 
@@ -26,7 +26,8 @@ pub type NDate<Message> = StateAnchor<GElement<Message>>;
 pub type E<Ix> = EmgEdgeItem<Ix>;
 pub type GraphType<Message, Ix = IdStr> = Graph<N<Message, Ix>, E<Ix>, Ix>;
 
-type PathDict = Dict<EPath<IdStr>, bool>;
+// type PathDict<Ix> = Dict<DictIndex<EPath<Ix>>, bool>;
+type PathDict<Ix> = Dict<EPath<Ix>, bool>;
 
 #[derive(Clone)]
 pub struct EmgNodeItem<Message, Ix = IdStr>
@@ -38,7 +39,7 @@ where
     gel_sa: NDate<Message>,
     //TODO maybe indexSet
     // paths_sa: StateAnchor<Vector<EPath<Ix>>>, //NOTE: has self
-    paths_sa: StateAnchor<PathDict>, //NOTE: has self
+    paths_sa: StateAnchor<PathDict<Ix>>, //NOTE: has self
     incoming_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
     outgoing_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
     paths_view_gel_sa: StateAnchor<Dict<EPath<Ix>, StateAnchor<GElement<Message>>>>,
@@ -81,7 +82,7 @@ where
                                         vec_e_path_clone
                                             .into_iter()
                                             .map(|(ep, v)| (ep.link_ref(nix2.clone().into()), v))
-                                            .collect::<PathDict>()
+                                            .collect::<PathDict<IdStr>>()
                                     }),
                             )
                         },
