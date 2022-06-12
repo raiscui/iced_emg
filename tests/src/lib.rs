@@ -394,7 +394,7 @@ mod wasm_test {
 
     
 
-    
+    // new rc graph build view:  15us 646ns 
     // new graph build view:  12- 14,new 15 us 170ns,new 17us (R²=0.737, 1054 iterations in 48 samples)
     // view:   6 - 9 us 470ns (R²=0.992, 1549 iterations in 52 samples)
 
