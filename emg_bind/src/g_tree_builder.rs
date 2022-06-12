@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-06-09 13:28:31
+ * @LastEditTime: 2022-06-12 21:24:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,6 +19,7 @@ use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, instrument, trace, trace_span, warn};
 
 
+#[allow(clippy::module_name_repetitions)]
 #[allow(dead_code)]
 #[derive(Clone)]
 pub enum GTreeBuilderElement<Message, Ix = IdStr>
@@ -132,7 +133,7 @@ impl<Message> std::fmt::Debug for GTreeBuilderElement<Message>
 where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GTreeBuilderElement::Layer(id, _, children_list) => {
+            Self::Layer(id, _, children_list) => {
                 let edge_str = "with-Edge-Vector";
                 f.debug_tuple("GTreeBuilderElement::Layer")
                     .field(id)
@@ -145,7 +146,7 @@ where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
             //     .field(id)
             //     .field(el)
             //     .finish(),
-            GTreeBuilderElement::GElementTree(id, _, gel, updaters) => {
+            Self::GElementTree(id, _, gel, updaters) => {
                 let edge_str = "with-Edge-Vector";
 
                 f.debug_tuple("GTreeBuilderElement::GElementTree")
@@ -155,22 +156,22 @@ where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
                     .field(updaters)
                     .finish()
             }
-            GTreeBuilderElement::RefreshUse(id, _) => {
+            Self::RefreshUse(id, _) => {
                 let updater = "Box<dyn RefreshFor<GElement< Message>>>";
                 f.debug_tuple("GTreeBuilderElement::Updater")
                     .field(id)
                     .field(&updater)
                     .finish()
             }
-            GTreeBuilderElement::Cl(id, _) => {
+            Self::Cl(id, _) => {
                 f.debug_tuple("GTreeBuilderElement::Cl").field(id).finish()
             }
-            GTreeBuilderElement::Event(id, e) => f
+            Self::Event(id, e) => f
                 .debug_tuple("GTreeBuilderElement::Event")
                 .field(id)
                 .field(&e)
                 .finish(),
-            GTreeBuilderElement::Dyn(id,_e,_sa_dict_gbe) => {
+            Self::Dyn(id,_e,_sa_dict_gbe) => {
                 let gbe = "StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>";
 
                 f.debug_tuple("GTreeBuilderElement::Dyn")
@@ -192,7 +193,7 @@ where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
     }
 }
 
-
+#[allow(clippy::module_name_repetitions)]
 pub trait GTreeBuilderFn<Message>
 where
     Self::Ix: Clone + Default + std::hash::Hash + Ord, Message: std::cmp::PartialEq

@@ -17,7 +17,13 @@ split-debuginfo = "unpacked"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = []
+pool = ["emg_core/pool", "emg/pool", "seed_styles/pool"]
+
+
 [dependencies]
+cfg-if = "1.0.0"
 iced = { path = "../../iced" }
 emg = { path = "../../emg" }
 # functionate = { path = "../../functionate" }

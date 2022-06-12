@@ -1,5 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
+use cfg_if::cfg_if;
 use either::Either::{self, Left, Right};
 use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_core::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
@@ -32,6 +33,8 @@ type PathDict<Ix> = Dict<EPath<Ix>, bool>;
 type CurrentPathChildrenEixGElSA<Message> =
     StateAnchor<(EdgeIndex<IdStr>, Either<GelType<Message>, GelType<Message>>)>;
 
+type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
+
 impl<Message> EmgNodeItem<NItem<Message>>
 where
     Message: Clone + std::cmp::PartialEq,
@@ -48,7 +51,7 @@ where
     ) -> Self {
         let graph_rc2 = graph_rc.clone();
         let nix2 = nix.clone();
-        let paths_ord_map_pool_0 = OrdMapPool::new(POOL_SIZE);
+        let paths_ord_map_pool_0: OrdMapPool<EPath<IdStr>, bool> = OrdMapPool::new(POOL_SIZE);
 
         let paths_sa = incoming_eix_sa.then(move |ins| {
             let ord_map_pool = paths_ord_map_pool_0.clone();
@@ -66,36 +69,60 @@ where
                                     .unwrap()
                                     .paths_sa
                                     .map(move |vec_e_path| {
-                                        let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool2);
-                                        let vec_e_path_clone = vec_e_path.clone();
-                                        vec_e_path_clone
-                                            .into_iter()
-                                            .map(|(ep, v)| (ep.link_ref(nix2.clone().into()), v))
-                                            .collect_into(&mut pd);
-                                        pd
+                                        cfg_if! {
+                                            if #[cfg(feature = "pool")]{
+
+                                                let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool2);
+                                                let vec_e_path_clone = vec_e_path.clone();
+                                                vec_e_path_clone
+                                                    .into_iter()
+                                                    .map(|(ep, v)| (ep.link_ref(nix2.clone().into()), v))
+                                                    .collect_into(&mut pd);
+                                                pd
+                                            }else{
+                                                let vec_e_path_clone = vec_e_path.clone();
+                                                vec_e_path_clone
+                                                    .into_iter()
+                                                    .map(|(ep, v)| (ep.link_ref(nix2.clone().into()), v))
+                                                    .collect::<PathDict<IdStr>>()
+                                            }
+                                        }
                                     })
                                     .get_anchor(),
                             )
                         },
                     );
                     res.right_or_else(|no_source_self_eix| {
-                        let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool);
-                        pd.insert(EPath::new(vector![no_source_self_eix]), false);
-                        Anchor::constant(pd)
+                        cfg_if!{
+                            if #[cfg(feature = "pool")]{
+                                let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool);
+                                pd.insert(EPath::new(vector![no_source_self_eix]), false);
+                                Anchor::constant(pd)
+                            }else{
+                                Anchor::constant(Dict::<EPath<IdStr>, bool>::unit(EPath::new(vector![no_source_self_eix]), false))
+                            }
+                        }
                     })
                 })
                 .collect::<Anchor<Vector<_>>>()
                 .map(move |vd: &Vector<_>| {
-                    vd.clone()
-                        .into_iter()
-                        .fold(PathDict::<IdStr>::with_pool(&ord_map_pool), Dict::union)
+                    cfg_if!{
+                        if #[cfg(feature = "pool")]{
+                            vd.clone()
+                            .into_iter()
+                            .fold(PathDict::<IdStr>::with_pool(&ord_map_pool), Dict::union)
+                        }else{
+                            PathDict::<IdStr>::unions(vd.clone())
+                        }
+                    }
                 })
         });
 
         let graph_rc3 = graph_rc.clone();
         let nix3 = nix.clone();
 
-        let children_ord_map_pool_0 = OrdMapPool::new(POOL_SIZE);
+        let children_ord_map_pool_0: OrdMapPool<EPath<IdStr>, NItem<Message>> =
+            OrdMapPool::new(POOL_SIZE);
 
         let children_view_gel_sa: StateAnchor<Dict<EPath<IdStr>, NItem<Message>>> = outgoing_eix_sa
             .then(move |outs| {
@@ -127,10 +154,17 @@ where
                     .collect::<Anchor<Vector<_>>>() //each edge-child vec --<  diff paths dict
                     // .map(|v: &Vector<_>| Dict::unions(v.clone()))
                     .map(move |vd: &Vector<_>| {
-                        vd.clone().into_iter().fold(
-                            Dict::<EPath<IdStr>, NItem<Message>>::with_pool(&children_ord_map_pool),
-                            Dict::union,
-                        )
+                        cfg_if!{
+                            if #[cfg(feature = "pool")]{
+                                vd.clone().into_iter().fold(
+                                    Dict::<EPath<IdStr>, NItem<Message>>::with_pool(&children_ord_map_pool),
+                                    Dict::union,
+                                )
+
+                            }else{
+                                Dict::<EPath<IdStr>, NItem<Message>>::unions(vd.clone())
+                            }
+                        }
                     })
             });
         // let children_count = children_view_gel_sa.map(Dict::len).get();
@@ -141,7 +175,8 @@ where
         let graph_rc3 = graph_rc.clone();
         let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
 
-        let children_either_ord_map_pool_0 = OrdMapPool::new(POOL_SIZE);
+        let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex<IdStr>, GElEither<Message>> =
+            OrdMapPool::new(POOL_SIZE);
 
         let paths_view_gel_sa = paths_sa.map_(move |current_path, _v| {
             let current_path2 = current_path.clone();
@@ -149,7 +184,9 @@ where
 
             let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 
-            let this_path_children_sa = children_view_gel_sa
+            let this_path_children_sa: StateAnchor<
+                Dict<EdgeIndex<IdStr>, GElEither<Message>>,
+            > = children_view_gel_sa
                 .filter_map(move |k_child_path, v_child_gel_sa| {
                     let mut child_path_clone = k_child_path.clone();
                     //TODO check [current_child_ei] only one
@@ -201,14 +238,23 @@ where
                         .map(emg_state::StateAnchor::get_anchor)
                         .collect::<Anchor<Vector<_>>>()
                         .map(move |v| {
-                            let mut dict = Dict::<
-                                EdgeIndex<IdStr>,
-                                Either<GelType<Message>, GelType<Message>>,
-                            >::with_pool(
-                                &children_either_ord_map_pool_2
-                            );
-                            v.clone().into_iter().collect_into(&mut dict);
-                            dict
+                            cfg_if! {
+
+                                if #[cfg(feature = "pool")]{
+                                    let mut dict = Dict::<EdgeIndex<IdStr>, GElEither<Message>>::with_pool(
+                                        &children_either_ord_map_pool_2
+                                    );
+                                    v.clone().into_iter().collect_into(&mut dict);
+                                    dict
+
+                                }else{
+
+                                    v.clone().into_iter().collect::<Dict<EdgeIndex<IdStr>, GElEither<Message>>>()
+
+
+                                }
+
+                            }
                         })
                 });
 

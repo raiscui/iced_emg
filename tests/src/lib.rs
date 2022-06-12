@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-06-10 22:59:20
+ * @LastEditTime: 2022-06-12 21:21:43
  * @LastEditors: Rais
  * @Description: 
  */
@@ -393,7 +393,9 @@ mod wasm_test {
     }
 
     
-
+    //NOTE speed
+    // new rc graph build view:  16us 266ns (pool)
+    // new rc graph build view:   13us 97ns  (no pool)
     // new rc graph build view:  15us 646ns 
     // new graph build view:  12- 14,new 15 us 170ns,new 17us (R²=0.737, 1054 iterations in 48 samples)
     // view:   6 - 9 us 470ns (R²=0.992, 1549 iterations in 52 samples)
