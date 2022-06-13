@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-06-12 21:21:43
+ * @LastEditTime: 2022-06-13 11:57:46
  * @LastEditors: Rais
  * @Description: 
  */
@@ -394,6 +394,7 @@ mod wasm_test {
 
     
     //NOTE speed
+    // new rc graph build view:  12us 700ns (no pool ,CompactString)
     // new rc graph build view:  16us 266ns (pool)
     // new rc graph build view:   13us 97ns  (no pool)
     // new rc graph build view:  15us 646ns 
@@ -503,6 +504,27 @@ mod wasm_test {
             )
             .into(),
         );
+
+    }
+    #[wasm_bindgen_test]
+    fn test_new_rc_graph_build(){
+        console_error_panic_hook::set_once();
+
+        use web_sys::console;
+
+           console_error_panic_hook::set_once();
+        // ─────────────────────────────────────────────────────────────────
+        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        config.set_max_level(tracing::Level::TRACE);
+        config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+        // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+
+        tracing_wasm::set_as_global_default_with_config(config.build());
+        
+   
+                    let  g=  new_rc_graph_build();
+                    let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+           
 
     }
 

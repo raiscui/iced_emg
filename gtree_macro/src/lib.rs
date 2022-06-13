@@ -47,27 +47,46 @@ impl ID {
                 // println!("id:{}", &id);
 
                 // quote!(String::from(#id))
-                quote!(IdStr::new_inline(#id))
+                if id.len() <= 12usize{
+                    quote!(IdStr::new_inline(#id))
+
+                }else{
+                    quote!(IdStr::new(#id))
+
+                }
             },
             |id| {
                 let id_string = id.to_string();
                 // println!("id:{}", &id_string);
 
                 // quote_spanned!(id.span()=>String::from(#id_string))
-                quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
+                if id_string.len() <= 12usize{
+                    quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
+                }else{
+                    quote_spanned!(id.span()=>IdStr::new(#id_string))
+
+                }
             },
         )
     }
 }
 
+
 fn make_id(name: &str) -> String {
-    let mut id = nanoid!(8);
+    
+    // let mut id = nanoid!(8);
+    let mut id = name.to_string();
     // let mut id = (*Uuid::new_v4()
     //     .to_simple()
     //     .encode_lower(&mut Uuid::encode_buffer()))
     // .to_string();
-    id.push('-');
-    id.push_str(name);
+    if let Some(n) = (12usize-1usize).checked_sub(id.len()) {
+        id.push('-');
+        id.push_str(nanoid!(n).as_str());
+    
+    }
+ 
+  
     id
 }
 
@@ -159,7 +178,7 @@ impl Parse for Edge {
 }
 impl ToTokens for Edge {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let Edge {
+        let Self {
             bracket_token,
             content,
         } = self;
@@ -211,7 +230,7 @@ impl Parse for GTreeClosure {
 }
 impl ToTokens for GTreeClosure {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GTreeClosure { id, closure } = self;
+        let Self { id, closure } = self;
         let id_token = id.get("Cl");
 
         quote_spanned!(
@@ -265,12 +284,12 @@ impl Parse for GOnEvent {
 }
 impl ToTokens for GOnEvent {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GOnEvent {
+        let Self {
             id,
             event_name,
             closure,
         } = self;
-        let id_token = id.get(format!("Event-{}", event_name).as_str());//just emg graph node id
+        let id_token = id.get(format!("Ev-{}", event_name).as_str());//just emg graph node id
 
         let token = if closure.inputs.is_empty() {
             quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(IdStr::new_inline(#event_name), #closure ).into()) )
@@ -339,7 +358,7 @@ impl Parse for GRefresher {
 
 impl ToTokens for GRefresher {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GRefresher { id, kws, method } = self;
+        let Self { id, kws, method } = self;
 
         let kw_token = match method {
             RefresherType::Callback(callback) => {
@@ -438,7 +457,7 @@ impl Parse for GTreeSurface {
 impl ToTokens for GTreeSurface {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         // self.expr.to_tokens(tokens)
-        let GTreeSurface {
+        let Self {
             edge,
             id,
             module,
@@ -455,12 +474,13 @@ impl ToTokens for GTreeSurface {
         //TODO namespace ,slot
 
         if *module {
-            let id_token = id.get("GTree-Mod");
+            let id_token = id.get("GTM");
 
             quote_spanned! (expr.span() =>
                 // let exp_v:GTreeBuilderElement<_,_> = ;
                 match #expr{
                     GTreeBuilderElement::Layer( expr_id,mut expr_edge,expr_children) =>{
+                        //TODO maybe change Ord to   expr_id, #id_token,
                         let new_id =format!("{}|{}", #id_token, expr_id);
                         expr_edge.extend( #edge_token);
                         // let new_children = expr_children.
@@ -510,7 +530,7 @@ impl ToTokens for GTreeSurface {
             )
             .to_tokens(tokens);
         } else {
-            let id_token = id.get("GElement");
+            let id_token = id.get("GEl");
 
             quote_spanned! (expr.span() => 
                     GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token)
@@ -817,7 +837,7 @@ fn edge2token(edge: &Option<Edge>) -> TokenStream {
 
 impl ToTokens for GTreeLayerStruct {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GTreeLayerStruct {
+        let Self {
             edge,
             layer,
             id,
@@ -828,7 +848,7 @@ impl ToTokens for GTreeLayerStruct {
         let g_tree_builder_element_layer_token =
             quote_spanned! {layer.span()=>GTreeBuilderElement::Layer};
 
-        let id_token = id.get("Layer");
+        let id_token = id.get("L");
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
         // let brace_op_token = quote_spanned! {children.span()=>vec![#children_token]};
 
@@ -872,7 +892,7 @@ impl Parse for Gtree {
 
 impl ToTokens for Gtree {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let Gtree { root } = self;
+        let Self { root } = self;
 
         let token = quote_spanned! {root.span()=> {
 

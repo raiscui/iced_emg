@@ -16,12 +16,15 @@ pool = ["im-rc/pool"]
 
 
 [dependencies]
+tracing = "0.1"
+
 ordered-float = "3.0.0"
 derive_more = "0.99"
 im-rc = { version = "15.1.0" }
 # imbl = { path = "../../imbl" }
-smol_str = "0.1.23"
-# compact_str = "0.2.0"
+# smol_str = "0.1.23"
+# smartstring = "1.0.1"
+compact_str = "0.4.0"
 # tinyvec = { version = "1.5.1", features = ["alloc"] }
 smallvec = { version = "1.8.0", features = ["const_generics"] }
 # smallvec = { version = "1.8.0" }

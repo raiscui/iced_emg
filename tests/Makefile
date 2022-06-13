@@ -6,6 +6,8 @@ bench-new:
 	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --release --lib -- wasm_test::benchmark_new_graph_build
 bench-new-rc:
 	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --release --lib -- wasm_test::benchmark_new_rc_graph_build
+test-new-rc:
+	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --lib -- wasm_test::test_new_rc_graph_build
 bench:
 	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --release --lib -- wasm_test::benchmark
 bench2:
