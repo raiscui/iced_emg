@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-06-07 18:12:38
+ * @LastEditTime: 2022-06-14 22:54:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -404,8 +404,10 @@ where
         let gel_take = gel;
         match gel_take {
             Builder_(gel_in, mut builder) => {
-                error!("Builder in builder");
                 builder.set_widget(*gel_in);
+                panic!("check what happened , Builder in builder");
+                // FIXME impl NodeBuilder<Message> can set
+                // self.widget = Some(BuilderWidget::Static(Rc::new(builder)));
             }
             Layer_(x) => {
                 self.widget = Some(BuilderWidget::Static(

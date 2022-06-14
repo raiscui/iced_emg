@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-06-14 18:48:28
+ * @LastEditTime: 2022-06-14 22:03:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -1114,88 +1114,6 @@ where
         b
     }
 }
-
-// #[macro_export]
-// macro_rules! to_vector_di {
-//     ( $( $element:expr ) , * ) => {
-//         {
-//             let mut v:im::Vector<emg_state::StateVar<emg_animation::Property>> = im::Vector::new();
-
-//             $(
-//                 let di =emg_state::StateVarDi::From( $element);
-//                 v.push_back(di.into());
-//             )*
-
-//             v
-//         }
-//     };
-// }
-// pub struct StateVarDi<A, B> {
-//     pub this: StateVar<A>,
-//     pub similar: StateVar<B>,
-//     update_fn: Box<dyn Fn(A, StateVar<B>)>,
-// }
-// impl<A, B, T> TryFrom<StateVarDi<A, B>> for StateVar<T>
-// where
-//     A: 'static,
-//     B: 'static,
-//     T: 'static,
-// {
-//     type Error = ();
-//     fn try_from(di: StateVarDi<A, B>) -> Result<Self, Self::Error> {
-//         if TypeId::of::<A>() == TypeId::of::<T>() {
-//             let any: Box<dyn std::any::Any> = Box::new(di.this);
-//             any.downcast::<Self>().map(|v| *v).map_err(|_| ())
-//         } else if TypeId::of::<B>() == TypeId::of::<T>() {
-//             let any: Box<dyn std::any::Any> = Box::new(di.similar);
-//             any.downcast::<Self>().map(|v| *v).map_err(|_| ())
-//         } else {
-//             panic!("not match any type")
-//         }
-//     }
-// }
-
-// impl<A, B> StateVarDi<A, B>
-// where
-//     B: Clone + From<A> + 'static,
-//     A: Clone + 'static,
-// {
-//     #[must_use]
-//     pub fn new_use_into(this: StateVar<A>, similar: StateVar<B>) -> Self {
-//         Self {
-//             this,
-//             similar,
-//             update_fn: Box::new(|a, sv_b| sv_b.set(a.into())),
-//         }
-//     }
-// }
-// impl<A, B> StateVarDi<A, B>
-// where
-//     B: 'static,
-//     A: Clone + 'static,
-// {
-//     #[must_use]
-//     pub fn new(
-//         this: StateVar<A>,
-//         similar: StateVar<B>,
-//         update_fn: Box<dyn Fn(A, StateVar<B>)>,
-//     ) -> Self {
-//         Self {
-//             this,
-//             similar,
-//             update_fn,
-//         }
-//     }
-
-//     pub fn set(&self, value: A) {
-//         self.this.set(value.clone());
-//         (self.update_fn)(value, self.similar);
-//     }
-//     #[must_use]
-//     pub fn get(&self) -> A {
-//         self.this.get()
-//     }
-// }
 
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, Eq)]
