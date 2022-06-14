@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-06-10 10:46:51
+ * @LastEditTime: 2022-06-14 14:50:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -29,7 +29,7 @@ use slotmap::{DefaultKey, Key, SlotMap, SparseSecondaryMap};
 // ────────────────────────────────────────────────────────────────────────────────
 
 thread_local! {
-    static G_STATE_STORE: Rc<RefCell<GStateStore>> =Rc::new( RefCell::new(
+    pub(crate) static G_STATE_STORE: Rc<RefCell<GStateStore>> =Rc::new( RefCell::new(
         GStateStore::default()
     ));
 }
@@ -686,7 +686,7 @@ where
     fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
     fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F);
     fn set_with<F: Fn(&T) -> T>(&self, func: F);
-    fn try_get(&self) -> Option<T>;
+    // fn try_get(&self) -> Option<T>;
 
     fn update<F: FnOnce(&mut T)>(&self, func: F);
     fn store_update<F: FnOnce(&mut T)>(&self, store: &GStateStore, func: F);
@@ -851,9 +851,9 @@ where
             after_fns,
         );
     }
-    fn try_get(&self) -> Option<T> {
-        clone_state_with_topo_id::<T>(self.id).map(|v| (*v.get()).clone())
-    }
+    // fn try_get(&self) -> Option<T> {
+    //     clone_state_with_topo_id::<T>(self.id).map(|v| (*v.get()).clone())
+    // }
 
     fn update<F: FnOnce(&mut T)>(&self, func: F) {
         // read_var_with_topo_id::<_, T, ()>(self.id, |var| {
@@ -1069,7 +1069,7 @@ where
 
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, Eq)]
-pub struct StateAnchor<T>(Anchor<T>);
+pub struct StateAnchor<T>(pub(crate) Anchor<T>);
 
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateAnchor<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1520,18 +1520,17 @@ fn insert_var_with_topo_id<T: 'static>(var: Var<T>, current_id: TopoKey) {
 
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
 }
+// fn clone_state_with_topo_id<T: 'static>(id: TopoKey) -> Option<Var<T>> {
+//     G_STATE_STORE.with(|g_state_store_refcell| {
+//         trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
 
-fn clone_state_with_topo_id<T: 'static>(id: TopoKey) -> Option<Var<T>> {
-    G_STATE_STORE.with(|g_state_store_refcell| {
-        trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
-
-        g_state_store_refcell
-            .borrow_mut()
-            .opt_get_state_and_bf_af_use_id::<T>(&StorageKey::TopoKey(id))
-            .map(|v| &v.0)
-            .cloned()
-    })
-}
+//         g_state_store_refcell
+//             .borrow_mut()
+//             .opt_get_state_and_bf_af_use_id::<T>(&StorageKey::TopoKey(id))
+//             .map(|v| &v.0)
+//             .cloned()
+//     })
+// }
 
 fn read_state_val_with_topo_id<
     F: FnOnce(&T, &SynCallBeforeFnsMap<T>, &SynCallAfterFnsMap<T>) -> R,

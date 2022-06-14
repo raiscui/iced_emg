@@ -9,6 +9,7 @@
 // ────────────────────────────────────────────────────────────────────────────────
 
 // #![feature(specialization)]
+pub mod state_lit;
 pub mod use_state_impl;
 pub use anchors::dict;
 pub use anchors::singlethread::Anchor;
