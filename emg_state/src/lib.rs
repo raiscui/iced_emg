@@ -3,6 +3,7 @@
 #![warn(clippy::nursery)]
 #![feature(min_specialization)]
 #![feature(box_into_inner)]
+#![feature(is_some_with)]
 // ────────────────────────────────────────────────────────────────────────────────
 // #![feature(auto_traits)]
 // #![feature(negative_impls)]

@@ -259,7 +259,7 @@ where
                 });
 
             let path2 = current_path.clone();
-
+            //TODO check once edge change, edges recalculation?
             let styles_string_sa = graph_rc.borrow().edges.watch().then(move |es| {
                 let path3 = path2.clone();
 
