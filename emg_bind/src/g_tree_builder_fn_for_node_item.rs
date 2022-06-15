@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-05 19:54:16
- * @LastEditTime: 2022-06-10 22:30:40
+ * @LastEditTime: 2022-06-15 12:54:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -47,25 +47,25 @@ Message: std::cmp::PartialEq + std::clone::Clone + 'static,
 {
     fn new(graph_rc: Rc<RefCell<GraphType<Message,IdStr>>>) -> Self { Self { graph_rc,key:None,gel_sa: None,incoming_eix_set:None,outgoing_eix_set:None} }
     #[allow(clippy::missing_const_for_fn)]
-    fn set_key(mut self, k:IdStr) ->Self {
+    fn and_key(mut self, k:IdStr) ->Self {
         self.key= Some(k);
         self
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    fn set_gel_sa(mut self, gel_sa: StateAnchor<GElement<Message>>) -> Self {
+    fn and_gel_sa(mut self, gel_sa: StateAnchor<GElement<Message>>) -> Self {
         self.gel_sa =Some( gel_sa);
         self
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    fn set_incoming_eix_set(mut self, incoming_eix_set: EdgeCollect<IdStr>)->Self {
+    fn and_incoming_eix_set(mut self, incoming_eix_set: EdgeCollect<IdStr>)->Self {
         self.incoming_eix_set = Some(incoming_eix_set);
         self
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    fn set_outgoing_eix_set(mut self, outgoing_eix_set: EdgeCollect<IdStr>)->Self {
+    fn and_outgoing_eix_set(mut self, outgoing_eix_set: EdgeCollect<IdStr>)->Self {
         self.outgoing_eix_set = Some(outgoing_eix_set);
         self
     }
@@ -186,10 +186,10 @@ where
 
                 let edge_index = edge_index_no_source(root_id.clone());
                 GraphNodeBuilder::new(self.clone())
-                .set_key(root_id.clone())
-                .set_gel_sa(StateAnchor::constant(Layer::<Message>::new(root_id.clone()).into()))
-                .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .set_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                .and_key(root_id.clone())
+                .and_gel_sa(StateAnchor::constant(Layer::<Message>::new(root_id.clone()).into()))
+                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     5,
                     BuildHasherDefault::<CustomHasher>::default(),
                 ))
@@ -285,10 +285,10 @@ where
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
                 GraphNodeBuilder::new(self.clone())
-                .set_key(id.clone())
-                .set_gel_sa(StateAnchor::constant(Layer::<Message>::new(id.clone()).into()))
-                .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .set_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                .and_key(id.clone())
+                .and_gel_sa(StateAnchor::constant(Layer::<Message>::new(id.clone()).into()))
+                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     2,
                     BuildHasherDefault::<CustomHasher>::default(),
                 ))
@@ -355,10 +355,10 @@ where
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
                 GraphNodeBuilder::new(self.clone())
-                .set_key(id.clone())
-                .set_gel_sa(StateAnchor::constant(gel.clone()))
-                .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .set_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                .and_key(id.clone())
+                .and_gel_sa(StateAnchor::constant(gel.clone()))
+                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     2,
                     BuildHasherDefault::<CustomHasher>::default(),
                 ))
@@ -512,10 +512,10 @@ where
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(self.clone())
-                .set_key(id.clone())
-                .set_gel_sa(StateAnchor::constant(u.clone().into()))
-                .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .set_outgoing_eix_set(IndexSet::with_hasher(
+                .and_key(id.clone())
+                .and_gel_sa(StateAnchor::constant(u.clone().into()))
+                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                .and_outgoing_eix_set(IndexSet::with_hasher(
                     BuildHasherDefault::<CustomHasher>::default(),
                 ))
                 .build_in_topo();
@@ -554,10 +554,10 @@ where
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(self.clone())
-                .set_key(id.clone())
-                .set_gel_sa(StateAnchor::constant(callback.clone().into()))
-                .set_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .set_outgoing_eix_set(IndexSet::with_hasher(
+                .and_key(id.clone())
+                .and_gel_sa(StateAnchor::constant(callback.clone().into()))
+                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                .and_outgoing_eix_set(IndexSet::with_hasher(
                     BuildHasherDefault::<CustomHasher>::default(),
                 ))
                 .build_in_topo();

@@ -9,6 +9,7 @@
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(convert_float_to_int)] //RafEventRecipe:  (timestamp * 1000.).trunc().to_int_unchecked::<u64>()
 #![feature(negative_impls)] // NOTE for Gid refresh
+#![feature(auto_traits)]
 #![feature(min_specialization)] // NOTE for Gid refresh
 #![feature(box_patterns)]
 #![feature(trait_upcasting)]

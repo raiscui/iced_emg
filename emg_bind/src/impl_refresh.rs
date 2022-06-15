@@ -1,9 +1,7 @@
-use std::ops::Deref;
-
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-07 18:59:41
+ * @LastEditTime: 2022-06-15 16:05:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,12 +13,12 @@ use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Message: PartialEq> RefreshWhoNoWarper for GElement<Message> {}
-impl<Message: PartialEq> RefreshUseNoWarper for GElement<Message> {}
-impl<Message: PartialEq + Clone> EqRefreshFor<Self> for GElement<Message> {}
+impl<Message> RefreshWhoNoWarper for GElement<Message> {}
+impl<Message> RefreshUseNoWarper for GElement<Message> {}
+impl<Message: PartialEq + Clone + 'static> EqRefreshFor<Self> for GElement<Message> {}
 impl<Message> RefreshFor<Self> for GElement<Message>
 where
-    Message: 'static + Clone + PartialEq,
+    Message: Clone,
 {
     fn refresh_for(&self, el: &mut Self) {
         use GElement::{Builder_, Event_, Generic_, Layer_, Refresher_, Text_};
@@ -38,6 +36,7 @@ where
             }
 
             // @ Single explicit match
+            //TODO event 只和 builder 起作用
             (_gel, _g_event_callback @ Event_(_)) => {
                 // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
                 // .refresh_use(g_event_callback)
@@ -55,7 +54,7 @@ where
             // layer 包裹 任何除了refresher的el
             (Layer_(l), any_not_refresher_event) => {
                 trace!("layer refresh use {} (do push)", any_not_refresher_event);
-                l.try_ref_push(any_not_refresher_event.clone());
+                l.push(any_not_refresher_event.clone());
             }
             // refresher 不与任何不是 refresher 的 el 产生刷新动作
             (Refresher_(_), any_not_refresher_event) => {
@@ -67,8 +66,8 @@ where
             (Text_(who), Text_(us_it)) => {
                 who.content(us_it.get_content());
             }
-            (who, Builder_(us_gel, _)) => {
-                us_gel.deref().refresh_for(who);
+            (who, Builder_(builder)) => {
+                builder.widget().unwrap().refresh_for(who);
             }
 
             // @ any not match ─────────────────────────────────────────────────────────────────
@@ -88,7 +87,7 @@ where
 /// `GElement` refresh use X
 /// for Refresher<GElement> many type
 // this is `GElement` refresh use `i32`
-impl<Message: PartialEq> RefreshFor<GElement<Message>> for i32 {
+impl<Message> RefreshFor<GElement<Message>> for i32 {
     fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
@@ -105,7 +104,7 @@ impl<Message: PartialEq> RefreshFor<GElement<Message>> for i32 {
     }
 }
 
-impl<Message: std::cmp::PartialEq> RefreshFor<GElement<Message>> for f64 {
+impl<Message> RefreshFor<GElement<Message>> for f64 {
     fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2022-06-07 19:05:13
+ * @LastEditTime: 2022-06-15 16:01:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,7 +22,7 @@ pub use text::Text;
 
 use crate::Bus;
 // ────────────────────────────────────────────────────────────────────────────────
-use dodrio::bumpalo;
+use dodrio::{builder::ElementBuilder, bumpalo, Attribute, Listener};
 
 use dyn_clone::DynClone;
 use dyn_partial_eq::DynPartialEq;
@@ -30,13 +30,33 @@ use dyn_partial_eq::DynPartialEq;
 pub trait Widget<Message>: DynClone + DynPartialEq // where
 //     Message: Clone,
 {
+    fn has_generate_element_builder(&self) -> bool {
+        false
+    }
+    fn generate_element_builder<'b>(
+        &self,
+        _bump: &'b bumpalo::Bump,
+        _bus: &Bus<Message>,
+        _style_sheet: &GlobalStyleSV,
+    ) -> ElementBuilder<
+        'b,
+        bumpalo::collections::Vec<'b, Listener<'b>>,
+        bumpalo::collections::Vec<'b, Attribute<'b>>,
+        bumpalo::collections::Vec<'b, dodrio::Node<'b>>,
+    > {
+        panic!("need implementation generate_element_builder")
+    }
+
     /// Produces a VDOM node for the [`Widget`].
     fn node<'b>(
         &self,
         bump: &'b bumpalo::Bump,
-        _bus: &Bus<Message>,
+        bus: &Bus<Message>,
         style_sheet: &GlobalStyleSV,
-    ) -> dodrio::Node<'b>;
+    ) -> dodrio::Node<'b> {
+        self.generate_element_builder(bump, bus, style_sheet)
+            .finish()
+    }
 }
 
 impl<Message> core::cmp::Eq for dyn Widget<Message> + '_ {}

@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2022-06-01 15:47:27
+ * @LastEditTime: 2022-06-15 12:28:42
  * @LastEditors: Rais
 * @Description:
 */
@@ -11,7 +11,7 @@ use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
 
 use crate::iced_runtime::{css, Color, Font, HorizontalAlignment, Length, VerticalAlignment};
-use crate::{dodrio::bumpalo, Bus, Element, NodeBuilder, Widget};
+use crate::{dodrio::bumpalo, Bus, Element, Widget};
 /// A paragraph of text.
 ///
 /// # Example
@@ -109,10 +109,13 @@ impl Text {
     }
 }
 
-impl<Message> NodeBuilder<Message> for Text
+impl<Message> Widget<Message> for Text
 // where
 //     Message: 'static,
 {
+    fn has_generate_element_builder(&self) -> bool {
+        true
+    }
     fn generate_element_builder<'b>(
         &self,
         bump: &'b dodrio::bumpalo::Bump,
@@ -162,29 +165,5 @@ impl<Message> NodeBuilder<Message> for Text
         p(bump)
             .attr("style", style.into_bump_str())
             .children(bumpalo::vec![in bump;text(content.into_bump_str())])
-    }
-}
-
-impl<Message> Widget<Message> for Text
-where
-    Message: Clone,
-{
-    fn node<'b>(
-        &self,
-        bump: &'b bumpalo::Bump,
-        publish: &Bus<Message>,
-        style_sheet: &GlobalStyleSV,
-    ) -> dodrio::Node<'b> {
-        self.generate_element_builder(bump, publish, style_sheet)
-            .finish()
-    }
-}
-
-impl<Message> From<Text> for Element<Message>
-where
-    Message: Clone,
-{
-    fn from(text: Text) -> Self {
-        Self::new(text)
     }
 }

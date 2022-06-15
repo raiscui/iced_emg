@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-07 19:09:03
+ * @LastEditTime: 2022-06-15 16:23:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 use crate::{
     emg_runtime::{Bus, Element, Widget},
     iced_runtime::{css, Length},
-    DynGElement, GElement, GenerateElement, MessageTid, NodeBuilder,
+    DynGElement, GElement, MessageTid,
 };
 
 #[allow(unused_imports)]
@@ -44,7 +44,7 @@ use std::{ops::Deref, rc::Rc};
 /// ![Checkbox drawn by Coffee's renderer](https://github.com/hecrj/coffee/blob/bda9818f823dfcb8a7ad0ff4940b4d4b387b5208/images/ui/checkbox.png?raw=true)
 #[allow(missing_debug_implementations)]
 #[derive(Clone, Tid, DynPartialEq)]
-#[eq_opt(where_add = "Message: PartialEq + 'static,")]
+#[eq_opt(where_add = "Message: PartialEq+'static,")]
 pub struct Checkbox<Message>
 // where
 //     dyn std::ops::Fn(bool) -> Message + 'static: std::cmp::PartialEq,
@@ -122,10 +122,13 @@ impl<Message> Checkbox<Message>
     }
 }
 
-impl<Message> NodeBuilder<Message> for Checkbox<Message>
+impl<Message> Widget<Message> for Checkbox<Message>
 where
     Message: 'static + Clone + std::cmp::PartialEq,
 {
+    fn has_generate_element_builder(&self) -> bool {
+        true
+    }
     fn generate_element_builder<'b>(
         &self,
         bump: &'b bumpalo::Bump,
@@ -187,39 +190,24 @@ where
     }
 }
 
-impl<Message> Widget<Message> for Checkbox<Message>
-where
-    Message: 'static + Clone + std::cmp::PartialEq,
-{
-    fn node<'b>(
-        &self,
-        bump: &'b bumpalo::Bump,
-        bus: &Bus<Message>,
-        style_sheet: &GlobalStyleSV,
-    ) -> dodrio::Node<'b> {
-        self.generate_element_builder(bump, bus, style_sheet)
-            .finish()
-    }
-}
+// impl<Message> From<Checkbox<Message>> for Element<Message>
+// where
+//     Message: 'static + Clone + std::cmp::PartialEq,
+// {
+//     fn from(checkbox: Checkbox<Message>) -> Self {
+//         Self::new(checkbox)
+//     }
+// }
 
-impl<Message> From<Checkbox<Message>> for Element<Message>
-where
-    Message: 'static + Clone + std::cmp::PartialEq,
-{
-    fn from(checkbox: Checkbox<Message>) -> Self {
-        Self::new(checkbox)
-    }
-}
-
-impl<Message> GenerateElement<Message> for Checkbox<Message>
-where
-    Message: 'static + Clone + std::cmp::PartialEq,
-{
-    fn generate_element(&self) -> Element<Message> {
-        //TODO remove ref? not clone?
-        Element::new(self.clone())
-    }
-}
+// impl<Message> GenerateElement<Message> for Checkbox<Message>
+// where
+//     Message: 'static + Clone + std::cmp::PartialEq,
+// {
+//     fn generate_element(&self) -> Element<Message> {
+//         //TODO remove ref? not clone?
+//         Element::new(self.clone())
+//     }
+// }
 
 impl<'a, Message> RefreshFor<Self> for Checkbox<Message>
 where
@@ -251,8 +239,8 @@ where
             GElement::Layer_(_l) => {
                 unimplemented!();
             }
-            GElement::Builder_(gel, _) => {
-                gel.deref().refresh_for(who_checkbox);
+            GElement::Builder_(builder) => {
+                builder.widget().unwrap().deref().refresh_for(who_checkbox);
             }
             GElement::Text_(t) => {
                 who_checkbox.label = t.get_content(); //TODO text.get_content directly return IdStr
@@ -286,11 +274,14 @@ where
     fn refresh_for(&self, who: &mut GElement<Message>) {
         match who {
             GElement::Layer_(l) => {
-                // unimplemented!();
-                l.ref_push(self.clone());
+                l.push(self.clone().into());
             }
-            GElement::Builder_(gel, _) => {
-                self.refresh_for(gel.as_mut());
+            GElement::Builder_(builder) => {
+                if let Some(box gel) = builder.widget_mut() {
+                    self.refresh_for(gel);
+                } else {
+                    panic!("builder not has widget, in [RefreshFor<GElement<Message>> for Checkbox<Message>] ")
+                }
             }
             GElement::Text_(_)
             | GElement::Button_(_)
@@ -326,7 +317,7 @@ impl<Message> DynGElement<Message> for Checkbox<Message> where
 
 impl<Message> From<Checkbox<Message>> for GElement<Message>
 where
-    Message: Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
+    Message: Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq + 'static,
 {
     fn from(checkbox: Checkbox<Message>) -> Self {
         Self::Generic_(Box::new(checkbox))

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-06-14 18:53:34
+ * @LastEditTime: 2022-06-15 16:26:03
  * @LastEditors: Rais
  * @Description: 
  */
@@ -12,7 +12,7 @@ mod wasm_test {
     use wasm_bindgen::JsCast;
 
     use wasm_bindgen_test::wasm_bindgen_test;
-    use emg_bind::{GTreeBuilderFn, futures, Bus, EdgeIndex};
+    use emg_bind::{GTreeBuilderFn, futures, Bus, EdgeIndex, GElement};
     use std::{
         cell::{Cell, RefCell},
         rc::Rc,
@@ -254,10 +254,10 @@ mod wasm_test {
         use web_sys::console;
 
         let  g=  new_graph_build();
-        let root_gel:Element<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+        let root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
                    
         let  g2=  new_graph_build();
-        let root_gel2:Element<Message> = g2.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+        let root_gel2:GElement<Message> = g2.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
                    
     }
     #[wasm_bindgen_test]
@@ -307,8 +307,8 @@ mod wasm_test {
         let css = GlobalStyleSV::default_topo();
 
         let  g=  new_graph_build();
-        let root_elm:Element<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
-        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget().node(&cx.bump,&bus,&css)));
         // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
         render2string(&root_elm_render_fn)
 
@@ -332,8 +332,8 @@ mod wasm_test {
         let css = GlobalStyleSV::default_topo();
 
         let  g=  new_graph_build();
-        let root_elm:Element<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
-        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget().node(&cx.bump,&bus,&css)));
         // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
         render2text(&root_elm_render_fn);
 
@@ -358,7 +358,7 @@ mod wasm_test {
        
         let g = build();
        let root_elm=  g.borrow().view("a");
-        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget(). node(&cx.bump,&bus,&css)));
         // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
         render2string(&root_elm_render_fn)
 
@@ -385,7 +385,7 @@ mod wasm_test {
        
         let g = build();
        let root_elm=  g.borrow().view("a");
-        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget(). node(&cx.bump,&bus,&css)));
         // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
         render2text(&root_elm_render_fn);
 
@@ -394,11 +394,11 @@ mod wasm_test {
 
     
     //NOTE speed
-    // new rc graph build view:  12us 300-500ns (no pool ,CompactString)
+    // new rc graph build view:  12us 100-500ns (no pool ,CompactString)
     // new rc graph build view:  16us 266ns (pool)
     // new rc graph build view:   13us 97ns  (no pool)
     // new rc graph build view:  15us 646ns 
-    // new graph build view:  12- 14,new 15 us 170ns,new 17us (R²=0.737, 1054 iterations in 48 samples)
+    // new graph build view:  12- 14,new 15 us 170ns,new 17us,new 14us (R²=0.737, 1054 iterations in 48 samples)
     // view:   6 - 9 us 470ns (R²=0.992, 1549 iterations in 52 samples)
 
     // new graph build view2:          0s (R²=1.000, 12154142 iterations in 146 samples)
@@ -466,7 +466,7 @@ mod wasm_test {
             &format!(
                 "new graph build view2: {}",
                 bench_limit(10.,|| {
-                    let _root_gel:Element<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+                    let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
                     _root_gel
                     })
     
@@ -657,7 +657,7 @@ mod wasm_test {
                 "new graph build view: {}",
                 bench_limit(10.,|| {
                     let  g=  new_graph_build();
-                    let _root_gel:Element<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+                    let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
                     _root_gel
                     })
     
@@ -1018,7 +1018,7 @@ mod wasm_test {
        
         let g = build();
        let root_elm=  g.borrow().view("a");
-        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget().node(&cx.bump,&bus,&css)));
         // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
         render2text(&root_elm_render_fn);
 
@@ -1206,7 +1206,7 @@ mod wasm_test {
         let root_elm =emg_graph.borrow()
         .view("a");
         
-        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.node(&cx.bump,&bus,&css)));
+        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget(). node(&cx.bump,&bus,&css)));
 
         let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
 

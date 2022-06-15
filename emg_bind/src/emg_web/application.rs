@@ -11,8 +11,8 @@ use seed_styles::GlobalStyleSV;
 use tracing::{debug, debug_span, trace_span};
 
 use crate::{
-    futures, orders::OrdersContainer, Bus, Command, Element, Executor, GTreeBuilderElement,
-    GTreeBuilderFn, GraphType, Subscription,
+    futures, orders::OrdersContainer, Bus, Command, Element, Executor, GElement,
+    GTreeBuilderElement, GTreeBuilderFn, GraphType, Subscription,
 };
 use emg_orders::Orders;
 
@@ -69,7 +69,7 @@ pub trait Application {
     /// Returns the widgets to display in the [`Application`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view(&self, g: &GraphType<Self::Message>) -> Element<Self::Message>;
+    fn view(&self, g: &GraphType<Self::Message>) -> GElement<Self::Message>;
 
     /// Returns the event [`Subscription`] for the current state of the
     /// application.
@@ -257,7 +257,11 @@ where
         let css = GlobalStyleSV::default_topo();
 
         let node_span = trace_span!("application->element.node");
-        let node = node_span.in_scope(|| element.node(context.bump, &self.bus, &css));
+        let node = node_span.in_scope(|| {
+            element
+                .as_dyn_node_widget()
+                .node(context.bump, &self.bus, &css)
+        });
 
         trace_span!("application-> dodrio .finish").in_scope(|| {
             div(context.bump)

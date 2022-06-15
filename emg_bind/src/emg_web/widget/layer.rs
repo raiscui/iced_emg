@@ -3,16 +3,18 @@ use std::{clone::Clone, cmp::PartialEq, convert::TryInto};
 use dyn_partial_eq::DynPartialEq;
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
-use tracing::{debug, warn};
+use tracing::debug;
 
-use crate::emg_runtime::{
-    dodrio::{
-        self,
-        builder::ElementBuilder,
-        bumpalo::{self, Bump},
-        Attribute, Listener, Node,
+use crate::{
+    emg_runtime::{
+        dodrio::{
+            builder::ElementBuilder,
+            bumpalo::{self, Bump},
+            Attribute, Listener, Node,
+        },
+        Bus, Element, Widget,
     },
-    Bus, Element, NodeBuilder, Widget,
+    GElement,
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -21,15 +23,18 @@ use crate::emg_runtime::{
 use crate::emg_runtime::dodrio::builder::div;
 // ────────────────────────────────────────────────────────────────────────────────
 
+type LayerChildren<Message> = Vec<GElement<Message>>;
+
 /// A container that distributes its contents vertically.
 ///
 /// A [`Layer`] will try to fill the horizontal space of its container.
 #[allow(missing_debug_implementations)]
 #[derive(Clone, DynPartialEq, Eq, Debug)]
-#[eq_opt(where_add = "Message: PartialEq + 'static,")]
+#[eq_opt(where_add = "Message: PartialEq+'static,")]
 pub struct Layer<Message> {
     id: IdStr,
-    children: Vec<Element<Message>>,
+    //TODO vec?
+    children: LayerChildren<Message>,
 }
 impl<Message> PartialEq for Layer<Message>
 where
@@ -59,17 +64,17 @@ impl<Message> Layer<Message> {
     /// Creates an empty [`Layer`].
     #[must_use]
     pub fn new(id: IdStr) -> Self {
-        Self::with_children(id, Vec::new())
+        Self::with_children(id, LayerChildren::<Message>::new())
     }
 
     /// Creates a [`Layer`] with the given elements.
     #[must_use]
-    pub fn with_children(id: IdStr, children: Vec<Element<Message>>) -> Self {
+    pub fn with_children(id: IdStr, children: LayerChildren<Message>) -> Self {
         Self { id, children }
     }
 
     #[must_use]
-    pub fn set_children(mut self, children: Vec<Element<Message>>) -> Self {
+    pub fn set_children(mut self, children: LayerChildren<Message>) -> Self {
         self.children = children;
         self
     }
@@ -88,32 +93,27 @@ impl<Message> Layer<Message> {
     //     self
     // }
 
-    #[must_use]
-    pub fn push<E>(mut self, child: E) -> Self
-    where
-        E: Into<Element<Message>>,
-    {
-        self.children.push(child.into());
-        self
+    pub fn push(&mut self, child: GElement<Message>) {
+        self.children.push(child);
     }
-    pub fn ref_push<E>(&mut self, child: E) -> &mut Self
-    where
-        E: Into<Element<Message>>,
-    {
-        self.children.push(child.into());
-        self
-    }
+    // pub fn ref_push<E>(&mut self, child: E) -> &mut Self
+    // where
+    //     E: Into<Element<Message>>,
+    // {
+    //     self.children.push(child.into());
+    //     self
+    // }
 
-    /// `GElement::Refresher_(_)` `GElement::Event_(_)` can't convert to Element
-    pub fn try_ref_push<E>(&mut self, child: E)
-    where
-        E: TryInto<Element<Message>>,
-    {
-        //TODO type error,  show error if need;
-        if let Ok(e) = child.try_into() {
-            self.children.push(e);
-        }
-    }
+    // /// `GElement::Refresher_(_)` `GElement::Event_(_)` can't convert to Element
+    // pub fn try_ref_push<E>(&mut self, child: E)
+    // where
+    //     E: TryInto<Element<Message>>,
+    // {
+    //     //TODO type error,  show error if need;
+    //     if let Ok(e) = child.try_into() {
+    //         self.children.push(e);
+    //     }
+    // }
 
     // pub fn update_use<T>(mut self, updater: T) -> Self
     // where
@@ -150,10 +150,13 @@ where
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Message> NodeBuilder<Message> for Layer<Message>
+impl<Message> Widget<Message> for Layer<Message>
 where
-    Message: PartialEq + 'static,
+    Message: PartialEq + 'static + std::clone::Clone,
 {
+    fn has_generate_element_builder(&self) -> bool {
+        true
+    }
     fn generate_element_builder<'b>(
         &self,
         bump: &'b bumpalo::Bump,
@@ -171,7 +174,7 @@ where
         let children = self
             .children
             .iter()
-            .map(|element| element.node(bump, bus, style_sheet));
+            .map(|element| element.as_dyn_node_widget().node(bump, bus, style_sheet));
 
         // TODO: Complete styling
 
@@ -199,29 +202,14 @@ where
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Message> Widget<Message> for Layer<Message>
-where
-    Message: Clone + PartialEq + 'static,
-{
-    fn node<'b>(
-        &self,
-        bump: &'b bumpalo::Bump,
-        publish: &Bus<Message>,
-        style_sheet: &GlobalStyleSV,
-    ) -> dodrio::Node<'b> {
-        self.generate_element_builder(bump, publish, style_sheet)
-            .finish()
-    }
-}
-
-impl<Message> From<Layer<Message>> for Element<Message>
-where
-    Message: Clone + 'static + PartialEq,
-{
-    fn from(layer: Layer<Message>) -> Self {
-        Self::new(layer)
-    }
-}
+// impl<Message> From<Layer<Message>> for Element<Message>
+// where
+//     Message: Clone + 'static + PartialEq,
+// {
+//     fn from(layer: Layer<Message>) -> Self {
+//         Self::new(layer)
+//     }
+// }
 
 // /// NOTE: example for UpdateUse<Who> not Self
 // impl<'a, Message> UpdateUse<GElement<'a, Message>> for Layer<'a, Message>

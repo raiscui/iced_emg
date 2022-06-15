@@ -1,14 +1,16 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-08 19:21:37
+ * @LastEditTime: 2022-06-15 16:05:08
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{
     emg_runtime::{Button, Element, EventNode, Layer, Text},
-    NodeBuilder, NodeBuilderWidget,
+    NodeBuilderWidget, Widget,
 };
+use match_any::match_any;
+
 pub use better_any;
 use better_any::{Tid, TidAble};
 use dyn_partial_eq::DynPartialEq;
@@ -17,13 +19,13 @@ use emg_refresh::{EqRefreshFor, RefreshFor, RefreshUse};
 // extern crate derive_more;
 use derive_more::From;
 use dyn_clonable::clonable;
-use std::{convert::TryFrom, rc::Rc};
+use std::rc::Rc;
 use strum_macros::Display;
 use tracing::debug;
-pub trait GenerateElement<Message> {
-    //TODO remove ref? not clone?
-    fn generate_element(&self) -> Element<Message>;
-}
+// pub trait GenerateElement<Message> {
+//     //TODO remove ref? not clone?
+//     fn generate_element(&self) -> Element<Message>;
+// }
 
 #[allow(clippy::module_name_repetitions)]
 #[clonable]
@@ -32,12 +34,12 @@ pub trait DynGElement<Message>:
     for<'a> Tid<'a>
      +RefreshFor<GElement< Message>>
      +RefreshUse<GElement<Message>>
-    + GenerateElement<Message>
-    + NodeBuilder<Message>
+    // + GenerateElement<Message>
+    + Widget<Message>
     + TypeCheckObjectSafe
     +DynPartialEq
     + Clone
-    where Message: 'static + std::cmp::PartialEq
+ 
 {
 }
 impl<Message> core::cmp::Eq for dyn DynGElement<Message> + '_ {}
@@ -79,13 +81,10 @@ pub trait MessageTid<'a>: TidAble<'a> {}
 // }
 
 #[derive(Clone, Display, DynPartialEq, From)]
-#[eq_opt(no_self_where, where_add = "Message: PartialEq,")]
-pub enum GElement<Message>
-where
-    Message: 'static + PartialEq,
-{
+#[eq_opt(no_self_where, where_add = "Message: PartialEq+'static,")]
+pub enum GElement<Message> {
     //TODO cow
-    Builder_(Box<Self>, NodeBuilderWidget<Message>),
+    Builder_(NodeBuilderWidget<Message>),
     Layer_(Layer<Message>),
     Text_(Text),
     Button_(Button<Message>),
@@ -97,14 +96,14 @@ where
     NodeRef_(IdStr),     // IntoE(Rc<dyn Into<Element< Message>>>),
     EmptyNeverUse,
 }
-
+impl<Message> Eq for GElement<Message> where Message: PartialEq {}
 impl<Message> PartialEq for GElement<Message>
 where
     Message: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Builder_(l0, l1), Self::Builder_(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::Builder_(l0), Self::Builder_(r0)) => l0 == r0,
             (Self::Layer_(l0), Self::Layer_(r0)) => l0 == r0,
             (Self::Text_(l0), Self::Text_(r0)) => l0 == r0,
             (Self::Button_(l0), Self::Button_(r0)) => l0 == r0,
@@ -117,7 +116,7 @@ where
     }
 }
 
-pub fn node_ref<Message: PartialEq>(str: impl Into<IdStr>) -> GElement<Message> {
+pub fn node_ref<Message>(str: impl Into<IdStr>) -> GElement<Message> {
     GElement::NodeRef_(str.into())
 }
 
@@ -141,7 +140,7 @@ pub fn node_ref<Message: PartialEq>(str: impl Into<IdStr>) -> GElement<Message> 
 
 impl<Message> GElement<Message>
 where
-    Message: std::clone::Clone + 'static + PartialEq,
+    Message: PartialEq,
 {
     /// Returns `true` if the `g_element` is [`EventCallBack_`].
     #[must_use]
@@ -163,17 +162,60 @@ where
             None
         }
     }
+
+    pub fn as_dyn_node_widget(&self) -> &dyn Widget<Message> where Message: Clone +'static{
+        use GElement::{
+            Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
+        };
+        match_any!(self,
+            Builder_( builder) => {
+
+                builder  as &dyn Widget<Message>
+            },
+            Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
+            Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
+            Generic_(x) => {
+                debug!("Generic_:: from Generic_ to element");
+                 &**x as &dyn Widget<Message>},
+            NodeRef_(_)=> panic!("TryFrom<GElement to Element: \n     GElement::NodeIndex_() should handle before."),
+            EmptyNeverUse=> panic!("EmptyNeverUse never here")
+
+
+
+        )
+    }
+
+    // pub fn into_dyn_node_widget(self) -> Result<Box<dyn Widget<Message>>, String> {
+    //     use GElement::{
+    //         Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
+    //     };
+    //     match_any!(self,
+    //         Builder_(gel, mut builder) => {
+
+    //             builder.and_widget(*gel);
+    //             Ok(Box::new(builder))
+    //         },
+    //         Layer_(x) | Text_(x) | Button_(x) => Ok(Box::new(x) as Box<dyn Widget<Message>>),
+    //         Refresher_(_) | Event_(_) => Err("Refresher_|Event_ can't convert to dyn widget.".to_string()),
+    //         Generic_(x) => {
+    //             debug!("Generic_:: from Generic_ to element");
+    //             Ok( x as Box<dyn Widget<Message>>)},
+    //         NodeRef_(_)=> panic!("TryFrom<GElement to Element: \n     GElement::NodeIndex_() should handle before."),
+    //         EmptyNeverUse=> panic!("EmptyNeverUse never here")
+
+    //     )
+    // }
 }
 
 impl<Message> std::fmt::Debug for GElement<Message>
 where
-    Message: std::fmt::Debug + std::clone::Clone + PartialEq,
+    Message: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use GElement::{
             Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
         };
-        let nbw = "NodeBuilderWidget< Message>".to_string();
+        let nbw = "NodeBuilderWidget< Message>(empty Widget)".to_string();
 
         match self {
             Layer_(l) => f.debug_tuple("GElement::Layer").field(l).finish(),
@@ -181,12 +223,14 @@ where
             Refresher_(_) => f
                 .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement< Message>>>)")
                 .finish(),
-            Builder_(ge, _) => f
-                .debug_tuple("GElement::Builder_")
-                .field(&ge)
-                .field(&nbw)
-                .finish(),
-            Event_(e) => f.debug_tuple("GElement::EventCallBack_").field(&e).finish(),
+            Builder_(builder) => {
+                if let Some(gel) = builder.widget() {
+                    f.debug_tuple("GElement::Builder_").field(gel).finish()
+                } else {
+                    f.debug_tuple("GElement::Builder_").field(&nbw).finish()
+                }
+            }
+            Event_(e) => f.debug_tuple("GElement::EventCallBack_").field(e).finish(),
             Button_(_) => {
                 write!(f, "GElement::Button_")
             }
@@ -199,40 +243,37 @@ where
     }
 }
 
-impl<Message> TryFrom<GElement<Message>> for Element<Message>
-where
-    Message: 'static + Clone + PartialEq,
-{
-    type Error = ();
+// impl<Message> TryFrom<GElement<Message>> for Element<Message>
+// where
+//     Message: 'static + Clone + PartialEq,
+// {
+//     type Error = ();
 
-    ///  Refresher_(_)|Event_(_) can't to Element
-    fn try_from(ge: GElement<Message>) -> Result<Self, Self::Error> {
-        use match_any::match_any;
-        use GElement::{
-            Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
-        };
+//     ///  Refresher_(_)|Event_(_) can't to Element
+//     fn try_from(ge: GElement<Message>) -> Result<Self, Self::Error> {
+//         use GElement::{
+//             Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
+//         };
 
-        // if let GElement::Builder_(gel, builder) = ge {
-        //     let x = gel.borrow_mut().as_mut();
-        //     let ff = Rc::new(f);
-        // }
+//         // if let GElement::Builder_(gel, builder) = ge {
+//         //     let x = gel.borrow_mut().as_mut();
+//         //     let ff = Rc::new(f);
+//         // }
 
-        match_any!(ge,
-            Builder_(gel, mut builder) => {
+//         match_any!(ge,
+//             Builder_(gel, mut builder) => {
 
-                builder.set_widget(*gel);
-                Ok(builder.into())
-            },
-            Layer_(x) | Text_(x) | Button_(x) => Ok(x.into()),
-            Refresher_(_) | Event_(_) => Err(()),
-            Generic_(x) => {
-                debug!("Generic_:: from Generic_ to element");
-                Ok(x.generate_element())},
-            NodeRef_(_)=> panic!("TryFrom<GElement to Element: \n     GElement::NodeIndex_() should handle before."),
-            EmptyNeverUse=> panic!("EmptyNeverUse never here")
+//                 builder.set_widget(*gel);
+//                 Ok(builder.into())
+//             },
+//             Layer_(x) | Text_(x) | Button_(x) => Ok(x.into()),
+//             Refresher_(_) | Event_(_) => Err(()),
+//             Generic_(x) => {
+//                 debug!("Generic_:: from Generic_ to element");
+//                 Ok(x.generate_element())},
+//             NodeRef_(_)=> panic!("TryFrom<GElement to Element: \n     GElement::NodeIndex_() should handle before."),
+//             EmptyNeverUse=> panic!("EmptyNeverUse never here")
 
-
-
-        )
-    }
-}
+//         )
+//     }
+// }

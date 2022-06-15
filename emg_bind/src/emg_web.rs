@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:05:39
- * @LastEditTime: 2021-09-01 10:51:43
+ * @LastEditTime: 2022-06-15 12:01:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,6 @@ mod node_builder;
 pub use node_builder::EventCallback;
 pub use node_builder::EventMessage;
 pub use node_builder::EventNode;
-pub use node_builder::NodeBuilder;
 pub use node_builder::NodeBuilderWidget;
 
 mod bus;

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-06-08 22:53:37
+ * @LastEditTime: 2022-06-15 15:25:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -29,7 +29,7 @@ pub trait GraphView {
     type N;
     type Ix: std::fmt::Debug + std::fmt::Display;
     type E;
-    type Message: PartialEq;
+    type Message: PartialEq + Clone;
 
     fn gelement_refresh_and_comb(
         &self,
@@ -55,7 +55,7 @@ pub trait GraphView {
         // <Self as GraphView<Message>>::Ix: Clone + Hash + Eq + Ord + Default;
         Self::Ix: Clone + Hash + Eq + Ord + Default;
 
-    fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<Self::Message>;
+    fn view(&self, into_ix: impl Into<Self::Ix>) -> GElement<Self::Message>;
     // fn global_view(ix: Ix) -> Element< Message>;
 }
 
@@ -147,7 +147,7 @@ where
                     }
                 }
 
-                GElement::Builder_(Box::new(current_node_item_clone), node_builder_widget)
+                GElement::Builder_(node_builder_widget.and_widget(current_node_item_clone))
             }
         } else {
             trace!(
@@ -183,7 +183,7 @@ where
             .collect() //TODO use iter
     }
 
-    fn view(&self, into_ix: impl Into<Self::Ix>) -> Element<Self::Message> {
+    fn view(&self, into_ix: impl Into<Self::Ix>) -> GElement<Self::Message> {
         let cix: Self::Ix = into_ix.into();
         let _g = trace_span!("graph view-", ?cix);
         {
@@ -191,7 +191,7 @@ where
             let paths = EPath::<IdStr>::new(vector![edge_index_no_source(cix.clone())]);
             // TODO add store in gelement_refresh_and_comb
             let gel = self.gelement_refresh_and_comb(&edges, &cix, &paths);
-            gel.try_into().unwrap()
+            gel
         }
     }
 

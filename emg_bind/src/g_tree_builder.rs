@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-06-12 21:24:31
+ * @LastEditTime: 2022-06-15 15:03:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,7 +25,7 @@ use tracing::{debug, instrument, trace, trace_span, warn};
 pub enum GTreeBuilderElement<Message, Ix = IdStr>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
-    Message: 'static + std::cmp::PartialEq,
+    Message: 'static + std::cmp::PartialEq + std::clone::Clone,
 {
     Layer(
         Ix,
@@ -81,9 +81,10 @@ where
 impl<Message, Ix> From<StateVar<Dict<Ix, Self>>> for GTreeBuilderElement<Message, Ix>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
-    Message: 'static + std::cmp::PartialEq,
+    Message: 'static + std::cmp::PartialEq+Clone,
 {
     fn from(value: StateVar<Dict<Ix, Self>>) -> Self {
+        //TODO check ix use default value or build uuid ?
         Self::Dyn(Ix::default(), vec![], value)
     }
 }
@@ -196,7 +197,7 @@ where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
 #[allow(clippy::module_name_repetitions)]
 pub trait GTreeBuilderFn<Message>
 where
-    Self::Ix: Clone + Default + std::hash::Hash + Ord, Message: std::cmp::PartialEq
+    Self::Ix: Clone + Default + std::hash::Hash + Ord, Message: std::cmp::PartialEq+Clone
 {
     type Ix;
 

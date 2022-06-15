@@ -6,8 +6,11 @@ use dyn_partial_eq::DynPartialEq;
 pub use iced_style::button::{Style, StyleSheet};
 use seed_styles::GlobalStyleSV;
 
-use crate::emg_runtime::{Bus, Element, NodeBuilder, Widget};
 use crate::iced_runtime::{css, Background, Length};
+use crate::{
+    emg_runtime::{Bus, Element, Widget},
+    GElement,
+};
 
 /// A generic widget that produces a message when pressed.
 ///
@@ -24,10 +27,10 @@ use crate::iced_runtime::{css, Background, Length};
 /// ```
 #[allow(missing_debug_implementations)]
 #[derive(Clone, DynPartialEq, PartialEq)]
-#[eq_opt(where_add = "Message: PartialEq + 'static,")]
+#[eq_opt(where_add = "Message: PartialEq+'static,")]
 pub struct Button<Message> {
     // id: String,
-    content: Element<Message>,
+    content: Box<GElement<Message>>,
     on_press: Option<Message>,
     width: Length,
     #[allow(dead_code)]
@@ -51,11 +54,11 @@ impl<Message> Button<Message> {
     // pub fn new<E>(_state: &'a mut State, content: E) -> Self
     pub fn new<E>(content: E) -> Self
     where
-        E: Into<Element<Message>>,
+        E: Into<GElement<Message>>,
     {
         Self {
             // id: "".to_string(),
-            content: content.into(),
+            content: Box::new(content.into()),
             on_press: None,
             width: Length::Shrink,
             height: Length::Shrink,
@@ -132,10 +135,13 @@ impl State {
 // ────────────────────────────────────────────────────────────────────────────────
 use dodrio::{builder::ElementBuilder, bumpalo, Attribute, Listener, Node};
 
-impl<Message> NodeBuilder<Message> for Button<Message>
+impl<Message> Widget<Message> for Button<Message>
 where
     Message: 'static + Clone + std::cmp::PartialEq,
 {
+    fn has_generate_element_builder(&self) -> bool {
+        true
+    }
     fn generate_element_builder<'b>(
         &self,
         bump: &'b bumpalo::Bump,
@@ -192,7 +198,7 @@ where
                 )
                 .into_bump_str(),
             )
-            .children(bumpalo::vec![in bump;self.content.node(bump, bus, style_sheet)]);
+            .children(bumpalo::vec![in bump;self.content.as_dyn_node_widget() .node(bump, bus, style_sheet)]);
 
         if let Some(on_press) = self.on_press.clone() {
             let event_bus = bus.clone();
@@ -205,26 +211,11 @@ where
     }
 }
 
-impl<Message> Widget<Message> for Button<Message>
-where
-    Message: Clone + std::cmp::PartialEq + 'static,
-{
-    fn node<'b>(
-        &self,
-        bump: &'b bumpalo::Bump,
-        bus: &Bus<Message>,
-        style_sheet: &GlobalStyleSV,
-    ) -> dodrio::Node<'b> {
-        self.generate_element_builder(bump, bus, style_sheet)
-            .finish()
-    }
-}
-
-impl<Message> From<Button<Message>> for Element<Message>
-where
-    Message: Clone + 'static + PartialEq,
-{
-    fn from(button: Button<Message>) -> Self {
-        Self::new(button)
-    }
-}
+// impl<Message> From<Button<Message>> for Element<Message>
+// where
+//     Message: Clone + 'static + PartialEq,
+// {
+//     fn from(button: Button<Message>) -> Self {
+//         Self::new(button)
+//     }
+// }

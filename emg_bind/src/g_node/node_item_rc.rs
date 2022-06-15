@@ -37,7 +37,7 @@ type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
 
 impl<Message> EmgNodeItem<NItem<Message>>
 where
-    Message: Clone + std::cmp::PartialEq,
+    Message: Clone + std::cmp::PartialEq+'static,
     // Dict<EPath<Ix>, EmgNodeItem<Message, Ix>>: PartialEq,
 {
     #[allow(clippy::too_many_lines)]
@@ -342,8 +342,8 @@ where
                             //         node_builder_widget.refresh_for_use(event_gel);
                             //     }
                             // }
-
-                            Rc::new(GElement::Builder_(Box::new(gel_clone), node_builder_widget))
+                            
+                            Rc::new(GElement::Builder_(node_builder_widget.and_widget(gel_clone), ))
                         }
                     } else {
                         trace!(

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-26 18:22:22
- * @LastEditTime: 2022-06-12 21:11:43
+ * @LastEditTime: 2022-06-15 16:02:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -55,7 +55,7 @@ where
 
 impl<Message> EmgNodeItem<NItem<Message>>
 where
-    Message: Clone + std::cmp::PartialEq,
+    Message: Clone + std::cmp::PartialEq +'static,
     // Dict<EPath<Ix>, EmgNodeItem<Message, Ix>>: PartialEq,
 {
     #[allow(clippy::too_many_lines)]
@@ -403,7 +403,7 @@ where
                             //     }
                             // }
 
-                            GElement::Builder_(Box::new(gel_clone), node_builder_widget)
+                            GElement::Builder_(node_builder_widget.and_widget(gel_clone))
                         }
                     } else {
                         trace!(
