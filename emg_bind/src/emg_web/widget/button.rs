@@ -8,7 +8,7 @@ use seed_styles::GlobalStyleSV;
 
 use crate::iced_runtime::{css, Background, Length};
 use crate::{
-    emg_runtime::{Bus, Element, Widget},
+    emg_runtime::{Bus, Widget},
     GElement,
 };
 
@@ -210,12 +210,3 @@ where
         node
     }
 }
-
-// impl<Message> From<Button<Message>> for Element<Message>
-// where
-//     Message: Clone + 'static + PartialEq,
-// {
-//     fn from(button: Button<Message>) -> Self {
-//         Self::new(button)
-//     }
-// }

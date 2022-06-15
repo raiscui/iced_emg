@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-06-15 15:25:15
+ * @LastEditTime: 2022-06-15 16:38:57
  * @LastEditors: Rais
  * @Description:
  */
-use crate::{Element, GElement, NodeBuilderWidget};
+use crate::{GElement, NodeBuilderWidget};
 pub use emg::EdgeIndex;
 pub use emg::Graph;
 pub use emg::NodeIndex;
@@ -15,7 +15,7 @@ use emg_core::IdStr;
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshForUse;
 use emg_state::{CloneStateAnchor, StateAnchor};
-use std::{convert::TryInto, hash::Hash};
+use std::hash::Hash;
 use tracing::{instrument, trace, trace_span};
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -56,7 +56,6 @@ pub trait GraphView {
         Self::Ix: Clone + Hash + Eq + Ord + Default;
 
     fn view(&self, into_ix: impl Into<Self::Ix>) -> GElement<Self::Message>;
-    // fn global_view(ix: Ix) -> Element< Message>;
 }
 
 // impl<Message> GraphView<Message> for GraphType<Message>
@@ -190,20 +189,8 @@ where
             let edges = self.raw_edges().store_get_rc(&self.store());
             let paths = EPath::<IdStr>::new(vector![edge_index_no_source(cix.clone())]);
             // TODO add store in gelement_refresh_and_comb
-            let gel = self.gelement_refresh_and_comb(&edges, &cix, &paths);
-            gel
+
+            self.gelement_refresh_and_comb(&edges, &cix, &paths)
         }
     }
-
-    // fn global_view(cix: Ix) -> Element< Message> {
-    //     G_STORE.with(|g_store_refcell| {
-    //         // g_store_refcell.borrow_mut().set_graph(g);
-    //         g_store_refcell
-    //             .borrow()
-    //             .get_graph::<Self::N, Self::E, Ix>()
-    //             .gelement_comb_and_refresh(&cix)
-    //             .try_into()
-    //             .unwrap()
-    //     })
-    // }
 }

@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-15 16:23:05
+ * @LastEditTime: 2022-06-15 16:36:54
  * @LastEditors: Rais
  * @Description:
  */
 //! Show toggle controls using checkboxes.
 use crate::{
-    emg_runtime::{Bus, Element, Widget},
+    emg_runtime::{Bus, Widget},
     iced_runtime::{css, Length},
     DynGElement, GElement, MessageTid,
 };
@@ -189,25 +189,6 @@ where
             ])
     }
 }
-
-// impl<Message> From<Checkbox<Message>> for Element<Message>
-// where
-//     Message: 'static + Clone + std::cmp::PartialEq,
-// {
-//     fn from(checkbox: Checkbox<Message>) -> Self {
-//         Self::new(checkbox)
-//     }
-// }
-
-// impl<Message> GenerateElement<Message> for Checkbox<Message>
-// where
-//     Message: 'static + Clone + std::cmp::PartialEq,
-// {
-//     fn generate_element(&self) -> Element<Message> {
-//         //TODO remove ref? not clone?
-//         Element::new(self.clone())
-//     }
-// }
 
 impl<'a, Message> RefreshFor<Self> for Checkbox<Message>
 where

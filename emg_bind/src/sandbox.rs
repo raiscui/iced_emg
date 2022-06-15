@@ -11,7 +11,7 @@ use emg_orders::Orders;
 use iced::{Color, Error, Settings};
 
 use crate::{
-    Application, Command, Element, GElement, GTreeBuilderElement, GraphType, Subscription,
+    Application, Command, GElement, GTreeBuilderElement, GraphType, Subscription,
 };
 
 pub trait Sandbox {

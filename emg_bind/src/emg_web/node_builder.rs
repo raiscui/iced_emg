@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-06-15 16:20:53
+ * @LastEditTime: 2022-06-15 16:33:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,13 +17,11 @@ use derive_more::From;
 
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 
 use crate::{
-    dodrio::{
-        self, builder::ElementBuilder, bumpalo, Attribute, Listener, Node, RootRender, VdomWeak,
-    },
-    map_fn_callback_return_to_option_ms, Bus, DynGElement, Element, GElement, Widget,
+    dodrio::{self, bumpalo, Node, RootRender, VdomWeak},
+    map_fn_callback_return_to_option_ms, Bus, GElement, Widget,
 };
 use std::{collections::VecDeque, rc::Rc, string::String};
 // use emg_core::Vector;
@@ -301,31 +299,31 @@ where
     }
 }
 
-#[derive(Clone, Eq)]
-enum BuilderWidget<Message>
-where
-    Message: 'static + PartialEq,
-{
-    Static(Rc<dyn Widget<Message>>), //TODO use g_element impl trait
-    Dyn(Box<dyn DynGElement<Message>>),
-}
-impl<Message> PartialEq for BuilderWidget<Message>
-where
-    Message: 'static + PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Static(l0), Self::Static(r0)) =>
-            // (&**l0).box_eq((&**r0).as_any())
-            {
-                (**l0) == (**r0)
-            }
+// #[derive(Clone, Eq)]
+// enum BuilderWidget<Message>
+// where
+//     Message: 'static + PartialEq,
+// {
+//     Static(Rc<dyn Widget<Message>>),
+//     Dyn(Box<dyn DynGElement<Message>>),
+// }
+// impl<Message> PartialEq for BuilderWidget<Message>
+// where
+//     Message: 'static + PartialEq,
+// {
+//     fn eq(&self, other: &Self) -> bool {
+//         match (self, other) {
+//             (Self::Static(l0), Self::Static(r0)) =>
+//             // (&**l0).box_eq((&**r0).as_any())
+//             {
+//                 (**l0) == (**r0)
+//             }
 
-            (Self::Dyn(l0), Self::Dyn(r0)) => l0 == r0,
-            _ => false,
-        }
-    }
-}
+//             (Self::Dyn(l0), Self::Dyn(r0)) => l0 == r0,
+//             _ => false,
+//         }
+//     }
+// }
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, DynPartialEq, PartialEq, Eq)]
@@ -406,6 +404,7 @@ impl<Message> NodeBuilderWidget<Message> {
     #[must_use]
     pub fn and_widget(mut self, gel: GElement<Message>) -> Self {
         // use match_any::match_any;
+        #[allow(unused)]
         use GElement::{
             Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
         };
@@ -544,14 +543,7 @@ where
     }
 }
 
-// impl<Message> From<NodeBuilderWidget<Message>> for Element<Message>
-// where
-//     Message: 'static + Clone + PartialEq,
-// {
-//     fn from(node_builder_widget: NodeBuilderWidget<Message>) -> Self {
-//         Self::new(node_builder_widget)
-//     }
-// }
+
 #[cfg(test)]
 #[allow(unused)]
 mod node_builder_test {

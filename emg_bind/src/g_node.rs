@@ -1,12 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-26 18:22:22
- * @LastEditTime: 2022-06-15 16:02:39
+ * @LastEditTime: 2022-06-15 16:39:06
  * @LastEditors: Rais
  * @Description:
  */
 
-mod index;
+// mod index;
 pub mod node_item_rc;
 
 use std::{cell::RefCell, rc::Rc};
@@ -17,10 +17,10 @@ use cfg_if::cfg_if;
 use either::Either::{self, Left, Right};
 use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_core::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
-use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem, GraphEdgesDict};
+use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_refresh::RefreshForUse;
 use emg_state::{Anchor, CloneStateAnchor, Dict, StateAnchor, StateMultiAnchor};
-use tracing::{trace, trace_span, warn};
+use tracing::{trace, trace_span};
 
 const POOL_SIZE: usize = 1;
 

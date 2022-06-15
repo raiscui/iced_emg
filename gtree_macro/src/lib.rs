@@ -897,7 +897,7 @@ impl ToTokens for Gtree {
         let token = quote_spanned! {root.span()=> {
 
             #[allow(unused)]
-            use emg_bind::{Element, EventCallback, EventMessage, GElement,
+            use emg_bind::{ EventCallback, EventMessage, GElement,
                 GTreeBuilderElement,node_ref
             };
             #[allow(unused)]

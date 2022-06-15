@@ -1,4 +1,4 @@
-use std::{clone::Clone, cmp::PartialEq, convert::TryInto};
+use std::{clone::Clone, cmp::PartialEq};
 
 use dyn_partial_eq::DynPartialEq;
 use emg_core::IdStr;
@@ -12,7 +12,7 @@ use crate::{
             bumpalo::{self, Bump},
             Attribute, Listener, Node,
         },
-        Bus, Element, Widget,
+        Bus, Widget,
     },
     GElement,
 };

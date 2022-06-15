@@ -1,12 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-15 16:05:08
+ * @LastEditTime: 2022-06-15 16:35:46
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{
-    emg_runtime::{Button, Element, EventNode, Layer, Text},
+    emg_runtime::{Button,  EventNode, Layer, Text},
     NodeBuilderWidget, Widget,
 };
 use match_any::match_any;
@@ -22,10 +22,6 @@ use dyn_clonable::clonable;
 use std::rc::Rc;
 use strum_macros::Display;
 use tracing::debug;
-// pub trait GenerateElement<Message> {
-//     //TODO remove ref? not clone?
-//     fn generate_element(&self) -> Element<Message>;
-// }
 
 #[allow(clippy::module_name_repetitions)]
 #[clonable]
@@ -175,9 +171,9 @@ where
             Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
             Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Generic_(x) => {
-                debug!("Generic_:: from Generic_ to element");
+                debug!("Generic_:: from Generic_ to dyn Widget");
                  &**x as &dyn Widget<Message>},
-            NodeRef_(_)=> panic!("TryFrom<GElement to Element: \n     GElement::NodeIndex_() should handle before."),
+            NodeRef_(_)=> panic!("TryFrom<GElement to dyn Widget: \n     GElement::NodeIndex_() should handle before."),
             EmptyNeverUse=> panic!("EmptyNeverUse never here")
 
 
@@ -242,38 +238,3 @@ where
         }
     }
 }
-
-// impl<Message> TryFrom<GElement<Message>> for Element<Message>
-// where
-//     Message: 'static + Clone + PartialEq,
-// {
-//     type Error = ();
-
-//     ///  Refresher_(_)|Event_(_) can't to Element
-//     fn try_from(ge: GElement<Message>) -> Result<Self, Self::Error> {
-//         use GElement::{
-//             Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
-//         };
-
-//         // if let GElement::Builder_(gel, builder) = ge {
-//         //     let x = gel.borrow_mut().as_mut();
-//         //     let ff = Rc::new(f);
-//         // }
-
-//         match_any!(ge,
-//             Builder_(gel, mut builder) => {
-
-//                 builder.set_widget(*gel);
-//                 Ok(builder.into())
-//             },
-//             Layer_(x) | Text_(x) | Button_(x) => Ok(x.into()),
-//             Refresher_(_) | Event_(_) => Err(()),
-//             Generic_(x) => {
-//                 debug!("Generic_:: from Generic_ to element");
-//                 Ok(x.generate_element())},
-//             NodeRef_(_)=> panic!("TryFrom<GElement to Element: \n     GElement::NodeIndex_() should handle before."),
-//             EmptyNeverUse=> panic!("EmptyNeverUse never here")
-
-//         )
-//     }
-// }

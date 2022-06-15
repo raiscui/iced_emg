@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2022-06-15 12:28:42
+ * @LastEditTime: 2022-06-15 16:38:08
  * @LastEditors: Rais
 * @Description:
 */
@@ -11,7 +11,7 @@ use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
 
 use crate::iced_runtime::{css, Color, Font, HorizontalAlignment, Length, VerticalAlignment};
-use crate::{dodrio::bumpalo, Bus, Element, Widget};
+use crate::{dodrio::bumpalo, Bus, Widget};
 /// A paragraph of text.
 ///
 /// # Example
