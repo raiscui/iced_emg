@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-15 16:35:46
+ * @LastEditTime: 2022-06-15 22:55:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,8 +13,7 @@ use match_any::match_any;
 
 pub use better_any;
 use better_any::{Tid, TidAble};
-use dyn_partial_eq::DynPartialEq;
-use emg_core::{IdStr, TypeCheckObjectSafe};
+use emg_core::{IdStr, TypeCheckObjectSafe, dyn_partial_eq::DynPartialEq};
 use emg_refresh::{EqRefreshFor, RefreshFor, RefreshUse};
 // extern crate derive_more;
 use derive_more::From;
@@ -45,8 +44,8 @@ impl<Message> core::cmp::PartialEq for dyn DynGElement<Message> + '_ {
         self.box_eq(other.as_any())
     }
 }
-impl<Message> core::cmp::PartialEq<dyn DynGElement<Message> + '_>
-    for Box<dyn DynGElement<Message> + '_>
+impl<Message:'static> core::cmp::PartialEq<dyn DynGElement<Message> >
+    for Box<dyn DynGElement<Message> >
 {
     fn eq(&self, other: &dyn DynGElement<Message>) -> bool {
         self.box_eq(other.as_any())
@@ -76,8 +75,8 @@ pub trait MessageTid<'a>: TidAble<'a> {}
 //     }
 // }
 
-#[derive(Clone, Display, DynPartialEq, From)]
-#[eq_opt(no_self_where, where_add = "Message: PartialEq+'static,")]
+#[derive(Clone, Display, From)]
+// #[eq_opt(no_self_where, where_add = "Message: PartialEq+'static,")]
 pub enum GElement<Message> {
     //TODO cow
     Builder_(NodeBuilderWidget<Message>),

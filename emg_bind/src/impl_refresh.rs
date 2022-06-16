@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-15 16:05:29
+ * @LastEditTime: 2022-06-16 13:53:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,7 @@ use tracing::{trace, warn};
 
 impl<Message> RefreshWhoNoWarper for GElement<Message> {}
 impl<Message> RefreshUseNoWarper for GElement<Message> {}
-impl<Message: PartialEq + Clone + 'static> EqRefreshFor<Self> for GElement<Message> {}
+// impl<Message: PartialEq + Clone + 'static> EqRefreshFor<Self> for GElement<Message> {}
 impl<Message> RefreshFor<Self> for GElement<Message>
 where
     Message: Clone,
@@ -87,6 +87,27 @@ where
 /// `GElement` refresh use X
 /// for Refresher<GElement> many type
 // this is `GElement` refresh use `i32`
+// impl DynPartialEq for u32 {}
+
+impl<Message> EqRefreshFor<GElement<Message>> for u32 {}
+impl<Message> RefreshFor<GElement<Message>> for u32 {
+    fn refresh_for(&self, el: &mut GElement<Message>) {
+        use GElement::Text_;
+
+        match el {
+            Text_(text) => {
+                trace!("==========Text update use u32");
+                text.content(format!("u32:{}", self));
+            }
+
+            other => {
+                trace!("====> {} refreshing use u32", other);
+            }
+        }
+    }
+}
+impl<Message> EqRefreshFor<GElement<Message>> for i32 {}
+
 impl<Message> RefreshFor<GElement<Message>> for i32 {
     fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
@@ -154,5 +175,25 @@ where
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    use emg_refresh::{EqRefreshFor, Refresher};
+
+    use crate::GElement;
+
+    enum Message {
+        A,
+    }
+
+    #[test]
+    fn it_works() {
+        let f = GElement::<Message>::Refresher_(Rc::new(Refresher::new(|| 1i32)));
+        // let ff: Rc<dyn EqRefreshFor<GElement<Message>>> = f;
+        // Rc<dyn EqRefreshFor<GElement<Message>>>, found Rc<Refresher<u32>>
     }
 }

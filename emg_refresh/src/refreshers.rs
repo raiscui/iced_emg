@@ -1,18 +1,18 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2022-06-07 20:43:20
+ * @LastEditTime: 2022-06-15 22:41:31
  * @LastEditors: Rais
  * @Description:
  */
-use dyn_partial_eq::DynPartialEq;
+use emg_core::dyn_partial_eq::DynPartialEq;
 use std::rc::Rc;
 
 #[derive(Clone)]
-pub struct Refresher<'a, Use>(Rc<dyn Fn() -> Use + 'a>);
-impl<'a, Use> Refresher<'a, Use> {
-    pub fn new<F: Fn() -> Use + 'a>(f: F) -> Self {
-        Refresher(Rc::new(f))
+pub struct Refresher<Use>(Rc<dyn Fn() -> Use>);
+impl<Use> Refresher<Use> {
+    pub fn new<F: Fn() -> Use + 'static>(f: F) -> Self {
+        Self(Rc::new(f))
     }
     #[must_use]
     pub fn get(&self) -> Use {
@@ -20,23 +20,24 @@ impl<'a, Use> Refresher<'a, Use> {
         // Rc::clone(&self.0)()
     }
 }
-impl<'a, Use> Eq for Refresher<'a, Use> {}
-impl<'a, Use> PartialEq for Refresher<'a, Use> {
+impl<Use> Eq for Refresher<Use> {}
+impl<Use> PartialEq for Refresher<Use> {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(
             (std::ptr::addr_of!(*self.0)).cast::<u8>(),
             (std::ptr::addr_of!(*other.0)).cast::<u8>(),
         )
+        // Rc::ptr_eq(&self.0, &other.0)
     }
 }
-impl<Use: 'static> DynPartialEq for Refresher<'static, Use> {
-    fn as_any(&self) -> &dyn core::any::Any {
-        self
-    }
-    fn box_eq(&self, other: &dyn core::any::Any) -> bool {
-        other.downcast_ref::<Self>().map_or(false, |a| self == a)
-    }
-}
+// impl<Use: 'static> DynPartialEq for Refresher<Use> {
+//     fn as_any(&self) -> &dyn core::any::Any {
+//         self
+//     }
+//     fn box_eq(&self, other: &dyn core::any::Any) -> bool {
+//         other.downcast_ref::<Self>().map_or(false, |a| self == a)
+//     }
+// }
 
 #[derive(Clone)]
 pub struct RefresherFor<'a, Who>(Rc<dyn Fn(&mut Who) + 'a>);
@@ -72,14 +73,14 @@ pub trait RefreshFor<Who> {
 }
 pub trait EqRefreshFor<Who>: RefreshFor<Who> + DynPartialEq {}
 
-impl<Who> core::cmp::Eq for dyn EqRefreshFor<Who> + '_ {}
+impl<Who> core::cmp::Eq for dyn EqRefreshFor<Who> {}
 
-impl<Who> core::cmp::PartialEq for dyn EqRefreshFor<Who> + '_ {
+impl<Who> core::cmp::PartialEq for dyn EqRefreshFor<Who> {
     fn eq(&self, other: &Self) -> bool {
         self.box_eq(other.as_any())
     }
 }
-impl<Who> core::cmp::PartialEq<dyn EqRefreshFor<Who> + '_> for Box<dyn EqRefreshFor<Who> + '_> {
+impl<Who: 'static> core::cmp::PartialEq<dyn EqRefreshFor<Who>> for Box<dyn EqRefreshFor<Who>> {
     fn eq(&self, other: &dyn EqRefreshFor<Who>) -> bool {
         self.box_eq(other.as_any())
     }

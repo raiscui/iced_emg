@@ -3,13 +3,14 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-07 18:42:16
+ * @LastEditTime: 2022-06-16 13:52:34
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{EqRefreshFor, RefreshFor};
 
 use crate::{RefreshForUse, Refresher, RefresherFor};
+use dyn_partial_eq::DynPartialEq;
 use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 use tracing::{debug, warn};
 // ────────────────────────────────────────────────────────────────────────────────
@@ -41,7 +42,7 @@ impl<Use> !RefreshUseNoWarper for StateAnchor<Use> {}
 impl<Who> !RefreshWhoNoWarper for StateVar<Who> {}
 impl<Use> !RefreshWhoNoWarper for StateAnchor<Use> {}
 impl<'a, Use> !RefreshUseNoWarper for RefresherFor<'a, Use> {}
-impl<'a, Use> !RefreshUseNoWarper for Refresher<'a, Use> {}
+impl<Use> !RefreshUseNoWarper for Refresher<Use> {}
 // ────────────────────────────────────────────────────────────────────────────────
 // impl<Who> RefreshFor<Who> for Vector<Box<dyn RefreshFor<Who>>>
 // where
@@ -156,6 +157,12 @@ where
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
+// impl<Who, Use> EqRefreshFor<Who> for StateVar<Use>
+// where
+//     Who: RefreshWhoNoWarper,
+//     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static + PartialEq,
+// {
+// }
 
 impl<Who, Use> RefreshFor<Who> for StateVar<Use>
 where
@@ -202,7 +209,7 @@ where
     }
 }
 
-impl<'a, Who, Use> RefreshFor<Who> for Refresher<'a, Use>
+impl<Who, Use> RefreshFor<Who> for Refresher<Use>
 where
     Who: RefreshWhoNoWarper,
     Use: RefreshUseNoWarper + RefreshFor<Who>,
@@ -212,12 +219,12 @@ where
         who.refresh_for_use(&self.get());
     }
 }
-impl<Who, Use> EqRefreshFor<Who> for Refresher<'static, Use>
-where
-    Who: RefreshWhoNoWarper,
-    Use: RefreshUseNoWarper + RefreshFor<Who> + 'static,
-{
-}
+// impl<Who, Use> EqRefreshFor<Who> for Refresher<Use>
+// where
+//     Who: RefreshWhoNoWarper,
+//     Use: RefreshUseNoWarper + RefreshFor<Who> + 'static,
+// {
+// }
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -289,11 +296,17 @@ where
         }
     }
 }
+// impl<Who, Use> EqRefreshFor<Who> for StateAnchor<Use>
+// where
+//     Who: RefreshWhoNoWarper,
+//     Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static + std::cmp::PartialEq,
+// {
+// }
 
 impl<Who, Use> RefreshFor<Who> for StateAnchor<Use>
 where
     Who: RefreshWhoNoWarper,
-    Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static + std::fmt::Debug,
+    Use: RefreshUseNoWarper + RefreshFor<Who> + Clone + 'static,
 {
     default fn refresh_for(&self, who: &mut Who) {
         let u_s_e = self.get();
@@ -301,3 +314,15 @@ where
         who.refresh_for_use(&u_s_e);
     }
 }
+impl<Who, Use> EqRefreshFor<Who> for Use
+where
+    Who: RefreshWhoNoWarper,
+    Use: RefreshFor<Who> + 'static + DynPartialEq,
+{
+}
+// impl<Who, Use> EqRefreshFor<Who> for Use
+// where
+//     Who: RefreshWhoNoWarper,
+//     Use: RefreshFor<Who> + 'static + PartialEq,
+// {
+// }

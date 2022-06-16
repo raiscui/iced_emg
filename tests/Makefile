@@ -21,9 +21,9 @@ new-old:
 	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --release --lib -- wasm_test::new_old_comp
 new-str:
 	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --release --lib -- wasm_test::new_str
+new-text:
+	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --release --lib -- wasm_test::render_new
 old-str:
 	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --release --lib -- wasm_test::old_str
 old-text:
 	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --release --lib -- wasm_test::render_old
-new-text:
-	wasm-pack test --chrome --chromedriver /opt/homebrew/bin/chromedriver --release --lib -- wasm_test::render_new

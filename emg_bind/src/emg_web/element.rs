@@ -1,11 +1,10 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:14:26
- * @LastEditTime: 2022-06-15 10:45:01
+ * @LastEditTime: 2022-06-15 22:50:01
  * @LastEditors: Rais
  * @Description:
  */
-use dyn_partial_eq::DynPartialEq;
 use seed_styles::GlobalStyleSV;
 use std::rc::Rc;
 
@@ -98,18 +97,18 @@ impl<A, B> PartialEq for Map<A, B> {
             )
     }
 }
-impl<A, B> DynPartialEq for Map<A, B>
-where
-    A: 'static,
-    B: 'static,
-{
-    fn as_any(&self) -> &dyn core::any::Any {
-        self
-    }
-    fn box_eq(&self, other: &dyn core::any::Any) -> bool {
-        other.downcast_ref::<Self>().map_or(false, |a| self == a)
-    }
-}
+// impl<A, B> DynPartialEq for Map<A, B>
+// where
+//     A: 'static,
+//     B: 'static,
+// {
+//     fn as_any(&self) -> &dyn core::any::Any {
+//         self
+//     }
+//     fn box_eq(&self, other: &dyn core::any::Any) -> bool {
+//         other.downcast_ref::<Self>().map_or(false, |a| self == a)
+//     }
+// }
 
 impl<A, B> Map<A, B> {
     pub fn new<F>(widget: Box<dyn Widget<A>>, mapper: F) -> Self

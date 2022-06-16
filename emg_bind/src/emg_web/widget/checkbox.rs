@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-15 16:36:54
+ * @LastEditTime: 2022-06-15 22:45:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,6 @@ use crate::{
 #[allow(unused_imports)]
 use better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt};
 
-use dyn_partial_eq::DynPartialEq;
 use emg_core::{IdStr, TypeCheckObjectSafe, TypeName};
 use emg_refresh::RefreshFor;
 pub use iced_style::checkbox::{Style, StyleSheet};
@@ -43,8 +42,7 @@ use std::{ops::Deref, rc::Rc};
 ///
 /// ![Checkbox drawn by Coffee's renderer](https://github.com/hecrj/coffee/blob/bda9818f823dfcb8a7ad0ff4940b4d4b387b5208/images/ui/checkbox.png?raw=true)
 #[allow(missing_debug_implementations)]
-#[derive(Clone, Tid, DynPartialEq)]
-#[eq_opt(where_add = "Message: PartialEq+'static,")]
+#[derive(Clone, Tid)]
 pub struct Checkbox<Message>
 // where
 //     dyn std::ops::Fn(bool) -> Message + 'static: std::cmp::PartialEq,

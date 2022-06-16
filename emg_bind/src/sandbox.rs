@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2022-06-15 15:31:58
+ * @LastEditTime: 2022-06-15 22:05:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,8 @@ use emg_orders::Orders;
 use iced::{Color, Error, Settings};
 
 use crate::{
-    Application, Command, GElement, GTreeBuilderElement, GraphType, Subscription,
+    g_node::node_item_rc::{GelType, GraphType},
+    Application, Command, GElement, GTreeBuilderElement, Subscription,
 };
 
 pub trait Sandbox {
@@ -38,7 +39,7 @@ pub trait Sandbox {
     /// Returns the widgets to display in the [`Sandbox`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view(&self, g: &GraphType<Self::Message>) -> GElement<Self::Message>;
+    fn view(&self, g: &GraphType<Self::Message>) -> GelType<Self::Message>;
 
     /// Returns the background color of the [`Sandbox`].
     ///
@@ -111,7 +112,7 @@ where
         Subscription::none()
     }
 
-    fn view(&self, g: &GraphType<T::Message>) -> GElement<T::Message> {
+    fn view(&self, g: &GraphType<T::Message>) -> GelType<T::Message> {
         T::view(self, g)
     }
     fn tree_build(

@@ -23,6 +23,9 @@ pool = ["emg_core/pool", "emg/pool", "seed_styles/pool"]
 
 
 [dependencies]
+
+vec-string = "0.1.1"
+
 cfg-if = "1.0.0"
 iced = { path = "../../iced" }
 emg = { path = "../../emg" }
@@ -92,7 +95,6 @@ iced_web = { path = "../../iced/web" }
 # tracing-wasm = "0.2.0"
 # console_error_panic_hook = "0.1.6"
 wasm-bindgen = "0.2"
-dyn_partial_eq = { path = "../../dyn_partial_eq" }
 either = "1.6.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

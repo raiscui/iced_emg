@@ -17,6 +17,7 @@ pool = ["im-rc/pool"]
 
 [dependencies]
 tracing = "0.1"
+dyn_partial_eq = { path = "../../dyn_partial_eq" }
 
 ordered-float = "3.0.0"
 derive_more = "0.99"

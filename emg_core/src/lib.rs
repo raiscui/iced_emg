@@ -3,6 +3,7 @@ mod macros;
 pub mod measures;
 pub use crate::SVec::{smallvec, SmallVec};
 pub use ::smallvec as SVec;
+pub use dyn_partial_eq;
 
 pub use im::{vector, Vector};
 pub use im_rc as im;

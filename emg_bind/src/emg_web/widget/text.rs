@@ -1,12 +1,11 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2022-06-15 16:38:08
+ * @LastEditTime: 2022-06-16 13:58:13
  * @LastEditors: Rais
 * @Description:
 */
 
-use dyn_partial_eq::DynPartialEq;
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
 
@@ -22,7 +21,7 @@ use crate::{dodrio::bumpalo, Bus, Widget};
 /// Text::new("I <3 iced!")
 ///     .size(40);
 /// ```
-#[derive(Debug, Clone, DynPartialEq, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Text {
     content: IdStr,
     size: Option<u16>,

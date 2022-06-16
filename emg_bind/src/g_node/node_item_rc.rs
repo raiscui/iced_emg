@@ -8,6 +8,7 @@ use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_refresh::RefreshForUse;
 use emg_state::{Anchor, CloneStateAnchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{trace, trace_span};
+use vec_string::VecString;
 
 use crate::{GElement, NodeBuilderWidget};
 
@@ -22,7 +23,7 @@ use super::EmgNodeItem;
  */
 const POOL_SIZE: usize = 1;
 
-type GelType<Message> = Rc<GElement<Message>>;
+pub type GelType<Message> = Rc<GElement<Message>>;
 
 pub type NItem<Message> = StateAnchor<GelType<Message>>;
 pub type N<Message, Ix> = EmgNodeItem<NItem<Message>, Ix>;
@@ -34,6 +35,7 @@ type CurrentPathChildrenEixGElSA<Message> =
     StateAnchor<(EdgeIndex<IdStr>, Either<GelType<Message>, GelType<Message>>)>;
 
 type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
+
 
 impl<Message> EmgNodeItem<NItem<Message>>
 where
@@ -268,9 +270,12 @@ where
                     .item
                     .edge_nodes
                     .then(move |e_nodes| {
+                        // let all_paths =  e_nodes.keys().cloned().collect::<Vec<_>>().vec_string();
+
                         e_nodes
                             .get(&path3)
                             .and_then(EdgeItemNode::as_edge_data)
+                            // .unwrap_or_else(|| panic!("not find EdgeData for path:{} \n allPaths:\n{}", &path3,&all_paths))
                             .unwrap_or_else(|| panic!("not find EdgeData for path:{}", &path3))
                             .styles_string
                             .get_anchor()

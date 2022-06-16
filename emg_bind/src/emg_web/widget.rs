@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2022-06-15 16:01:55
+ * @LastEditTime: 2022-06-15 22:54:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,7 +25,7 @@ use crate::Bus;
 use dodrio::{builder::ElementBuilder, bumpalo, Attribute, Listener};
 
 use dyn_clone::DynClone;
-use dyn_partial_eq::DynPartialEq;
+use emg_core::dyn_partial_eq::DynPartialEq;
 
 pub trait Widget<Message>: DynClone + DynPartialEq // where
 //     Message: Clone,
@@ -66,7 +66,7 @@ impl<Message> core::cmp::PartialEq for dyn Widget<Message> + '_ {
         self.box_eq(other.as_any())
     }
 }
-impl<Message> core::cmp::PartialEq<dyn Widget<Message> + '_> for Box<dyn Widget<Message> + '_> {
+impl<Message: 'static> core::cmp::PartialEq<dyn Widget<Message>> for Box<dyn Widget<Message>> {
     fn eq(&self, other: &dyn Widget<Message>) -> bool {
         self.box_eq(other.as_any())
     }

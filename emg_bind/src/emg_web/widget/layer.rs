@@ -1,6 +1,5 @@
 use std::{clone::Clone, cmp::PartialEq};
 
-use dyn_partial_eq::DynPartialEq;
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
 use tracing::debug;
@@ -29,8 +28,7 @@ type LayerChildren<Message> = Vec<GElement<Message>>;
 ///
 /// A [`Layer`] will try to fill the horizontal space of its container.
 #[allow(missing_debug_implementations)]
-#[derive(Clone, DynPartialEq, Eq, Debug)]
-#[eq_opt(where_add = "Message: PartialEq+'static,")]
+#[derive(Clone, Eq, Debug)]
 pub struct Layer<Message> {
     id: IdStr,
     //TODO vec?

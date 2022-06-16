@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-06-14 22:03:15
+ * @LastEditTime: 2022-06-16 14:00:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -640,10 +640,11 @@ fn start_set_var_and_run_before_after<T: Clone + 'static>(
     after_fns_run(&skip, &data, after_fns);
 }
 // ────────────────────────────────────────────────────────────────────────────────
-//TODO check PartialEq use
+
 // https://docs.rs/graph_safe_compare/latest/graph_safe_compare/
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(PartialEq, Eq)]
+// #[eq_opt(where_add = "T: PartialEq+'static,")]
 pub struct StateVar<T> {
     id: TopoKey,
     _phantom_data: PhantomData<T>,

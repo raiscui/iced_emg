@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-06-15 16:33:24
+ * @LastEditTime: 2022-06-16 13:58:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,8 +9,6 @@
 #![allow(clippy::borrow_as_ptr)]
 #![allow(clippy::ptr_as_ptr)]
 #![allow(clippy::ptr_eq)]
-use dyn_partial_eq::DynPartialEq;
-// use dyn_clone::DynClone;
 // ────────────────────────────────────────────────────────────────────────────────
 
 use derive_more::From;
@@ -326,8 +324,7 @@ where
 // }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, DynPartialEq, PartialEq, Eq)]
-#[eq_opt(where_add = "Message: PartialEq+'static,")]
+#[derive(Clone, PartialEq, Eq)]
 pub struct NodeBuilderWidget<Message> {
     id: IdStr,
     //TODO : in areas heap
@@ -542,7 +539,6 @@ where
         element_builder.finish()
     }
 }
-
 
 #[cfg(test)]
 #[allow(unused)]

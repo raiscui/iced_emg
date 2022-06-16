@@ -2,7 +2,6 @@
 //!
 //! A [`Button`] has some local [`State`].
 
-use dyn_partial_eq::DynPartialEq;
 pub use iced_style::button::{Style, StyleSheet};
 use seed_styles::GlobalStyleSV;
 
@@ -26,8 +25,7 @@ use crate::{
 ///     .on_press(Message::ButtonPressed);
 /// ```
 #[allow(missing_debug_implementations)]
-#[derive(Clone, DynPartialEq, PartialEq)]
-#[eq_opt(where_add = "Message: PartialEq+'static,")]
+#[derive(Clone, PartialEq)]
 pub struct Button<Message> {
     // id: String,
     content: Box<GElement<Message>>,

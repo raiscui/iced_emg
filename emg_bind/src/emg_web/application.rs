@@ -2,7 +2,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2022-06-15 16:36:15
+ * @LastEditTime: 2022-06-16 13:58:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,8 +11,10 @@ use seed_styles::GlobalStyleSV;
 use tracing::{debug, debug_span, trace_span};
 
 use crate::{
-    futures, orders::OrdersContainer, Bus, Command, Executor, GElement,
-    GTreeBuilderElement, GTreeBuilderFn, GraphType, Subscription,
+    futures,
+    g_node::node_item_rc::{GelType, GraphType},
+    orders::OrdersContainer,
+    Bus, Command, Executor, GTreeBuilderElement, GTreeBuilderFn, Subscription,
 };
 use emg_orders::Orders;
 
@@ -69,7 +71,7 @@ pub trait Application {
     /// Returns the widgets to display in the [`Application`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view(&self, g: &GraphType<Self::Message>) -> GElement<Self::Message>;
+    fn view(&self, g: &GraphType<Self::Message>) -> GelType<Self::Message>;
 
     /// Returns the event [`Subscription`] for the current state of the
     /// application.

@@ -367,14 +367,14 @@ impl ToTokens for GRefresher {
                 );
                 let id_token = id.get("Refresh");
 
-                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(Refresher::new(#closure_token))) )
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(Refresher::new(#closure_token)) as Rc<dyn EqRefreshFor<GElement<Message>>>) )
             }
             RefresherType::Expr(expr) => {
                 let expr_token = quote_spanned!(
                     expr.span()=> #expr
                 );
                 let id_token = id.get("Refresh");
-                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(#expr_token)) )
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(#expr_token) as Rc<dyn EqRefreshFor<GElement<Message>>>) )
             }
         };
 
@@ -903,7 +903,8 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use emg_layout::{css, styles::*,add_values::*,EmgEdgeItem};
             #[allow(unused)]
-            use emg_refresh::{Refresher,RefreshFor};
+            use emg_refresh::{Refresher,RefreshFor,EqRefreshFor};
+
             #[allow(unused)]
             use emg_state::{use_state, StateMultiAnchor,CloneStateVar,CloneStateAnchor};
 
