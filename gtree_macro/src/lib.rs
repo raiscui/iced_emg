@@ -386,13 +386,32 @@ impl ToTokens for GRefresher {
 
 // @ GSurface ────────────────────────────────────────────────────────────────────────────────
 
+
+#[derive(Debug, Clone)]
+struct SaGel {
+    pub left: Box<syn::Expr>,
+    pub _map_fn_token: token::FatArrow,
+    pub right: Box<syn::ExprClosure>,
+}
+
+impl Parse for SaGel {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            left: input.parse()?,
+            _map_fn_token: input.parse()?,
+            right: input.parse()?,
+        })
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct GTreeSurface {
     edge: Option<Edge>,
     id: ID,
     module: bool,
-    expr: syn::Expr,
+    opt_expr: Option<syn::Expr>,
+    opt_sa_gel:Option<SaGel>,
     children: ChildrenType,
 }
 
@@ -422,11 +441,36 @@ impl Parse for GTreeSurface {
         let id = ID::default();
         let module = false;
 
-        //println!("GSurface:{}", input);
-        let expr = input.parse::<syn::Expr>()?;
+        let fork2 = input.fork();
+       
+
+        let opt_sa_gel = if fork2.parse::<SaGel>().is_ok(){
+            let sa_gel:SaGel = input.parse()?;
+           Some (sa_gel)
+        }else{
+            None
+        };
+
+       
+        let opt_expr = if opt_sa_gel.is_none(){
+             Some(input.parse::<syn::Expr>()?)
+            }else{
+                None
+            };
+
+        
+        
         if input.peek(token::FatArrow) {
+            // println!("has fa");
+
             input.parse::<token::FatArrow>()?; //=>
                                                // []
+            //                                    let fork3 = input.fork().to_string();
+
+            // let f = quote!{
+            //     #fork3
+            // };
+
             if input.peek(token::Bracket) {
                 // println!("=>[] find");
                 let content;
@@ -437,18 +481,21 @@ impl Parse for GTreeSurface {
                     edge,
                     id,
                     module,
-                    expr,
+                    opt_expr,
+                    opt_sa_gel,
                     children,
                 })
             } else {
-                panic!("还没有完成 直接 单一 无[] 的后缀")
+                // panic!("还没有完成 直接 单一 无[] 的后缀.. {}",&f)
+                panic!("还没有完成 直接 单一 无[] 的后缀.")
             }
         } else {
             Ok(Self {
                 edge,
                 id,
                 module,
-                expr,
+                opt_expr,
+                opt_sa_gel,
                 children: None,
             })
         }
@@ -461,7 +508,8 @@ impl ToTokens for GTreeSurface {
             edge,
             id,
             module,
-            expr,
+            opt_expr,
+            opt_sa_gel,
             children,
         } = self;
         // println!("expr===={:?}", self.expr);
@@ -476,8 +524,11 @@ impl ToTokens for GTreeSurface {
         if *module {
             let id_token = id.get("GTM");
 
+            let expr = opt_expr.as_ref().unwrap();
+
             quote_spanned! (expr.span() =>
                 // let exp_v:GTreeBuilderElement<_,_> = ;
+           
                 match #expr{
                     GTreeBuilderElement::Layer( expr_id,mut expr_edge,expr_children) =>{
                         //TODO maybe change Ord to   expr_id, #id_token,
@@ -520,7 +571,7 @@ impl ToTokens for GTreeSurface {
                     }
 
                     _=>{
-                    panic!("不能转换元件表达式到 Layer");
+                    panic!("不能转换元件表达式到 Layer: {:?}",&#expr);
 
                     }
                 }
@@ -532,10 +583,32 @@ impl ToTokens for GTreeSurface {
         } else {
             let id_token = id.get("GEl");
 
-            quote_spanned! (expr.span() => 
+            match (opt_sa_gel,opt_expr){
+                (None, None)| (Some(_), Some(_)) => unreachable!(),
+                (None, Some(expr)) => {
+                    //NOTE Sa 不带后缀 也会转换 为 gel, = InsideUseSa_(StateAnchor<Self>),需要预处理掉
+                    quote_spanned! (expr.span() => 
                     GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token)
-             )
-            .to_tokens(tokens);
+                    )
+                    .to_tokens(tokens);
+                },
+                (Some(sa_gel_func), None) => {
+                    let sa_gel = &sa_gel_func.left;
+                    let sa_fn = &sa_gel_func.right;
+
+                    quote_spanned! (sa_gel.span() => 
+
+                            GTreeBuilderElement::SaMapEffectGElementTree(#id_token,#edge_token,Rc::new(|parent_sa|{
+                                (parent_sa,&#sa_gel).map(#sa_fn)
+                            }),#children_token)
+                    )
+                    .to_tokens(tokens);
+
+
+                },
+            };
+
+            
         }
     }
 }
@@ -903,7 +976,7 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use emg_layout::{css, styles::*,add_values::*,EmgEdgeItem};
             #[allow(unused)]
-            use emg_refresh::{Refresher,RefreshFor,EqRefreshFor};
+            use emg_refresh::{EqRefreshFor,RefreshFor,Refresher,RefreshUse};
 
             #[allow(unused)]
             use emg_state::{use_state, StateMultiAnchor,CloneStateVar,CloneStateAnchor};
@@ -1082,12 +1155,16 @@ mod tests {
 
         println!();
         let input = r#" 
-        @=a
-        Layer [
-             @=b @Mod @E=[w(pc(50)),origin_x(pc(50)),align_x(pc(50))]
-             Text::new(format!("aaa{}", "b"))
-              
-        ]
+        @=aa1
+                Layer [
+                    Text::new(format!("aa1***********8"))=>[
+                        RefreshUse dyn_v
+                    ],
+                    StateAnchor::constant(1) => |p,gel|p.clone() =>[
+
+                    ]
+
+                ]
 
         "#;
 

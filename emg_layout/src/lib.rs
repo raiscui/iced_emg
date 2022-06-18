@@ -150,12 +150,12 @@ impl ::core::ops::Add for GenericSizeAnchor {
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
+
+
 pub auto trait NotStateAnchor {}
 impl<T> !NotStateAnchor for StateAnchor<T> {}
 pub auto trait NotStateVar {}
 impl<T> !NotStateVar for StateVar<T> {}
-
-// impl<T> NotStateAnchor for T{}
 
 impl<T> From<T> for GenericSizeAnchor
 where T : NotStateAnchor+NotStateVar+ Into<GenericSize> + Clone+'static{

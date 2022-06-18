@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-15 22:45:33
+ * @LastEditTime: 2022-06-17 22:49:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -208,44 +208,46 @@ where
 //     }
 // }
 
-// @ 被GElement更新 ------------------------------------
+// @ 被GElement更新自己 ------------------------------------
 impl<Message> RefreshFor<Checkbox<Message>> for GElement<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
     fn refresh_for(&self, who_checkbox: &mut Checkbox<Message>) {
         match self {
-            GElement::Layer_(_l) => {
+            Self::Layer_(_l) => {
                 unimplemented!();
             }
-            GElement::Builder_(builder) => {
+            Self::Builder_(builder) => {
                 builder.widget().unwrap().deref().refresh_for(who_checkbox);
             }
-            GElement::Text_(t) => {
+            Self::Text_(t) => {
                 who_checkbox.label = t.get_content(); //TODO text.get_content directly return IdStr
             }
-            GElement::Button_(_) => {
+            Self::Button_(_) => {
                 unimplemented!();
             }
-            GElement::Refresher_(_refresher) => {
+            Self::Refresher_(_refresher) => {
                 // NOTE this is refresh_for GElement , not Checkbox
                 unimplemented!();
             }
-            GElement::Event_(_) => {
+            Self::Event_(_) => {
                 todo!();
             }
-            GElement::Generic_(_g_self) => {
+            Self::Generic_(_g_self) => {
                 trace!("use Generic refresh_for Checkbox");
                 //TODO 反射?
                 todo!("reflection?");
             }
-            GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
-            GElement::EmptyNeverUse => panic!("EmptyNeverUse never here"),
+            Self::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
+            Self::EmptyNeverUse => panic!("EmptyNeverUse never here"),
+            Self::InsideDirectUseSa_(_) => unreachable!(),
+            Self::SaNode_(_) => todo!(),
         };
     }
 }
 
-// @ 更新who -GElement ------------------------------------
+// @ 用于更新who -GElement ------------------------------------
 impl<Message> RefreshFor<GElement<Message>> for Checkbox<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
@@ -278,6 +280,8 @@ where
             }
             GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
             GElement::EmptyNeverUse => panic!("EmptyNeverUse never here"),
+            GElement::InsideDirectUseSa_(_) => unreachable!(),
+            GElement::SaNode_(_) => todo!(),
         };
     }
 }

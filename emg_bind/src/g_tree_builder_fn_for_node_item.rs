@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-05 19:54:16
- * @LastEditTime: 2022-06-15 16:41:38
+ * @LastEditTime: 2022-06-17 23:11:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -35,7 +35,7 @@ Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default 
     graph_rc: Rc<RefCell<GraphType<Message,Ix>>>,
 
     key:Option< Ix>,
-    gel_sa:Option<StateAnchor<GElement<Message>>>,
+    gel_sa:Option<NItem<Message>>,
     incoming_eix_set:Option<EdgeCollect<Ix>>,
     outgoing_eix_set:Option<EdgeCollect<Ix>>,
 
@@ -307,6 +307,7 @@ where
 
                 let path = (&*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
 
+                
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
                     new_def_ei.refresh_for_use(edge_refreshers);
@@ -354,15 +355,30 @@ where
              
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
-                GraphNodeBuilder::new(self.clone())
-                .and_key(id.clone())
-                .and_gel_sa(StateAnchor::constant(gel.clone()))
-                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
-                    2,
-                    BuildHasherDefault::<CustomHasher>::default(),
-                ))
-                .build_in_topo();
+                
+                gel.as_inside_direct_use_sa().map_or_else(|| {
+                    GraphNodeBuilder::new(self.clone())
+                    .and_key(id.clone())
+                    //TODO GTreeBuilderElement use Rc
+                    .and_gel_sa(StateAnchor::constant(gel.clone()))
+                    .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                    .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                        1,
+                        BuildHasherDefault::<CustomHasher>::default(),
+                    ))
+                    .build_in_topo();
+                }, |gel_sa| {
+                    GraphNodeBuilder::new(self.clone())
+                    .and_key(id.clone())
+                    //TODO GTreeBuilderElement use Rc
+                    .and_gel_sa(gel_sa.map(|g|(**g).clone()))
+                    .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                    .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                        0,
+                        BuildHasherDefault::<CustomHasher>::default(),
+                    ))
+                    .build_in_topo();
+                });
 
                 //edge
                 let mut new_def_ei = self
@@ -385,6 +401,22 @@ where
                         }
                     });
                 });
+            }
+            GTreeBuilderElement::SaMapEffectGElementTree(org_id, _edge_refreshers, builder_fn, _children_list) => {
+                let id = replace_id.unwrap_or(org_id);
+                info!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
+
+
+                let _span =
+                    trace_span!("-> handle_children [SaMapEffectGElementTree] ", ?id, ?parent_nix).entered();
+
+
+                
+                let mut g = self.borrow_mut();
+                let parent_item = g.get_mut_node_item(&parent_nix).unwrap();
+                let rc_p = parent_item.gel_sa().map(|g|Rc::new(g.clone()));
+                parent_item.set_gel_sa( (**builder_fn)(&rc_p).map(|n_p|(**n_p).clone()));
+
             }
             //TODO _edge_refresher use for  inject element
             GTreeBuilderElement::Dyn(org_id,_edge_refresher,sa_dict_gbe) => {
@@ -565,7 +597,8 @@ where
                 let _ei = self
                     .setup_default_edge_in_topo(edge_index)
                     .unwrap();
-            } // GTreeBuilderElement::GenericTree(id, edge_refreshers, dyn_gel, refreshers) => {
+            } 
+            // GTreeBuilderElement::GenericTree(id, edge_refreshers, dyn_gel, refreshers) => {
               //     panic!("test here");
               //     let _span =
               //         trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();

@@ -229,13 +229,42 @@ impl GenericSize {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use crate::Vector;
 
     use crate::into_vector;
+
+    struct XX(Rc<dyn Fn() -> u32>);
+
+    impl std::fmt::Debug for XX {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_tuple("XX").finish()
+        }
+    }
+
+    impl PartialEq for XX {
+        fn eq(&self, other: &Self) -> bool {
+            std::ptr::eq(
+                (std::ptr::addr_of!(*self.0)).cast::<u8>(),
+                (std::ptr::addr_of!(*other.0)).cast::<u8>(),
+            )
+        }
+    }
 
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
         let _f: Vector<i32> = into_vector![1, 2, 3];
+
+        let a = XX(Rc::new(|| 2u32));
+
+        let b = XX(a.0.clone());
+        let c = XX(Rc::new(|| 2u32));
+
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+        assert!(Rc::ptr_eq(&a.0, &b.0));
+        assert!(!Rc::ptr_eq(&a.0, &c.0));
     }
 }

@@ -1,12 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-06-15 15:03:00
+ * @LastEditTime: 2022-06-17 19:03:13
  * @LastEditors: Rais
  * @Description:
  */
 
-use crate::emg_runtime::{EventNode, Layer};
+use crate::{emg_runtime::{EventNode, Layer}};
 use crate::{GElement, GraphType, NodeIndex};
 use emg::{edge_index_no_source, node_index, Edge, EdgeIndex};
 use emg_core::{vector,IdStr};
@@ -18,6 +18,8 @@ use emg_state::{CloneStateVar, Dict, StateAnchor, StateVar, topo::{self, call_in
 use std::{cell::RefCell, rc::Rc};
 use tracing::{debug, instrument, trace, trace_span, warn};
 
+
+type SaBuilderFn<T> = dyn Fn(&StateAnchor<Rc<T>>)->StateAnchor<Rc<T>>;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(dead_code)]
@@ -39,7 +41,14 @@ where
         GElement<Message>,
         Vec<GTreeBuilderElement<Message, Ix>>,
     ),
-    RefreshUse(Ix, Rc<dyn EqRefreshFor<GElement<Message>>>),
+    SaMapEffectGElementTree(
+        Ix,
+        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+        Rc< SaBuilderFn< GElement<Message>>>,
+        Vec<GTreeBuilderElement<Message, Ix>>,
+    ),
+
+    RefreshUse(Ix, Rc<dyn EqRefreshFor<GElement<Message>>  >),
     Cl(Ix, Rc<dyn Fn()>),
     Event(Ix, EventNode<Message>),
     Dyn(
@@ -47,6 +56,7 @@ where
         Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
         StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>,
     ),
+
     // Fragment(Vec<GTreeBuilderElement< Message, Ix>>),
     // GenericTree(
     //     Ix,
@@ -135,10 +145,9 @@ where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Layer(id, _, children_list) => {
-                let edge_str = "with-Edge-Vector";
                 f.debug_tuple("GTreeBuilderElement::Layer")
                     .field(id)
-                    .field(&edge_str)
+                    .field(&"with-Edge-Vector")
                     .field(children_list)
                     .finish()
             }
@@ -148,20 +157,25 @@ where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
             //     .field(el)
             //     .finish(),
             Self::GElementTree(id, _, gel, updaters) => {
-                let edge_str = "with-Edge-Vector";
-
                 f.debug_tuple("GTreeBuilderElement::GElementTree")
                     .field(id)
-                    .field(&edge_str)
+                    .field(&"with-Edge-Vector")
                     .field(gel)
                     .field(updaters)
                     .finish()
             }
+            Self::SaMapEffectGElementTree(id, _, _builder_fn, updaters) => {
+                f.debug_tuple("GTreeBuilderElement::SaMapEffectGElementTree")
+                    .field(id)
+                    .field(&"with-Edge-Vector")
+                    .field(&"builder_fn")
+                    .field(updaters)
+                    .finish()
+            }
             Self::RefreshUse(id, _) => {
-                let updater = "Box<dyn RefreshFor<GElement< Message>>>";
                 f.debug_tuple("GTreeBuilderElement::Updater")
                     .field(id)
-                    .field(&updater)
+                    .field(&"Box<dyn RefreshFor<GElement< Message>>>")
                     .finish()
             }
             Self::Cl(id, _) => {
@@ -173,11 +187,9 @@ where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
                 .field(&e)
                 .finish(),
             Self::Dyn(id,_e,_sa_dict_gbe) => {
-                let gbe = "StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>";
-
                 f.debug_tuple("GTreeBuilderElement::Dyn")
                     .field(id)
-                    .field(&gbe)
+                    .field(&"StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>")
                     .finish()
             } // GTreeBuilderElement::GenericTree(id, _, dyn_gel, updaters) => {
               //     let edge_str = "with-Edge-Vector";
@@ -477,16 +489,29 @@ where
             //         .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
             //         .unwrap();
             // }
+            //TODO 预处理 InsideUseSa_
             GTreeBuilderElement::GElementTree(org_id, edge_refreshers, gel, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
 
                 let _span =
                     trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
 
-                //node index
-                let nix = self
+                let nix =  if let Some(gel_sa)= gel.as_inside_direct_use_sa(){
+                    let no_rc_gel = gel_sa.map(|g|(**g).clone());
+                    self
                     .borrow_mut()
-                    .insert_node_in_topo(id.clone(), StateAnchor::constant(gel.clone()));
+                    .insert_node_in_topo(id.clone(), no_rc_gel)
+                }else{
+                    self
+                    .borrow_mut()
+                    .insert_node_in_topo(id.clone(), StateAnchor::constant(gel.clone()))
+                };
+              
+
+                //node index
+                // let nix = self
+                //     .borrow_mut()
+                //     .insert_node_in_topo(id.clone(), StateAnchor::constant(gel_clone));
 
                 //edge
                 let mut new_def_ei = self
@@ -509,6 +534,44 @@ where
                         }
                     });
                 });
+            }
+            GTreeBuilderElement::SaMapEffectGElementTree(org_id, edge_refreshers, builder_fn, children_list) => {
+                unimplemented!()
+                // let id = replace_id.unwrap_or(org_id);
+
+                // let _span =
+                //     trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
+
+                // let parent = self.borrow_mut().get_mut_node_item(&parent_nix).unwrap();
+                // let new_parent = builder_fn(&*parent);
+
+                //     let gel = builder_fn.map(|g|(**g).clone());
+                // //node index
+                // let nix = self
+                //     .borrow_mut()
+                //     .insert_node_in_topo(id.clone(), gel);
+
+                // //edge
+                // let mut new_def_ei = self
+                //     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix, nix.clone()))
+                //     .unwrap();
+
+                // let path = (&*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
+
+                // illicit::Layer::new().offer(path.clone()).enter(|| {
+                //     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
+                //     new_def_ei.refresh_for_use(edge_refreshers);
+
+                //     //next
+                //     illicit::Layer::new().offer(nix.clone()).enter(|| {
+                //         // #[cfg(debug_assertions)]
+                //         debug_assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
+
+                //         for child_gtree_builder in children_list.iter() {
+                //             self.handle_children_in_topo(None,child_gtree_builder);
+                //         }
+                //     });
+                // });
             }
             //TODO _edge_refresher use for  inject element
             GTreeBuilderElement::Dyn(org_id,_edge_refresher,sa_dict_gbe) => {

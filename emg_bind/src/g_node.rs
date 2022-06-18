@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-26 18:22:22
- * @LastEditTime: 2022-06-15 16:39:06
+ * @LastEditTime: 2022-06-17 23:06:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -570,5 +570,14 @@ where
     pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> NItem<Message> {
         self.paths_view_gel_sa
             .get_with(|x| x.get(eix).unwrap().clone())
+    }
+
+    pub fn set_gel_sa(&mut self, gel_sa: NItem<Message>) {
+        self.gel_sa = gel_sa;
+    }
+
+    #[must_use] 
+    pub const fn gel_sa(&self) -> &NItem<Message> {
+        &self.gel_sa
     }
 }

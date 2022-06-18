@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-06-16 13:58:42
+ * @LastEditTime: 2022-06-16 23:41:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -441,7 +441,11 @@ impl<Message> NodeBuilderWidget<Message> {
         //TODO add type_name
     }
 
-    pub fn widget(&self) -> Option<&Box<GElement<Message>>> {
+    #[must_use]
+    #[allow(clippy::borrowed_box)]
+    pub const fn widget(&self) -> Option<&Box<GElement<Message>>> {
+        //TODO use cow/beef
+
         self.widget.as_ref()
     }
 

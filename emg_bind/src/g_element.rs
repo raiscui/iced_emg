@@ -1,26 +1,30 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-15 22:55:15
+ * @LastEditTime: 2022-06-18 11:13:38
  * @LastEditors: Rais
  * @Description:
  */
+// pub mod impls;
 use crate::{
     emg_runtime::{Button,  EventNode, Layer, Text},
     NodeBuilderWidget, Widget,
 };
+use emg_state::{StateAnchor};
 use match_any::match_any;
 
 pub use better_any;
 use better_any::{Tid, TidAble};
 use emg_core::{IdStr, TypeCheckObjectSafe, dyn_partial_eq::DynPartialEq};
-use emg_refresh::{EqRefreshFor, RefreshFor, RefreshUse};
+use emg_refresh::{ RefreshFor, RefreshUse, EqRefreshFor};
 // extern crate derive_more;
 use derive_more::From;
 use dyn_clonable::clonable;
 use std::rc::Rc;
 use strum_macros::Display;
 use tracing::debug;
+
+
 
 #[allow(clippy::module_name_repetitions)]
 #[clonable]
@@ -52,30 +56,39 @@ impl<Message:'static> core::cmp::PartialEq<dyn DynGElement<Message> >
     }
 }
 pub trait MessageTid<'a>: TidAble<'a> {}
-// pub trait AsRefreshFor<T> {
-//     fn as_refresh_for(&self) -> &dyn RefreshFor<T>;
-// }
-// impl< Message, T: RefreshFor<GElement< Message>>> AsRefreshFor<GElement< Message>> for T {
-//     fn as_refresh_for(&self) -> &dyn RefreshFor<GElement< Message>> {
-//         self
-//     }
-// }
 
-// pub trait AsNodeBuilder<T> {
-//     fn as_node_builder(&self) -> &dyn NodeBuilder<T>;
-// }
-// // impl<Message, T: NodeBuilder<Message>> AsNodeBuilder<Message> for T {
-// //     fn as_node_builder(&self) -> &dyn NodeBuilder<Message> {
-// //         self
-// //     }
-// // }
-// impl< Message> AsNodeBuilder<Message> for Box<dyn DynGElement< Message>> {
-//     fn as_node_builder(&self) -> &dyn NodeBuilder<Message> {
-//         self.as_ref()
-//     }
-// }
 
-#[derive(Clone, Display, From)]
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    use emg_refresh::{Refresher, EqRefreshFor};
+    use emg_state::use_state;
+
+    use crate::{GElement};
+
+    #[derive(Clone,PartialEq,Eq)]
+    enum Message {
+        A,
+    }
+
+    #[test]
+    fn it_works() {
+        let _f = GElement::<Message>::Refresher_(Rc::new(Refresher::new(|| 1i32)) as Rc<dyn EqRefreshFor<GElement<Message>> >);
+        let _a = use_state(2i32);
+
+        let _f = GElement::<Message>::Refresher_(Rc::new(_a.watch()) );
+
+        // let ff: Rc<dyn EqRefreshFor<GElement<Message>>> = f;
+        // Rc<dyn EqRefreshFor<GElement<Message>>>, found Rc<Refresher<u32>>
+    }
+}
+
+
+
+
+#[derive(Clone,Display, From)]
 // #[eq_opt(no_self_where, where_add = "Message: PartialEq+'static,")]
 pub enum GElement<Message> {
     //TODO cow
@@ -83,12 +96,15 @@ pub enum GElement<Message> {
     Layer_(Layer<Message>),
     Text_(Text),
     Button_(Button<Message>),
-    Refresher_(Rc<dyn EqRefreshFor<Self>>),
+    Refresher_(Rc<dyn EqRefreshFor<Self> >),
     Event_(EventNode<Message>),
     //internal
-    Generic_(Box<dyn DynGElement<Message>>), //范型
+    Generic_(Box<dyn DynGElement<Message>>), //范型 //TODO check batter when use rc?
     #[from(ignore)]
     NodeRef_(IdStr),     // IntoE(Rc<dyn Into<Element< Message>>>),
+    InsideDirectUseSa_(StateAnchor<Rc<Self>>),//NOTE generate by tree builder use into()
+    #[from(ignore)]
+    SaNode_(StateAnchor<Rc<Self>>),
     EmptyNeverUse,
 }
 impl<Message> Eq for GElement<Message> where Message: PartialEq {}
@@ -97,15 +113,25 @@ where
     Message: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
+        //TODO allways check when add GElement number;
         match (self, other) {
             (Self::Builder_(l0), Self::Builder_(r0)) => l0 == r0,
             (Self::Layer_(l0), Self::Layer_(r0)) => l0 == r0,
             (Self::Text_(l0), Self::Text_(r0)) => l0 == r0,
             (Self::Button_(l0), Self::Button_(r0)) => l0 == r0,
-            (Self::Refresher_(l0), Self::Refresher_(r0)) => (**l0) == (**r0),
+            (Self::Refresher_(l0), Self::Refresher_(r0)) => (**l0) == (**r0) ,
             (Self::Event_(l0), Self::Event_(r0)) => l0 == r0,
             (Self::Generic_(l0), Self::Generic_(r0)) => l0 == r0,
             (Self::NodeRef_(l0), Self::NodeRef_(r0)) => l0 == r0,
+            (Self::InsideDirectUseSa_(l0), Self::InsideDirectUseSa_(r0)) => {
+                // std::ptr::eq(
+                //     (std::ptr::addr_of!(**l0)).cast::<u8>(),
+                //     (std::ptr::addr_of!(**r0)).cast::<u8>(),
+                // )
+
+                l0 == r0
+            },
+            (Self::SaNode_(l0),Self::SaNode_(r0)) => l0 == r0,
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
@@ -160,7 +186,7 @@ where
 
     pub fn as_dyn_node_widget(&self) -> &dyn Widget<Message> where Message: Clone +'static{
         use GElement::{
-            Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
+            Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,InsideDirectUseSa_,SaNode_
         };
         match_any!(self,
             Builder_( builder) => {
@@ -173,6 +199,8 @@ where
                 debug!("Generic_:: from Generic_ to dyn Widget");
                  &**x as &dyn Widget<Message>},
             NodeRef_(_)=> panic!("TryFrom<GElement to dyn Widget: \n     GElement::NodeIndex_() should handle before."),
+            InsideDirectUseSa_(_)=> unreachable!(),
+            SaNode_(_)=>todo!(),
             EmptyNeverUse=> panic!("EmptyNeverUse never here")
 
 
@@ -200,6 +228,40 @@ where
 
     //     )
     // }
+
+    /// Returns `true` if the gelement is [`React_`].
+    ///
+    /// [`React_`]: GElement::React_
+  
+
+    /// Returns `true` if the gelement is [`InsideUseSa_`].
+    ///
+    /// [`InsideUseSa_`]: GElement::InsideUseSa_
+    #[must_use]
+    pub const fn is_inside_direct_use_sa(&self) -> bool {
+        matches!(self, Self::InsideDirectUseSa_(..))
+    }
+
+    /// # Errors
+    ///
+    /// Will return `Err` if `GElement<Message>` is not `InsideDirectUseSa_`
+    /// permission to read it.
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn try_into_inside_direct_use_sa(self) -> Result<StateAnchor<Rc<Self>>, Self> {
+        if let Self::InsideDirectUseSa_(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    pub const fn as_inside_direct_use_sa(&self) -> Option<&StateAnchor<Rc<Self>>> {
+        if let Self::InsideDirectUseSa_(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 impl<Message> std::fmt::Debug for GElement<Message>
@@ -234,6 +296,8 @@ where
                 write!(f, "GElement::NodeIndex(\"{}\")", nid)
             }
             EmptyNeverUse => write!(f, "GElement::EmptyNeverUse"),
+            Self::InsideDirectUseSa_(_) => write!(f, "GElement::InsideDirectUseSa_"),
+            Self::SaNode_(_)=> write!(f, "GElement::SaNode"),
         }
     }
 }

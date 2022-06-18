@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-16 13:53:45
+ * @LastEditTime: 2022-06-18 11:22:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,6 +23,8 @@ where
     fn refresh_for(&self, el: &mut Self) {
         use GElement::{Builder_, Event_, Generic_, Layer_, Refresher_, Text_};
         //TODO for builder
+        //TODO allways check when add GElement number;
+
         match (el, self) {
             (who, Generic_(use_something)) => {
                 use_something.refresh_for(who);
@@ -70,8 +72,6 @@ where
                 builder.widget().unwrap().refresh_for(who);
             }
 
-            // @ any not match ─────────────────────────────────────────────────────────────────
-
             // TODO : event_callbacks prosess
             // TODO : NodeBuilderWidget prosess
             (not_layer_or_refresher, b) => {
@@ -88,7 +88,7 @@ where
 /// for Refresher<GElement> many type
 // this is `GElement` refresh use `i32`
 // impl DynPartialEq for u32 {}
-
+// TODO : check no need? because already impl<Who, Use> EqRefreshFor<Who> for Use
 impl<Message> EqRefreshFor<GElement<Message>> for u32 {}
 impl<Message> RefreshFor<GElement<Message>> for u32 {
     fn refresh_for(&self, el: &mut GElement<Message>) {
@@ -119,7 +119,7 @@ impl<Message> RefreshFor<GElement<Message>> for i32 {
             }
 
             other => {
-                trace!("====> {} refreshing use i32", other);
+                warn!("====> {} refreshing use i32,no effect", other);
             }
         }
     }
@@ -182,7 +182,7 @@ where
 mod tests {
     use std::rc::Rc;
 
-    use emg_refresh::{EqRefreshFor, Refresher};
+    use emg_refresh::Refresher;
 
     use crate::GElement;
 
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let f = GElement::<Message>::Refresher_(Rc::new(Refresher::new(|| 1i32)));
+        let _f = GElement::<Message>::Refresher_(Rc::new(Refresher::new(|| 1i32)));
         // let ff: Rc<dyn EqRefreshFor<GElement<Message>>> = f;
         // Rc<dyn EqRefreshFor<GElement<Message>>>, found Rc<Refresher<u32>>
     }

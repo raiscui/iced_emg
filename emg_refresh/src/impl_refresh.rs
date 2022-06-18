@@ -3,7 +3,7 @@ use std::{clone::Clone, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-16 13:52:34
+ * @LastEditTime: 2022-06-17 14:27:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -317,7 +317,7 @@ where
 impl<Who, Use> EqRefreshFor<Who> for Use
 where
     Who: RefreshWhoNoWarper,
-    Use: RefreshFor<Who> + 'static + DynPartialEq,
+    Use: RefreshFor<Who> + DynPartialEq,
 {
 }
 // impl<Who, Use> EqRefreshFor<Who> for Use

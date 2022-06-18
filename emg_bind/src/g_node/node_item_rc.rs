@@ -5,7 +5,7 @@ use either::Either::{self, Left, Right};
 use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_core::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
-use emg_refresh::RefreshForUse;
+use emg_refresh::{RefreshForUse, RefreshUse};
 use emg_state::{Anchor, CloneStateAnchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{trace, trace_span};
 use vec_string::VecString;
@@ -285,14 +285,14 @@ where
 
             let nix4 = nix.clone();
             let path3 = current_path.clone();
-            let gel_sa_clone = gel_sa_clone1.clone();
+            let gel_sa_clone2 = gel_sa_clone1.clone();
 
             //TODO children Dict 细化 reduce, use diffitem 更新 gel_clone
 
             (
                 &outgoing_eix_sa_clone,
                 &this_path_children_sa,
-                &gel_sa_clone,
+                &gel_sa_clone2,
                 &styles_string_sa,
             )
                 .map(move |out_eix_s, children, gel, edge_styles| {
@@ -302,7 +302,7 @@ where
                         if let Some(child_gel) =
                             children.get(eix).and_then(|child| child.as_ref().right())
                         {
-                            gel_clone.refresh_for_use(child_gel.as_ref());
+                            gel_clone.refresh_use(child_gel.as_ref());
                         }
                     }
                     // for child in children {
@@ -374,5 +374,13 @@ where
     pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> NItem<Message> {
         self.paths_view_gel_sa
             .get_with(|x| x.get(eix).unwrap().clone())
+    }
+    pub fn set_gel_sa(&mut self, gel_sa: NItem<Message>) {
+        self.gel_sa = gel_sa;
+    }
+
+    #[must_use] 
+    pub const fn gel_sa(&self) -> &NItem<Message> {
+        &self.gel_sa
     }
 }

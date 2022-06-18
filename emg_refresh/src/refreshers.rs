@@ -1,11 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2022-06-15 22:41:31
+ * @LastEditTime: 2022-06-17 15:40:51
  * @LastEditors: Rais
  * @Description:
  */
 use emg_core::dyn_partial_eq::DynPartialEq;
+use emg_state::StateAnchor;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -86,6 +87,24 @@ impl<Who: 'static> core::cmp::PartialEq<dyn EqRefreshFor<Who>> for Box<dyn EqRef
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
+// pub auto trait NotStateAnchor4Refresher {}
+// impl<T> !NotStateAnchor4Refresher for StateAnchor<T> {}
+
+// impl<Use> NotStateAnchor4Refresher for Refresher<Use> where Use: NotStateAnchor4Refresher {}
+
+// impl<Who> PartialEq for dyn EqRefreshFor<Who> + NotStateAnchor4Refresher {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.box_eq(other.as_any())
+//     }
+// }
+
+// impl<Who: 'static> PartialEq<dyn EqRefreshFor<Who> + NotStateAnchor4Refresher>
+//     for Box<dyn EqRefreshFor<Who> + NotStateAnchor4Refresher>
+// {
+//     fn eq(&self, other: &(dyn EqRefreshFor<Who> + NotStateAnchor4Refresher)) -> bool {
+//         self.box_eq(other.as_any())
+//     }
+// }
 
 // ────────────────────────────────────────────────────────────────────────────────
 
