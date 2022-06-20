@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-18 12:53:14
- * @LastEditTime: 2022-06-18 23:08:38
+ * @LastEditTime: 2022-06-20 17:35:24
  * @LastEditors: Rais
  * @Description: 
  */
@@ -14,7 +14,7 @@ use emg_core::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_refresh::{RefreshForUse, RefreshUse};
 use emg_state::{Anchor, CloneStateAnchor, Dict, StateAnchor, StateMultiAnchor, StateVar, CloneStateVar};
-use tracing::{trace, trace_span};
+use tracing::{trace, trace_span, debug};
 use vec_string::VecString;
 
 use crate::{GElement, NodeBuilderWidget};
@@ -309,6 +309,8 @@ where
                             gel_clone.refresh_use(child_gel.as_ref());
                         }
                     }
+
+                    debug!("[combine view gel] gel_clone: {}",gel_clone);
                     // for child in children {
                     //     if let Some(child_gel) = child.as_ref().right() {
                     //         gel_clone.refresh_for_use(child_gel);
@@ -320,14 +322,15 @@ where
                     {
                         let _g = trace_span!("-> in NodeBuilderWidget").entered();
                         {
-                            trace!("NodeBuilderWidget::<Message>::try_from  OK");
+                            trace!("[combine view gel] NodeBuilderWidget::<Message>::try_from  OK");
                             // node_builder_widget.set_id(format!("{}", cix));
                             node_builder_widget.set_id(nix4.clone());
 
                             //TODO use StateAnchor ? for child edge change
-                            trace!("edge::path:  {}", path3);
-
-                            trace!("styles---------------> {}", &edge_styles);
+                            trace!("[combine view gel] edge::path:  {}", path3);
+                            trace!("[combine view gel] styles---------------> {}", &edge_styles);
+                            debug!("[combine view gel] edge::path:  {}", path3);
+                            debug!("[combine view gel] styles---------------> {}", &edge_styles);
 
                             node_builder_widget.add_styles_string(edge_styles.as_str());
 
@@ -356,7 +359,7 @@ where
                         }
                     } else {
                         trace!(
-                            "NodeBuilderWidget::<Message>::try_from  error use:",
+                            "[combine view gel] NodeBuilderWidget::<Message>::try_from  error use:",
                             // current_node_clone.borrow()
                         );
                         Rc::new(gel_clone)

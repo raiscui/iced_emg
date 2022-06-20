@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-19 21:55:57
+ * @LastEditTime: 2022-06-20 18:05:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -172,10 +172,18 @@ where
             //     bumpalo::format!(in bump, "{} {}", row_class, spacing_class)
             //         .into_bump_str(),
             // )
+            // .attr(
+            //     "style",
+            //     bumpalo::format!(in bump, "width: {}; align-items: center;", css::length(self.width))
+            //         .into_bump_str(),
+            // )
             .attr(
                 "style",
-                bumpalo::format!(in bump, "width: {}; align-items: center", css::length(self.width))
-                    .into_bump_str(),
+                bumpalo::collections::String::from_str_in(
+                    "display: block; position: absolute;",
+                    bump,
+                )
+                .into_bump_str(),
             )
             .children(bumpalo::vec![in bump;
                 // TODO: Checkbox styling

@@ -48,7 +48,7 @@ fn setup_tracing() {
     #[cfg(debug_assertions)]
     {
         let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::WARN);
+        config.set_max_level(tracing::Level::DEBUG);
         config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
         // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
@@ -285,9 +285,9 @@ impl Application for Counter {
         gtree! {
             @=a
             Layer [
-                    @=modstatic @Mod ComponentStatic::tree_build(this.clone(), orders.clone()),
+                    // @=modstatic @Mod ComponentStatic::tree_build(this.clone(), orders.clone()),
 
-                    @=text_aa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
+                    @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
                     Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
                     // Text::new(format!("temp34567845678345678"))=>[
                         aw => |p:&Rc<GElement<Message>>,num|{

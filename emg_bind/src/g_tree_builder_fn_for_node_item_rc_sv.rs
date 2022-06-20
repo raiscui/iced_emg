@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-18 23:12:03
- * @LastEditTime: 2022-06-19 21:59:09
+ * @LastEditTime: 2022-06-20 17:27:57
  * @LastEditors: Rais
  * @Description: 
  */
@@ -407,6 +407,7 @@ where
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
                     new_def_ei.refresh_for_use(edge_refreshers);
+                    debug!("new_def_ei: {}", &new_def_ei);
 
                     //next
                     illicit::Layer::new().offer(nix.clone()).enter(|| {

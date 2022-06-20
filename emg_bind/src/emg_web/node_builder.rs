@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-06-16 23:41:04
+ * @LastEditTime: 2022-06-20 17:59:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,7 @@ use derive_more::From;
 
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 use crate::{
     dodrio::{self, bumpalo, Node, RootRender, VdomWeak},
@@ -372,8 +372,19 @@ impl<Message> NodeBuilderWidget<Message> {
     pub fn try_new_use(gel: &GElement<Message>) -> Result<Self, ()> {
         use GElement::{Button_, Layer_, Text_};
         match gel {
-            Layer_(_) | Button_(_) | Text_(_) => Ok(Self::default()), //TODO check if is Generic_
-            _ => Err(()),
+            Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
+            GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
+            GElement::Refresher_(_) | GElement::Event_(_) => Err(()),
+            GElement::NodeRef_(_) => {
+                unreachable!("crate builder use NodeRef_ is should never happened")
+            }
+            GElement::InsideDirectUseSa_(_) => {
+                unreachable!("crate builder use InsideDirectUseSa_ is should never happened")
+            }
+            GElement::EmptyNeverUse => {
+                unreachable!("crate builder use EmptyNeverUse is should never happened")
+            }
+            GElement::SaNode_(_) => todo!(),
         }
     }
     pub fn set_id(&mut self, id: IdStr) {
