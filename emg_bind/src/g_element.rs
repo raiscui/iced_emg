@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-20 16:49:43
+ * @LastEditTime: 2022-06-20 18:26:53
  * @LastEditors: Rais
  * @Description:
  */
@@ -188,15 +188,14 @@ where
             Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,InsideDirectUseSa_,SaNode_
         };
         match_any!(self,
-            Builder_( builder) => {
-
-                builder  as &dyn Widget<Message>
-            },
-            Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
+            
+            Builder_( x)| Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
             Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Generic_(x) => {
-                debug!("Generic_:: from Generic_ to dyn Widget");
-                 &**x as &dyn Widget<Message>},
+                // debug!("Generic_:: from Generic_ to dyn Widget");
+                 &**x as &dyn Widget<Message>
+                // panic!("Generic_ should be Builder here");
+                },
             NodeRef_(_)=> panic!("TryFrom<GElement to dyn Widget: \n     GElement::NodeIndex_() should handle before."),
             InsideDirectUseSa_(_)=> unreachable!(),
             SaNode_(_)=>todo!(),
