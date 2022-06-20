@@ -2,17 +2,18 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2022-06-16 13:58:36
+ * @LastEditTime: 2022-06-20 10:40:46
  * @LastEditors: Rais
  * @Description:
  */
-
+#[allow(unused)]
+use emg_state::use_state_impl::{get_caller_location, get_caller_location2};
 use seed_styles::GlobalStyleSV;
 use tracing::{debug, debug_span, trace_span};
 
 use crate::{
     futures,
-    g_node::node_item_rc::{GelType, GraphType},
+    g_node::node_item_rc_sv::{GelType, GraphType},
     orders::OrdersContainer,
     Bus, Command, Executor, GTreeBuilderElement, GTreeBuilderFn, Subscription,
 };
@@ -240,6 +241,9 @@ impl<'a> CssNode<'a> for GlobalStyleSV {
     }
 }
 
+// fn get_caller_location3() {
+//     get_caller_location2();
+// }
 impl<'a, A> dodrio::Render<'a> for Instance<A>
 where
     A: Application,
@@ -255,6 +259,8 @@ where
         let view_span = trace_span!("application->view");
         let element = view_span.in_scope(|| ui.view(&*emg_graph_ref));
 
+        // get_caller_location2();
+        // get_caller_location3();
         // let mut css = Css::new();
         let css = GlobalStyleSV::default_topo();
 

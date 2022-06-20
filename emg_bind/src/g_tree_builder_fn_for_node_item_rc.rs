@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-10 22:34:38
- * @LastEditTime: 2022-06-18 11:59:30
+ * @LastEditTime: 2022-06-19 21:58:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@
  */
 use crate::{
     emg_runtime::{ Layer},
-    g_node::{EmgNodeItem, node_item_rc::{GraphType, NItem}},
+    g_node::{EmgNodeItem, node_item_rc::{GraphType, NItem, GelType}},
     GTreeBuilderElement, GTreeBuilderFn,
 };
 use crate::NodeIndex;
@@ -29,7 +29,7 @@ use emg_state::{
     topo::{self, call_in_slot},
     use_state,
     use_state_impl::TopoKey,
-    CloneStateVar, StateAnchor, CloneStateAnchor,
+    CloneStateVar, StateAnchor,
 };
 use indexmap::{ IndexSet};
 use std::{cell::RefCell, hash::BuildHasherDefault, rc::Rc};
@@ -80,7 +80,7 @@ Message: std::cmp::PartialEq + std::clone::Clone + 'static,
     fn build_in_topo(self){
         let incoming_eix_set = use_state(self.incoming_eix_set.unwrap());
         let outgoing_eix_set = use_state(self.outgoing_eix_set.unwrap());
-        let node_item = EmgNodeItem::<NItem<Message>,IdStr>::new(
+        let node_item = EmgNodeItem::<NItem<Message>,GelType<Message>,IdStr>::new(
             self.key.clone().unwrap(),
             self.gel_sa.unwrap(),
             &incoming_eix_set.watch(),
@@ -254,6 +254,7 @@ where
     }
 
     #[allow(clippy::too_many_lines)]
+    #[topo::nested]
     fn handle_children_in_topo(
         &self,
         replace_id: Option<&Self::Ix>,

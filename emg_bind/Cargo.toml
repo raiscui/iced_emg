@@ -23,7 +23,6 @@ pool = ["emg_core/pool", "emg/pool", "seed_styles/pool"]
 
 
 [dependencies]
-
 vec-string = "0.1.1"
 
 cfg-if = "1.0.0"

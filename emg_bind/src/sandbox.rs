@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-04 12:16:31
- * @LastEditTime: 2022-06-15 22:05:28
+ * @LastEditTime: 2022-06-18 23:33:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@ use emg_orders::Orders;
 use iced::{Color, Error, Settings};
 
 use crate::{
-    g_node::node_item_rc::{GelType, GraphType},
+    g_node::node_item_rc_sv::{GelType, GraphType},
     Application, Command, GElement, GTreeBuilderElement, Subscription,
 };
 

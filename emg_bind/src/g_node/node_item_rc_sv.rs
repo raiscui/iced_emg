@@ -1,3 +1,10 @@
+/*
+ * @Author: Rais
+ * @Date: 2022-06-18 12:53:14
+ * @LastEditTime: 2022-06-18 23:08:38
+ * @LastEditors: Rais
+ * @Description: 
+ */
 use std::{cell::RefCell, rc::Rc};
 
 use cfg_if::cfg_if;
@@ -6,7 +13,7 @@ use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_core::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_refresh::{RefreshForUse, RefreshUse};
-use emg_state::{Anchor, CloneStateAnchor, Dict, StateAnchor, StateMultiAnchor};
+use emg_state::{Anchor, CloneStateAnchor, Dict, StateAnchor, StateMultiAnchor, StateVar, CloneStateVar};
 use tracing::{trace, trace_span};
 use vec_string::VecString;
 
@@ -14,18 +21,11 @@ use crate::{GElement, NodeBuilderWidget};
 
 use super::EmgNodeItem;
 
-/*
- * @Author: Rais
- * @Date: 2022-06-10 21:38:26
- * @LastEditTime: 2022-06-10 21:42:38
- * @LastEditors: Rais
- * @Description:
- */
 const POOL_SIZE: usize = 1;
 
 pub type GelType<Message> = Rc<GElement<Message>>;
 
-pub type NItem<Message> = StateAnchor<GelType<Message>>;
+pub type NItem<Message> =StateVar< StateAnchor<GelType<Message>>>;
 pub type N<Message, Ix> = EmgNodeItem<NItem<Message>,GelType<Message>, Ix>;
 pub type E<Ix> = EmgEdgeItem<Ix>;
 pub type GraphType<Message, Ix = IdStr> = Graph<N<Message, Ix>, E<Ix>, Ix>;
@@ -123,10 +123,10 @@ where
         let graph_rc3 = graph_rc.clone();
         let nix3 = nix.clone();
 
-        let children_ord_map_pool_0: OrdMapPool<EPath<IdStr>, NItem<Message>> =
+        let children_ord_map_pool_0: OrdMapPool<EPath<IdStr>, StateAnchor<GelType<Message>>> =
             OrdMapPool::new(POOL_SIZE);
 
-        let children_view_gel_sa: StateAnchor<Dict<EPath<IdStr>, NItem<Message>>> = outgoing_eix_sa
+        let children_view_gel_sv_sa: StateAnchor<Dict<EPath<IdStr>, StateAnchor<GelType<Message>>>> = outgoing_eix_sa
             .then(move |outs| {
                 let children_ord_map_pool = children_ord_map_pool_0.clone();
                 outs.iter()
@@ -159,12 +159,12 @@ where
                         cfg_if!{
                             if #[cfg(feature = "pool")]{
                                 vd.clone().into_iter().fold(
-                                    Dict::<EPath<IdStr>, NItem<Message>>::with_pool(&children_ord_map_pool),
+                                    Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::with_pool(&children_ord_map_pool),
                                     Dict::union,
                                 )
 
                             }else{
-                                Dict::<EPath<IdStr>, NItem<Message>>::unions(vd.clone())
+                                Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::unions(vd.clone())
                             }
                         }
                     })
@@ -173,7 +173,6 @@ where
         // warn!("children count:{}", children_count);
 
         // @────────────────────────────────────────────────────────────────────────────────
-        let gel_sa_clone1 = gel_sa.clone();
         let graph_rc3 = graph_rc.clone();
         let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
 
@@ -188,8 +187,8 @@ where
 
             let this_path_children_sa: StateAnchor<
                 Dict<EdgeIndex<IdStr>, GElEither<Message>>,
-            > = children_view_gel_sa
-                .filter_map(move |k_child_path, v_child_gel_sa| {
+            > = children_view_gel_sv_sa
+                .filter_map(move |k_child_path, v_child_gel_sv_sa| {
                     let mut child_path_clone = k_child_path.clone();
                     //TODO check [current_child_ei] only one
                     let current_child_ei = child_path_clone.pop_back().unwrap();
@@ -197,24 +196,28 @@ where
                     if child_path_clone_popped == current_path2 {
                         //
                         let graph_rc5 = graph_rc4.clone();
-                        let v_child_gel_sa_clone = v_child_gel_sa.clone();
-                        let gel_l_r: CurrentPathChildrenEixGElSA<Message> = v_child_gel_sa
+                        let v_child_gel_sa_clone = v_child_gel_sv_sa.clone();
+                        let gel_l_r: CurrentPathChildrenEixGElSA<Message> = v_child_gel_sv_sa
                             .then(move |gel| {
-                                // NOTE handle note_ref
+                                    
+                                    // NOTE handle note_ref
 
-                                if gel.is_node_ref_() {
-                                    gel.as_node_ref_()
-                                        .and_then(|str| {
-                                            graph_rc5
-                                                .borrow()
-                                                .get_node_item_use_ix(str)
-                                                .map(|x| x.gel_sa.get_anchor())
-                                        })
-                                        .expect("expect get node id")
-                                    // .map(move |g| g.clone())
-                                } else {
-                                    v_child_gel_sa_clone.get_anchor()
-                                }
+                                    if gel.is_node_ref_() {
+                                        gel.as_node_ref_()
+                                            .and_then(|str| {
+                                                graph_rc5
+                                                    .borrow()
+                                                    .get_node_item_use_ix(str)
+                                                    .map(|x| x.gel_sa.watch().get_anchor().then(|aa|aa.clone().into()))
+                                            })
+                                            .expect("expect get node id")
+                                        // .map(move |g| g.clone())
+                                    } else {
+                                        v_child_gel_sa_clone.get_anchor()
+                                    }
+                                    
+                                
+                                
                             })
                             .map(move |gel| {
                                 if gel.is_event_() {
@@ -285,14 +288,15 @@ where
 
             let nix4 = nix.clone();
             let path3 = current_path.clone();
-            let gel_sa_clone2 = gel_sa_clone1.clone();
+
+            let gel_sa_no_sv = gel_sa.watch().then(|g_sa|g_sa.clone().into());
 
             //TODO children Dict 细化 reduce, use diffitem 更新 gel_clone
 
             (
                 &outgoing_eix_sa_clone,
                 &this_path_children_sa,
-                &gel_sa_clone2,
+                &gel_sa_no_sv,
                 &styles_string_sa,
             )
                 .map(move |out_eix_s, children, gel, edge_styles| {
@@ -371,16 +375,16 @@ where
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     //TODO make no clone fn
-    pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> NItem<Message> {
+    pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) ->StateAnchor< GelType<Message>> {
         self.paths_view_gel_sa
             .get_with(|x| x.get(eix).unwrap().clone())
     }
-    pub fn set_gel_sa(&mut self, gel_sa: NItem<Message>) {
-        self.gel_sa = gel_sa;
+    pub fn set_gel_sa(&self, gel_sa: StateAnchor<GelType<Message>>) {
+        self.gel_sa.set( gel_sa);
     }
 
     #[must_use] 
-    pub const fn gel_sa(&self) -> &NItem<Message> {
-        &self.gel_sa
+    pub fn get_gel_rc_sa(& self) -> Rc< StateAnchor<Rc<GElement<Message>>>>{
+        self.gel_sa.get_rc()
     }
 }

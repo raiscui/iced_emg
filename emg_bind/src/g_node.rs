@@ -1,13 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-26 18:22:22
- * @LastEditTime: 2022-06-17 23:06:29
+ * @LastEditTime: 2022-06-18 22:45:23
  * @LastEditors: Rais
  * @Description:
  */
 
 // mod index;
 pub mod node_item_rc;
+pub mod node_item_rc_sv;
 
 use std::{cell::RefCell, rc::Rc};
 
@@ -24,10 +25,10 @@ use tracing::{trace, trace_span};
 
 const POOL_SIZE: usize = 1;
 
-type GelType<Message> = GElement<Message>;
+pub type GelType<Message> = GElement<Message>;
 
 pub type NItem<Message> = StateAnchor<GelType<Message>>;
-pub type N<Message, Ix> = EmgNodeItem<NItem<Message>, Ix>;
+pub type N<Message, Ix> = EmgNodeItem<NItem<Message>, GelType<Message>,Ix>;
 pub type E<Ix> = EmgEdgeItem<Ix>;
 pub type GraphType<Message, Ix = IdStr> = Graph<N<Message, Ix>, E<Ix>, Ix>;
 type PathDict<Ix> = Dict<EPath<Ix>, bool>;
@@ -35,10 +36,10 @@ type PathDict<Ix> = Dict<EPath<Ix>, bool>;
 type CurrentPathChildrenEixGElSA<Message> =
     StateAnchor<(EdgeIndex<IdStr>, Either<GelType<Message>, GelType<Message>>)>;
     
-    type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
+type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
 
 #[derive(Clone)]
-pub struct EmgNodeItem<NItem, Ix = IdStr>
+pub struct EmgNodeItem<NItem,GelType, Ix = IdStr>
 where
     // Message: 'static + Clone + std::cmp::PartialEq,
     Ix: std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default,
@@ -50,10 +51,10 @@ where
     paths_sa: StateAnchor<PathDict<Ix>>, //NOTE: has self
     // incoming_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
     // outgoing_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
-    paths_view_gel_sa: StateAnchor<Dict<EPath<Ix>, NItem>>,
+    paths_view_gel_sa: StateAnchor<Dict<EPath<Ix>, StateAnchor<GelType>>>,
 }
 
-impl<Message> EmgNodeItem<NItem<Message>>
+impl<Message> EmgNodeItem<NItem<Message>,GelType<Message>>
 where
     Message: Clone + std::cmp::PartialEq +'static,
     // Dict<EPath<Ix>, EmgNodeItem<Message, Ix>>: PartialEq,
@@ -567,17 +568,17 @@ where
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     //TODO make no clone fn
-    pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> NItem<Message> {
+    pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> StateAnchor< GelType<Message>>  {
         self.paths_view_gel_sa
             .get_with(|x| x.get(eix).unwrap().clone())
     }
 
-    pub fn set_gel_sa(&mut self, gel_sa: NItem<Message>) {
+    pub fn set_gel_sa(&mut self, gel_sa: StateAnchor<GelType<Message>>) {
         self.gel_sa = gel_sa;
     }
 
     #[must_use] 
-    pub const fn gel_sa(&self) -> &NItem<Message> {
+    pub const fn gel_sa(&self) -> &StateAnchor<GelType<Message>> {
         &self.gel_sa
     }
 }

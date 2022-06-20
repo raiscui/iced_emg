@@ -33,6 +33,7 @@ mod g_element;
 mod g_tree_builder;
 mod g_tree_builder_fn_for_node_item;
 mod g_tree_builder_fn_for_node_item_rc;
+mod g_tree_builder_fn_for_node_item_rc_sv;
 // mod graph_store;
 mod animation;
 mod bind_view;

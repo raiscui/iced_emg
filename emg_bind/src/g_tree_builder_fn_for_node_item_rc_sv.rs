@@ -1,30 +1,44 @@
 /*
  * @Author: Rais
+ * @Date: 2022-06-18 23:12:03
+ * @LastEditTime: 2022-06-19 21:59:09
+ * @LastEditors: Rais
+ * @Description: 
+ */
+/*
+ * @Author: Rais
+ * @Date: 2022-06-10 22:34:38
+ * @LastEditTime: 2022-06-18 11:59:30
+ * @LastEditors: Rais
+ * @Description:
+ */
+/*
+ * @Author: Rais
  * @Date: 2022-06-05 19:54:16
- * @LastEditTime: 2022-06-18 22:50:44
+ * @LastEditTime: 2022-06-10 22:30:40
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{
-    emg_runtime::Layer,
-    g_node::{EmgNodeItem, GraphType, NItem, GelType},
+    emg_runtime::{ Layer},
+    g_node::{EmgNodeItem, node_item_rc_sv::{GraphType, NItem, GelType}},
     GTreeBuilderElement, GTreeBuilderFn,
 };
-use crate::{GElement, NodeIndex};
+use crate::NodeIndex;
 use emg::{edge_index_no_source, node_index, Edge, EdgeIndex, EdgeCollect};
 use emg_core::GenericSize;
 use emg_core::{vector, IdStr};
 use emg_hasher::CustomHasher;
 // use emg_core::{GenericSize, Vector};
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
-use emg_refresh::RefreshForUse;
+use emg_refresh:: RefreshForUse;
 use emg_state::{
     topo::{self, call_in_slot},
     use_state,
     use_state_impl::TopoKey,
-    CloneStateVar,  StateAnchor,
+    CloneStateVar, StateAnchor,
 };
-use indexmap::IndexSet;
+use indexmap::{ IndexSet};
 use std::{cell::RefCell, hash::BuildHasherDefault, rc::Rc};
 use tracing::{debug, instrument, trace, trace_span, warn, info};
 
@@ -35,7 +49,7 @@ Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default 
     graph_rc: Rc<RefCell<GraphType<Message,Ix>>>,
 
     key:Option< Ix>,
-    gel_sa:Option<NItem<Message>>,
+    gel_state:Option<NItem<Message>>,
     incoming_eix_set:Option<EdgeCollect<Ix>>,
     outgoing_eix_set:Option<EdgeCollect<Ix>>,
 
@@ -45,7 +59,7 @@ impl<Message> GraphNodeBuilder<Message, IdStr>
 where 
 Message: std::cmp::PartialEq + std::clone::Clone + 'static, 
 {
-    fn new(graph_rc: Rc<RefCell<GraphType<Message,IdStr>>>) -> Self { Self { graph_rc,key:None,gel_sa: None,incoming_eix_set:None,outgoing_eix_set:None} }
+    fn new(graph_rc: Rc<RefCell<GraphType<Message,IdStr>>>) -> Self { Self { graph_rc,key:None,gel_state: None,incoming_eix_set:None,outgoing_eix_set:None} }
     #[allow(clippy::missing_const_for_fn)]
     fn and_key(mut self, k:IdStr) ->Self {
         self.key= Some(k);
@@ -53,8 +67,8 @@ Message: std::cmp::PartialEq + std::clone::Clone + 'static,
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    fn and_gel_sa(mut self, gel_sa: StateAnchor<GElement<Message>>) -> Self {
-        self.gel_sa =Some( gel_sa);
+    fn and_gel_state(mut self, gel_state: NItem<Message>) -> Self {
+        self.gel_state =Some( gel_state);
         self
     }
 
@@ -75,7 +89,7 @@ Message: std::cmp::PartialEq + std::clone::Clone + 'static,
         let outgoing_eix_set = use_state(self.outgoing_eix_set.unwrap());
         let node_item = EmgNodeItem::<NItem<Message>,GelType<Message>,IdStr>::new(
             self.key.clone().unwrap(),
-            self.gel_sa.unwrap(),
+            self.gel_state.unwrap(),
             &incoming_eix_set.watch(),
             &outgoing_eix_set.watch(),
             self.graph_rc.clone(),
@@ -187,7 +201,7 @@ where
                 let edge_index = edge_index_no_source(root_id.clone());
                 GraphNodeBuilder::new(self.clone())
                 .and_key(root_id.clone())
-                .and_gel_sa(StateAnchor::constant(Layer::<Message>::new(root_id.clone()).into()))
+                .and_gel_state(use_state(StateAnchor::constant(Rc::new(Layer::<Message>::new(root_id.clone()).into()))))
                 .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     5,
@@ -287,7 +301,7 @@ where
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
                 GraphNodeBuilder::new(self.clone())
                 .and_key(id.clone())
-                .and_gel_sa(StateAnchor::constant(Layer::<Message>::new(id.clone()).into()))
+                .and_gel_state(use_state(StateAnchor::constant(Rc::new(Layer::<Message>::new(id.clone()).into()))))
                 .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     2,
@@ -308,7 +322,6 @@ where
 
                 let path = (&*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
 
-                
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
                     new_def_ei.refresh_for_use(edge_refreshers);
@@ -347,6 +360,7 @@ where
             GTreeBuilderElement::GElementTree(org_id, edge_refreshers, gel, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
                 info!("\n handle children [GElementTree]: org_id: {:?},  id : {:?}", org_id, id);
+                // warn!("\n handle children [GElementTree]: org_id: {:?},  id : {:?}", org_id, id);
 
 
                 let _span =
@@ -356,12 +370,12 @@ where
              
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
-                
+
                 gel.as_inside_direct_use_sa().map_or_else(|| {
                     GraphNodeBuilder::new(self.clone())
                     .and_key(id.clone())
                     //TODO GTreeBuilderElement use Rc
-                    .and_gel_sa(StateAnchor::constant(gel.clone()))
+                    .and_gel_state(use_state(StateAnchor::constant(Rc::new(gel.clone()))))
                     .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
                     .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                         1,
@@ -372,7 +386,7 @@ where
                     GraphNodeBuilder::new(self.clone())
                     .and_key(id.clone())
                     //TODO GTreeBuilderElement use Rc
-                    .and_gel_sa(gel_sa.map(|g|(**g).clone()))
+                    .and_gel_state(use_state(gel_sa.clone()))
                     .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
                     .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                         0,
@@ -380,6 +394,8 @@ where
                     ))
                     .build_in_topo();
                 });
+
+               
 
                 //edge
                 let mut new_def_ei = self
@@ -405,19 +421,25 @@ where
             }
             GTreeBuilderElement::SaMapEffectGElementTree(org_id, _edge_refreshers, builder_fn, _children_list) => {
                 let id = replace_id.unwrap_or(org_id);
-                info!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
+                // info!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
+                warn!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
 
 
                 let _span =
                     trace_span!("-> handle_children [SaMapEffectGElementTree] ", ?id, ?parent_nix).entered();
 
+                // let parent = self.borrow_mut().get_mut_node_item(&parent_nix).unwrap();
+                // parent.set_gel_sa( (**builder_fn)(parent.gel_sa()));
 
-                
                 let mut g = self.borrow_mut();
                 let parent_item = g.get_mut_node_item(&parent_nix).unwrap();
-                let rc_p = parent_item.gel_sa().map(|g|Rc::new(g.clone()));
-                parent_item.set_gel_sa( (**builder_fn)(&rc_p).map(|n_p|(**n_p).clone()));
-
+                let rc_p = parent_item.get_gel_rc_sa();
+                warn!("---- anchor: {}",&rc_p);
+                let gel_sa = (**builder_fn)(&*rc_p);
+                warn!("---- before run builder , anchor: {}",&rc_p);
+                parent_item.set_gel_sa( gel_sa);
+                
+             
             }
             //TODO _edge_refresher use for  inject element
             GTreeBuilderElement::Dyn(org_id,_edge_refresher,sa_dict_gbe) => {
@@ -546,7 +568,7 @@ where
                 let edge_index = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(self.clone())
                 .and_key(id.clone())
-                .and_gel_sa(StateAnchor::constant(u.clone().into()))
+                .and_gel_state(use_state(StateAnchor::constant(Rc::new(u.clone().into()))))
                 .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .and_outgoing_eix_set(IndexSet::with_hasher(
                     BuildHasherDefault::<CustomHasher>::default(),
@@ -588,7 +610,7 @@ where
                 let edge_index = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(self.clone())
                 .and_key(id.clone())
-                .and_gel_sa(StateAnchor::constant(callback.clone().into()))
+                .and_gel_state(use_state(StateAnchor::constant(Rc::new(callback.clone().into()))))
                 .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .and_outgoing_eix_set(IndexSet::with_hasher(
                     BuildHasherDefault::<CustomHasher>::default(),
@@ -598,8 +620,7 @@ where
                 let _ei = self
                     .setup_default_edge_in_topo(edge_index)
                     .unwrap();
-            } 
-            // GTreeBuilderElement::GenericTree(id, edge_refreshers, dyn_gel, refreshers) => {
+            } // GTreeBuilderElement::GenericTree(id, edge_refreshers, dyn_gel, refreshers) => {
               //     panic!("test here");
               //     let _span =
               //         trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();

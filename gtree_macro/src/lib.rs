@@ -598,7 +598,7 @@ impl ToTokens for GTreeSurface {
 
                     quote_spanned! (sa_gel.span() => 
 
-                            GTreeBuilderElement::SaMapEffectGElementTree(#id_token,#edge_token,Rc::new(|parent_sa|{
+                            GTreeBuilderElement::SaMapEffectGElementTree(#id_token,#edge_token,Rc::new(move |parent_sa|{
                                 (parent_sa,&#sa_gel).map(#sa_fn)
                             }),#children_token)
                     )
@@ -972,6 +972,9 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use emg_bind::{ EventCallback, EventMessage, GElement,
                 GTreeBuilderElement,node_ref
+            };
+            use emg_bind::better_any::{
+                impl_tid, tid, type_id, Tid, TidAble, TidExt,
             };
             #[allow(unused)]
             use emg_layout::{css, styles::*,add_values::*,EmgEdgeItem};

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-18 11:13:38
+ * @LastEditTime: 2022-06-19 20:01:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ use emg_state::{StateAnchor};
 use match_any::match_any;
 
 pub use better_any;
-use better_any::{Tid, TidAble};
+use better_any::{Tid, TidAble, TidExt};
 use emg_core::{IdStr, TypeCheckObjectSafe, dyn_partial_eq::DynPartialEq};
 use emg_refresh::{ RefreshFor, RefreshUse, EqRefreshFor};
 // extern crate derive_more;
@@ -36,7 +36,7 @@ pub trait DynGElement<Message>:
     // + GenerateElement<Message>
     + Widget<Message>
     + TypeCheckObjectSafe
-    +DynPartialEq
+    + DynPartialEq
     + Clone
  
 {
@@ -262,6 +262,14 @@ where
             None
         }
     }
+
+    pub fn as_generic(&self) -> Option<&dyn DynGElement<Message>> {
+        if let Self::Generic_( v) = self {
+            Some(v.as_ref())
+        } else {
+            None
+        }
+    }
 }
 
 impl<Message> std::fmt::Debug for GElement<Message>
@@ -291,7 +299,9 @@ where
             Button_(_) => {
                 write!(f, "GElement::Button_")
             }
-            Generic_(_) => write!(f, "GElement::Generic_"),
+            Generic_(x) => {
+                write!(f, "GElement::Generic_")
+            },
             NodeRef_(nid) => {
                 write!(f, "GElement::NodeIndex(\"{}\")", nid)
             }

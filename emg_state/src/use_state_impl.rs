@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-06-16 18:24:27
+ * @LastEditTime: 2022-06-20 10:04:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -1583,6 +1583,7 @@ fn insert_var_with_topo_id<T: 'static>(var: Var<T>, current_id: TopoKey) {
 //     })
 // }
 
+#[inline]
 fn read_val_with_topo_id<F: FnOnce(&T) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
     // G_STATE_STORE.with(|g_state_store_refcell| {
     //     func(
@@ -1772,6 +1773,20 @@ pub fn state_store() -> Rc<RefCell<GStateStore>> {
 //     })
 // }
 
+//-> &'static Location<'static>
+#[track_caller]
+#[topo::nested]
+pub fn get_caller_location() {
+    let loc = Location::caller();
+    let id = topo::CallId::current();
+    warn!("get_caller_location::at:\n{} \n id:{:?}", &loc, &id);
+}
+#[track_caller]
+#[topo::nested]
+pub fn get_caller_location2() {
+    get_caller_location();
+}
+
 #[must_use]
 #[topo::nested]
 #[allow(clippy::if_not_else)]
@@ -1789,19 +1804,28 @@ where
         &std::any::type_name::<T>(),
         &data
     );
-    trace!("use_state::at:\n{}", Location::caller());
+    let loc = Location::caller();
+    trace!("use_state::at:\n{}", &loc);
 
     let id = topo::CallId::current();
     let id = TopoKey { id };
 
     if !state_exists_for_topo_id::<T>(id) {
         insert_var_with_topo_id::<T>(Var::new(data), id);
-    } else {
+    } else if cfg!(debug_assertions) {
+        let old = StateVar::<T>::new(id);
+        let old_v = old.get_rc();
         warn!(
-            "this is checker: use_state call again, StateVar already settled state ->{} \n v:{:?}",
-            &std::any::type_name::<T>(),
-            &data
+        "this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {}, \n v:{:?},\n old_v:{:?}",
+        &std::any::type_name::<T>(),
+        &loc,
+        // id,
+        &data,
+        &old_v
+
+
         );
+    } else {
     }
     StateVar::new(id)
 }

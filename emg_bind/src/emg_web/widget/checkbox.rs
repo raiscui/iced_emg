@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-17 22:49:23
+ * @LastEditTime: 2022-06-19 21:55:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -116,6 +116,12 @@ impl<Message> Checkbox<Message>
     #[must_use]
     pub fn id(mut self, id: impl Into<IdStr>) -> Self {
         self.id = Some(id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_label(mut self, label: IdStr) -> Self {
+        self.label = label;
         self
     }
 }
