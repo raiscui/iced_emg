@@ -66,7 +66,7 @@ where
                 );
             }
             (Text_(who), Text_(us_it)) => {
-                who.content(us_it.get_content());
+                who.set_content(us_it.get_content());
             }
             (who, Builder_(builder)) => {
                 builder.widget().unwrap().refresh_for(who);
@@ -97,7 +97,7 @@ impl<Message> RefreshFor<GElement<Message>> for u32 {
         match el {
             Text_(text) => {
                 trace!("==========Text update use u32");
-                text.content(format!("u32:{}", self));
+                text.set_content(format!("u32:{}", self));
             }
 
             other => {
@@ -115,7 +115,7 @@ impl<Message> RefreshFor<GElement<Message>> for i32 {
         match el {
             Text_(text) => {
                 trace!("==========Text update use i32");
-                text.content(format!("i32:{}", self));
+                text.set_content(format!("i32:{}", self));
             }
 
             other => {
@@ -132,7 +132,7 @@ impl<Message> RefreshFor<GElement<Message>> for f64 {
         match el {
             Text_(text) => {
                 trace!("==========Text update use f64");
-                text.content(format!("f64:{}", self));
+                text.set_content(format!("f64:{}", self));
             }
 
             other => {

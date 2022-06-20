@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-19 20:01:13
+ * @LastEditTime: 2022-06-20 13:22:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,7 +23,6 @@ use dyn_clonable::clonable;
 use std::rc::Rc;
 use strum_macros::Display;
 use tracing::debug;
-
 
 
 #[allow(clippy::module_name_repetitions)]
@@ -266,6 +265,14 @@ where
     pub fn as_generic(&self) -> Option<&dyn DynGElement<Message>> {
         if let Self::Generic_( v) = self {
             Some(v.as_ref())
+        } else {
+            None
+        }
+    }
+
+    pub fn as_text(&self) -> Option<&Text> {
+        if let Self::Text_(v) = self {
+            Some(v)
         } else {
             None
         }

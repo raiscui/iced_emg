@@ -23,6 +23,7 @@ pool = ["emg_core/pool", "emg/pool", "seed_styles/pool"]
 
 
 [dependencies]
+
 vec-string = "0.1.1"
 
 cfg-if = "1.0.0"
@@ -38,8 +39,8 @@ dyn-clone = "1.0.5"
 dyn-clonable = "0.9.0"
 
 better_any = { path = "../../better_any/better_any", features = [
-    "nightly",
-    "derive",
+  "nightly",
+  "derive",
 ] }
 emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
 
@@ -115,14 +116,14 @@ path = "../../iced/futures"
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "^0.3"
 features = [
-    "Window",
-    "console",
-    "Document",
-    "HtmlElement",
-    "HtmlInputElement",
-    "Event",
-    "EventTarget",
-    "InputEvent",
-    "KeyboardEvent",
-    "IdleRequestOptions",
+  "Window",
+  "console",
+  "Document",
+  "HtmlElement",
+  "HtmlInputElement",
+  "Event",
+  "EventTarget",
+  "InputEvent",
+  "KeyboardEvent",
+  "IdleRequestOptions",
 ]
