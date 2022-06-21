@@ -307,6 +307,7 @@ impl Application for Counter {
                             }
 
                         } ,
+                        aw
                     ],
 
                 @=b2 @E=[

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-20 18:26:53
+ * @LastEditTime: 2022-06-21 18:13:52
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@ use crate::{
     emg_runtime::{Button,  EventNode, Layer, Text},
     NodeBuilderWidget, Widget,
 };
-use emg_state::{StateAnchor};
+use emg_state::{StateAnchor, StateMultiAnchor};
 use match_any::match_any;
 
 pub use better_any;
@@ -20,7 +20,7 @@ use emg_refresh::{ RefreshFor, RefreshUse, EqRefreshFor};
 // extern crate derive_more;
 use derive_more::From;
 use dyn_clonable::clonable;
-use std::rc::Rc;
+use std::{rc::Rc, any::Any};
 use strum_macros::Display;
 use tracing::debug;
 
@@ -101,11 +101,141 @@ pub enum GElement<Message> {
     Generic_(Box<dyn DynGElement<Message>>), //范型 //TODO check batter when use rc?
     #[from(ignore)]
     NodeRef_(IdStr),     // IntoE(Rc<dyn Into<Element< Message>>>),
+    #[from(ignore)]
     InsideDirectUseSa_(StateAnchor<Rc<Self>>),//NOTE generate by tree builder use into()
     #[from(ignore)]
     SaNode_(StateAnchor<Rc<Self>>),
+    EvolutionaryFactor(Rc<dyn Evolution<StateAnchor<Rc<GElement<Message>>>>>),
     EmptyNeverUse,
 }
+
+trait Evolution<Who> {
+fn evolution(&self,who:&Who) ->Who;
+
+}
+
+#[derive(Clone)]
+struct SaWithMapFn<Use:Clone,Message>(StateAnchor<Use>,Rc<dyn Fn(&Rc<GElement<Message>>,&Use)->Rc<GElement<Message>>>);
+
+impl<Use:PartialEq+Clone, Message> PartialEq for SaWithMapFn<Use, Message>  {
+    fn eq(&self, other: &Self) -> bool {
+        //TODO impl real method
+        self.0 == other.0 
+    }
+}
+
+
+
+impl<Use:Clone,Message> Evolution<StateAnchor<Rc<GElement<Message>>>> for SaWithMapFn<Use,Message>
+where 
+    Use:PartialEq+ 'static,
+    Message:PartialEq+Clone+'static
+{
+    fn evolution(&self,who:&StateAnchor<Rc<GElement<Message>>>) ->StateAnchor<Rc<GElement<Message>>> {
+        let func = self.1.clone();
+          (who,&self.0).map(move |gel,u_s_e|{
+            func (gel,u_s_e)
+        })
+    }
+}
+
+impl<Use,Message> Evolution<StateAnchor<Rc<GElement<Message>>>> for StateAnchor<Use>
+where 
+    Use:EqRefreshFor<GElement<Message>>+'static,
+    Message:PartialEq+Clone+'static
+{
+    fn evolution(&self,who:&StateAnchor<Rc<GElement<Message>>>) ->StateAnchor<Rc<GElement<Message>>> {
+        (who,self).map(|gel,u_s_e|{
+             let mut new_gel = (**gel).clone();
+             new_gel.refresh_use(u_s_e);
+             Rc::new(new_gel)
+        })
+    }
+}
+
+
+ 
+impl<Use,Message> From<StateAnchor<Use>> for GElement<Message> 
+where 
+    Use:'static,
+    Message:'static,
+    StateAnchor<Use>:Evolution<StateAnchor<Rc<GElement<Message>>>>
+    {
+        fn from(sa_use: StateAnchor<Use>) -> Self {
+
+            if let Some(s)= (&sa_use as &dyn Any ).downcast_ref::<StateAnchor<Rc<GElement<Message>>>>().cloned(){
+                // Self::InsideDirectUseSa_(s)
+                Self::SaNode_(s)
+
+
+            }else{
+                Self::EvolutionaryFactor(Rc::new(sa_use))
+
+            }
+          
+
+
+            
+            // if is_state_anchor_rc_gel::<Message>( &sa_use){
+            //     let s = (&sa_use as &dyn Any ).downcast_ref::<StateAnchor<Rc<GElement<Message>>>>().unwrap().clone();
+            //     Self::InsideDirectUseSa_(s)
+            // }else{
+            //     Self::EvolutionaryFactor(Rc::new(sa_use))
+
+            // }
+
+
+
+        
+        }
+    }
+
+// impl<Message> From<StateAnchor<Rc<Self>>> for GElement<Message> 
+//     {
+//         fn from(sa_use: StateAnchor<Rc<Self>>) -> Self {
+//                 Self::InsideDirectUseSa_(sa_use)
+        
+//         }
+//     }
+
+#[cfg(test)]
+mod evolution_test{
+    use std::rc::Rc;
+
+    use emg_state::{use_state, StateAnchor};
+    use tracing::warn;
+
+    use crate::{GElement, Checkbox};
+
+    use super::{Evolution, SaWithMapFn, NotGElement};
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    enum Message {
+        A
+    }
+
+
+
+
+    #[test]
+    fn test(){
+        let a = use_state(1);
+        let f = SaWithMapFn(a.watch(),Rc::new(|p,num|{
+           
+                p.clone()
+
+        }) );
+
+        let ge = use_state( GElement::<Message>::EmptyNeverUse).watch();
+        let _x  = GElement::<Message>::EvolutionaryFactor(Rc::new(f) );
+        let _x2  = GElement::<Message>::EvolutionaryFactor(Rc::new(a.watch()) as Rc<dyn Evolution<StateAnchor<Rc<GElement<Message>>>>>);
+        let _x2  = GElement::<Message>::EvolutionaryFactor(Rc::new(ge) as Rc<dyn Evolution<StateAnchor<Rc<GElement<Message>>>>>);
+        let _x3:GElement<Message>  = a.watch().into();
+
+
+    }
+}
+
 impl<Message> Eq for GElement<Message> where Message: PartialEq {}
 impl<Message> PartialEq for GElement<Message>
 where
