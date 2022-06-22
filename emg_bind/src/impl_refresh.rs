@@ -1,11 +1,13 @@
+use std::{any::Any, rc::Rc};
+
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-22 10:06:24
+ * @LastEditTime: 2022-06-22 14:39:43
  * @LastEditors: Rais
  * @Description:
  */
-use crate::{GElement, NodeBuilderWidget};
+use crate::{Checkbox, GElement, NodeBuilderWidget};
 use emg_core::IdStr;
 use emg_refresh::{
     EqRefreshFor, RefreshFor, RefreshForUse, RefreshUseNoWarper, RefreshWhoNoWarper,
@@ -102,15 +104,16 @@ impl<Message> RefreshFor<GElement<Message>> for u32 {
             }
 
             other => {
-                trace!("====> {} refreshing use u32", other);
+                warn!("====> {} refreshing use u32,no effect", other);
             }
         }
     }
 }
 
-impl<Message> EqRefreshFor<GElement<Message>> for i32 {}
-
-impl<Message> RefreshFor<GElement<Message>> for i32 {
+impl<Message> RefreshFor<GElement<Message>> for i32
+where
+    Message: 'static,
+{
     fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
@@ -124,15 +127,19 @@ impl<Message> RefreshFor<GElement<Message>> for i32 {
             GElement::Button_(_) => todo!(),
             GElement::Refresher_(_) => todo!(),
             GElement::Event_(_) => todo!(),
-            GElement::Generic_(x) => {
-                todo!()
+            GElement::Generic_(w) => {
+                warn!("i32 try_refresh_for Generic_");
+
+                // self.try_refresh_for(x);
+                w.try_refresh_use(self);
             }
             GElement::NodeRef_(_) => todo!(),
             GElement::SaNode_(_) => todo!(),
             GElement::EvolutionaryFactor(_) => todo!(),
-            GElement::EmptyNeverUse => todo!(), // other => {
-                                                //     warn!("====> {} refreshing use i32,no effect", other);
-                                                // }
+            GElement::EmptyNeverUse => todo!(),
+            // other => {
+            //     warn!("====> {} refreshing use i32,no effect", other);
+            // }
         }
     }
 }

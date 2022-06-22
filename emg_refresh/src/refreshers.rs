@@ -1,13 +1,16 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2022-06-21 21:55:32
+ * @LastEditTime: 2022-06-22 15:02:43
  * @LastEditors: Rais
  * @Description:
  */
 use emg_core::dyn_partial_eq::DynPartialEq;
 use emg_state::StateAnchor;
-use std::rc::Rc;
+use std::{any::Any, rc::Rc};
+use tracing::warn;
+
+use crate::{RefreshForUse, RefreshUse};
 
 #[derive(Clone)]
 pub struct Refresher<Use>(Rc<dyn Fn() -> Use>);
@@ -67,11 +70,60 @@ impl<'a, Who> RefresherFor<'a, Who> {
 //     // }
 // }
 // ────────────────────────────────────────────────────────────────────────────────
+// pub trait TryRefreshFor<Who> {
+//     fn try_refresh_for(&self, who: &mut Who);
+// }
+// impl<Who: std::fmt::Debug + 'static + Clone, Use: Sized + Clone + std::fmt::Debug + 'static>
+//     TryRefreshFor<Who> for Use
+// {
+//     fn try_refresh_for(&self, who: &mut Who) {
+//         warn!(
+//             "[try_refresh_for] self:{} try  who  {}>",
+//             std::any::type_name::<Self>(),
+//             std::any::type_name::<Who>()
+//         );
+//         let w =
+//             unsafe { (who as &mut dyn Any).downcast_mut_unchecked::<Box<dyn RefreshUse<Self>>>() };
+//         // {
+//         let xx = &mut **w;
+//         warn!("w change xx");
+//         xx.refresh_use(self);
+//         warn!("xx refresh_use self");
 
+//         let xxxx = (&*w as &dyn Any).downcast_ref::<Who>();
+//         *who = (*xxxx.unwrap()).clone();
+//         // } else {
+//         warn!("try_refresh failed: use {:?} for who:{:?}", &self, &who);
+//         // }
+//     }
+// }
+
+pub trait TryRefreshUse {
+    fn try_refresh_use(&mut self, u_s_e: &dyn Any);
+}
+// impl
+//     TryRefreshUse for Rc<Use>
+// {
+//     fn try_refresh_for(&self, who: &mut Who) {
+//         warn!(
+//             "[try_refresh_for] self:{} try downcast to Rc<dyn RefreshFor<{}>>",
+//             std::any::type_name::<Self>(),
+//             std::any::type_name::<Who>()
+//         );
+//         let u = self.clone();
+//         let any: &dyn Any = &u;
+//         if let Some(u_s_e) = any.downcast_ref::<Rc<dyn RefreshFor<Who>>>() {
+//             who.refresh_for_use(&**u_s_e);
+//         } else {
+//             warn!("try_refresh failed: use {:?} for who:{:?}", &self, &who);
+//         }
+//     }
+// }
 // refresh
 pub trait RefreshFor<Who> {
     fn refresh_for(&self, who: &mut Who);
 }
+
 pub trait EqRefreshFor<Who>: RefreshFor<Who> + DynPartialEq {}
 
 impl<Who> core::cmp::Eq for dyn EqRefreshFor<Who> {}

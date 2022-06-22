@@ -277,7 +277,7 @@ impl Application for Counter {
         orders: impl Orders<Message> + 'static,
     ) -> GTreeBuilderElement<Message> {
         let a = use_state(19999);
-        let b = use_state(333);
+        let b = use_state(333i32);
         let bw = b.watch();
 
         let aw = a.watch();

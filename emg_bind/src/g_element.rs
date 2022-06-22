@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-21 22:46:19
+ * @LastEditTime: 2022-06-22 14:40:52
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,14 +16,18 @@ use match_any::match_any;
 pub use better_any;
 use better_any::{Tid, TidAble, TidExt};
 use emg_core::{IdStr, TypeCheckObjectSafe, dyn_partial_eq::DynPartialEq};
-use emg_refresh::{ RefreshFor, RefreshUse, EqRefreshFor};
+use emg_refresh::{ RefreshFor, RefreshUse, EqRefreshFor, TryRefreshUse};
 // extern crate derive_more;
 use derive_more::From;
 use dyn_clonable::clonable;
 use std::{rc::Rc, any::Any};
 use strum_macros::Display;
-use tracing::debug;
+use tracing::{debug, warn};
 
+
+pub trait DowncastSelf {
+    fn downcast_self(&self) -> Self;
+}
 
 #[allow(clippy::module_name_repetitions)]
 #[clonable]
@@ -37,6 +41,9 @@ pub trait DynGElement<Message>:
     + TypeCheckObjectSafe
     + DynPartialEq
     + Clone
+    + core::fmt::Debug
+    + TryRefreshUse
+    
  
 {
 }
@@ -167,11 +174,15 @@ where
 
 impl<Use,Message> Evolution<StateAnchor<Rc<GElement<Message>>>> for StateAnchor<Use>
 where 
-    Use:PartialEq+EqRefreshFor<GElement<Message>>+'static,
-    Message:PartialEq+Clone+'static
+    Use:PartialEq+EqRefreshFor<GElement<Message>>+'static+ std::fmt::Debug+Clone,
+    Message:PartialEq+Clone+'static+ std::fmt::Debug,
 {
     fn evolution(&self,who:&StateAnchor<Rc<GElement<Message>>>) ->StateAnchor<Rc<GElement<Message>>> {
+       warn!( "[Evolution] Evolution<{:?}> use {:?}:{}",&who,&self,std::any::type_name::<Self>());
+
         (who,self).map(|gel,u_s_e|{
+       warn!( "[Evolution] in -- Evolution<{:?}> use {:?}:{}",&gel,&u_s_e ,std::any::type_name::<Use>());
+
              let mut new_gel = (**gel).clone();
              new_gel.refresh_use(u_s_e);
              Rc::new(new_gel)
@@ -425,7 +436,7 @@ where
                 write!(f, "GElement::Button_")
             }
             Generic_(x) => {
-                write!(f, "GElement::Generic_")
+                f.debug_tuple("GElement::Generic_").field(&x).finish()
             },
             NodeRef_(nid) => {
                 write!(f, "GElement::NodeIndex(\"{}\")", nid)

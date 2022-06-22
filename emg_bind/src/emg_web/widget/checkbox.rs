@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-21 23:14:49
+ * @LastEditTime: 2022-06-22 14:52:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,13 +16,13 @@ use crate::{
 use better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt};
 
 use emg_core::{IdStr, TypeCheckObjectSafe, TypeName};
-use emg_refresh::RefreshFor;
+use emg_refresh::{RefreshFor, RefreshForUse, RefreshUse, TryRefreshUse};
 pub use iced_style::checkbox::{Style, StyleSheet};
 use seed_styles::GlobalStyleSV;
 use tracing::{error, trace, warn};
 
 use crate::emg_runtime::dodrio::bumpalo;
-use std::{ops::Deref, rc::Rc};
+use std::{any::Any, ops::Deref, rc::Rc};
 
 /// A box that can be checked.
 ///
@@ -55,6 +55,17 @@ pub struct Checkbox<Message>
     width: Length,
     // #[allow(dead_code)]
     // style: Box<dyn StyleSheet>,
+}
+
+impl<Message> std::fmt::Debug for Checkbox<Message> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Checkbox")
+            .field("is_checked", &self.is_checked)
+            .field("label", &self.label)
+            .field("id", &self.id)
+            .field("width", &self.width)
+            .finish()
+    }
 }
 impl<Message> PartialEq for Checkbox<Message>
 where
@@ -320,5 +331,57 @@ where
 {
     fn from(checkbox: Checkbox<Message>) -> Self {
         Self::Generic_(Box::new(checkbox))
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+impl<'a, Message> RefreshFor<Checkbox<Message>> for i32
+where
+    Message: 'static + Clone + MessageTid<'a>,
+{
+    fn refresh_for(&self, who: &mut Checkbox<Message>) {
+        warn!(
+            "[checkbox] use i32 refresh for checkbox self:{:?}-who:{}",
+            &who, &self
+        );
+
+        who.label = format!("checkbox i32: {}", self).into()
+    }
+}
+// impl<Message, Use: Sized + Clone + std::fmt::Debug + 'static> TryRefreshFor<Checkbox<Message>>
+//     for Rc<Use>
+// {
+//     fn try_refresh_for(&self, who: &mut Checkbox<Message>) {
+//         warn!(
+//             "[try_refresh_for] self:{} try downcast to Rc<dyn RefreshFor<{}>>",
+//             std::any::type_name::<Self>(),
+//             std::any::type_name::<Checkbox<Message>>()
+//         );
+//         let u = self.clone();
+//         let any: &dyn Any = &u;
+//         if let Some(u_s_e) = any.downcast_ref::<Rc<dyn RefreshFor<Checkbox<Message>>>>() {
+//             who.refresh_for_use(&**u_s_e);
+//         } else {
+//             warn!("try_refresh failed: use {:?} for who:{:?}", &self, &who);
+//         }
+//     }
+// }
+
+impl<'a, Message> TryRefreshUse for Checkbox<Message>
+where
+    Message: 'static + Clone + MessageTid<'a>,
+{
+    fn try_refresh_use(&mut self, any: &dyn Any) {
+        warn!(
+            "[try_refresh_use]  try downcast to Rc<dyn RefreshFor<{}>>",
+            std::any::type_name::<Self>()
+        );
+        if let Some(x) = any.downcast_ref::<i32>() {
+            self.refresh_use(x)
+        }
+        // if let Some(u_s_e_rf) = any.downcast_ref::<Rc<dyn RefreshFor<Self>>>() {
+        //     self.refresh_for_use(&**u_s_e_rf);
+        // } else {
+        //     warn!("try_refresh failed: use {:?} for who:{:?}", &self, &any);
+        // }
     }
 }
