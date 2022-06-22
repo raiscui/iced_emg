@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-06-17 19:03:13
+ * @LastEditTime: 2022-06-21 22:33:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -41,12 +41,12 @@ where
         GElement<Message>,
         Vec<GTreeBuilderElement<Message, Ix>>,
     ),
-    SaMapEffectGElementTree(
-        Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
-        Rc< SaBuilderFn< GElement<Message>>>,
-        Vec<GTreeBuilderElement<Message, Ix>>,
-    ),
+    // SaMapEffectGElementTree(
+    //     Ix,
+    //     Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+    //     Rc< SaBuilderFn< GElement<Message>>>,
+    //     Vec<GTreeBuilderElement<Message, Ix>>,
+    // ),
 
     RefreshUse(Ix, Rc<dyn EqRefreshFor<GElement<Message>>  >),
     Cl(Ix, Rc<dyn Fn()>),
@@ -164,14 +164,14 @@ where Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq {
                     .field(updaters)
                     .finish()
             }
-            Self::SaMapEffectGElementTree(id, _, _builder_fn, updaters) => {
-                f.debug_tuple("GTreeBuilderElement::SaMapEffectGElementTree")
-                    .field(id)
-                    .field(&"with-Edge-Vector")
-                    .field(&"builder_fn")
-                    .field(updaters)
-                    .finish()
-            }
+            // Self::SaMapEffectGElementTree(id, _, _builder_fn, updaters) => {
+            //     f.debug_tuple("GTreeBuilderElement::SaMapEffectGElementTree")
+            //         .field(id)
+            //         .field(&"with-Edge-Vector")
+            //         .field(&"builder_fn")
+            //         .field(updaters)
+            //         .finish()
+            // }
             Self::RefreshUse(id, _) => {
                 f.debug_tuple("GTreeBuilderElement::Updater")
                     .field(id)
@@ -496,16 +496,9 @@ where
                 let _span =
                     trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
 
-                let nix =  if let Some(gel_sa)= gel.as_inside_direct_use_sa(){
-                    let no_rc_gel = gel_sa.map(|g|(**g).clone());
-                    self
-                    .borrow_mut()
-                    .insert_node_in_topo(id.clone(), no_rc_gel)
-                }else{
-                    self
-                    .borrow_mut()
-                    .insert_node_in_topo(id.clone(), StateAnchor::constant(gel.clone()))
-                };
+                let nix= 
+                    self .borrow_mut()
+                    .insert_node_in_topo(id.clone(), StateAnchor::constant(gel.clone())) ;
               
 
                 //node index
@@ -535,44 +528,7 @@ where
                     });
                 });
             }
-            GTreeBuilderElement::SaMapEffectGElementTree(org_id, edge_refreshers, builder_fn, children_list) => {
-                unimplemented!()
-                // let id = replace_id.unwrap_or(org_id);
-
-                // let _span =
-                //     trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
-
-                // let parent = self.borrow_mut().get_mut_node_item(&parent_nix).unwrap();
-                // let new_parent = builder_fn(&*parent);
-
-                //     let gel = builder_fn.map(|g|(**g).clone());
-                // //node index
-                // let nix = self
-                //     .borrow_mut()
-                //     .insert_node_in_topo(id.clone(), gel);
-
-                // //edge
-                // let mut new_def_ei = self
-                //     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix, nix.clone()))
-                //     .unwrap();
-
-                // let path = (&*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
-
-                // illicit::Layer::new().offer(path.clone()).enter(|| {
-                //     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                //     new_def_ei.refresh_for_use(edge_refreshers);
-
-                //     //next
-                //     illicit::Layer::new().offer(nix.clone()).enter(|| {
-                //         // #[cfg(debug_assertions)]
-                //         debug_assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
-
-                //         for child_gtree_builder in children_list.iter() {
-                //             self.handle_children_in_topo(None,child_gtree_builder);
-                //         }
-                //     });
-                // });
-            }
+            
             //TODO _edge_refresher use for  inject element
             GTreeBuilderElement::Dyn(org_id,_edge_refresher,sa_dict_gbe) => {
                 let id = replace_id.unwrap_or(org_id);

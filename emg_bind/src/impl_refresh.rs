@@ -1,11 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-18 11:22:22
+ * @LastEditTime: 2022-06-22 10:06:24
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{GElement, NodeBuilderWidget};
+use emg_core::IdStr;
 use emg_refresh::{
     EqRefreshFor, RefreshFor, RefreshForUse, RefreshUseNoWarper, RefreshWhoNoWarper,
 };
@@ -66,7 +67,7 @@ where
                 );
             }
             (Text_(who), Text_(us_it)) => {
-                who.content(us_it.get_content());
+                who.set_content(us_it.get_content());
             }
             (who, Builder_(builder)) => {
                 builder.widget().unwrap().refresh_for(who);
@@ -97,7 +98,7 @@ impl<Message> RefreshFor<GElement<Message>> for u32 {
         match el {
             Text_(text) => {
                 trace!("==========Text update use u32");
-                text.content(format!("u32:{}", self));
+                text.set_content(format!("u32:{}", self));
             }
 
             other => {
@@ -106,6 +107,7 @@ impl<Message> RefreshFor<GElement<Message>> for u32 {
         }
     }
 }
+
 impl<Message> EqRefreshFor<GElement<Message>> for i32 {}
 
 impl<Message> RefreshFor<GElement<Message>> for i32 {
@@ -115,12 +117,22 @@ impl<Message> RefreshFor<GElement<Message>> for i32 {
         match el {
             Text_(text) => {
                 trace!("==========Text update use i32");
-                text.content(format!("i32:{}", self));
+                text.set_content(format!("i32:{}", self));
             }
-
-            other => {
-                warn!("====> {} refreshing use i32,no effect", other);
+            GElement::Builder_(_) => todo!(),
+            GElement::Layer_(_) => todo!(),
+            GElement::Button_(_) => todo!(),
+            GElement::Refresher_(_) => todo!(),
+            GElement::Event_(_) => todo!(),
+            GElement::Generic_(x) => {
+                todo!()
             }
+            GElement::NodeRef_(_) => todo!(),
+            GElement::SaNode_(_) => todo!(),
+            GElement::EvolutionaryFactor(_) => todo!(),
+            GElement::EmptyNeverUse => todo!(), // other => {
+                                                //     warn!("====> {} refreshing use i32,no effect", other);
+                                                // }
         }
     }
 }
@@ -132,7 +144,7 @@ impl<Message> RefreshFor<GElement<Message>> for f64 {
         match el {
             Text_(text) => {
                 trace!("==========Text update use f64");
-                text.content(format!("f64:{}", self));
+                text.set_content(format!("f64:{}", self));
             }
 
             other => {

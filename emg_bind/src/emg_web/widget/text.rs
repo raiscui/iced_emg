@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2022-06-16 13:58:13
+ * @LastEditTime: 2022-06-20 13:28:55
  * @LastEditors: Rais
 * @Description:
 */
@@ -49,7 +49,11 @@ impl Text {
     }
 
     /// update content string of the [`Text`].
-    pub fn content<T: Into<IdStr>>(&mut self, label: T) -> &mut Self {
+    pub fn set_content<T: Into<IdStr>>(&mut self, label: T) -> &mut Self {
+        self.content = label.into();
+        self
+    }
+    pub fn with_content<T: Into<IdStr>>(mut self, label: T) -> Self {
         self.content = label.into();
         self
     }

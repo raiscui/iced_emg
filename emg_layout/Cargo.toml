@@ -44,7 +44,7 @@ emg_hasher = { path = "../emg_hasher" }
 
 # ownref = "0.3.1"
 # ahash = "0.7.6"
-indexmap = "1.8"
+indexmap = "1.9"
 
 illicit = "1.1.2"
 

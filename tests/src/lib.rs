@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-06-18 23:52:30
+ * @LastEditTime: 2022-06-22 00:04:37
  * @LastEditors: Rais
  * @Description: 
  */
@@ -241,7 +241,27 @@ mod wasm_test {
     // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
+#[wasm_bindgen_test]
+    fn benchmark_new_rc_sv_graph_build(){
+        console_error_panic_hook::set_once();
 
+        use web_sys::console;
+
+        
+        console::log_1(
+            &format!(
+                "new rc graph build view: {}",
+                bench_limit(10.,|| {
+                    let  g=  new_rc_sv_graph_build();
+                    let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+                    _root_gel
+                    })
+    
+            )
+            .into(),
+        );
+
+    }
 
 #[wasm_bindgen_test]
     fn test_new_rc_sv_graph_build(){
@@ -375,107 +395,107 @@ mod wasm_test {
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
 
-    #[wasm_bindgen_test]
-    fn new_graph_build_test(){
-           console_error_panic_hook::set_once();
-        // ─────────────────────────────────────────────────────────────────
-        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::DEBUG);
-        config.set_max_level(tracing::Level::INFO);
-        config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    // #[wasm_bindgen_test]
+    // fn new_graph_build_test(){
+    //        console_error_panic_hook::set_once();
+    //     // ─────────────────────────────────────────────────────────────────
+    //     let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     config.set_max_level(tracing::Level::DEBUG);
+    //     config.set_max_level(tracing::Level::INFO);
+    //     config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        tracing_wasm::set_as_global_default_with_config(config.build());
+    //     tracing_wasm::set_as_global_default_with_config(config.build());
         
 
-        use web_sys::console;
+    //     use web_sys::console;
 
-        let  g=  new_graph_build();
-        let root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //     let  g=  new_graph_build();
+    //     let root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
                    
-        let  g2=  new_graph_build();
-        let root_gel2:GElement<Message> = g2.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //     let  g2=  new_graph_build();
+    //     let root_gel2:GElement<Message> = g2.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
                    
-    }
-    #[wasm_bindgen_test]
-    fn new_old_comp(){
+    // }
+    // #[wasm_bindgen_test]
+    // fn new_old_comp(){
 
-        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::WARN);
-        config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    //     let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     config.set_max_level(tracing::Level::WARN);
+    //     config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        tracing_wasm::set_as_global_default_with_config(config.build());
+    //     tracing_wasm::set_as_global_default_with_config(config.build());
         
-        let new_str = render_new_string();
-        let old_str = render_old_string();
-        warn!("new_str: \n {}",new_str);
-        warn!("==================================\n");
-        warn!("old_str: \n {}",old_str);
-        warn!("==================================\n");
+    //     let new_str = render_new_string();
+    //     let old_str = render_old_string();
+    //     warn!("new_str: \n {}",new_str);
+    //     warn!("==================================\n");
+    //     warn!("old_str: \n {}",old_str);
+    //     warn!("==================================\n");
 
-        assert_eq!(new_str, old_str);
-    }
-    #[wasm_bindgen_test]
-    fn new_str(){
-        let new_str = render_new_string();
-        warn!("new_str: \n {}",new_str);
-    }
+    //     assert_eq!(new_str, old_str);
+    // }
+    // #[wasm_bindgen_test]
+    // fn new_str(){
+    //     let new_str = render_new_string();
+    //     warn!("new_str: \n {}",new_str);
+    // }
     #[wasm_bindgen_test]
     fn old_str(){
         let old_str = render_old_string();
         warn!("old_str: \n {}",old_str);
     }
 
-    fn render_new_string()->String {
+    // fn render_new_string()->String {
         
-        console_error_panic_hook::set_once();
-        // ─────────────────────────────────────────────────────────────────
-        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        // config.set_max_level(tracing::Level::WARN);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    //     console_error_panic_hook::set_once();
+    //     // ─────────────────────────────────────────────────────────────────
+    //     // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     // config.set_max_level(tracing::Level::WARN);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        // tracing_wasm::set_as_global_default_with_config(config.build());
-        // ────────────────────────────────────────────────────────────────────────────────
+    //     // tracing_wasm::set_as_global_default_with_config(config.build());
+    //     // ────────────────────────────────────────────────────────────────────────────────
 
-        let (sender, _receiver) = futures::channel::mpsc::unbounded();
-        let bus = Bus::new(sender);
-        let css = GlobalStyleSV::default_topo();
+    //     let (sender, _receiver) = futures::channel::mpsc::unbounded();
+    //     let bus = Bus::new(sender);
+    //     let css = GlobalStyleSV::default_topo();
 
-        let  g=  new_graph_build();
-        let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
-        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget().node(&cx.bump,&bus,&css)));
-        // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
-        render2string(&root_elm_render_fn)
+    //     let  g=  new_graph_build();
+    //     let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //     let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget().node(&cx.bump,&bus,&css)));
+    //     // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
+    //     render2string(&root_elm_render_fn)
 
 
-    }
-    #[wasm_bindgen_test]
-    fn render_new() {
+    // }
+    // #[wasm_bindgen_test]
+    // fn render_new() {
         
-        console_error_panic_hook::set_once();
-        // ─────────────────────────────────────────────────────────────────
-        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::WARN);
-        config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    //     console_error_panic_hook::set_once();
+    //     // ─────────────────────────────────────────────────────────────────
+    //     let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     config.set_max_level(tracing::Level::WARN);
+    //     config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        tracing_wasm::set_as_global_default_with_config(config.build());
-        // ────────────────────────────────────────────────────────────────────────────────
+    //     tracing_wasm::set_as_global_default_with_config(config.build());
+    //     // ────────────────────────────────────────────────────────────────────────────────
 
-        let (sender, _receiver) = futures::channel::mpsc::unbounded();
-        let bus = Bus::new(sender);
-        let css = GlobalStyleSV::default_topo();
+    //     let (sender, _receiver) = futures::channel::mpsc::unbounded();
+    //     let bus = Bus::new(sender);
+    //     let css = GlobalStyleSV::default_topo();
 
-        let  g=  new_graph_build();
-        let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
-        let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget().node(&cx.bump,&bus,&css)));
-        // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
-        render2text(&root_elm_render_fn);
+    //     let  g=  new_graph_build();
+    //     let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //     let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget().node(&cx.bump,&bus,&css)));
+    //     // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
+    //     render2text(&root_elm_render_fn);
 
 
-    }
+    // }
     fn render_old_string() ->String {
         
         console_error_panic_hook::set_once();
@@ -563,7 +583,7 @@ mod wasm_test {
     }
        // 4us 789ns 
     #[wasm_bindgen_test]
-    fn benchmark(){
+    fn benchmark1(){
         console_error_panic_hook::set_once();
 
         use web_sys::console;
@@ -582,332 +602,332 @@ mod wasm_test {
         );
 
     }
-    #[wasm_bindgen_test]
-    fn b2enchmark_new_graph_build(){
-        console_error_panic_hook::set_once();
+    // #[wasm_bindgen_test]
+    // fn b2enchmark_new_graph_build(){
+    //     console_error_panic_hook::set_once();
 
-        use web_sys::console;
+    //     use web_sys::console;
 
-        //    console_error_panic_hook::set_once();
-        // // ─────────────────────────────────────────────────────────────────
-        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        // config.set_max_level(tracing::Level::DEBUG);
-        // config.set_max_level(tracing::Level::INFO);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    //     //    console_error_panic_hook::set_once();
+    //     // // ─────────────────────────────────────────────────────────────────
+    //     // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     // config.set_max_level(tracing::Level::DEBUG);
+    //     // config.set_max_level(tracing::Level::INFO);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        // tracing_wasm::set_as_global_default_with_config(config.build());
-        let  g=  new_graph_build();
+    //     // tracing_wasm::set_as_global_default_with_config(config.build());
+    //     let  g=  new_graph_build();
         
-        console::log_1(
-            &format!(
-                "new graph build view2: {}",
-                bench_limit(10.,|| {
-                    let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
-                    _root_gel
-                    })
+    //     console::log_1(
+    //         &format!(
+    //             "new graph build view2: {}",
+    //             bench_limit(10.,|| {
+    //                 let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //                 _root_gel
+    //                 })
     
-            )
-            .into(),
-        );
+    //         )
+    //         .into(),
+    //     );
 
-    }
+    // }
 
-    #[wasm_bindgen_test]
-    fn benchmark_new_rc_graph_build(){
-        console_error_panic_hook::set_once();
+    // #[wasm_bindgen_test]
+    // fn benchmark_new_rc_graph_build(){
+    //     console_error_panic_hook::set_once();
 
-        use web_sys::console;
+    //     use web_sys::console;
 
-        //    console_error_panic_hook::set_once();
-        // // ─────────────────────────────────────────────────────────────────
-        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        // config.set_max_level(tracing::Level::DEBUG);
-        // config.set_max_level(tracing::Level::INFO);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    //     //    console_error_panic_hook::set_once();
+    //     // // ─────────────────────────────────────────────────────────────────
+    //     // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     // config.set_max_level(tracing::Level::DEBUG);
+    //     // config.set_max_level(tracing::Level::INFO);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        // tracing_wasm::set_as_global_default_with_config(config.build());
+    //     // tracing_wasm::set_as_global_default_with_config(config.build());
         
-        console::log_1(
-            &format!(
-                "new rc graph build view: {}",
-                bench_limit(10.,|| {
-                    let  g=  new_rc_graph_build();
-                    let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
-                    _root_gel
-                    })
+    //     console::log_1(
+    //         &format!(
+    //             "new rc graph build view: {}",
+    //             bench_limit(10.,|| {
+    //                 let  g=  new_rc_graph_build();
+    //                 let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //                 _root_gel
+    //                 })
     
-            )
-            .into(),
-        );
+    //         )
+    //         .into(),
+    //     );
 
-    }
-    #[wasm_bindgen_test]
-    fn test_new_rc_graph_build(){
-        console_error_panic_hook::set_once();
+    // }
+    // #[wasm_bindgen_test]
+    // fn test_new_rc_graph_build(){
+    //     console_error_panic_hook::set_once();
 
-        use web_sys::console;
+    //     use web_sys::console;
 
-           console_error_panic_hook::set_once();
-        // ─────────────────────────────────────────────────────────────────
-        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::TRACE);
-        config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    //        console_error_panic_hook::set_once();
+    //     // ─────────────────────────────────────────────────────────────────
+    //     let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     config.set_max_level(tracing::Level::TRACE);
+    //     config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        tracing_wasm::set_as_global_default_with_config(config.build());
+    //     tracing_wasm::set_as_global_default_with_config(config.build());
         
    
-                    let  g=  new_rc_graph_build();
-                    let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //                 let  g=  new_rc_graph_build();
+    //                 let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
            
 
-    }
+    // }
 
 
-    #[topo::nested]
-    fn new_rc_graph_build() ->Rc< RefCell< emg_bind::g_node::node_item_rc::GraphType<Message>>>{
+    // #[topo::nested]
+    // fn new_rc_graph_build() ->Rc< RefCell< emg_bind::g_node::node_item_rc::GraphType<Message>>>{
 
-        // console_error_panic_hook::set_once();
-        // // ─────────────────────────────────────────────────────────────────
-        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        // config.set_max_level(tracing::Level::DEBUG);
-        // config.set_max_level(tracing::Level::INFO);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    //     // console_error_panic_hook::set_once();
+    //     // // ─────────────────────────────────────────────────────────────────
+    //     // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     // config.set_max_level(tracing::Level::DEBUG);
+    //     // config.set_max_level(tracing::Level::INFO);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        // tracing_wasm::set_as_global_default_with_config(config.build());
+    //     // tracing_wasm::set_as_global_default_with_config(config.build());
         
-        let an: AnimationE<Message> =call(||anima![width(px(80))]) ;
-        let a = use_state(9999);
+    //     let an: AnimationE<Message> =call(||anima![width(px(80))]) ;
+    //     let a = use_state(9999);
         
-        let emg_graph =Rc::new(RefCell::new( emg_bind::g_node::node_item_rc::GraphType::<Message>::default()));
+    //     let emg_graph =Rc::new(RefCell::new( emg_bind::g_node::node_item_rc::GraphType::<Message>::default()));
 
-        let root: GTreeBuilderElement<Message> = gtree! {
-            @=a
-            Layer [
-                 @=b @E=[w(w(pc(50))),h(pc(50)),origin_x(pc(50)),align_x(pc(50))]
-                 Layer [
-                    @=c @E=[w(px(150)),h(px(50)),origin_x(pc(50)),origin_y(pc(50)),align_x(pc(50)),align_y(pc(50))]
-                    Layer [
-                        node_ref("b"),
+    //     let root: GTreeBuilderElement<Message> = gtree! {
+    //         @=a
+    //         Layer [
+    //              @=b @E=[w(w(pc(50))),h(pc(50)),origin_x(pc(50)),align_x(pc(50))]
+    //              Layer [
+    //                 @=c @E=[w(px(150)),h(px(50)),origin_x(pc(50)),origin_y(pc(50)),align_x(pc(50)),align_y(pc(50))]
+    //                 Layer [
+    //                     node_ref("b"),
 
-                        Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
-                            Checkbox::new(false,"222",|_|Message::IncrementPressed)=>[
-                                Text::new(format!("checkbox-text")),
-                            ],
-                        ]
-                    ],
-                    @=temp @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
-                    Text::new(format!("temp----------")),
+    //                     Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
+    //                         Checkbox::new(false,"222",|_|Message::IncrementPressed)=>[
+    //                             Text::new(format!("checkbox-text")),
+    //                         ],
+    //                     ]
+    //                 ],
+    //                 @=temp @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
+    //                 Text::new(format!("temp----------")),
 
-                    @=t1
-                    Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
+    //                 @=t1
+    //                 Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
 
-                    @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
-                    Text::new(format!("in quote.. {}", "b")) => [
-                        RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
+    //                 @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
+    //                 Text::new(format!("in quote.. {}", "b")) => [
+    //                     RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
 
-                    ],
+    //                 ],
 
-                    @=t2
-                    @E=[w(px(150)),origin_x(pc(100)),align_x(pc(100))]
-                    Text::new(format!("in quote.. {}", "b")) => [
-                        RefreshUse ||{100},
-                    ],
-                    @=t3
-                    @E=[w(px(150)),origin_x(pc(0)),align_x(pc(0))]
-                    Text::new(format!("dt.. {}", "b")) => [
-                    ],
-                    @=t4
-                    @E=[w(px(250)),origin_x(pc(0)),align_y(pc(140))]
-                    Text::new(format!("dt.. {}", "b")) => [
-                    ],
-                    @=e @E=[w(pc(100)),h(px(40)),css(background_color("red")),origin_x(pc(50)),align_y(pc(70))]
-                    Layer [
-                        @=eb @E=[w(px(150)),h(px(30)),origin_x(pc(60)),align_y(pc(250))]
-                        Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                            On:click move||{
+    //                 @=t2
+    //                 @E=[w(px(150)),origin_x(pc(100)),align_x(pc(100))]
+    //                 Text::new(format!("in quote.. {}", "b")) => [
+    //                     RefreshUse ||{100},
+    //                 ],
+    //                 @=t3
+    //                 @E=[w(px(150)),origin_x(pc(0)),align_x(pc(0))]
+    //                 Text::new(format!("dt.. {}", "b")) => [
+    //                 ],
+    //                 @=t4
+    //                 @E=[w(px(250)),origin_x(pc(0)),align_y(pc(140))]
+    //                 Text::new(format!("dt.. {}", "b")) => [
+    //                 ],
+    //                 @=e @E=[w(pc(100)),h(px(40)),css(background_color("red")),origin_x(pc(50)),align_y(pc(70))]
+    //                 Layer [
+    //                     @=eb @E=[w(px(150)),h(px(30)),origin_x(pc(60)),align_y(pc(250))]
+    //                     Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+    //                         On:click move||{
 
-                                trace!("bbbbbbbbbbbbb");
+    //                             trace!("bbbbbbbbbbbbb");
 
-                                a.set_with(|v|v+1);
-                                Option::<Message>::None
+    //                             a.set_with(|v|v+1);
+    //                             Option::<Message>::None
 
-                            },
-                            // On:dblclick move||{
-                            //     // a.set((*a.get()).clone()+1);
-                            //     // a.set(a.get()+1);
-                            //     trace!("ccccccccccccc");
-                            //     a.set_with(|v|v+1);
-                            //     // this.borrow_mut().ddd +=1;
-                            //     Message::None
-                            // }
-                        ],
-                        @=b2 @E=[an.clone(),h(parent!(CssWidth)+px(30)),origin_x(pc(60)),align_y(pc(300))]
-                        Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                            On:click move |_root, vdom, _event| {
+    //                         },
+    //                         // On:dblclick move||{
+    //                         //     // a.set((*a.get()).clone()+1);
+    //                         //     // a.set(a.get()+1);
+    //                         //     trace!("ccccccccccccc");
+    //                         //     a.set_with(|v|v+1);
+    //                         //     // this.borrow_mut().ddd +=1;
+    //                         //     Message::None
+    //                         // }
+    //                     ],
+    //                     @=b2 @E=[an.clone(),h(parent!(CssWidth)+px(30)),origin_x(pc(60)),align_y(pc(300))]
+    //                     Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+    //                         On:click move |_root, vdom, _event| {
 
-                                an.interrupt([
-                                    to![width(px(50))],
-                                    to![width(pc(100))],
-                                ]);
+    //                             an.interrupt([
+    //                                 to![width(px(50))],
+    //                                 to![width(pc(100))],
+    //                             ]);
 
-                                            a.set(a.get()+1);
+    //                                         a.set(a.get()+1);
 
-                                            debug!("will render");
+    //                                         debug!("will render");
 
-                                        Option::<Message>::None
-                                }
-                        ]
-                    ],
-                ]
-            ]
-        };
-        emg_graph.handle_root_in_topo(&root);
-        // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
-        // warn!("{:#?}",&root_gel);
-        emg_graph
+    //                                     Option::<Message>::None
+    //                             }
+    //                     ]
+    //                 ],
+    //             ]
+    //         ]
+    //     };
+    //     emg_graph.handle_root_in_topo(&root);
+    //     // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+    //     // warn!("{:#?}",&root_gel);
+    //     emg_graph
         
-    }
+    // }
        
 
-    #[wasm_bindgen_test]
-    fn benchmark_new_graph_build(){
-        console_error_panic_hook::set_once();
+    // #[wasm_bindgen_test]
+    // fn benchmark_new_graph_build(){
+    //     console_error_panic_hook::set_once();
 
-        use web_sys::console;
+    //     use web_sys::console;
 
-        //    console_error_panic_hook::set_once();
-        // // ─────────────────────────────────────────────────────────────────
-        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        // config.set_max_level(tracing::Level::DEBUG);
-        // config.set_max_level(tracing::Level::INFO);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    //     //    console_error_panic_hook::set_once();
+    //     // // ─────────────────────────────────────────────────────────────────
+    //     // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     // config.set_max_level(tracing::Level::DEBUG);
+    //     // config.set_max_level(tracing::Level::INFO);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        // tracing_wasm::set_as_global_default_with_config(config.build());
+    //     // tracing_wasm::set_as_global_default_with_config(config.build());
         
-        console::log_1(
-            &format!(
-                "new graph build view: {}",
-                bench_limit(10.,|| {
-                    let  g=  new_graph_build();
-                    let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
-                    _root_gel
-                    })
+    //     console::log_1(
+    //         &format!(
+    //             "new graph build view: {}",
+    //             bench_limit(10.,|| {
+    //                 let  g=  new_graph_build();
+    //                 let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //                 _root_gel
+    //                 })
     
-            )
-            .into(),
-        );
+    //         )
+    //         .into(),
+    //     );
 
-    }
-    #[topo::nested]
-    fn new_graph_build() ->Rc< RefCell< emg_bind::g_node::GraphType<Message>>>{
+    // }
+    // #[topo::nested]
+    // fn new_graph_build() ->Rc< RefCell< emg_bind::g_node::GraphType<Message>>>{
 
-        // console_error_panic_hook::set_once();
-        // // ─────────────────────────────────────────────────────────────────
-        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        // config.set_max_level(tracing::Level::DEBUG);
-        // config.set_max_level(tracing::Level::INFO);
-        // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
-        // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    //     // console_error_panic_hook::set_once();
+    //     // // ─────────────────────────────────────────────────────────────────
+    //     // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+    //     // config.set_max_level(tracing::Level::DEBUG);
+    //     // config.set_max_level(tracing::Level::INFO);
+    //     // config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
+    //     // // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
-        // tracing_wasm::set_as_global_default_with_config(config.build());
+    //     // tracing_wasm::set_as_global_default_with_config(config.build());
         
-        let an: AnimationE<Message> =call(||anima![width(px(80))]) ;
-        let a = use_state(9999);
+    //     let an: AnimationE<Message> =call(||anima![width(px(80))]) ;
+    //     let a = use_state(9999);
         
-        let emg_graph =Rc::new(RefCell::new( emg_bind::g_node::GraphType::<Message>::default()));
+    //     let emg_graph =Rc::new(RefCell::new( emg_bind::g_node::GraphType::<Message>::default()));
 
-        let root: GTreeBuilderElement<Message> = gtree! {
-            @=a
-            Layer [
-                 @=b @E=[w(w(pc(50))),h(pc(50)),origin_x(pc(50)),align_x(pc(50))]
-                 Layer [
-                    @=c @E=[w(px(150)),h(px(50)),origin_x(pc(50)),origin_y(pc(50)),align_x(pc(50)),align_y(pc(50))]
-                    Layer [
-                        node_ref("b"),
+    //     let root: GTreeBuilderElement<Message> = gtree! {
+    //         @=a
+    //         Layer [
+    //              @=b @E=[w(w(pc(50))),h(pc(50)),origin_x(pc(50)),align_x(pc(50))]
+    //              Layer [
+    //                 @=c @E=[w(px(150)),h(px(50)),origin_x(pc(50)),origin_y(pc(50)),align_x(pc(50)),align_y(pc(50))]
+    //                 Layer [
+    //                     node_ref("b"),
 
-                        Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
-                            Checkbox::new(false,"222",|_|Message::IncrementPressed)=>[
-                                Text::new(format!("checkbox-text")),
-                            ],
-                        ]
-                    ],
-                    @=temp @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
-                    Text::new(format!("temp----------")),
+    //                     Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
+    //                         Checkbox::new(false,"222",|_|Message::IncrementPressed)=>[
+    //                             Text::new(format!("checkbox-text")),
+    //                         ],
+    //                     ]
+    //                 ],
+    //                 @=temp @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
+    //                 Text::new(format!("temp----------")),
 
-                    @=t1
-                    Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
+    //                 @=t1
+    //                 Layer [RefreshUse GElement::from( Text::new(format!("ee up")))],
 
-                    @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
-                    Text::new(format!("in quote.. {}", "b")) => [
-                        RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
+    //                 @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
+    //                 Text::new(format!("in quote.. {}", "b")) => [
+    //                     RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
 
-                    ],
+    //                 ],
 
-                    @=t2
-                    @E=[w(px(150)),origin_x(pc(100)),align_x(pc(100))]
-                    Text::new(format!("in quote.. {}", "b")) => [
-                        RefreshUse ||{100},
-                    ],
-                    @=t3
-                    @E=[w(px(150)),origin_x(pc(0)),align_x(pc(0))]
-                    Text::new(format!("dt.. {}", "b")) => [
-                    ],
-                    @=t4
-                    @E=[w(px(250)),origin_x(pc(0)),align_y(pc(140))]
-                    Text::new(format!("dt.. {}", "b")) => [
-                    ],
-                    @=e @E=[w(pc(100)),h(px(40)),css(background_color("red")),origin_x(pc(50)),align_y(pc(70))]
-                    Layer [
-                        @=eb @E=[w(px(150)),h(px(30)),origin_x(pc(60)),align_y(pc(250))]
-                        Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                            On:click move||{
+    //                 @=t2
+    //                 @E=[w(px(150)),origin_x(pc(100)),align_x(pc(100))]
+    //                 Text::new(format!("in quote.. {}", "b")) => [
+    //                     RefreshUse ||{100},
+    //                 ],
+    //                 @=t3
+    //                 @E=[w(px(150)),origin_x(pc(0)),align_x(pc(0))]
+    //                 Text::new(format!("dt.. {}", "b")) => [
+    //                 ],
+    //                 @=t4
+    //                 @E=[w(px(250)),origin_x(pc(0)),align_y(pc(140))]
+    //                 Text::new(format!("dt.. {}", "b")) => [
+    //                 ],
+    //                 @=e @E=[w(pc(100)),h(px(40)),css(background_color("red")),origin_x(pc(50)),align_y(pc(70))]
+    //                 Layer [
+    //                     @=eb @E=[w(px(150)),h(px(30)),origin_x(pc(60)),align_y(pc(250))]
+    //                     Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+    //                         On:click move||{
 
-                                trace!("bbbbbbbbbbbbb");
+    //                             trace!("bbbbbbbbbbbbb");
 
-                                a.set_with(|v|v+1);
-                                Option::<Message>::None
+    //                             a.set_with(|v|v+1);
+    //                             Option::<Message>::None
 
-                            },
-                            // On:dblclick move||{
-                            //     // a.set((*a.get()).clone()+1);
-                            //     // a.set(a.get()+1);
-                            //     trace!("ccccccccccccc");
-                            //     a.set_with(|v|v+1);
-                            //     // this.borrow_mut().ddd +=1;
-                            //     Message::None
-                            // }
-                        ],
-                        @=b2 @E=[an.clone(),h(parent!(CssWidth)+px(30)),origin_x(pc(60)),align_y(pc(300))]
-                        Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                            On:click move |_root, vdom, _event| {
+    //                         },
+    //                         // On:dblclick move||{
+    //                         //     // a.set((*a.get()).clone()+1);
+    //                         //     // a.set(a.get()+1);
+    //                         //     trace!("ccccccccccccc");
+    //                         //     a.set_with(|v|v+1);
+    //                         //     // this.borrow_mut().ddd +=1;
+    //                         //     Message::None
+    //                         // }
+    //                     ],
+    //                     @=b2 @E=[an.clone(),h(parent!(CssWidth)+px(30)),origin_x(pc(60)),align_y(pc(300))]
+    //                     Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+    //                         On:click move |_root, vdom, _event| {
 
-                                an.interrupt([
-                                    to![width(px(50))],
-                                    to![width(pc(100))],
-                                ]);
+    //                             an.interrupt([
+    //                                 to![width(px(50))],
+    //                                 to![width(pc(100))],
+    //                             ]);
 
-                                            a.set(a.get()+1);
+    //                                         a.set(a.get()+1);
 
-                                            debug!("will render");
+    //                                         debug!("will render");
 
-                                        Option::<Message>::None
-                                }
-                        ]
-                    ],
-                ]
-            ]
-        };
-        emg_graph.handle_root_in_topo(&root);
-        // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
-        // warn!("{:#?}",&root_gel);
-        emg_graph
+    //                                     Option::<Message>::None
+    //                             }
+    //                     ]
+    //                 ],
+    //             ]
+    //         ]
+    //     };
+    //     emg_graph.handle_root_in_topo(&root);
+    //     // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+    //     // warn!("{:#?}",&root_gel);
+    //     emg_graph
         
-    }
+    // }
 
 
     #[topo::nested]

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-18 23:12:03
- * @LastEditTime: 2022-06-19 21:59:09
+ * @LastEditTime: 2022-06-21 22:49:28
  * @LastEditors: Rais
  * @Description: 
  */
@@ -22,7 +22,7 @@
 use crate::{
     emg_runtime::{ Layer},
     g_node::{EmgNodeItem, node_item_rc_sv::{GraphType, NItem, GelType}},
-    GTreeBuilderElement, GTreeBuilderFn,
+    GTreeBuilderElement, GTreeBuilderFn, GElement,
 };
 use crate::NodeIndex;
 use emg::{edge_index_no_source, node_index, Edge, EdgeIndex, EdgeCollect};
@@ -89,7 +89,7 @@ Message: std::cmp::PartialEq + std::clone::Clone + 'static,
         let outgoing_eix_set = use_state(self.outgoing_eix_set.unwrap());
         let node_item = EmgNodeItem::<NItem<Message>,GelType<Message>,IdStr>::new(
             self.key.clone().unwrap(),
-            self.gel_state.unwrap(),
+         self.gel_state.unwrap(),
             &incoming_eix_set.watch(),
             &outgoing_eix_set.watch(),
             self.graph_rc.clone(),
@@ -369,31 +369,61 @@ where
                 //node index
              
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
-                let edge_index = EdgeIndex::new(parent_nix, nix.clone());
+                let edge_index = EdgeIndex::new(parent_nix.clone(), nix.clone());
 
-                gel.as_inside_direct_use_sa().map_or_else(|| {
-                    GraphNodeBuilder::new(self.clone())
-                    .and_key(id.clone())
-                    //TODO GTreeBuilderElement use Rc
-                    .and_gel_state(use_state(StateAnchor::constant(Rc::new(gel.clone()))))
-                    .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                    .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
-                        1,
-                        BuildHasherDefault::<CustomHasher>::default(),
-                    ))
-                    .build_in_topo();
-                }, |gel_sa| {
-                    GraphNodeBuilder::new(self.clone())
-                    .and_key(id.clone())
-                    //TODO GTreeBuilderElement use Rc
-                    .and_gel_state(use_state(gel_sa.clone()))
-                    .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                    .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
-                        0,
-                        BuildHasherDefault::<CustomHasher>::default(),
-                    ))
-                    .build_in_topo();
-                });
+                match gel{
+                    
+                    GElement::SaNode_(gel_sa) => {
+                        GraphNodeBuilder::new(self.clone())
+                        .and_key(id.clone())
+                        //TODO GTreeBuilderElement use Rc
+                        .and_gel_state(use_state(gel_sa.clone()))
+                        .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                        .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                            0,
+                            BuildHasherDefault::<CustomHasher>::default(),
+                        ))
+                        .build_in_topo();
+                    },
+                    GElement::EvolutionaryFactor(evo) => {
+                        let mut g = self.borrow_mut();
+                        let parent_item = g.get_mut_node_item(&parent_nix).unwrap();
+                        let rc_sa_rc_parent = parent_item.get_gel_rc_sa();
+                        warn!("---- parent anchor: {}",&rc_sa_rc_parent);
+                        let gel_sa = evo.evolution(&*rc_sa_rc_parent);
+                        warn!("---- before run evolution , anchor: {}",&rc_sa_rc_parent);
+                        parent_item.set_gel_sa( gel_sa);
+                        return
+                    },
+
+                    GElement::Builder_(_) |
+                    GElement::Layer_(_) |
+                    GElement::Text_(_) |
+                    GElement::Button_(_) |
+                    GElement::Refresher_(_) |
+                    GElement::Event_(_) |
+                    GElement::Generic_(_) |
+                    GElement::NodeRef_(_)   =>{
+                        GraphNodeBuilder::new(self.clone())
+                        .and_key(id.clone())
+                        //TODO GTreeBuilderElement use Rc
+                        .and_gel_state(use_state(StateAnchor::constant(Rc::new(gel.clone()))))
+                        .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                        .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                            1,
+                            BuildHasherDefault::<CustomHasher>::default(),
+                        ))
+                        .build_in_topo();
+                    },
+                    GElement::EmptyNeverUse => unreachable!(),
+
+                };
+                
+                // .map_or_else(|| {
+               
+                // }, |gel_sa| {
+       
+                // });
 
                
 
@@ -407,6 +437,7 @@ where
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
                     new_def_ei.refresh_for_use(edge_refreshers);
+                    debug!("new_def_ei: {}", &new_def_ei);
 
                     //next
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
@@ -419,28 +450,28 @@ where
                     });
                 });
             }
-            GTreeBuilderElement::SaMapEffectGElementTree(org_id, _edge_refreshers, builder_fn, _children_list) => {
-                let id = replace_id.unwrap_or(org_id);
-                // info!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
-                warn!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
+            // GTreeBuilderElement::SaMapEffectGElementTree(org_id, _edge_refreshers, builder_fn, _children_list) => {
+            //     let id = replace_id.unwrap_or(org_id);
+            //     // info!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
+            //     warn!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
 
 
-                let _span =
-                    trace_span!("-> handle_children [SaMapEffectGElementTree] ", ?id, ?parent_nix).entered();
+            //     let _span =
+            //         trace_span!("-> handle_children [SaMapEffectGElementTree] ", ?id, ?parent_nix).entered();
 
-                // let parent = self.borrow_mut().get_mut_node_item(&parent_nix).unwrap();
-                // parent.set_gel_sa( (**builder_fn)(parent.gel_sa()));
+            //     // let parent = self.borrow_mut().get_mut_node_item(&parent_nix).unwrap();
+            //     // parent.set_gel_sa( (**builder_fn)(parent.gel_sa()));
 
-                let mut g = self.borrow_mut();
-                let parent_item = g.get_mut_node_item(&parent_nix).unwrap();
-                let rc_p = parent_item.get_gel_rc_sa();
-                warn!("---- anchor: {}",&rc_p);
-                let gel_sa = (**builder_fn)(&*rc_p);
-                warn!("---- before run builder , anchor: {}",&rc_p);
-                parent_item.set_gel_sa( gel_sa);
+            //     let mut g = self.borrow_mut();
+            //     let parent_item = g.get_mut_node_item(&parent_nix).unwrap();
+            //     let rc_p = parent_item.get_gel_rc_sa();
+            //     warn!("---- anchor: {}",&rc_p);
+            //     let gel_sa = (**builder_fn)(&*rc_p);
+            //     warn!("---- before run builder , anchor: {}",&rc_p);
+            //     parent_item.set_gel_sa( gel_sa);
                 
              
-            }
+            // }
             //TODO _edge_refresher use for  inject element
             GTreeBuilderElement::Dyn(org_id,_edge_refresher,sa_dict_gbe) => {
                 let id = replace_id.unwrap_or(org_id);

@@ -23,6 +23,7 @@ pool = ["emg_core/pool", "emg/pool", "seed_styles/pool"]
 
 
 [dependencies]
+
 vec-string = "0.1.1"
 
 cfg-if = "1.0.0"
@@ -33,13 +34,13 @@ emg = { path = "../../emg" }
 illicit = "1.1.2"
 # log = "0.4"
 # lazy_static = "1.4.0"
-dyn-clone = "1.0.5"
+dyn-clone = "1.0.6"
 # downcast-rs = "1.2.0"
 dyn-clonable = "0.9.0"
 
 better_any = { path = "../../better_any/better_any", features = [
-    "nightly",
-    "derive",
+  "nightly",
+  "derive",
 ] }
 emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
 
@@ -63,7 +64,7 @@ derive_more = "0.99"
 
 tracing = "0.1"
 
-indexmap = "1.8"
+indexmap = "1.9"
 # rustc-hash = "1.1.0"
 emg_core = { path = "../emg_core" }
 emg_hasher = { path = "../emg_hasher" }
@@ -78,9 +79,6 @@ emg_hasher = { path = "../emg_hasher" }
 # [patch.crates-io]
 # dodrio={path="../../dodrio"}
 
-# [dependencies.bumpalo]
-# version = "3.4.0"
-# features = ["allocator_api"] 
 
 # [target.'cfg(target_arch = "wasm32")'.dependencies]
 
@@ -97,7 +95,7 @@ wasm-bindgen = "0.2"
 either = "1.6.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.6", features = ["js"] }
+getrandom = { version = "0.2.7", features = ["js"] }
 
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
@@ -115,14 +113,14 @@ path = "../../iced/futures"
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "^0.3"
 features = [
-    "Window",
-    "console",
-    "Document",
-    "HtmlElement",
-    "HtmlInputElement",
-    "Event",
-    "EventTarget",
-    "InputEvent",
-    "KeyboardEvent",
-    "IdleRequestOptions",
+  "Window",
+  "console",
+  "Document",
+  "HtmlElement",
+  "HtmlInputElement",
+  "Event",
+  "EventTarget",
+  "InputEvent",
+  "KeyboardEvent",
+  "IdleRequestOptions",
 ]
