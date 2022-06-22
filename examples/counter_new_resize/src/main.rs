@@ -277,6 +277,8 @@ impl Application for Counter {
         orders: impl Orders<Message> + 'static,
     ) -> GTreeBuilderElement<Message> {
         let a = use_state(19999);
+        let b = use_state(333);
+        let bw = b.watch();
 
         let aw = a.watch();
 
@@ -290,24 +292,24 @@ impl Application for Counter {
                     @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
                     Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
                     // Text::new(format!("temp34567845678345678"))=>[
-                        aw.clone() => |p:&Rc<GElement<Message>>,num|{
-                            warn!("run in sa map builder");
-                            // if let Some(p_text) = p.as_text(){
-                            //     warn!("downcast_ref to text ok");
+                        // aw.clone() => |p:&Rc<GElement<Message>>,num|{
+                        //     warn!("run in sa map builder");
+                        //     // if let Some(p_text) = p.as_text(){
+                        //     //     warn!("downcast_ref to text ok");
 
-                            //     Rc::new(p_text.clone().with_content( num.to_string()).into())
-                            if let Some(p_checkbox) = p.as_generic().and_then(|dyn_gel|dyn_gel.downcast_ref::<Checkbox<Message>>()){
-                                warn!("downcast_ref::<Checkbox<Message>> ok");
+                        //     //     Rc::new(p_text.clone().with_content( num.to_string()).into())
+                        //     if let Some(p_checkbox) = p.as_generic().and_then(|dyn_gel|dyn_gel.downcast_ref::<Checkbox<Message>>()){
+                        //         warn!("downcast_ref::<Checkbox<Message>> ok");
 
-                                Rc::new(p_checkbox.clone().with_label( num.to_string().into()).into())
-                            }else{
-                                warn!("downcast_ref::<Checkbox<Message>> false");
-                                p.clone()
+                        //         Rc::new(p_checkbox.clone().with_label( num.to_string().into()).into())
+                        //     }else{
+                        //         warn!("downcast_ref::<Checkbox<Message>> false");
+                        //         p.clone()
 
-                            }
+                        //     }
 
-                        } ,
-                        aw
+                        // } ,
+                        bw
                     ],
 
                 @=b2 @E=[

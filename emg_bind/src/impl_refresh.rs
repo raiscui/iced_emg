@@ -1,11 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-18 11:22:22
+ * @LastEditTime: 2022-06-22 10:06:24
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{GElement, NodeBuilderWidget};
+use emg_core::IdStr;
 use emg_refresh::{
     EqRefreshFor, RefreshFor, RefreshForUse, RefreshUseNoWarper, RefreshWhoNoWarper,
 };
@@ -106,6 +107,7 @@ impl<Message> RefreshFor<GElement<Message>> for u32 {
         }
     }
 }
+
 impl<Message> EqRefreshFor<GElement<Message>> for i32 {}
 
 impl<Message> RefreshFor<GElement<Message>> for i32 {
@@ -117,10 +119,20 @@ impl<Message> RefreshFor<GElement<Message>> for i32 {
                 trace!("==========Text update use i32");
                 text.set_content(format!("i32:{}", self));
             }
-
-            other => {
-                warn!("====> {} refreshing use i32,no effect", other);
+            GElement::Builder_(_) => todo!(),
+            GElement::Layer_(_) => todo!(),
+            GElement::Button_(_) => todo!(),
+            GElement::Refresher_(_) => todo!(),
+            GElement::Event_(_) => todo!(),
+            GElement::Generic_(x) => {
+                todo!()
             }
+            GElement::NodeRef_(_) => todo!(),
+            GElement::SaNode_(_) => todo!(),
+            GElement::EvolutionaryFactor(_) => todo!(),
+            GElement::EmptyNeverUse => todo!(), // other => {
+                                                //     warn!("====> {} refreshing use i32,no effect", other);
+                                                // }
         }
     }
 }
