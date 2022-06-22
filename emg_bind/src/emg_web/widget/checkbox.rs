@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-22 14:52:36
+ * @LastEditTime: 2022-06-22 16:52:52
  * @LastEditors: Rais
  * @Description:
  */
@@ -385,3 +385,34 @@ where
         // }
     }
 }
+
+// #[cfg(test)]
+// mod testcb {
+//     use std::rc::Rc;
+
+//     use emg_refresh::{RefreshFor, RefreshUse};
+
+//     trait UseI32 {
+//         const VALUE: bool = false;
+//     }
+//     impl<T> UseI32 for T {}
+
+//     struct RfUseI32<T>(T);
+
+//     impl<T: RefreshUse<i32>> RfUseI32<T> {
+//         const VALUE: bool = true;
+//     }
+//     trait XX: UseI32 {}
+
+//     #[derive(Clone, PartialEq, Debug)]
+//     enum Message {
+//         A,
+//     }
+
+//     #[test]
+//     fn test() {
+//         let a = RfUseI32(1i64);
+//         let aa = Rc::new(a) as Rc<dyn UseI32>;
+
+//     }
+// }
