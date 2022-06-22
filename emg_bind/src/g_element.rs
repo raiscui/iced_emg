@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-22 14:40:52
+ * @LastEditTime: 2022-06-22 21:39:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -43,6 +43,7 @@ pub trait DynGElement<Message>:
     + Clone
     + core::fmt::Debug
     + TryRefreshUse
+    + RefreshUse<i32>
     
  
 {

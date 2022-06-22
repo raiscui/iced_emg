@@ -3,14 +3,14 @@ use std::{any::Any, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-22 14:39:43
+ * @LastEditTime: 2022-06-22 21:38:14
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{Checkbox, GElement, NodeBuilderWidget};
 use emg_core::IdStr;
 use emg_refresh::{
-    EqRefreshFor, RefreshFor, RefreshForUse, RefreshUseNoWarper, RefreshWhoNoWarper,
+    EqRefreshFor, RefreshFor, RefreshForUse, RefreshUse, RefreshUseNoWarper, RefreshWhoNoWarper,
 };
 use tracing::{trace, warn};
 
@@ -131,7 +131,10 @@ where
                 warn!("i32 try_refresh_for Generic_");
 
                 // self.try_refresh_for(x);
-                w.try_refresh_use(self);
+                // w.try_refresh_use(Box::new(*self));
+                (&mut **w).refresh_use(self);
+
+                // w.refresh_for_use(self);
             }
             GElement::NodeRef_(_) => todo!(),
             GElement::SaNode_(_) => todo!(),

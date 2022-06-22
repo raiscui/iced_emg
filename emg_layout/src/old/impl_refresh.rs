@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2022-01-30 19:32:08
+ * @LastEditTime: 2022-06-22 18:37:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -367,8 +367,8 @@ where
         + Ord
         + 'static
         + Default
-        + std::fmt::Debug
-        + std::fmt::Display,
+        + std::fmt::Display
+        + std::fmt::Debug,
 {
     fn refresh_for(&self, edge: &mut EmgEdgeItem<Ix>) {
         //NOTE 当 tree 宏 中 在 edge中使用 am类型

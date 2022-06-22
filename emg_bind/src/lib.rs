@@ -4,13 +4,13 @@
 // #![warn(clippy::cargo)]
 // #![deny(unsafe_code)]
 #![feature(unboxed_closures, fn_traits, thread_local)]
-// #![feature(specialization)]
+#![feature(specialization)]
 #![feature(drain_filter)]
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(convert_float_to_int)] //RafEventRecipe:  (timestamp * 1000.).trunc().to_int_unchecked::<u64>()
 #![feature(negative_impls)] // NOTE for Gid refresh
 #![feature(auto_traits)]
-#![feature(min_specialization)] // NOTE for Gid refresh
+// #![feature(min_specialization)] // NOTE for Gid refresh
 #![feature(box_patterns)]
 #![feature(trait_upcasting)]
 #![feature(iter_collect_into)]

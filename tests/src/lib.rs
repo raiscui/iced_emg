@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-06-22 00:04:37
+ * @LastEditTime: 2022-06-22 20:58:41
  * @LastEditors: Rais
  * @Description: 
  */
@@ -250,7 +250,7 @@ mod wasm_test {
         
         console::log_1(
             &format!(
-                "new rc graph build view: {}",
+                "new rc sv graph build view: {}",
                 bench_limit(10.,|| {
                     let  g=  new_rc_sv_graph_build();
                     let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
@@ -327,7 +327,7 @@ mod wasm_test {
 
                     @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
                     Text::new(format!("in quote.. {}", "b")) => [
-                        RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
+                        RefreshUse ||-> GElement<Message> {GElement::from( Text::new(format!("ee up")))},
 
                     ],
 
@@ -959,7 +959,7 @@ mod wasm_test {
 
                     @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
                     Text::new(format!("in quote.. {}", "b")) => [
-                        RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
+                        RefreshUse ||-> GElement<Message> {GElement::from( Text::new(format!("ee up")))},
 
                     ],
 
@@ -1059,7 +1059,7 @@ mod wasm_test {
 
                                                 @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
                                                 Text::new(format!("in quote.. {}", "b")) => [
-                                                    RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
+                                                    RefreshUse ||-> GElement<Message> {GElement::from( Text::new(format!("ee up")))},
 
                                                 ],
 
@@ -1253,7 +1253,7 @@ mod wasm_test {
                     @=an @E=[w(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(100))]
                     Text::new(format!("in quote.. {}", "b")) => [
                         // xxx,
-                        RefreshUse ||{GElement::from( Text::new(format!("ee up")))},
+                        RefreshUse ||-> GElement<Message> {GElement::from( Text::new(format!("ee up")))},
                         // RefreshUse  move||{
                         //     that3.borrow().an.get_position(0)
                         // },

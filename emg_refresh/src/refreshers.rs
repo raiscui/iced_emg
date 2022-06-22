@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2022-06-22 15:02:43
+ * @LastEditTime: 2022-06-22 21:20:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -99,7 +99,7 @@ impl<'a, Who> RefresherFor<'a, Who> {
 // }
 
 pub trait TryRefreshUse {
-    fn try_refresh_use(&mut self, u_s_e: &dyn Any);
+    fn try_refresh_use(&mut self, u_s_e: Box<dyn Any>);
 }
 // impl
 //     TryRefreshUse for Rc<Use>
@@ -123,7 +123,15 @@ pub trait TryRefreshUse {
 pub trait RefreshFor<Who> {
     fn refresh_for(&self, who: &mut Who);
 }
-
+impl<Who: Sized, Use: Sized> RefreshFor<Who> for Use {
+    default fn refresh_for(&self, el: &mut Who) {
+        warn!(
+            "this is un implemented yet use {} refresh_for {}",
+            std::any::type_name::<Use>(),
+            std::any::type_name::<Who>()
+        );
+    }
+}
 pub trait EqRefreshFor<Who>: RefreshFor<Who> + DynPartialEq {}
 
 impl<Who> core::cmp::Eq for dyn EqRefreshFor<Who> {}

@@ -2,8 +2,8 @@
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
 // ────────────────────────────────────────────────────────────────────────────────
-// #![feature(specialization)]
-#![feature(min_specialization)]
+#![feature(specialization)]
+// #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
 // #![feature(trivial_bounds)]

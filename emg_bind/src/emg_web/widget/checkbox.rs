@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-22 16:52:52
+ * @LastEditTime: 2022-06-22 21:27:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -334,6 +334,12 @@ where
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
+// impl<Message> RefreshUse<i32> for Checkbox<Message> {
+//     fn refresh_use(&mut self, use_something: &i32) {
+//         self.label = format!("checkbox i32: {}", use_something).into()
+//     }
+// }
+
 impl<'a, Message> RefreshFor<Checkbox<Message>> for i32
 where
     Message: 'static + Clone + MessageTid<'a>,
@@ -370,12 +376,12 @@ impl<'a, Message> TryRefreshUse for Checkbox<Message>
 where
     Message: 'static + Clone + MessageTid<'a>,
 {
-    fn try_refresh_use(&mut self, any: &dyn Any) {
+    fn try_refresh_use(&mut self, any: Box<dyn Any>) {
         warn!(
             "[try_refresh_use]  try downcast to Rc<dyn RefreshFor<{}>>",
             std::any::type_name::<Self>()
         );
-        if let Some(x) = any.downcast_ref::<i32>() {
+        if let Some(x) = any.downcast_ref::<Box<dyn RefreshFor<Self>>>() {
             self.refresh_use(x)
         }
         // if let Some(u_s_e_rf) = any.downcast_ref::<Rc<dyn RefreshFor<Self>>>() {

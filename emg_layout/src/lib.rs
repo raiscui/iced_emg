@@ -5,7 +5,8 @@
 #![allow(clippy::used_underscore_binding)]//for display attr
 
 // ────────────────────────────────────────────────────────────────────────────────
-#![feature(min_specialization)]
+#![feature(specialization)]
+// #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
 #![feature(iter_intersperse)]
