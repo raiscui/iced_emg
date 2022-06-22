@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-06-20 17:59:19
+ * @LastEditTime: 2022-06-21 22:44:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -378,13 +378,12 @@ impl<Message> NodeBuilderWidget<Message> {
             GElement::NodeRef_(_) => {
                 unreachable!("crate builder use NodeRef_ is should never happened")
             }
-            GElement::InsideDirectUseSa_(_) => {
-                unreachable!("crate builder use InsideDirectUseSa_ is should never happened")
-            }
+
             GElement::EmptyNeverUse => {
                 unreachable!("crate builder use EmptyNeverUse is should never happened")
             }
             GElement::SaNode_(_) => todo!(),
+            GElement::EvolutionaryFactor(_) => todo!(),
         }
     }
     pub fn set_id(&mut self, id: IdStr) {

@@ -290,7 +290,7 @@ impl Application for Counter {
                     @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
                     Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
                     // Text::new(format!("temp34567845678345678"))=>[
-                        aw => |p:&Rc<GElement<Message>>,num|{
+                        aw.clone() => |p:&Rc<GElement<Message>>,num|{
                             warn!("run in sa map builder");
                             // if let Some(p_text) = p.as_text(){
                             //     warn!("downcast_ref to text ok");

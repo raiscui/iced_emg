@@ -598,12 +598,14 @@ impl ToTokens for GTreeSurface {
 
                     quote_spanned! (sa_gel.span() => 
 
-                            GTreeBuilderElement::SaMapEffectGElementTree(#id_token,#edge_token,Rc::new(move |parent_sa|{
-                                (parent_sa,&#sa_gel).map(#sa_fn)
-                            }),#children_token)
+                            GTreeBuilderElement::GElementTree(#id_token,#edge_token,
+                                emg_bind::SaWithMapFn::new(#sa_gel,Rc::new(#sa_fn)).into()
+                                // Rc::new(move |parent_sa|{
+                                //     (parent_sa,&#sa_gel).map(#sa_fn)
+                                // })
+                            ,#children_token)
                     )
                     .to_tokens(tokens);
-
 
                 },
             };

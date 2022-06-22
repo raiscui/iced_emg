@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-20 18:05:26
+ * @LastEditTime: 2022-06-21 23:14:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,7 @@ use emg_core::{IdStr, TypeCheckObjectSafe, TypeName};
 use emg_refresh::RefreshFor;
 pub use iced_style::checkbox::{Style, StyleSheet};
 use seed_styles::GlobalStyleSV;
-use tracing::trace;
+use tracing::{error, trace, warn};
 
 use crate::emg_runtime::dodrio::bumpalo;
 use std::{ops::Deref, rc::Rc};
@@ -249,14 +249,16 @@ where
                 todo!();
             }
             Self::Generic_(_g_self) => {
-                trace!("use Generic refresh_for Checkbox");
+                error!("use Generic refresh_for Checkbox :{}", _g_self.type_name());
+
                 //TODO 反射?
-                todo!("reflection?");
+                // todo!("reflection? ",);
             }
             Self::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
             Self::EmptyNeverUse => panic!("EmptyNeverUse never here"),
-            Self::InsideDirectUseSa_(_) => unreachable!(),
             Self::SaNode_(_) => todo!(),
+
+            GElement::EvolutionaryFactor(_) => todo!(),
         };
     }
 }
@@ -294,8 +296,8 @@ where
             }
             GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
             GElement::EmptyNeverUse => panic!("EmptyNeverUse never here"),
-            GElement::InsideDirectUseSa_(_) => unreachable!(),
             GElement::SaNode_(_) => todo!(),
+            GElement::EvolutionaryFactor(_) => todo!(),
         };
     }
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-18 12:53:14
- * @LastEditTime: 2022-06-20 17:35:24
+ * @LastEditTime: 2022-06-21 23:49:33
  * @LastEditors: Rais
  * @Description: 
  */
@@ -14,7 +14,7 @@ use emg_core::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_refresh::{RefreshForUse, RefreshUse};
 use emg_state::{Anchor, CloneStateAnchor, Dict, StateAnchor, StateMultiAnchor, StateVar, CloneStateVar};
-use tracing::{trace, trace_span, debug};
+use tracing::{trace, trace_span, debug, warn, error};
 use vec_string::VecString;
 
 use crate::{GElement, NodeBuilderWidget};
@@ -194,6 +194,8 @@ where
                     let current_child_ei = child_path_clone.pop_back().unwrap();
                     let child_path_clone_popped = child_path_clone;
                     if child_path_clone_popped == current_path2 {
+
+                        let current_path3=current_path2.clone();
                         //
                         let graph_rc5 = graph_rc4.clone();
                         let v_child_gel_sa_clone = v_child_gel_sv_sa.clone();
@@ -203,6 +205,10 @@ where
                                     // NOTE handle note_ref
 
                                     if gel.is_node_ref_() {
+
+                                            let refs =gel.as_node_ref_().unwrap();
+                                            error!("child-- is node ref:{} path:{}",refs,current_path3);
+
                                         gel.as_node_ref_()
                                             .and_then(|str| {
                                                 graph_rc5
@@ -288,9 +294,30 @@ where
 
             let nix4 = nix.clone();
             let path3 = current_path.clone();
+            let graph_rc6 = graph_rc.clone();
 
-            let gel_sa_no_sv = gel_sa.watch().then(|g_sa|g_sa.clone().into());
+            let gel_sa_no_sv = gel_sa.watch().then(move |g_sa|{
+                let graph_rc7 = graph_rc6.clone();
+                let g_sa2 = g_sa.clone();
+            
+                g_sa.then(move|gel|{
+                    if gel.is_node_ref_() {
+                        let refs =gel.as_node_ref_().unwrap();
+                        error!("self is node ref:{} ",refs);
+                         graph_rc7
+                                                    .borrow()
+                                                    .get_node_item_use_ix(&refs)
+                                                    .map(|x| x.gel_sa.watch().get_anchor().then(|aa|aa.clone().into())).unwrap()
+                    }else{
+                        g_sa2.clone().into()
+                    }
 
+                }).into()
+                
+
+                // g_sa.clone().into()
+            
+            });
             //TODO children Dict 细化 reduce, use diffitem 更新 gel_clone
 
             (
@@ -301,11 +328,17 @@ where
             )
                 .map(move |out_eix_s, children, gel, edge_styles| {
                     let mut gel_clone = (&**gel).clone();
+                    
 
                     for eix in out_eix_s {
                         if let Some(child_gel) =
                             children.get(eix).and_then(|child| child.as_ref().right())
                         {
+                            if child_gel.is_node_ref_() {
+                                let refs =child_gel.as_node_ref_().unwrap();
+                                error!("child_gel is node ref:{} ",refs);
+                            }
+
                             gel_clone.refresh_use(child_gel.as_ref());
                         }
                     }
