@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-18 23:12:03
- * @LastEditTime: 2022-06-21 22:49:28
+ * @LastEditTime: 2022-06-23 10:04:19
  * @LastEditors: Rais
  * @Description: 
  */
@@ -116,8 +116,8 @@ where
     ) -> Result<EmgEdgeItem<Self::Ix>, String> {
         let mut g = self.borrow_mut();
         g.nodes_connect_eix(&ei).ok_or("node insert eix fails")?;
-        let source = use_state(ei.source_nix().as_ref().cloned());
-        let target = use_state(ei.target_nix().as_ref().cloned());
+        let source = use_state(ei.source_nix().clone());
+        let target = use_state(ei.target_nix().clone());
         let edge_item = EmgEdgeItem::default_with_wh_in_topo(
             source.watch(),
             target.watch(),
@@ -144,8 +144,8 @@ where
         g.nodes_connect_eix(&edge_index)
             .ok_or("node insert eix fails")?;
 
-        let source = use_state(edge_index.source_nix().as_ref().cloned());
-        let target = use_state(edge_index.target_nix().as_ref().cloned());
+        let source = use_state(edge_index.source_nix().clone());
+        let target = use_state(edge_index.target_nix().clone());
         let edge_item = EmgEdgeItem::new_in_topo(
             source.watch(),
             target.watch(),
@@ -172,10 +172,10 @@ where
             &edge_index
         );
 
-        let source = use_state(edge_index.source_nix().as_ref().cloned());
+        let source = use_state(edge_index.source_nix().clone());
         trace!("\n setup_default_edge_in_topo:\n cloned sv e source");
 
-        let target = use_state(edge_index.target_nix().as_ref().cloned());
+        let target = use_state(edge_index.target_nix().clone());
         trace!("\n setup_default_edge_in_topo:\n cloned sv e target");
 
         let edge_item =

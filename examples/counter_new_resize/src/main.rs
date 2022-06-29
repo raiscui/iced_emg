@@ -285,32 +285,35 @@ impl Application for Counter {
         let an: AnimationE<Message> = anima![width(px(80))];
 
         gtree! {
-            @=a
+            @=a @E=[@h |(button)...| in(#panel) gap(10)]
             Layer [
-                    // @=modstatic @Mod ComponentStatic::tree_build(this.clone(), orders.clone()),
+                // @=modstatic @Mod ComponentStatic::tree_build(this.clone(), orders.clone()),
 
-                    @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
-                    Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
-                    // Text::new(format!("temp34567845678345678"))=>[
-                        // aw.clone() => |p:&Rc<GElement<Message>>,num|{
-                        //     warn!("run in sa map builder");
-                        //     // if let Some(p_text) = p.as_text(){
-                        //     //     warn!("downcast_ref to text ok");
+                @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
+                Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
+                // Text::new(format!("temp34567845678345678"))=>[
+                    // aw.clone() => |p:&Rc<GElement<Message>>,num|{
+                    //     warn!("run in sa map builder");
+                    //     // if let Some(p_text) = p.as_text(){
+                    //     //     warn!("downcast_ref to text ok");
 
-                        //     //     Rc::new(p_text.clone().with_content( num.to_string()).into())
-                        //     if let Some(p_checkbox) = p.as_generic().and_then(|dyn_gel|dyn_gel.downcast_ref::<Checkbox<Message>>()){
-                        //         warn!("downcast_ref::<Checkbox<Message>> ok");
+                    //     //     Rc::new(p_text.clone().with_content( num.to_string()).into())
+                    //     if let Some(p_checkbox) = p.as_generic().and_then(|dyn_gel|dyn_gel.downcast_ref::<Checkbox<Message>>()){
+                    //         warn!("downcast_ref::<Checkbox<Message>> ok");
 
-                        //         Rc::new(p_checkbox.clone().with_label( num.to_string().into()).into())
-                        //     }else{
-                        //         warn!("downcast_ref::<Checkbox<Message>> false");
-                        //         p.clone()
+                    //         Rc::new(p_checkbox.clone().with_label( num.to_string().into()).into())
+                    //     }else{
+                    //         warn!("downcast_ref::<Checkbox<Message>> false");
+                    //         p.clone()
 
-                        //     }
+                    //     }
 
-                        // } ,
-                        bw
-                    ],
+                    // } ,
+                    bw,
+
+                ],
+                node_ref("a"),
+
 
                 @=b2 @E=[
                     an.clone(),

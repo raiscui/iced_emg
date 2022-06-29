@@ -6,16 +6,21 @@
 
 // use trace_var::trace_var;
 
-use proc_macro2::TokenStream;
+use std::error::Error;
+
+use cassowary::Cassowary;
+use proc_macro2::{TokenStream, Span, Punct, Spacing};
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
-use syn::parse::{Parse, ParseStream};
+use syn::{parse::{Parse, ParseStream}, braced};
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
 
 use syn::{Ident, Token};
 // use uuid::Uuid;
 use nanoid::nanoid;
+use tracing::{debug, instrument};
 // ────────────────────────────────────────────────────────────────────────────────
+pub(crate) mod cassowary;
 // use proc_macro::Diagnostic;
 pub mod kw {
     // use std::fmt::Debug;
@@ -157,8 +162,32 @@ impl Parse for AtList {
 //@ Edge ──────────────────────────────
 
 #[derive(Debug)]
+enum EdgeObject{
+    E(Box<syn::Expr>),
+    Cassowary(Box<Cassowary>)
+}
+impl Parse for EdgeObject{
+    #[instrument(name = "EdgeObject")]
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        if input.peek(token::Brace){
+        debug!("====== in EdgeObject peek-> {{}}, will parse cassowary... ");
+            Ok(Self::Cassowary(input.parse()?))
+        }else{
+            Ok(Self::E(input.parse()?))
+        }
+      
+
+        
+        
+    }
+}
+
+
+
+#[derive(Debug)]
 struct Edge {
     bracket_token: token::Bracket,
+    // content: Punctuated<EdgeObject, Token![,]>,
     content: Punctuated<syn::Expr, Token![,]>,
 }
 // struct Edge(Option<syn::Expr>);
@@ -167,12 +196,23 @@ impl Parse for Edge {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
         let bracket_token = bracketed!(content in input);
-        let content: Punctuated<syn::Expr, Token![,]> =
-            content.parse_terminated(syn::Expr::parse)?;
+        debug!("======Edge-> will parse ()");
+        
+        let content: Punctuated<EdgeObject, Token![,]> =
+            content.parse_terminated(EdgeObject::parse)?;
+            // content.parse_terminated(syn::Expr::parse)?;
+        debug!("content: {:?}",&content);
+        debug!("");
+
+        // Ok(Self {
+        //         bracket_token,
+        //         content
+        //     })
+
 
         Ok(Self {
             bracket_token,
-            content,
+            content:Punctuated::<syn::Expr, Token![,]>::default(),
         })
     }
 }
@@ -1150,6 +1190,27 @@ mod tests {
 
     use super::*;
     #[test]
+    fn test_2() {
+        fn token_test(input: &str) {
+            match syn::parse_str::<Gtree>(input) {
+                Ok(ok) => println!("===>{}", ok.to_token_stream()),
+                Err(error) => println!("...{:?}", error),
+            }
+        }
+
+        println!();
+        let input = r#" 
+        @=root
+                Layer [
+                    @=x111x @E=[{@h |(button)...| in(#panel) gap(10)},h(px(11))]
+                    Layer []
+                ]
+        "#;
+
+        token_test(input);
+        println!();
+    }
+    #[test]
     fn test_id() {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
@@ -1160,7 +1221,7 @@ mod tests {
 
         println!();
         let input = r#" 
-        @=aa1
+        @=aa1 @E=[@h |(button)...| in(#panel) gap(10),h(px(11))]
                 Layer [
                     Text::new(format!("aa1***********8"))=>[
                         RefreshUse dyn_v

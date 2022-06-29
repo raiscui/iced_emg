@@ -8,7 +8,7 @@ pub use dyn_partial_eq;
 pub use im::{vector, Vector};
 pub use im_rc as im;
 use measures::{px, ExactLengthSimplex, LogicLength, Unit};
-use ordered_float::NotNan;
+pub use ordered_float::NotNan;
 use tracing::{trace, trace_span, warn};
 // ────────────────────────────────────────────────────────────────────────────────
 use derive_more::{Display, From};

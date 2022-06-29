@@ -25,7 +25,7 @@ im-rc = { version = "15.1.0" }
 # imbl = { path = "../../imbl" }
 # smol_str = "0.1.23"
 # smartstring = "1.0.1"
-compact_str = "0.4.0"
+compact_str = "0.5.0"
 # tinyvec = { version = "1.5.1", features = ["alloc"] }
 smallvec = { version = "1.8.0", features = ["const_generics"] }
 # smallvec = { version = "1.8.0" }

@@ -1,0 +1,56 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: "&ok.ccsss"
+---
+[
+    CCSS {
+        var_op_vars: CCSSVarOpVarExpr {
+            var: ScopeViewVariable {
+                scope: None,
+                view: Some(
+                    Id(
+                        Ident(
+                            b1,
+                        ),
+                    ),
+                ),
+                variable: Some(
+                    PredVariable(
+                        Ident(
+                            bottom,
+                        ),
+                    ),
+                ),
+            },
+            op_exprs: [],
+        },
+        eq_exprs: [
+            CCSSEqExpression {
+                eq: Eq(
+                    EqEq,
+                ),
+                expr: CCSSVarOpVarExpr {
+                    var: ScopeViewVariable {
+                        scope: None,
+                        view: Some(
+                            Id(
+                                Ident(
+                                    b2,
+                                ),
+                            ),
+                        ),
+                        variable: Some(
+                            PredVariable(
+                                Ident(
+                                    top,
+                                ),
+                            ),
+                        ),
+                    },
+                    op_exprs: [],
+                },
+            },
+        ],
+        sw: None,
+    },
+]

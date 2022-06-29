@@ -21,6 +21,8 @@ bench = false
 
 [dependencies]
 
+slotmap = "1.0.6"
+
 nalgebra = "0.31.0"
 # nalgebra = "0.29.0"
 derive_more = "0.99"
@@ -47,6 +49,8 @@ emg_hasher = { path = "../emg_hasher" }
 indexmap = "1.9"
 
 illicit = "1.1.2"
+
+cassowary = { path = "../../cassowary-rs" }
 
 # tinyvec = { version = "1.5.1", features = ["alloc"] }
 

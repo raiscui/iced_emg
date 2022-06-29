@@ -1,0 +1,8 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+CCSSS [
+#b1[bottom] == #b2[top],
+]
+

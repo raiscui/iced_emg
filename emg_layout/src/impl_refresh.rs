@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2022-06-22 18:36:17
+ * @LastEditTime: 2022-06-23 17:16:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -68,7 +68,6 @@ where
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,
     Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
 {
-    // #[allow(clippy::redundant_closure_for_method_calls)]
     default fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         let rc_v = self.get_var_with(emg_state::Var::get);
         warn!("Edge  Refresh use StateVar current value");
@@ -82,7 +81,6 @@ where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,
 {
-    #[allow(clippy::redundant_closure_for_method_calls)]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         warn!("Edge  Refresh use StateVar<CssWidth>");
 
@@ -97,7 +95,6 @@ where
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,
     // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
 {
-    #[allow(clippy::redundant_closure_for_method_calls)]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         warn!("Edge  Refresh use StateAnchor<CssWidth>");
 
@@ -112,7 +109,6 @@ where
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,
     // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
 {
-    #[allow(clippy::redundant_closure_for_method_calls)]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         warn!("Edge  Refresh use StateVar<CssHeight>");
 
@@ -127,7 +123,6 @@ where
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,
     // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
 {
-    #[allow(clippy::redundant_closure_for_method_calls)]
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
         warn!("Edge  Refresh use StateAnchor<CssHeight>");
 

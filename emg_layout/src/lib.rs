@@ -16,12 +16,12 @@
 
 
 
-
 // // 固定 type  T:xxx
 // #![feature(trivial_bounds)]
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
 use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc, time::Duration};
+use ccsa::CassowaryMap;
 use emg_hasher::CustomHasher;
 
 use calc::layout_calculating;
@@ -57,6 +57,8 @@ pub mod add_values;
 pub use animation::AnimationE;
 
 pub mod old;
+pub mod ccsa;
+
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -322,6 +324,9 @@ struct EdgeDataOutput {
 //         )
 //     }
 // }
+
+
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Layout
 {
@@ -587,8 +592,9 @@ where
     pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,// dyn by Edge(source_nix , target_nix)
     pub paths:DictPathEiNodeSA<Ix>, // with parent self  // current not has current node
     pub layout: Layout,
+    pub cassowary_map:CassowaryMap,
     path_styles: StateVar<PathVarMap<Ix, Style>>, //TODO check use
-    path_layouts:StateVar<PathVarMap<Ix, Layout>>,
+    path_layouts:StateVar<PathVarMap<Ix, Layout>>,// layout only for one path 
 
     pub other_styles: StateVar<Style>,
     // no self  first try
@@ -636,7 +642,7 @@ impl<
         write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
     }
 }
-pub type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>;
+pub type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>; //NOTE: EdgeData or something
 
 
 impl<Ix> EmgEdgeItem<Ix>
@@ -792,7 +798,7 @@ where
 
         let other_styles_sv = use_state(s());
 
-        let opt_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
+        let opt_self_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
             let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
 
             eid_sa_inner.map(|i:&EdgeIndex<Ix>|{
@@ -803,16 +809,45 @@ where
             }).into()
         });
 
-        let paths: DictPathEiNodeSA<Ix> = 
-            opt_source_node_nix_sa_re_get.then(move|opt_source_nix:&Option<NodeIndex<Ix>>| {
+        let opt_self_target_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
+
+            eid_sa_inner.map(|i:&EdgeIndex<Ix>|{
+                
+                i.target_nix().clone()
+            }).into()
+        });
+
+        let edges2 = edges.clone();
+        let children_cassowary_var = opt_self_target_node_nix_sa_re_get.then(move|opt_self_target_nix|{
+            if opt_self_target_nix.is_none() {
+                //NOTE 尾
+                Anchor::constant(Dict::<EdgeIndex<Ix>, CassowaryMap>::default())
+            }else{
+
+                //TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
+                let opt_self_target_nix2 =opt_self_target_nix.clone();
+                edges2.filter_map(move |k,v|{
+                    //NOTE  edge source is self_target, this is children
+                    if k.source_nix() == &opt_self_target_nix2 {
+                        Some(v.cassowary_layout_var)
+                    }else{
+                        None
+                    }
+                }).into()
+
+            }
+        });
+
+        let parent_paths: DictPathEiNodeSA<Ix> = 
+            opt_self_source_node_nix_sa_re_get.then(move|opt_self_source_nix:&Option<NodeIndex<Ix>>| {
 
                 let _g = span!(Level::TRACE, "[ source_node_incoming_edge_dict_sa recalculation ]:source_node_nix_sa_re_get change ").entered();
 
-                if opt_source_nix.is_none(){
+                if opt_self_source_nix.is_none(){
                     //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
                     Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
                 }else{
-                    let opt_source_nix_clone = opt_source_nix.clone();
+                    let opt_source_nix_clone = opt_self_source_nix.clone();
                     edges.filter_map(move|someone_eix, e| {
                         
                         println!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_source_nix_clone);
@@ -842,8 +877,8 @@ where
        
 
         //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
-        let paths_clone = paths.clone();
-        let node:DictPathEiNodeSA<Ix> = id_sv.watch().then(move|id_sa|{
+        let paths_clone = parent_paths.clone();
+        let nodes:DictPathEiNodeSA<Ix> = id_sv.watch().then(move|id_sa|{
             
             let paths_clone2 = paths_clone.clone();
                 
@@ -892,12 +927,13 @@ where
 
         Self {
             id: id_sv,
-            paths,
+            paths:parent_paths,
             layout,
+            cassowary_layout_var: CassowaryMap::default(),
             path_styles,
             path_layouts,
             other_styles: other_styles_sv,
-            edge_nodes: node,
+            edge_nodes: nodes,
             store:state_store()
         }
     }
@@ -1132,7 +1168,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_core::{parent, IdStr};
-    use emg_refresh::{RefreshForUse};
+    use emg_refresh::RefreshForUse;
     use emg_state::StateVar;
     use emg_core::vector;
  
@@ -1596,6 +1632,12 @@ mod tests {
             );
             info!("..=========================================================");
     }
+    #[test]
+    fn  test_edge(){
+        let f = width(parent!(CssHeight)+ pc(100));
+        println!("{}", f);
+    }
+
 
     #[test]
     fn it_works() {

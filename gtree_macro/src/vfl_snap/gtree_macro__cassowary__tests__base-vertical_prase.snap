@@ -1,0 +1,77 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: "&ok"
+---
+VFLStatement {
+    d: V,
+    head: ViewSelector(
+        ViewSelector {
+            view: ScopeViewVariable {
+                scope: None,
+                view: Some(
+                    Id(
+                        Ident(
+                            b1,
+                        ),
+                    ),
+                ),
+                variable: None,
+            },
+            pred: None,
+        },
+    ),
+    tails: [
+        ConnectionView {
+            opt_connection: Some(
+                Eq(
+                    None,
+                ),
+            ),
+            view_obj: ViewSelector(
+                ViewSelector {
+                    view: ScopeViewVariable {
+                        scope: None,
+                        view: Some(
+                            Id(
+                                Ident(
+                                    b2,
+                                ),
+                            ),
+                        ),
+                        variable: None,
+                    },
+                    pred: None,
+                },
+            ),
+        },
+    ],
+    o: Options {
+        map: {},
+        chains: [],
+    },
+    selectors: [
+        ScopeViewVariable {
+            scope: None,
+            view: Some(
+                Id(
+                    Ident(
+                        b1,
+                    ),
+                ),
+            ),
+            variable: None,
+        },
+        ScopeViewVariable {
+            scope: None,
+            view: Some(
+                Id(
+                    Ident(
+                        b2,
+                    ),
+                ),
+            ),
+            variable: None,
+        },
+    ],
+    ccsss: [],
+}
