@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-06-29 23:10:39
+ * @LastEditTime: 2022-07-04 23:54:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -64,7 +64,7 @@ mod kw_strength {
     syn::custom_keyword!(weak);
     syn::custom_keyword!(medium); //default
     syn::custom_keyword!(strong);
-    syn::custom_keyword!(require);
+    syn::custom_keyword!(required);
     // syn::custom_keyword!(Dyn);
 
     // impl Debug for layer {
@@ -188,6 +188,14 @@ impl NameChars {
     #[must_use]
     fn is_id(&self) -> bool {
         matches!(self, Self::Id(..))
+    }
+
+    /// Returns `true` if the name chars is [`Number`].
+    ///
+    /// [`Number`]: NameChars::Number
+    #[must_use]
+    fn is_number(&self) -> bool {
+        matches!(self, Self::Number(..))
     }
 }
 
@@ -392,7 +400,7 @@ impl ScopeViewVariable {
         }
     }
     #[must_use]
-    fn new_scope(scope: Scope) -> Self {
+    const fn new_scope(scope: Scope) -> Self {
         Self {
             scope: Some(scope),
             view: None,
@@ -400,31 +408,35 @@ impl ScopeViewVariable {
         }
     }
     #[must_use]
-    fn new_var(var: Ident) -> Self {
+    const fn new_var(var: Ident) -> Self {
         Self {
             scope: None,
             view: None,
             variable: Some(PredVariable(var)),
         }
     }
-    fn variable_is_none(&self) -> bool {
+    const fn variable_is_none(&self) -> bool {
         self.variable.is_none()
     }
     #[must_use]
     fn with_variable(mut self, var: Ident) -> Self {
-        self.variable = Some(PredVariable(var));
+        if !self.view.is_some_and(NameChars::is_number) {
+            self.variable = Some(PredVariable(var));
+        }
         self
     }
     #[must_use]
     fn or_with_variable(mut self, var: Ident) -> Self {
-        if self.variable_is_none() {
+        if self.variable_is_none() && !self.view.is_some_and(NameChars::is_number) {
             self.variable = Some(PredVariable(var));
         }
         self
     }
 
     fn set_variable(&mut self, var: Ident) {
-        self.variable = Some(PredVariable(var));
+        if !self.view.is_some_and(NameChars::is_number) {
+            self.variable = Some(PredVariable(var));
+        }
     }
 }
 impl Parse for ScopeViewVariable {
@@ -596,15 +608,19 @@ impl std::fmt::Display for StrengthAndWeight {
     }
 }
 impl Parse for StrengthAndWeight {
+    #[instrument(name = "StrengthAndWeight")]
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        debug!("in StrengthAndWeight");
+        debug!("in strength_and_weight");
         input.parse::<Token![!]>()?;
         if input.parse::<kw_strength::weak>().is_ok() {
+            debug!("got weak");
             if input.peek(LitInt) {
+                debug!("got weak number");
                 return Ok(Self::Weak(Some(input.parse()?)));
             }
             return Ok(Self::Weak(None));
         }
+        debug!("not weak kw {:?}", &input);
         if input.parse::<kw_strength::medium>().is_ok() {
             if input.peek(LitInt) {
                 return Ok(Self::Medium(Some(input.parse()?)));
@@ -617,13 +633,16 @@ impl Parse for StrengthAndWeight {
             }
             return Ok(Self::Strong(None));
         }
+        debug!("not strong kw");
         // if input.parse::<kw_strength::require>().is_ok() {
         //     if input.peek(LitInt) {
         //         return Ok(Self::Require(Some(input.parse()?)));
         //     }
         //     return Ok(Self::Require(None));
         // }
-        input.parse::<kw_strength::require>()?;
+
+        input.parse::<kw_strength::required>()?;
+        debug!("find required keyword");
         if input.peek(LitInt) {
             return Ok(Self::Require(Some(input.parse()?)));
         }
@@ -1380,14 +1399,13 @@ impl Parse for OptionItem {
 
             return Ok(Self::OuterGap(content.first().cloned().unwrap()));
         }
-        // if input.peek(Token![!]) {
-        input.parse::<Token![!]>()?;
-        let sw = input.parse::<StrengthAndWeight>()?;
-        debug!("got sw");
-        Ok(Self::SW(sw))
-        // }
+        if input.peek(Token![!]) {
+            let sw = input.parse::<StrengthAndWeight>()?;
+            debug!("got sw");
+            return Ok(Self::SW(sw));
+        }
 
-        // panic!("OptionItem parse failed");
+        panic!("OptionItem parse failed");
     }
 }
 
@@ -1401,7 +1419,10 @@ impl Parse for Options {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut os = HashMap::new();
         let mut chains = vec![];
-        while let Ok(option_item) = input.parse::<OptionItem>() {
+        while let Some(option_item) = (!input.is_empty())
+            .then(|| input.parse::<OptionItem>().ok())
+            .flatten()
+        {
             debug!("got optionItem: {:?}", &option_item);
             if option_item.is_chain() {
                 chains.push(option_item.try_into_chain().unwrap());
@@ -1699,7 +1720,9 @@ impl VFLStatement {
             }
         }
     }
+    #[instrument(skip(self))]
     fn build(&mut self) {
+        debug!("in build");
         //   p.addSplatIfNeeded(head, d, o);
         let mut chained_views = vector![];
         let mut head_view_obj = self.head.processe();
@@ -1711,8 +1734,10 @@ impl VFLStatement {
         self.addPreds(&head_view, head_view_obj.pred.as_ref());
 
         let sw = self.o.map.get("SW").and_then(OptionItem::as_sw).cloned();
+        debug!("tail {:#?}", self.tails);
 
         for tail in self.tails.clone() {
+            debug!("in tail {:#?}", tail);
             let connection = tail.opt_connection.clone();
             let tail_view_obj = tail.view_obj.processe();
             self.add_splat_if_needed(&tail_view_obj);
@@ -1723,9 +1748,10 @@ impl VFLStatement {
             self.addPreds(&tail_view, tail_view_obj.pred.as_ref());
             //result = [...]
             if !(head_view_obj.is_point && tail_view_obj.is_point) {
-                //不全部是 point
+                debug!("不全部是 point",);
+                //NOTE 不全部是 point
                 let with_container = (head_view.is_or() || tail_view.is_or())
-                    && !(head_view_obj.is_point || tail_view_obj.is_point); //都不是
+                    && !(head_view_obj.is_point || tail_view_obj.is_point); //NOTE 都不是
                                                                             // • • • • •
                 let (left_v, mut left_point_op_var) =
                     get_left_var(&head_view, &self.d, &self.o, &head_view_obj);
@@ -1746,6 +1772,7 @@ impl VFLStatement {
                     op_exprs: right_point_op_var,
                 };
                 let eq_exprs = vec![CCSSEqExpression::new(eq, right_var_op_vars)];
+                debug!("======== sw: {:?}", &sw);
 
                 let ccss = CCSS {
                     var_op_vars: left_var_op_vars,
@@ -1858,6 +1885,7 @@ mod tests {
     use std::path::Path;
 
     use quote::ToTokens;
+    use tracing::debug;
 
     use crate::{
         cassowary::{CCSSSDisp, NameChars, VFLStatement},
@@ -1875,6 +1903,8 @@ mod tests {
         // ─────────────────────────────────────────────────────────────────
 
         insta::with_settings!({snapshot_path => Path::new("./vfl_snap")}, {
+
+            debug!("=========== parse \n {:?}\n",&input);
 
             match syn::parse_str::<VFLStatement>(input) {
                 Ok(mut ok) => {
