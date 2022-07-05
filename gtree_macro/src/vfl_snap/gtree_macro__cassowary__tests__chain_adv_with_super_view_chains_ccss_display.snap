@@ -1,0 +1,13 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+CCSSS [
+#b1[height]  ==  100 !strong,
+#panel[top] + 8  ==  #b1[top],
+#b1[bottom]  ==  #b2[top],
+#b2[bottom] + 8  ==  #panel[bottom],
+#b1[centerX]  ==  #panel[centerX] ==  #b2[centerX] !require,
+#b1[width]  >=  50 <=  #b2[width] !weak(10),
+]
+

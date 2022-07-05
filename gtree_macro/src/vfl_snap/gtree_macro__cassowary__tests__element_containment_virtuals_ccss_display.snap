@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+CCSSS [
+"LitStr { token: "parent" }"[top]  ==  #sub[top],
+#sub[bottom]  ==  "LitStr { token: "parent" }"[bottom],
+]
+

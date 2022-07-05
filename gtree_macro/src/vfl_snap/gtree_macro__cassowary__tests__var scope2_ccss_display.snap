@@ -3,6 +3,6 @@ source: gtree_macro/src/cassowary.rs
 expression: disp
 ---
 CCSSS [
-#b1[bottom]  ==  #b2[top],
+#b1[right] + $md  ==  #b2[left],
 ]
 

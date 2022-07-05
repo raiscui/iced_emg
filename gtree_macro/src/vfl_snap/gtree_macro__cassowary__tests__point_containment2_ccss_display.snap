@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+CCSSS [
+"LitStr { token: "col1" }"[center_x] + 20 + [hgap] == #box1[left],
+#box1[right] + [hgap] == #window[center_x],
+]
+

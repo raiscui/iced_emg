@@ -1,0 +1,10 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+CCSSS [
+#parent[left] + [hgap]  ==  #sub1[left],
+#sub1[right] + [hgap]  ==  #sub2[left],
+#sub2[right] + [hgap]  ==  #parent[right],
+]
+

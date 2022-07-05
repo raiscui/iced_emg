@@ -4,5 +4,7 @@ expression: disp
 ---
 CCSSS [
 #b1[right]  ==  #b2[left],
+#b2[right] + 20  ==  #b3[left],
+#b3[right] + 100  ==  #b4[left],
 ]
 

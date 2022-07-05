@@ -3,6 +3,6 @@ source: gtree_macro/src/cassowary.rs
 expression: disp
 ---
 CCSSS [
-#b1[height] >= 100,
+#b1[height]  >=  100,
 ]
 

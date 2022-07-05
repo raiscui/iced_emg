@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+CCSSS [
+#b1[right] + [my_gap]  ==  #b2[left],
+#b2[right] + [my_other_gap]  ==  #b3[left],
+]
+

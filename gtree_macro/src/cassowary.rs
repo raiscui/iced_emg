@@ -1,24 +1,24 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-07-04 23:54:43
+ * @LastEditTime: 2022-07-05 23:19:44
  * @LastEditors: Rais
  * @Description:
  */
+use im_rc::{vector, Vector};
 use parse_display::{Display, FromStr};
+use proc_macro2::{Span, TokenStream};
 use std::{collections::HashMap, rc::Rc};
 
-use im_rc::{vector, Vector};
-use proc_macro2::{Span, TokenStream};
-
 use quote::{quote_spanned, ToTokens};
+use syn::ext::IdentExt;
 use syn::{
     braced, bracketed, parenthesized,
     parse::{discouraged::Speculative, Parse, ParseStream},
     punctuated::Punctuated,
     token, BinOp, Ident, LitFloat, LitInt, LitStr, Token,
 };
-use tracing::{debug, debug_span, instrument};
+use tracing::{debug, debug_span, error, instrument};
 
 fn size_var_names(d: &Dimension) -> Ident {
     match d {
@@ -186,7 +186,7 @@ impl NameChars {
     ///
     /// [`Id`]: NameChars::Id
     #[must_use]
-    fn is_id(&self) -> bool {
+    const fn is_id(&self) -> bool {
         matches!(self, Self::Id(..))
     }
 
@@ -194,7 +194,7 @@ impl NameChars {
     ///
     /// [`Number`]: NameChars::Number
     #[must_use]
-    fn is_number(&self) -> bool {
+    const fn is_number(&self) -> bool {
         matches!(self, Self::Number(..))
     }
 }
@@ -205,22 +205,30 @@ impl Parse for NameChars {
         // TODO [a-zA-Z0-9#.\-_$:""&]
 
         if input.peek(Token![#]) {
+            debug!("peek #");
             input.parse::<Token![#]>()?;
-            let name = input.parse::<Ident>()?;
+            debug!("parse #");
+            debug!("will parse ident {:?}", &input);
+
+            let name = input.call(Ident::parse_any)?;
             debug!("got id: #{:?}", &name);
             return Ok(Self::Id(name));
         }
         debug!("not id : {:?}", &input);
 
         if input.peek(Token![.]) {
+            debug!("peek .");
+
             input.parse::<Token![.]>()?;
-            let name = input.parse::<Ident>()?;
+            let name = input.call(Ident::parse_any)?;
             debug!("got class: .{:?}", &name);
             return Ok(Self::Class(name));
         }
         debug!("not class : {:?}", &input);
 
         if input.peek(LitStr) {
+            debug!("peek \" \" ");
+
             let r#virtual: LitStr = input.parse()?;
             debug!("got virtual: {:?}", &r#virtual);
             return Ok(Self::Virtual(r#virtual));
@@ -228,14 +236,18 @@ impl Parse for NameChars {
         debug!("not Virtual : {:?}", &input);
 
         if input.peek(LitFloat) || input.peek(LitInt) {
+            debug!("peek number");
+
             let n: Number = input.parse()?;
             debug!("got Number: {:?}", &n);
 
             return Ok(Self::Number(n));
         }
         debug!("not Number : {:?}", &input);
+        // ────────────────────────────────────────────────────────────────────────────────
 
-        let name = input.parse::<Ident>()?;
+        let name = input.call(Ident::parse_any)?;
+
         debug!("got Element: {:?}", &name);
         Ok(Self::Element(name))
     }
@@ -330,7 +342,7 @@ impl Parse for PredVariable {
 
         let content;
         let _bracket_token = bracketed!(content in input);
-        let var: Ident = content.parse()?;
+        let var: Ident = content.call(Ident::parse_any)?;
         Ok(Self(var))
     }
 }
@@ -443,6 +455,9 @@ impl Parse for ScopeViewVariable {
     #[instrument(name = "ScopeViewVariable")]
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let scope = input.parse();
+        let fork = input.fork();
+        assert!(fork.parse::<Scope>().is_err(), "scope duplicated ");
+
         let view = input.parse();
         let variable = input.parse();
         // assert!(
@@ -452,14 +467,23 @@ impl Parse for ScopeViewVariable {
 
         if scope.is_err() && view.is_err() && variable.is_err() {
             let e = scope.err().unwrap();
+            let e2 = view.err().unwrap();
+            let e3 = variable.err().unwrap();
+            error!(
+                "all none in ScopeViewVariable \n {:?} \n {:?} \n {:?}\n",
+                &e, &e2, &e3
+            );
             return Err(syn::Error::new(e.span(), "all none in ScopeViewVariable"));
         }
 
-        Ok(Self {
+        let res = Self {
             scope: scope.ok(),
             view: view.ok(),
             variable: variable.ok(),
-        })
+        };
+        debug!("got ScopeViewVariable : {:?}", &res);
+
+        Ok(res)
     }
 }
 
@@ -541,10 +565,14 @@ impl Parse for PredExpression {
         debug!("in PredExpression");
         let first: ScopeViewVariable = input.parse()?;
         // ─────────────────────────────────────────────────────────────────
+        let fork = input.fork();
 
         let mut exps = vec![];
         let mut op = None;
-        while !input.peek(Token![>]) && !input.is_empty() {
+
+        // !input.peek(Token![>])
+        while !input.peek(Token![,]) && !input.peek(Token![!]) && !input.peek(Token![>]) /*for point <xxx> */&& !input.is_empty()
+        {
             if let Ok(x) = input.parse::<PredExpressionItem>() {
                 match x {
                     PredExpressionItem::PredOp(x) if op.is_none() => {
@@ -561,7 +589,10 @@ impl Parse for PredExpression {
                 break;
             }
         }
-        Ok(Self(first, exps))
+
+        let pred_expression = Self(first, exps);
+        debug!("got pred_expression {:?}", pred_expression);
+        Ok(pred_expression)
     }
 }
 /// !weak10   !require
@@ -576,32 +607,32 @@ enum StrengthAndWeight {
 impl std::fmt::Display for StrengthAndWeight {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StrengthAndWeight::Weak(x) => {
+            Self::Weak(x) => {
                 if let Some(i) = x {
-                    write!(f, "!weak{}", i)
+                    write!(f, " !weak({})", i)
                 } else {
-                    write!(f, "!weak")
+                    write!(f, " !weak")
                 }
             }
-            StrengthAndWeight::Medium(x) => {
+            Self::Medium(x) => {
                 if let Some(i) = x {
-                    write!(f, "!medium{}", i)
+                    write!(f, " !medium({})", i)
                 } else {
-                    write!(f, "!medium")
+                    write!(f, " !medium")
                 }
             }
-            StrengthAndWeight::Strong(x) => {
+            Self::Strong(x) => {
                 if let Some(i) = x {
-                    write!(f, "!strong{}", i)
+                    write!(f, " !strong({})", i)
                 } else {
-                    write!(f, "!strong")
+                    write!(f, " !strong")
                 }
             }
-            StrengthAndWeight::Require(x) => {
+            Self::Require(x) => {
                 if let Some(i) = x {
-                    write!(f, "!require{}", i)
+                    write!(f, " !require({})", i)
                 } else {
-                    write!(f, "!require")
+                    write!(f, " !require")
                 }
             }
         }
@@ -614,22 +645,30 @@ impl Parse for StrengthAndWeight {
         input.parse::<Token![!]>()?;
         if input.parse::<kw_strength::weak>().is_ok() {
             debug!("got weak");
-            if input.peek(LitInt) {
+            if input.peek(token::Paren) {
+                let content;
+                let paren_token = parenthesized!(content in input);
                 debug!("got weak number");
-                return Ok(Self::Weak(Some(input.parse()?)));
+                return Ok(Self::Weak(Some(content.parse()?)));
             }
             return Ok(Self::Weak(None));
         }
         debug!("not weak kw {:?}", &input);
         if input.parse::<kw_strength::medium>().is_ok() {
-            if input.peek(LitInt) {
-                return Ok(Self::Medium(Some(input.parse()?)));
+            if input.peek(token::Paren) {
+                let content;
+                let paren_token = parenthesized!(content in input);
+                debug!("got medium number");
+                return Ok(Self::Medium(Some(content.parse()?)));
             }
             return Ok(Self::Medium(None));
         }
         if input.parse::<kw_strength::strong>().is_ok() {
-            if input.peek(LitInt) {
-                return Ok(Self::Strong(Some(input.parse()?)));
+            if input.peek(token::Paren) {
+                let content;
+                let paren_token = parenthesized!(content in input);
+                debug!("got strong number");
+                return Ok(Self::Strong(Some(content.parse()?)));
             }
             return Ok(Self::Strong(None));
         }
@@ -643,8 +682,11 @@ impl Parse for StrengthAndWeight {
 
         input.parse::<kw_strength::required>()?;
         debug!("find required keyword");
-        if input.peek(LitInt) {
-            return Ok(Self::Require(Some(input.parse()?)));
+        if input.peek(token::Paren) {
+            let content;
+            let paren_token = parenthesized!(content in input);
+            debug!("got required number");
+            return Ok(Self::Require(Some(content.parse()?)));
         }
         Ok(Self::Require(None))
     }
@@ -653,15 +695,15 @@ impl Parse for StrengthAndWeight {
 /// ` == < > >= <= `
 #[derive(Debug, Copy, Clone, Display)]
 enum PredEq {
-    #[display("{0}")]
+    #[display(" {0} ")]
     Eq(#[display("==")] Token![==]),
-    #[display("{0}")]
+    #[display(" {0} ")]
     Lt(#[display("<")] Token![<]),
-    #[display("{0}")]
+    #[display(" {0} ")]
     Le(#[display("<=")] Token![<=]),
-    #[display("{0}")]
+    #[display(" {0} ")]
     Ge(#[display(">=")] Token![>=]),
-    #[display("{0}")]
+    #[display(" {0} ")]
     Gt(#[display(">")] Token![>]),
 }
 
@@ -705,12 +747,20 @@ struct PredicateItem {
     strength_and_weight: Option<StrengthAndWeight>,
 }
 impl Parse for PredicateItem {
+    #[instrument(name = "PredicateItem")]
     fn parse(input: ParseStream) -> syn::Result<Self> {
         debug!("in PredicateItem");
+        let pred_eq = input.parse()?;
+        debug!("got pred_eq : {:?}", &pred_eq);
+        let pred_expression = input.parse()?;
+        debug!("got pred_expression : {:?}", &pred_expression);
+        let strength_and_weight = input.parse().ok();
+        debug!("got strength_and_weight : {:?}", &strength_and_weight);
+
         Ok(Self {
-            pred_eq: input.parse()?,
-            pred_expression: input.parse()?,
-            strength_and_weight: input.parse().ok(),
+            pred_eq,
+            pred_expression,
+            strength_and_weight,
         })
     }
 }
@@ -723,7 +773,7 @@ impl Parse for Predicate {
         let content;
         // ()
         let _paren_token = parenthesized!(content in input);
-        debug!("got ()");
+        debug!("got () : {:?}", &content);
         let content: Punctuated<PredicateItem, Token![,]> =
             content.parse_terminated(PredicateItem::parse)?;
         if !content.is_empty() {
@@ -755,8 +805,6 @@ struct ViewSelector {
 impl Parse for ViewSelector {
     #[instrument(name = "ViewSelector")]
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let _span = debug_span!("parse-> (`&name[var]`? (`Predicate`)?) ").entered();
-        debug!("input: {:?}", &input);
         let content;
         let _paren_token = parenthesized!(content in input);
         debug!(" in ViewSelector find () \n content:{:?}", &content);
@@ -777,8 +825,10 @@ impl Parse for ViewSelector {
 enum Scope {
     #[display("&")]
     Local,
+    //
     #[display("^({0})")]
     Parent(u8),
+    //
     #[display("$")]
     Global,
 }
@@ -854,6 +904,7 @@ impl Parse for Connection {
             debug!("got just - ");
             return Ok(Self::Eq(Gap::Standard));
         }
+        debug!("not - ");
 
         if input.peek(Token![~]) {
             debug!("peek ~ ");
@@ -862,17 +913,26 @@ impl Parse for Connection {
 
             //TODO check input.parse::<ScopeViewVariable>()  不会通吃
             if let Ok(explicit_gap) = input.parse::<ScopeViewVariable>() {
-                input.parse::<Token![-]>()?;
+                debug!("got ScopeViewVariable: {:?}", &explicit_gap);
+
+                input.parse::<Token![~]>()?;
+                debug!(" ~view~ ");
                 return Ok(Self::Le(Gap::Var(explicit_gap)));
             }
+            debug!("not ~view_var ");
 
             if input.parse::<Token![-]>().is_ok() {
                 input.parse::<Token![~]>()?;
+                debug!(" ~-~ ");
+
                 return Ok(Self::Le(Gap::Standard));
             }
+            debug!("not ~-~ ");
 
             return Ok(Self::Le(Gap::None));
         }
+        debug!("not ~ ");
+
         Ok(Self::Eq(Gap::None))
     }
 }
@@ -882,12 +942,6 @@ impl Parse for Connection {
 struct Splat {
     view_selector: ViewSelector,
     opt_connection: Option<Connection>,
-}
-
-impl Splat {
-    fn opt_connection(&self) -> Option<&Connection> {
-        self.opt_connection.as_ref()
-    }
 }
 
 impl Parse for Splat {
@@ -943,7 +997,7 @@ impl ViewProcessedScopeViewVariable {
         matches!(self, Self::Or)
     }
 
-    fn as_node(&self) -> Option<&ScopeViewVariable> {
+    const fn as_node(&self) -> Option<&ScopeViewVariable> {
         if let Self::Node(v) = self {
             Some(v)
         } else {
@@ -985,7 +1039,7 @@ struct CCSSOpVar {
 }
 
 impl CCSSOpVar {
-    fn new(op: PredOp, var: ScopeViewVariable) -> Self {
+    const fn new(op: PredOp, var: ScopeViewVariable) -> Self {
         Self { op, var }
     }
 }
@@ -1270,7 +1324,7 @@ impl Parse for Chain {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         input.parse::<kw_opt::chain>()?;
         input.parse::<Token![-]>()?;
-        let prop: Ident = input.parse()?;
+        let prop: Ident = input.call(Ident::parse_any)?;
         if input.peek(token::Paren) {
             let preds: ChainPredicate = input.parse()?;
             return Ok(Self { prop, preds });
@@ -1294,15 +1348,15 @@ enum OptionItem {
 impl OptionItem {
     fn key(&self) -> String {
         match self {
-            OptionItem::Chain(_) => "Chain".to_string(),
-            OptionItem::In(_) => "In".to_string(),
-            OptionItem::Gap(_) => "Gap".to_string(),
-            OptionItem::OuterGap(_) => "OuterGap".to_string(),
-            OptionItem::SW(_) => "SW".to_string(),
+            Self::Chain(_) => "Chain".to_string(),
+            Self::In(_) => "In".to_string(),
+            Self::Gap(_) => "Gap".to_string(),
+            Self::OuterGap(_) => "OuterGap".to_string(),
+            Self::SW(_) => "SW".to_string(),
         }
     }
 
-    fn as_outer_gap(&self) -> Option<&ScopeViewVariable> {
+    const fn as_outer_gap(&self) -> Option<&ScopeViewVariable> {
         if let Self::OuterGap(v) = self {
             Some(v)
         } else {
@@ -1310,7 +1364,7 @@ impl OptionItem {
         }
     }
 
-    fn as_gap(&self) -> Option<&ScopeViewVariable> {
+    const fn as_gap(&self) -> Option<&ScopeViewVariable> {
         if let Self::Gap(v) = self {
             Some(v)
         } else {
@@ -1318,7 +1372,7 @@ impl OptionItem {
         }
     }
 
-    fn as_in(&self) -> Option<&ScopeViewVariable> {
+    const fn as_in(&self) -> Option<&ScopeViewVariable> {
         if let Self::In(v) = self {
             Some(v)
         } else {
@@ -1326,7 +1380,7 @@ impl OptionItem {
         }
     }
 
-    fn as_sw(&self) -> Option<&StrengthAndWeight> {
+    const fn as_sw(&self) -> Option<&StrengthAndWeight> {
         if let Self::SW(v) = self {
             Some(v)
         } else {
@@ -1346,7 +1400,7 @@ impl OptionItem {
     ///
     /// [`Chain`]: OptionItem::Chain
     #[must_use]
-    fn is_chain(&self) -> bool {
+    const fn is_chain(&self) -> bool {
         matches!(self, Self::Chain(..))
     }
 }
@@ -1517,14 +1571,10 @@ fn get_right_var(
 }
 
 fn get_super_view_name(o: &Options) -> ScopeViewVariable {
-    if let Some(in_name) = o.map.get("In") {
-        in_name.as_in().cloned().unwrap()
-    } else {
-        ScopeViewVariable::new_scope(Scope::Local)
-    }
-}
-fn get_trailing_options(o: &Options) {
-    if !o.map.is_empty() {}
+    o.map.get("In").map_or_else(
+        || ScopeViewVariable::new_scope(Scope::Local),
+        |in_name| in_name.as_in().cloned().unwrap(),
+    )
 }
 
 #[derive(Debug)]
@@ -1539,7 +1589,7 @@ pub struct VFLStatement {
 
 impl VFLStatement {
     fn get_op_gap(&self, opt_gap: Option<&Gap>, with_container: bool) -> Option<CCSSOpVar> {
-        let mut g: Option<CCSSOpVar>;
+        let g: Option<CCSSOpVar>;
         if let Some(gap) = opt_gap {
             match gap {
                 Gap::None => {
@@ -1627,7 +1677,7 @@ impl VFLStatement {
         }
     }
 
-    fn addPreds(&mut self, view: &ViewProcessedScopeViewVariable, opt_preds: Option<&Predicate>) {
+    fn add_preds(&mut self, view: &ViewProcessedScopeViewVariable, opt_preds: Option<&Predicate>) {
         if let Some(preds) = opt_preds {
             //NOTE has like  ( <=100!required,>=30!strong100 )
             for pred in &preds.0 {
@@ -1710,12 +1760,14 @@ impl VFLStatement {
                             eq_exprs.push(CCSSEqExpression::new(eq, right_view_var_op_vars));
                         }
                     }
-                    let ccss = CCSS {
-                        var_op_vars,
-                        eq_exprs,
-                        sw: pred.s.clone(),
-                    };
-                    self.ccsss.push(ccss);
+                    if !eq_exprs.is_empty() {
+                        let ccss = CCSS {
+                            var_op_vars,
+                            eq_exprs,
+                            sw: pred.s.clone(),
+                        };
+                        self.ccsss.push(ccss);
+                    }
                 }
             }
         }
@@ -1731,7 +1783,7 @@ impl VFLStatement {
         if !head_view.is_or() {
             chained_views.push_back(head_view.clone());
         }
-        self.addPreds(&head_view, head_view_obj.pred.as_ref());
+        self.add_preds(&head_view, head_view_obj.pred.as_ref());
 
         let sw = self.o.map.get("SW").and_then(OptionItem::as_sw).cloned();
         debug!("tail {:#?}", self.tails);
@@ -1745,7 +1797,7 @@ impl VFLStatement {
             if !tail_view.is_or() {
                 chained_views.push_back(tail_view.clone());
             }
-            self.addPreds(&tail_view, tail_view_obj.pred.as_ref());
+            self.add_preds(&tail_view, tail_view_obj.pred.as_ref());
             //result = [...]
             if !(head_view_obj.is_point && tail_view_obj.is_point) {
                 debug!("不全部是 point",);
@@ -1893,6 +1945,28 @@ mod tests {
     };
     use tracing_subscriber::{prelude::*, registry::Registry};
 
+    fn token_expect_error(name: &str, input: &str) {
+        // ────────────────────────────────────────────────────────────────────────────────
+
+        let subscriber = Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
+        // .with(subscriber1);
+        tracing::subscriber::set_global_default(subscriber).ok();
+
+        // ─────────────────────────────────────────────────────────────────
+
+        insta::with_settings!({snapshot_path => Path::new("./vfl_snap")}, {
+
+            debug!("=========== parse \n {:?}\n",&input);
+
+            match syn::parse_str::<VFLStatement>(input) {
+                Ok(mut ok) => {
+                    panic!("should error =============\n{:#?}\n", &ok);
+                     }
+                Err(error) => println!("...{:?}", error),
+            }
+        });
+    }
+
     fn token_test(name: &str, input: &str) {
         // ────────────────────────────────────────────────────────────────────────────────
 
@@ -1924,7 +1998,7 @@ mod tests {
 
                     // assert_eq!(x.as_str(), r#"NameChars :: Id (IdStr :: new ("button"))"#)
                 }
-                Err(error) => println!("...{:?}", error),
+                Err(error) => panic!("...{:?}", error),
             }
         });
     }
@@ -1999,12 +2073,494 @@ mod tests {
         // ─────────────────────────────────────────────────────────────────
     }
     #[test]
+    fn explicit_gap() {
+        let input = r#" 
+                    @h (#b1)-100-(#b2)-8-(#b3)
+            "#;
+
+        token_test("explicit-gaps", input);
+        let input = r#" 
+                    @h (#b1) - 100 - (#b2) - 8 - (#b3)
+            "#;
+
+        token_test("explicit-gaps2", input);
+    }
+    #[test]
+    fn explicit_var_gap() {
+        let input = r#" 
+                @h (#b1)-[my_gap]-(#b2)-[my_other_gap]-(#b3)
+            "#;
+
+        token_test("explicit-var-gaps", input);
+    }
+    #[test]
+    fn mix_gap() {
+        let input = r#" 
+        @h (#b1)(#b2)-(#b3)-100-(#b4) gap(20)
+            "#;
+
+        token_test("mix-gaps", input);
+    }
+    #[test]
+    fn variable_standard_gap() {
+        let input = r#" 
+        @h (#b1)-100-(#b2)-(#b3)-(#b4) gap([col_width])
+            "#;
+
+        token_test("variable-standard-gap", input);
+    }
+    #[test]
+    fn view_variable_standard_gap() {
+        let input = r#" 
+        @h (#b1)-100-(#b2)-(#b3)-(#b4) gap(#box1[width])
+            "#;
+
+        token_test("view-variable-standard-gap", input);
+    }
+    #[test]
+    fn virtuals() {
+        let input = r#" 
+        @v ("Zone")-("1")-("a")-("q-1")-("_fallout")
+            "#;
+
+        token_test("virtuals", input);
+    }
+    #[test]
+    fn err1() {
+        let input = r#" 
+        @h (#b1(#b2)
+            "#;
+
+        token_expect_error("err1", input);
+    }
+
+    #[test]
+    fn var_scope() {
+        let input = r#" 
+        @h (#b1)-$[md]-(#b2)
+            "#;
+
+        token_test("var scope", input);
+        let input = r#" 
+        @h (#b1)-$md-(#b2)
+            "#;
+
+        token_test("var scope2", input);
+    }
+    #[test]
+    #[should_panic]
+    fn var_scope_err() {
+        let input = r#" 
+        @h (#b1)-$$md-(#b2)
+            "#;
+
+        syn::parse_str::<VFLStatement>(input).expect("err....");
+    }
+
+    #[test]
+    fn parent() {
+        let input = r#" 
+        @h (#b1)-^[md]-(#b2)
+            "#;
+
+        token_test("parent", input);
+        let input = r#" 
+        @h (#b1)-^md-(#b2)
+            "#;
+
+        token_test("parent2", input);
+        let input = r#" 
+        @h (#b1)-^^md-(#b2)
+            "#;
+
+        token_test("parent3", input);
+    }
+
+    #[test]
+    fn local() {
+        let input = r#" 
+        @h (#b1)-&[md]-(#b2)
+            "#;
+
+        token_test("local", input);
+        let input = r#" 
+        @h (#b1)-&md-(#b2)
+            "#;
+
+        token_test("local2", input);
+    }
+
+    #[test]
+    #[should_panic]
+    fn local_err() {
+        let input = r#" 
+        @h (#b1)-&&md-(#b2)
+            "#;
+
+        syn::parse_str::<VFLStatement>(input).ok();
+    }
+
+    #[test]
+    fn element_containment_parent() {
+        let input = r#" 
+        @v |(#sub)| in(#parent)
+            "#;
+
+        token_test("element_containment_parent", input);
+    }
+    #[test]
+    fn element_containment_virtuals() {
+        let input = r#" 
+        @v |(#sub)| in("parent")
+            "#;
+
+        token_test("element_containment_virtuals", input);
+    }
+    #[test]
+    fn element_containment_default() {
+        let input = r#" 
+        @v |(#sub)|
+            "#;
+
+        token_test("element_containment_default", input);
+    }
+    #[test]
+    fn element_containment_view_gap() {
+        let input = r#" 
+        @h |-(#sub1)-(#sub2)-| in(#parent)
+            "#;
+
+        token_test("element_containment_view_gap", input);
+    }
+    #[test]
+    fn element_containment_view_explicit_gap() {
+        let input = r#" 
+        @h |-1-(#sub)-2-| in(#parent)
+            "#;
+
+        token_test("element_containment_view_explicit_gap", input);
+    }
+    #[test]
+    fn element_containment_outer_gap() {
+        let input = r#" 
+        @h |-(#sub1)-(#sub2)-| in(#parent) outer-gap(10)
+            "#;
+
+        token_test("element_containment_outer_gap", input);
+    }
+    #[test]
+    fn element_containment_outer_gap2() {
+        let input = r#" 
+        @h |-(#sub1)-(#sub2)-| in(#parent) gap(8) outer-gap([baseline])
+            "#;
+
+        token_test("element_containment_outer_gap2", input);
+    }
+    #[test]
+    #[should_panic]
+    fn element_containment_err() {
+        let input = r#" 
+        @h |-(#box]-
+            "#;
+
+        syn::parse_str::<VFLStatement>(input).expect("err....");
+    }
+
+    #[test]
+    fn points() {
+        let input = r#" 
+        @v <100>(#sub)<300>
+            "#;
+
+        token_test("points", input);
+    }
+
+    #[test]
+    #[should_panic]
+    fn point_containment() {
+        //TODO support special node element, then, remove #[should_panic]
+        let input = r#" 
+        @h < "col1"[center_x] + 20 > -(#box1)- < ::window[center_x] >
+            "#;
+
+        token_test("point_containment", input);
+    }
+    #[test]
+    fn point_containment3() {
+        let input = r#" 
+        @h < [line] >-(#box1)-(#box2)
+            "#;
+
+        token_test("point_containment3", input);
+    }
+    #[test]
+    #[should_panic]
+    fn point_containment_point_in_alignment() {
+        let input = r#" 
+        @h (#btn1)-<::window[center_x]>-(#btn2) gap(8)
+            "#;
+
+        token_test("point_containment_point_in_alignment", input);
+    }
+    #[test]
+    fn point_containment_point_in_alignment2() {
+        let input = r#" 
+        @h (#btn1)-<&window[center_x]>-(#btn2) gap(8)
+            "#;
+
+        token_test("point_containment_point_in_alignment2", input);
+    }
+    #[test]
+    #[should_panic]
+    fn point_containment_chains() {
+        let input = r#" 
+        @h (#btn1)-<::window[center_x]>-(#btn2) gap(8) chain-top chain-width(==)
+            "#;
+
+        token_test("point_containment_chains", input);
+    }
+    #[test]
+    fn point_containment_chains2() {
+        let input = r#" 
+        @h (#btn1)-<&window[center_x]>-(#btn2) gap(8) chain-top chain-width(==)
+            "#;
+
+        token_test("point_containment_chains2", input);
+    }
+    #[test]
+    fn point_containment_consecutive_point() {
+        let input = r#" 
+        @h (#btn1)- <"col3"[left]>
+                    <"col4"[right]>-(#btn2)
+                gap(8)
+            "#;
+
+        token_test("point_containment_consecutive_point", input);
+    }
+    #[test]
+    fn point_containment_this_scope() {
+        let input = r#" 
+        @h (#btn1)-<&[other_place]>
+                       < &[center_x] >-(#btn2)
+              gap(&[gap])
+            "#;
+
+        token_test("point_containment_this_scope", input);
+    }
+    #[test]
+    #[should_panic]
+    fn point_containment_complex_selectors() {
+        //TODO support complex selectors
+        let input = r#" 
+        @h (#btn1)-< (.box .foo:bar:next .black)[center_x] >
+                       < (.box ! .foo:bar:next .black)[left] >-(#btn2)
+              gap(&[gap])
+            "#;
+
+        token_test("point_containment_complex_selectors", input);
+    }
+    #[test]
+    fn point_containment_this_scope2() {
+        let input = r#" 
+                        @h | - (#btn1) - <&[right]>
+                                        < &[right] > - (#btn2) - |
+                        gap(&[gap])
+                        outer-gap(&[outer_gap])
+                        in(&)
+            "#;
+
+        token_test("point_containment_this_scope2", input);
+    }
+    #[test]
+    fn cushion() {
+        let input = r#" 
+        @h (#b1)~(#b2)
+            "#;
+
+        token_test("cushion", input);
+    }
+    #[test]
+    fn cushion_gap() {
+        let input = r#" 
+        @h (#b1)~-~(#b2)~100~(#b3)
+            "#;
+
+        token_test("cushion_gap", input);
+    }
+    #[test]
+    fn cushion_super_view_with_cushions() {
+        let input = r#" 
+        @h |~(#sub)~2~| in(#parent)
+            "#;
+
+        token_test("cushion_super_view_with_cushions", input);
+    }
+    #[test]
+    fn predicates() {
+        let input = r#" 
+        @v (#sub(==100))
+            "#;
+
+        token_test("predicates", input);
+    }
+    #[test]
+    fn predicate_multiple_with_sw() {
+        let input = r#" 
+        @v (#boox(<=100!required,>=30!strong(100)))
+            "#;
+
+        token_test("predicate_multiple_with_sw", input);
+    }
+    #[test]
+    fn predicate_connected() {
+        let input = r#" 
+        @h (#b1(<=100))(#b2(==#b1))
+            "#;
+
+        token_test("predicate_connected", input);
+    }
+    #[test]
+    fn predicate_virtuals() {
+        let input = r#" 
+        @h ("b1"(<=100)) ("b2"(=="b1"))
+            "#;
+
+        token_test("predicate_virtuals", input);
+    }
+    #[test]
+    fn predicate_multiple_conneected_sw() {
+        let input = r#" 
+        @h (#b1( <=100 , ==#b99 !weak(99) ))(#b2(>= #b1 *2  !weak(10), <=3!required))-100-(.b3(==200)) !medium(200)
+            "#;
+
+        token_test("predicate_multiple_conneected_sw", input);
+    }
+    #[test]
+    fn predicate_constraint_variable() {
+        let input = r#" 
+        @h (#b1(==[colwidth]))
+            "#;
+
+        token_test("predicate_constraint_variable", input);
+    }
+    #[test]
+    fn predicate_explicit_view_var() {
+        let input = r#" 
+        @h (#b1(==#b2[height]))
+            "#;
+
+        token_test("predicate_explicit_view_var", input);
+    }
+    #[test]
+    fn chain() {
+        let input = r#" 
+        @h (#b1)(#b2) chain-height chain-width(250)
+            "#;
+
+        token_test("chain", input);
+    }
+    #[test]
+    fn chain_multiply() {
+        let input = r#" 
+        @h (#b1)(#b2)(#b3) chain-width(==[colwidth]!strong,<=500!required)
+            "#;
+
+        token_test("chain_multiply", input);
+    }
+    #[test]
+    fn chain_explicit_equality_inequality_chains() {
+        let input = r#" 
+        @v (#b1)(#b2)(#b3)(#b4) chain-width(==!weak(10)) chain-height(<=150>= !required) !medium
+            "#;
+
+        token_test("chain_explicit_equality_inequality_chains", input);
+    }
+    #[test]
+    fn chain_single_view_with_equality() {
+        let input = r#" 
+        @v (#b1(==100!strong)) chain-centerX chain-width( 50 !weak(10))
+            "#;
+
+        token_test("chain_single_view_with_equality", input);
+    }
+    #[test]
+    fn chain_adv_with_super_view_chains() {
+        let input = r#" 
+        @v |-8-(#b1(==100!strong))(#b2)-8-| in(#panel) chain-centerX( #panel[centerX] !required) chain-width(>=50<= !weak(10))
+            "#;
+
+        token_test("chain_adv_with_super_view_chains", input);
+    }
+    #[test]
+    fn chain_adv_with_virtuals() {
+        let input = r#" 
+        @v |-(#b1)-(#b2)-| in("panel") gap("zone"[col_size]) outer-gap("outer-zone"[row_size]) chain-centerX( "panel"[centerX] !required)
+            "#;
+
+        token_test("chain_adv_with_virtuals", input);
+    }
+    #[test]
+    fn splats() {
+        let input = r#" 
+        @h (.box)...
+            "#;
+
+        token_test("splats", input);
+    }
+    #[test]
+    fn splats2() {
+        let input = r#" 
+        @h (.box)-10-...
+            "#;
+
+        token_test("splats2", input);
+    }
+    #[test]
+    fn splats3() {
+        let input = r#" 
+        @h (.box)-... gap(10)
+            "#;
+
+        token_test("splats3", input);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn explicit_view_var_gap() {
+        //TODO support?
+        // let input = r#"
+        //                         @v (#b1)
+        //                             -#box1.class1[width]-
+        //                         (#b2)
+        //                             -"virtual"[-my-custom-prop]-
+        //                         (#b3)
+        //     "#;
+
+        // token_test("explicit-view-var-gaps", input);
+    }
+    #[test]
     fn gap() {
         let input = r#" 
                 @v (#b1)-(#b2)-(#b3)-(#b4)-(#b5) gap(20)
             "#;
 
         token_test("explicit-standard-gaps", input);
+        let input = r#" 
+                                @v (#b1)
+                                    -
+                                (#b2)
+                                    -20-
+                                (#b3)
+                                    -20-
+                                (#b4)
+                                    -
+                                (#b5)
+
+                                gap(20)
+            "#;
+
+        token_test("explicit-standard-gaps2", input);
     }
     #[test]
     fn weak() {
@@ -2030,7 +2586,7 @@ mod tests {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
+                Err(error) => panic!("...{:?}", error),
             }
         }
 

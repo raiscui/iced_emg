@@ -1,0 +1,11 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+CCSSS [
+"LitStr { token: "Zone" }"[bottom] + [vgap]  ==  "LitStr { token: "1" }"[top],
+"LitStr { token: "1" }"[bottom] + [vgap]  ==  "LitStr { token: "a" }"[top],
+"LitStr { token: "a" }"[bottom] + [vgap]  ==  "LitStr { token: "q-1" }"[top],
+"LitStr { token: "q-1" }"[bottom] + [vgap]  ==  "LitStr { token: "_fallout" }"[top],
+]
+
