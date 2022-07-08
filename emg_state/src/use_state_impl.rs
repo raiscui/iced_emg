@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-06-21 15:01:21
+ * @LastEditTime: 2022-07-06 15:56:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -745,7 +745,7 @@ where
             trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
 
             let store = g_state_store_refcell.borrow();
-            self.store_get_rc(&*store)
+            self.store_get_rc(&store)
         })
     }
 
@@ -1751,7 +1751,7 @@ where
 {
     trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
 
-    G_STATE_STORE.with(|g_state_store_refcell| func(&*g_state_store_refcell.borrow()))
+    G_STATE_STORE.with(|g_state_store_refcell| func(&g_state_store_refcell.borrow()))
 }
 #[must_use]
 pub fn state_store() -> Rc<RefCell<GStateStore>> {
@@ -1774,14 +1774,12 @@ pub fn state_store() -> Rc<RefCell<GStateStore>> {
 // }
 
 //-> &'static Location<'static>
-#[track_caller]
 #[topo::nested]
 pub fn get_caller_location() {
     let loc = Location::caller();
     let id = topo::CallId::current();
     warn!("get_caller_location::at:\n{} \n id:{:?}", &loc, &id);
 }
-#[track_caller]
 #[topo::nested]
 pub fn get_caller_location2() {
     get_caller_location();

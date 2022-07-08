@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-06-29 17:35:04
+ * @LastEditTime: 2022-07-08 16:02:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -240,7 +240,14 @@ where
     /// permission to read it.
     pub fn effecting_edge_path<Ix>(&self, edge: &EmgEdgeItem<Ix>, for_path: EPath<Ix>)
     where
-        Ix: Clone + std::hash::Hash + Eq + Default + Ord + std::fmt::Display + 'static,
+        Ix: std::borrow::Borrow<str>
+            + Clone
+            + std::hash::Hash
+            + Eq
+            + Default
+            + Ord
+            + std::fmt::Display
+            + 'static,
     {
         edge.build_path_layout(|mut l| {
             // • • • • •

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2022-06-23 17:16:31
+ * @LastEditTime: 2022-07-08 16:03:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -356,7 +356,8 @@ where
 impl<Ix, Message> RefreshFor<EmgEdgeItem<Ix>> for AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-    Ix: Clone
+    Ix: std::borrow::Borrow<str>
+        + Clone
         + std::hash::Hash
         + Eq
         + Ord

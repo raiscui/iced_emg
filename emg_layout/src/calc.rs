@@ -2,7 +2,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-06-23 11:50:37
+ * @LastEditTime: 2022-07-08 22:27:18
  * @LastEditors: Rais
 * @Description:
 */
@@ -33,10 +33,10 @@ where
     let _span_ = trace_span!( "->[ layout_calculating ] ").entered();
     
             let EdgeData{
-                calculated: p_calculated,
-                
-                ..
-            }=path_edgedata;
+                        calculated:p_calculated,
+                        cassowary_map:p_cassowary_map,
+                        calculated_vars:p_calculated_vars,
+                .. }=path_edgedata;
             // ─────────────────────────────────────────────────────────────────
 
             let p_calc_size_sa = &p_calculated.size;
@@ -47,11 +47,105 @@ where
             let origin_y = layout.then(|l:&Layout|l.origin_y.watch().into());
             let align_x = layout.then(|l:&Layout|l.align_x.watch().into());
             let align_y = layout.then(|l:&Layout|l.align_y.watch().into());
+// ────────────────────────────────────────────────────────────────────────────────
+
+            let width_var  =p_cassowary_map.var("width").unwrap();
+            let width = p_calculated_vars.map(|p_vars|{
+                //  if let Some (val) = p_vars.get(width_var){
+                //     StateAnchor::constant( px(**val).into()).into()
+                    
+                //  }else{
+                //     layout.then(|l:&Layout|l.w.watch().into()).into()
+                //  }
+
+                p_vars.get(width_var).map(|val| **val)
+
+
+            });
+
+            let height_var  =p_cassowary_map.var("height").unwrap();
+            let height = p_calculated_vars.map(|p_vars|{
+                // if let Some (val) = p_vars.get(height_var){
+                //    StateAnchor::constant( px(**val).into()).into()
+                   
+                // }else{
+                //    layout.then(|l:&Layout|l.h.watch().into()).into()
+                // }
+
+                p_vars.get(height_var).map(|val| **val)
+
+
+            });
+
+            let top_var  =p_cassowary_map.var("top").unwrap();
+            let top = p_calculated_vars.map(|p_vars|{
+                p_vars.get(top_var).map(|val| **val)
+            });
+            let bottom_var  =p_cassowary_map.var("bottom").unwrap();
+            let bottom = p_calculated_vars.map(|p_vars|{
+                p_vars.get(bottom_var).map(|val| **val)
+            });
+            let left_var  =p_cassowary_map.var("left").unwrap();
+            let left = p_calculated_vars.map(|p_vars|{
+                p_vars.get(left_var).map(|val| **val)
+            });
+            let right_var  =p_cassowary_map.var("right").unwrap();
+            let right = p_calculated_vars.map(|p_vars|{
+                p_vars.get(right_var).map(|val| **val)
+            });
+
+            
+
+
+
+            let origin_x_var  =p_cassowary_map.var("origin_x").unwrap();
+            let origin_y_var  =p_cassowary_map.var("origin_y").unwrap();
+            let align_x_var  =p_cassowary_map.var("align_x").unwrap();
+            let align_y_var  =p_cassowary_map.var("align_y").unwrap();
+// ────────────────────────────────────────────────────────────────────────────────
+
+            // let calculated_size = p_calculated_vars.then(|p_vars|{
+            //     let width = if let Some (width_val) = p_vars.get(width_var){
+            //         StateAnchor::constant( **width_val)
+            //     }else{
+            //         (p_calc_size_sa, &w).then(
+            //             move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor| {
+            //                let p_calc_size = *p_calc_size;   
+                           
+            //                // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
+                          
+            //                 sa_w.map(move |w:&GenericSize|->f64{
+            //                    calculation_w(&p_calc_size, w)
+            //                }).into()
+                           
+            //            } )
+            //     };
+
+            //     let height = if let Some (height_val) = p_vars.get(height_var){
+            //         StateAnchor::constant( **height_val)
+            //     }else{
+            //         (p_calc_size_sa, &h).then(
+            //             move|p_calc_size: &Vector2<f64>, sa_h: &GenericSizeAnchor| {
+            //                let p_calc_size = *p_calc_size;   
+                           
+            //                // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
+                          
+            //                 sa_h.map(move |h:&GenericSize|->f64{
+            //                    calculation_h(&p_calc_size, h)
+            //                }).into()
+                           
+            //            } )
+            //     };
+
+            //     (&width, &height).map(|w,h|{
+            //         Vector2::<f64>::new(*w,*h)
+            //     }).into()
+
+
+            // });
 
             let calculated_size = (p_calc_size_sa, &w,&h).then(
                  move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor,sa_h:&GenericSizeAnchor| {
-                    // let sa_w = sa_w1.clone().into_inner();        
-                    // let sa_h = sa_h1.clone().into_inner();    
                     let p_calc_size = *p_calc_size;   
                     
                     // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
@@ -63,15 +157,50 @@ where
                         let new_size = Vector2::<f64>::new(calculation_w(&p_calc_size, w), calculation_h(&p_calc_size, h));
                         trace!("new size: {}",&new_size);
                         new_size
-
                     }).into()
-
-                        
-                    
-
-                    
                 },
             );
+
+            let calculated_origin = p_calculated_vars.then(|p_vars|{
+                let origin_x = if let Some (origin_x_val) = p_vars.get(origin_x_var){
+                    StateAnchor::constant( **origin_x_val)
+                }else{
+                    (p_calc_size_sa, &w).then(
+                        move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor| {
+                           let p_calc_size = *p_calc_size;   
+                           
+                           // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
+                          
+                            sa_w.map(move |w:&GenericSize|->f64{
+                               calculation_w(&p_calc_size, w)
+                           }).into()
+                           
+                       } )
+                };
+
+                let height = if let Some (height_val) = p_vars.get(height_var){
+                    StateAnchor::constant( **height_val)
+                }else{
+                    (p_calc_size_sa, &h).then(
+                        move|p_calc_size: &Vector2<f64>, sa_h: &GenericSizeAnchor| {
+                           let p_calc_size = *p_calc_size;   
+                           
+                           // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
+                          
+                            sa_h.map(move |h:&GenericSize|->f64{
+                               calculation_h(&p_calc_size, h)
+                           }).into()
+                           
+                       } )
+                };
+
+                (&width, &height).map(|w,h|{
+                    Vector2::<f64>::new(*w,*h)
+                }).into()
+
+
+            });
+
 
             let calculated_origin = (p_calc_size_sa,&p_calculated.origin, &p_calculated.align,&calculated_size, &origin_x,&origin_y).then(
                 move |p_calc_size: &Vector2<f64>,p_calc_origin:&Translation3<f64>,p_calc_align:&Translation3<f64>,calc_size: &Vector2<f64>, origin_x: &GenericSizeAnchor,origin_y: &GenericSizeAnchor| {

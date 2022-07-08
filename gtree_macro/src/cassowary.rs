@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-07-05 23:19:44
+ * @LastEditTime: 2022-07-07 10:31:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -1033,26 +1033,26 @@ impl ViewProcessedScopeViewVariable {
 
 #[derive(Debug, Clone, Display)]
 #[display("{op} {var}")]
-struct CCSSOpVar {
+struct CCSSOpSvv {
     op: PredOp,
     var: ScopeViewVariable,
 }
 
-impl CCSSOpVar {
+impl CCSSOpSvv {
     const fn new(op: PredOp, var: ScopeViewVariable) -> Self {
         Self { op, var }
     }
 }
 
 #[derive(Debug, Clone)]
-struct CCSSVarOpVarExpr {
-    var: ScopeViewVariable,
-    op_exprs: Vec<CCSSOpVar>,
+struct CCSSSvvOpSvvExpr {
+    svv: ScopeViewVariable,
+    op_exprs: Vec<CCSSOpSvv>,
 }
 
-impl std::fmt::Display for CCSSVarOpVarExpr {
+impl std::fmt::Display for CCSSSvvOpSvvExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.var)?;
+        write!(f, "{}", self.svv)?;
         for op in &self.op_exprs {
             write!(f, " {}", op)?;
         }
@@ -1060,13 +1060,13 @@ impl std::fmt::Display for CCSSVarOpVarExpr {
     }
 }
 
-impl CCSSVarOpVarExpr {
-    const fn new(var: ScopeViewVariable, op_exprs: Vec<CCSSOpVar>) -> Self {
-        Self { var, op_exprs }
+impl CCSSSvvOpSvvExpr {
+    const fn new(svv: ScopeViewVariable, op_exprs: Vec<CCSSOpSvv>) -> Self {
+        Self { svv, op_exprs }
     }
-    const fn new_var(var: ScopeViewVariable) -> Self {
+    const fn new_var(svv: ScopeViewVariable) -> Self {
         Self {
-            var,
+            svv,
             op_exprs: vec![],
         }
     }
@@ -1076,11 +1076,11 @@ impl CCSSVarOpVarExpr {
 #[display("{eq} {expr}")]
 struct CCSSEqExpression {
     eq: PredEq,
-    expr: CCSSVarOpVarExpr,
+    expr: CCSSSvvOpSvvExpr,
 }
 
 impl CCSSEqExpression {
-    const fn new(eq: PredEq, expr: CCSSVarOpVarExpr) -> Self {
+    const fn new(eq: PredEq, expr: CCSSSvvOpSvvExpr) -> Self {
         Self { eq, expr }
     }
 }
@@ -1088,24 +1088,24 @@ impl CCSSEqExpression {
 #[derive(Debug, Clone)]
 #[allow(clippy::upper_case_acronyms)]
 struct CCSS {
-    var_op_vars: CCSSVarOpVarExpr,
+    svv_op_svvs: CCSSSvvOpSvvExpr,
     eq_exprs: Vec<CCSSEqExpression>,
-    sw: Option<StrengthAndWeight>,
+    opt_sw: Option<StrengthAndWeight>,
 }
 
 impl std::fmt::Display for CCSS {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
-            var_op_vars,
+            svv_op_svvs: var_op_vars,
             eq_exprs,
-            sw,
+            opt_sw: sw,
         } = self;
-        let sw = disp_opt(self.sw.as_ref());
+        let sw_str = disp_opt(sw.as_ref());
         write!(f, "{} ", var_op_vars)?;
         for eqe in eq_exprs {
             write!(f, "{}", eqe)?;
         }
-        write!(f, "{}", sw)
+        write!(f, "{}", sw_str)
     }
 }
 #[derive(Debug, Clone)]
@@ -1493,7 +1493,7 @@ fn get_left_var(
     d: &Dimension,
     o: &Options,
     view_obj: &ViewProcessed,
-) -> (ScopeViewVariable, Vec<CCSSOpVar>) {
+) -> (ScopeViewVariable, Vec<CCSSOpSvv>) {
     if view_obj.is_point {
         let pos = view_obj.pos.clone().unwrap();
         // if (pos.0).0.len() > 1 {
@@ -1503,7 +1503,7 @@ fn get_left_var(
         (
             v,
             op_s.into_iter()
-                .map(|(op, var)| CCSSOpVar::new(op, var))
+                .map(|(op, var)| CCSSOpSvv::new(op, var))
                 .collect(),
         )
     } else if view.is_or() {
@@ -1533,7 +1533,7 @@ fn get_right_var(
     d: &Dimension,
     o: &Options,
     view_obj: &ViewProcessed,
-) -> (ScopeViewVariable, Vec<CCSSOpVar>) {
+) -> (ScopeViewVariable, Vec<CCSSOpSvv>) {
     if view_obj.is_point {
         let pos = view_obj.pos.clone().unwrap();
         // if (pos.0).0.len() > 1 {
@@ -1544,7 +1544,7 @@ fn get_right_var(
         (
             v,
             op_s.into_iter()
-                .map(|(op, var)| CCSSOpVar::new(op, var))
+                .map(|(op, var)| CCSSOpSvv::new(op, var))
                 .collect(),
         )
     } else if view.is_or() {
@@ -1588,8 +1588,8 @@ pub struct VFLStatement {
 }
 
 impl VFLStatement {
-    fn get_op_gap(&self, opt_gap: Option<&Gap>, with_container: bool) -> Option<CCSSOpVar> {
-        let g: Option<CCSSOpVar>;
+    fn get_op_gap(&self, opt_gap: Option<&Gap>, with_container: bool) -> Option<CCSSOpSvv> {
+        let g: Option<CCSSOpSvv>;
         if let Some(gap) = opt_gap {
             match gap {
                 Gap::None => {
@@ -1597,7 +1597,7 @@ impl VFLStatement {
                 }
                 Gap::Standard => {
                     if with_container && self.o.map.contains_key("OuterGap") {
-                        g = Some(CCSSOpVar {
+                        g = Some(CCSSOpSvv {
                             op: PredOp::new_add(),
                             var: self
                                 .o
@@ -1608,7 +1608,7 @@ impl VFLStatement {
                                 .unwrap(),
                         });
                     } else if self.o.map.contains_key("Gap") {
-                        g = Some(CCSSOpVar {
+                        g = Some(CCSSOpSvv {
                             op: PredOp::new_add(),
                             var: self
                                 .o
@@ -1619,14 +1619,14 @@ impl VFLStatement {
                                 .unwrap(),
                         });
                     } else {
-                        g = Some(CCSSOpVar {
+                        g = Some(CCSSOpSvv {
                             op: PredOp::new_add(),
                             var: ScopeViewVariable::new_var(standard_gap_names(&self.d)),
                         });
                     }
                 }
                 Gap::Var(x) => {
-                    g = Some(CCSSOpVar {
+                    g = Some(CCSSOpSvv {
                         op: PredOp::new_add(),
                         var: x.clone(),
                     });
@@ -1642,7 +1642,7 @@ impl VFLStatement {
         &self,
         c: Option<&Connection>,
         with_container: bool,
-    ) -> (Option<CCSSOpVar>, PredEq) {
+    ) -> (Option<CCSSOpSvv>, PredEq) {
         let gap = c.map(Connection::gap);
         let op_gap = self.get_op_gap(gap, with_container);
         let connection_op = c.map(Connection::op).unwrap_or_default();
@@ -1656,8 +1656,8 @@ impl VFLStatement {
             // ────────────────────────────────────────────────────────────────────────────────
             let (op, eq) = self.get_connection_string(view_processed.connection.as_ref(), false);
             // @ left ─────────────────────────────────────────────────────────────────
-            let var_op_vars = CCSSVarOpVarExpr {
-                var: view_var.clone(),
+            let var_op_vars = CCSSSvvOpSvvExpr {
+                svv: view_var.clone(),
                 op_exprs: op.map_or(vec![], |op_one| vec![op_one]),
             };
 
@@ -1666,12 +1666,12 @@ impl VFLStatement {
             let right = view_var.into_next(Some(right_var_names(&self.d)));
             let eq_exprs = vec![CCSSEqExpression {
                 eq,
-                expr: CCSSVarOpVarExpr::new_var(right),
+                expr: CCSSSvvOpSvvExpr::new_var(right),
             }];
             let ccss = CCSS {
-                var_op_vars,
+                svv_op_svvs: var_op_vars,
                 eq_exprs,
-                sw: None, //TODO check no sw?
+                opt_sw: None, //TODO check no sw?
             };
             self.ccsss.push(ccss);
         }
@@ -1695,7 +1695,7 @@ impl VFLStatement {
                     .clone()
                     .or_with_variable(size_var_names(&self.d));
 
-                let mut op_exprs: Vec<CCSSOpVar> = vec![];
+                let mut op_exprs: Vec<CCSSOpSvv> = vec![];
                 for (op, view) in pred.pred_expression.1.clone() {
                     let var = if view.variable_is_none() {
                         view.clone().or_with_variable(size_var_names(&self.d))
@@ -1703,17 +1703,17 @@ impl VFLStatement {
                         view
                     };
 
-                    op_exprs.push(CCSSOpVar::new(op, var));
+                    op_exprs.push(CCSSOpSvv::new(op, var));
                 }
 
                 let sw = pred.strength_and_weight.clone();
                 let ccss = CCSS {
-                    var_op_vars: CCSSVarOpVarExpr::new_var(node),
+                    svv_op_svvs: CCSSSvvOpSvvExpr::new_var(node),
                     eq_exprs: vec![CCSSEqExpression::new(
                         eq,
-                        CCSSVarOpVarExpr::new(right_var, op_exprs),
+                        CCSSSvvOpSvvExpr::new(right_var, op_exprs),
                     )],
-                    sw,
+                    opt_sw: sw,
                 };
                 self.ccsss.push(ccss);
             }
@@ -1737,7 +1737,7 @@ impl VFLStatement {
                         .and_then(|v| v.try_into_node().ok())
                         .map(|v| v.with_variable(chain_var.clone()))
                         .expect("must have one view");
-                    let var_op_vars = CCSSVarOpVarExpr::new_var(first);
+                    let var_op_vars = CCSSSvvOpSvvExpr::new_var(first);
                     let mut eq_exprs = vec![];
                     let eq = pred.head_eq.unwrap_or_default();
 
@@ -1747,11 +1747,11 @@ impl VFLStatement {
                             .ok()
                             .unwrap()
                             .with_variable(chain_var.clone());
-                        let right_view_var_op_vars = CCSSVarOpVarExpr::new_var(var);
+                        let right_view_var_op_vars = CCSSSvvOpSvvExpr::new_var(var);
 
                         if pred.value.is_some() {
                             let right_chain_var_op_vars =
-                                CCSSVarOpVarExpr::new_var(pred.value.clone().unwrap());
+                                CCSSSvvOpSvvExpr::new_var(pred.value.clone().unwrap());
                             eq_exprs.push(CCSSEqExpression::new(eq, right_chain_var_op_vars));
 
                             let tail_eq = pred.tail_eq.unwrap_or_else(|| eq.chain_tail_eq_map());
@@ -1762,9 +1762,9 @@ impl VFLStatement {
                     }
                     if !eq_exprs.is_empty() {
                         let ccss = CCSS {
-                            var_op_vars,
+                            svv_op_svvs: var_op_vars,
                             eq_exprs,
-                            sw: pred.s.clone(),
+                            opt_sw: pred.s.clone(),
                         };
                         self.ccsss.push(ccss);
                     }
@@ -1815,21 +1815,21 @@ impl VFLStatement {
                 if let Some(op_gap) = opt_op_gap {
                     left_point_op_var.push(op_gap);
                 }
-                let left_var_op_vars = CCSSVarOpVarExpr {
-                    var: left_v,
+                let left_var_op_vars = CCSSSvvOpSvvExpr {
+                    svv: left_v,
                     op_exprs: left_point_op_var,
                 };
-                let right_var_op_vars = CCSSVarOpVarExpr {
-                    var: right_v,
+                let right_var_op_vars = CCSSSvvOpSvvExpr {
+                    svv: right_v,
                     op_exprs: right_point_op_var,
                 };
                 let eq_exprs = vec![CCSSEqExpression::new(eq, right_var_op_vars)];
                 debug!("======== sw: {:?}", &sw);
 
                 let ccss = CCSS {
-                    var_op_vars: left_var_op_vars,
+                    svv_op_svvs: left_var_op_vars,
                     eq_exprs,
-                    sw: sw.clone(),
+                    opt_sw: sw.clone(),
                 };
 
                 self.ccsss.push(ccss);

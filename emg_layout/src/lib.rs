@@ -20,8 +20,9 @@
 // #![feature(trivial_bounds)]
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
-use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc, time::Duration};
-use ccsa::CassowaryMap;
+use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc, time::Duration, borrow::Borrow};
+use cassowary::{Variable, Constraint, Expression, WeightedRelation, Solver};
+use ccsa::{CassowaryMap, CCSS, CCSSEqExpression, CCSSSvvOpSvvExpr, NameChars, ScopeViewVariable, CCSSOpSvv, PredOp, PredEq, StrengthAndWeight};
 use emg_hasher::CustomHasher;
 
 use calc::layout_calculating;
@@ -29,7 +30,7 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
-use emg_core::{GenericSize};
+use emg_core::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self}, IdStr, NotNan, vector};
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
@@ -227,105 +228,6 @@ impl Default for M4Data {
     }
 }
 
-#[derive(Debug, Clone)]
-struct EdgeDataOutput {
-    loc_styles: StateAnchor<Style>,
-    other_styles: StateVar<Style>,
-    styles: StateAnchor<Style>,
-    style_string: StateAnchor<String>,
-}
-
-
-// #[derive(Display, Debug, Clone, PartialEq, PartialOrd, Eq)]
-// // #[derive(Debug, Clone, Into)]
-// // #[into(owned, ref, ref_mut)]
-// #[display(fmt = "(w:{},h:{})", w, h)]
-// pub struct GenericWH {
-//     w: GenericSize,
-//     h: GenericSize,
-// }
-// impl Default for GenericWH {
-//     fn default() -> Self {
-//         Self {
-//             w: px(0).into(),
-//             h: px(0).into(),
-//         }
-//     }
-// }
-// impl GenericWH {
-//     pub fn new(w: impl Into<GenericSize>, h: impl Into<GenericSize>) -> Self {
-//         Self {
-//             w: w.into(),
-//             h: h.into(),
-//         }
-//     }
-
-//     #[must_use]
-//     pub fn get_length_value(&self) -> (f64, f64) {
-//         (
-//             self.w
-//                 .try_get_length_value()
-//                 .expect("root size w get failed, expected Length Px struct"),
-//             self.h
-//                 .try_get_length_value()
-//                 .expect("root size h get failed, expected Length Px struct"),
-//         )
-//     }
-
-    
-// }
-
-
-// impl Default for GenericLoc {
-//     fn default() -> Self {
-//         Self {
-//             x: px(0).into(),
-//             y: px(0).into(),
-//             z: px(0).into(),
-//         }
-//     }
-// }
-
-// #[derive(Display, Debug, Clone, PartialEq, PartialOrd)]
-// // #[derive(Debug, Clone, Into)]
-// // #[into(owned, ref, ref_mut)]
-// #[display(fmt = "(x:{},y:{},z:{})", x, y, z)]
-// pub struct GenericLoc {
-//     x: GenericSize,
-//     y: GenericSize,
-//     z: GenericSize,
-// }
-
-// impl GenericLoc {
-//     pub fn new(
-//         x: impl Into<GenericSize>,
-//         y: impl Into<GenericSize>,
-//         z: impl Into<GenericSize>,
-//     ) -> Self {
-//         Self {
-//             x: x.into(),
-//             y: y.into(),
-//             z: z.into(),
-//         }
-//     }
-
-//     #[must_use]
-//     pub fn get_length_value(&self) -> (f64, f64, f64) {
-//         (
-//             self.x
-//                 .try_get_length_value()
-//                 .expect("root size get failed, expected Length Px struct"),
-//             self.y
-//                 .try_get_length_value()
-//                 .expect("root size get failed, expected Length Px struct"),
-//             self.z
-//                 .try_get_length_value()
-//                 .expect("root size get failed, expected Length Px struct"),
-//         )
-//     }
-// }
-
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Layout
@@ -339,6 +241,7 @@ pub struct Layout
     align_x: StateVar<GenericSizeAnchor>,
     align_y: StateVar<GenericSizeAnchor>,
     align_z: StateVar<GenericSizeAnchor>,
+    cassowary:StateVar<StateAnchor<Vector<CCSS>>>,
 }
 
 impl Layout
@@ -448,6 +351,8 @@ pub struct LayoutCalculated {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EdgeData {
     calculated: LayoutCalculated,
+    cassowary_map:CassowaryMap,
+    calculated_vars:StateAnchor<Dict<Variable, NotNan<f64>>>,
     pub styles_string: StateAnchor<String>, 
     opt_p_calculated:Option<LayoutCalculated>,//TODO check need ? use for what?
     // matrix: M4Data,
@@ -541,6 +446,22 @@ impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
         Self(vec)
     }
 
+    pub fn last_target(&self) -> Option<&NodeIndex<Ix>> {
+         self.0.last().and_then(|e| e.target_nix().as_ref())
+    }
+    pub fn except_tail_match(&self,other_no_tail:&EPath<Ix>) -> bool {
+        if self.0.len() -1 != other_no_tail.0.len() {
+            return false;
+        }
+        for i in 0..self.0.len()-1 {
+            if self.0[i] != other_no_tail.0[i] {
+                return false;
+            }
+        }
+        true
+
+    }
+
     #[must_use]
         pub fn link_ref(&self, target_nix:NodeIndex<Ix>)-> Self {
         let last = self.last().and_then(|e|e.target_nix().as_ref()).cloned();
@@ -592,7 +513,6 @@ where
     pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,// dyn by Edge(source_nix , target_nix)
     pub paths:DictPathEiNodeSA<Ix>, // with parent self  // current not has current node
     pub layout: Layout,
-    pub cassowary_map:CassowaryMap,
     path_styles: StateVar<PathVarMap<Ix, Style>>, //TODO check use
     path_layouts:StateVar<PathVarMap<Ix, Layout>>,// layout only for one path 
 
@@ -712,7 +632,7 @@ where
 
 impl<Ix> EmgEdgeItem<Ix>
 where
-    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display,
+    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
 
     pub fn build_path_layout(&self,func:impl FnOnce(Layout)->(EPath<Ix>, Layout)){
@@ -768,7 +688,9 @@ where
         origin: (GenericSizeAnchor,GenericSizeAnchor, GenericSizeAnchor),
         align:  (GenericSizeAnchor,GenericSizeAnchor,GenericSizeAnchor),
     ) -> Self 
-    where Ix:std::fmt::Debug
+    where
+     Ix:std::fmt::Debug,
+    (IdStr, NotNan<f64>):PartialEq
 
     {
         let id_sa:StateAnchor <EdgeIndex<Ix> > =( &source_node_nix_sa,&target_node_nix_sa).map(|s,t| {
@@ -790,6 +712,9 @@ where
             align_x: use_state(align.0),
             align_y: use_state(align.1),
             align_z: use_state(align.2),
+            cassowary: use_state(StateAnchor::constant(vector![])),
+        
+
         };
         // let path_styles= use_state(Dict::unit(EPath::<Ix>::default(), s()));
         let path_styles:StateVar<PathVarMap<Ix, Style>> = use_state(PathVarMap::default());
@@ -818,25 +743,8 @@ where
         });
 
         let edges2 = edges.clone();
-        let children_cassowary_var = opt_self_target_node_nix_sa_re_get.then(move|opt_self_target_nix|{
-            if opt_self_target_nix.is_none() {
-                //NOTE 尾
-                Anchor::constant(Dict::<EdgeIndex<Ix>, CassowaryMap>::default())
-            }else{
+      
 
-                //TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
-                let opt_self_target_nix2 =opt_self_target_nix.clone();
-                edges2.filter_map(move |k,v|{
-                    //NOTE  edge source is self_target, this is children
-                    if k.source_nix() == &opt_self_target_nix2 {
-                        Some(v.cassowary_layout_var)
-                    }else{
-                        None
-                    }
-                }).into()
-
-            }
-        });
 
         let parent_paths: DictPathEiNodeSA<Ix> = 
             opt_self_source_node_nix_sa_re_get.then(move|opt_self_source_nix:&Option<NodeIndex<Ix>>| {
@@ -874,6 +782,36 @@ where
                 
             });
 
+
+
+        // NOTE children cassowary_map
+        let children_nodes = opt_self_target_node_nix_sa_re_get.then(move|opt_self_target_nix|{
+            if opt_self_target_nix.is_none() {
+                //NOTE 尾
+                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default())
+            }else{
+
+                // TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
+                // TODO ? let e = edges2.map(|e|e.get(Edge::default()));
+                let opt_self_target_nix2 =opt_self_target_nix.clone();
+                edges2.filter_map(move |child_eix,v|{
+                    //NOTE  edge source is self_target, this is children
+                    if child_eix.source_nix() == &opt_self_target_nix2 {
+                        Some(v.edge_nodes.clone())
+                    }else{
+                        None
+                    }
+                }).anchor()
+                .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
+                    x.values().map(emg_state::StateAnchor::anchor)
+                    .collect::<Anchor<Vector<_>>>()
+                    .map(|v:&Vector<_>|{
+                        Dict::unions(v.clone())})
+                })
+            }
+        });
+        // ─────────────────────────────────────────────────────────────────
+
        
 
         //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
@@ -889,35 +827,209 @@ where
                 paths_clone2.map(move |p_node_as_paths:&Dict<EPath<Ix>, EdgeItemNode>|{
                     
                     p_node_as_paths.iter()
-                        .map(|(parent_e_node_k, p_ei_node_v)| {
-                            let mut nk = parent_e_node_k.clone();
+                        .map(|(parent_e_path, p_ei_node_v)| {
+                            let mut p_ep_add_self = parent_e_path.clone();
                             
                             //TODO node 可以自带 self nix ,下游不必每个子节点都重算
 
-                            nk.0.push_back(eid_clone.clone());
-                            (nk, p_ei_node_v.clone())
+                            p_ep_add_self.0.push_back(eid_clone.clone());
+                            (p_ep_add_self, p_ei_node_v.clone())
                         })
                         .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
 
-                }).map_( move |path:&EPath<Ix>, path_edge_item_node:&EdgeItemNode| {
+                }).map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode| {
 
                     let _child_span =
                         span!(Level::TRACE, "[ node recalculation ]:paths change ").entered();
                         
                        
-                    let (opt_p_calculated,layout_calculated,styles_string) =  match path_edge_item_node {
+                    let (opt_p_calculated,layout_calculated,styles_string) =  match p_path_edge_item_node {
                         //NOTE 上一级节点: empty => 此节点是root
-                        EdgeItemNode::Empty => path_ein_empty_node_builder(&layout, path,path_layouts,path_styles, other_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &layout, path,path_layouts, path_styles, other_styles_sv),
+                        EdgeItemNode::Empty => path_ein_empty_node_builder(&layout, self_path,path_layouts,path_styles, other_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &layout, self_path,path_layouts, path_styles, other_styles_sv),
                         EdgeItemNode::String(_)  => {
                             todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
                                 
                     };
+
+                    let children_cass_maps_sa = children_nodes.filter_map(|child_path,child_node|{
+                        if child_path.except_tail_match(&self_path) {
+                            match (child_path.last_target(),child_node.as_edge_data()){
+                               
+                                (Some(nix), Some(ed)) =>Some( (nix.index().clone(),ed.cassowary_map.clone())),
+                                _=>None
+                            }
+                        }else{
+                            None
+                        }
+                    })
+                    .map(|x|{
+                        x.values().cloned()
+                        .collect::<Dict<Ix, CassowaryMap>>()
+                    });
+
+
+                    let constant_sets_sa = (&layout.cassowary.watch(),&children_cass_maps_sa).then(|ccss_list_sa,children_cass_maps|{
+                          ccss_list_sa.map(|ccss_list|{
+
+                            let constant_vec = ccss_list.iter().fold(OrdSet::<Constraint>::new(), |mut constant_sets,CCSS{ svv_op_svvs, eq_exprs, opt_sw }|{
+
+                                let left_expr = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps);
+
+                                let (constants,_) = eq_exprs.iter().fold((constant_sets,left_expr), |(mut constants,left_expr),CCSSEqExpression{ eq, expr }|{
+
+
+                                    let right_expr = svv_op_svvs_to_expr(expr,children_cass_maps);
+
+                                    let constraint = left_expr | eq_opt_sw_to_weighted_relation(eq,opt_sw)| right_expr;
+
+                                    constants.insert(constraint);
+
+                                    (constants,right_expr)
+
+                                });
+                                constants
+
+                            });
+
+                            constant_vec
+
+                            
+                        }).into()
+                        
+                    });
+
+                    let LayoutCalculated{ size, origin, align, coordinates_trans, matrix, loc_styles } = &layout_calculated;
+                    let calculated_prop_val_sa = ( size, origin, align, coordinates_trans ).map(|size, origin, align, coordinates_trans|{
+                        let width = size.x;
+                        let height = size.y;
+                        let origin_x = origin.x;
+                        let origin_y = origin.y;
+                        let align_x = align.x;
+                        let align_y = align.y;
+                        let top  =  0f64;
+                        let bottom = height;
+                        let left = 0f64;
+                        let right = width;
+
+                        im::ordmap!{
+                            IdStr::new("width") => NotNan::new(width).unwrap(),
+                            IdStr::new("height") => NotNan::new(height).unwrap(),
+                            IdStr::new("origin_x") => NotNan::new(origin_x).unwrap(),
+                            IdStr::new("origin_y") => NotNan::new(origin_y).unwrap(),
+                            IdStr::new("align_x") => NotNan::new(align_x).unwrap(),
+                            IdStr::new("align_y") => NotNan::new(align_y).unwrap(),
+                            IdStr::new("top") => NotNan::new(top).unwrap(),
+                            IdStr::new("bottom") => NotNan::new(bottom).unwrap(),
+                            IdStr::new("left") => NotNan::new(left).unwrap(),
+                            IdStr::new("right") => NotNan::new(right).unwrap()
+                        }
+
+                    });
+
+// ────────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
+
+                    let mut last_observation_constants:OrdSet<Constraint>  =  OrdSet::new();
+                    let mut last_observation_props:Dict<IdStr, NotNan<f64>> =  Dict::new();
+                    let current_cassowary_map = CassowaryMap::new();
+
+                    let mut cass_solver = Solver::new();
+
+
+                    let calculated_changed_vars_sa  = (&constant_sets_sa,&calculated_prop_val_sa).map_mut( Dict::<Variable,NotNan<f64>>::new(),move |out,newest_constants,newest_prop_vals| {
+                        let mut constants_did_update = false;
+                        let mut prop_vals_did_update = false;
+
+                        if newest_constants.len() == 0 && last_observation_constants.len() != 0 {
+                            for constant in last_observation_constants.iter() {
+                                cass_solver.remove_constraint(constant);
+                            }
+                            last_observation_constants.clear();
+                            // cass_solver.reset();
+                            constants_did_update = true;
+                        }
+                        for diff_item in last_observation_constants.diff(newest_constants){
+                            match diff_item {
+                                NodeDiffItem::Add(x) => {
+                                    cass_solver.add_constraint(x.clone()).unwrap();
+                                    constants_did_update = true;
+                                },
+                                NodeDiffItem::Update { old, new } => {
+                                    cass_solver.remove_constraint(old).unwrap();
+                                    cass_solver.add_constraint(new.clone()).unwrap();
+                                    constants_did_update = true;
+                                },
+                                NodeDiffItem::Remove(old) => {
+                                    cass_solver.remove_constraint(old).unwrap();
+                                    constants_did_update = true;
+                                } ,
+                            };
+
+                        };
+                        last_observation_constants = newest_constants.clone();
+
+                        // ────────────────────────────────────────────────────────────────────────────────
+
+                            
+
+                        for diff_item in last_observation_props.diff(newest_prop_vals){
+                            match diff_item {
+                                ordmap::DiffItem::Add(prop, v) => {
+                                    panic!("current props never add (current now)")
+                                },
+                                ordmap::DiffItem::Update { old:(old_prop,old_v), new:(prop,v) } => {
+                                    //TODO check, remove .
+                                    assert_eq!(old_prop,prop);
+                                    let var = current_cassowary_map.var(&**prop).unwrap();
+                                    cass_solver.add_edit_variable(*var, cassowary::strength::REQUIRED).unwrap();
+                                    cass_solver.suggest_value(*var, *v);
+                                    prop_vals_did_update = true;
+
+                                },
+                                ordmap::DiffItem::Remove(_, _) => {
+                                    panic!("current props never remove (current now)")
+
+                                },
+                            };
+
+                        };
+                        last_observation_props = newest_prop_vals.clone();
+
+                        // ────────────────────────────────────────────────────────────────────────────────
+                        if constants_did_update || prop_vals_did_update {
+                            let changes = cass_solver.fetch_changes();
+                            if changes.len() > 0 {
+                                *out =  changes.into();
+                                return true
+                            }
+                        }
+
+                        false
+
+                    });
+// ────────────────────────────────────────────────────────────────────────────────
+                    let calculated_vars =  calculated_changed_vars_sa.map_mut(Dict::<Variable, NotNan<f64>>::new(),|out,changed_vars|{
+                        if !changed_vars.is_empty() {
+                            for (var,v) in changed_vars.iter() {
+                                out.insert(*var,*v);
+                            }
+                            return true
+                        }
+                        false
+                        
+                    });
+// ────────────────────────────────────────────────────────────────────────────────
+
+
+
                     EdgeItemNode::EdgeData(Box::new(EdgeData {
                         calculated: layout_calculated,
                         styles_string,
-                        opt_p_calculated
+                        opt_p_calculated,
+                        cassowary_map:current_cassowary_map,
+                        calculated_vars
                     }))
                 }).into()
 
@@ -929,7 +1041,7 @@ where
             id: id_sv,
             paths:parent_paths,
             layout,
-            cassowary_layout_var: CassowaryMap::default(),
+            
             path_styles,
             path_layouts,
             other_styles: other_styles_sv,
@@ -939,15 +1051,99 @@ where
     }
 }
 
+fn eq_opt_sw_to_weighted_relation(
+    eq: &PredEq,
+    opt_sw: &Option<StrengthAndWeight>,
+) -> WeightedRelation {
+    let weight = opt_sw.map_or(cassowary::strength::MEDIUM, |sw| sw.to_number());
+    match eq {
+        PredEq::Eq => WeightedRelation::EQ(weight),
+        PredEq::Lt => todo!(),
+        PredEq::Le => WeightedRelation::LE(weight),
+        PredEq::Ge => WeightedRelation::GE(weight),
+        PredEq::Gt => todo!(),
+    }
+}
+
+
+fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, CassowaryMap>)->Expression 
+where
+Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
+{
+    let CCSSSvvOpSvvExpr{  svv:main_svv, op_exprs }=svv_op_svvs;
+    let first_var = svv_to_var(main_svv,children_cass_maps);
+    op_exprs.clone().iter().fold(None, |mut exp,op_expr| {
+        let CCSSOpSvv{ op, svv } = op_expr;
+        match exp{
+            None => {
+                Some(first_var + svv_to_var(svv,children_cass_maps))
+            },
+            Some(mut exp) => {
+
+                match op{
+                    PredOp::Add => Some(exp + svv_to_var(svv,children_cass_maps)),
+                    PredOp::Sub => todo!(),
+                    PredOp::Mul => todo!(),
+                }
+
+            }
+        }
+   
+    }).unwrap()
+}
+
+fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, CassowaryMap>) -> Variable 
+where
+Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
+{
+    let ScopeViewVariable{ scope, view, variable } = scope_view_variable;
+    let var = match (scope, view, variable) {
+        (None, None, None) => todo!(),
+        (None, None, Some(_)) => todo!(),
+        (None, Some(_), None) => todo!(),
+        (None, Some(name), Some(prop)) => {
+
+            match name {
+                NameChars::Id(id) => {
+
+                
+                     match children_cass_maps.get(id.as_str()){
+                        Some(cass_map) => {
+                            *cass_map.var(&**prop).unwrap()
+                        },
+                        None => todo!(),
+                    }
+
+                
+
+                },
+                NameChars::Class(_) => todo!(),
+                NameChars::Element(_) => todo!(),
+                NameChars::Virtual(_) => todo!(),
+                NameChars::Number(_) => todo!(),
+                NameChars::Next(_) => todo!(),
+                NameChars::Last(_) => todo!(),
+                NameChars::First(_) => todo!(),
+            }
+
+        },
+        (Some(_), None, None) => todo!(),
+        (Some(_), None, Some(_)) => todo!(),
+        (Some(_), Some(_), None) => todo!(),
+        (Some(_), Some(_), Some(_)) => todo!(),
+    };
+    var
+}
+
 
 fn path_with_ed_node_builder<Ix>(
     id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>, 
     ped: &EdgeData,
-     layout: &Layout,
-      path: &EPath<Ix>, 
-      path_layouts:StateVar<PathVarMap<Ix, Layout>>,
-      path_styles: StateVar<PathVarMap<Ix, Style>>,
-      other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>, LayoutCalculated, StateAnchor<String>) 
+    layout: &Layout,
+    path: &EPath<Ix>, 
+    path_layouts:StateVar<PathVarMap<Ix, Layout>>,//NOTE 某个 特别指定路径 的layout
+    path_styles: StateVar<PathVarMap<Ix, Style>>,
+    other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>, LayoutCalculated, StateAnchor<String>) 
 where
 Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord +std::fmt::Display+'static+ std::fmt::Debug
 {

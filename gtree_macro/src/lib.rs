@@ -16,7 +16,7 @@ use cassowary::Cassowary;
 use proc_macro2::{TokenStream, Span, Punct, Spacing};
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
-use syn::{parse::{Parse, ParseStream}, braced};
+use syn::{parse::{Parse, ParseStream, discouraged::Speculative}, braced};
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
 
 use syn::{Ident, Token};
@@ -434,7 +434,7 @@ impl ToTokens for GRefresher {
 #[derive(Debug, Clone)]
 struct SaGel {
     pub left: Box<syn::Expr>,
-    pub _map_fn_token: token::FatArrow,
+    pub map_fn_token: token::FatArrow,
     pub right: Box<syn::ExprClosure>,
 }
 
@@ -442,7 +442,7 @@ impl Parse for SaGel {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         Ok(Self {
             left: input.parse()?,
-            _map_fn_token: input.parse()?,
+            map_fn_token: input.parse()?,
             right: input.parse()?,
         })
     }
@@ -488,8 +488,8 @@ impl Parse for GTreeSurface {
         let fork2 = input.fork();
        
 
-        let opt_sa_gel = if fork2.parse::<SaGel>().is_ok(){
-            let sa_gel:SaGel = input.parse()?;
+        let opt_sa_gel = if let Ok(sa_gel) = fork2.parse::<SaGel>(){
+            input.advance_to(&fork2);
            Some (sa_gel)
         }else{
             None
