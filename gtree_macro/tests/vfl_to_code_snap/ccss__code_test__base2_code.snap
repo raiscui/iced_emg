@@ -1,0 +1,5 @@
+---
+source: gtree_macro/tests/ccss.rs
+expression: x
+---
+emg_core :: vector ! [emg_layout :: ccsa :: CCSS :: new (emg_layout :: ccsa :: CCSSSvvOpSvvExpr :: new (emg_layout :: ccsa :: ScopeViewVariable :: new (:: std :: option :: Option :: None , :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Id (emg_core :: IdStr :: new ("b1"))) , :: std :: option :: Option :: Some (emg_layout :: ccsa :: PredVariable (emg_core :: IdStr :: new ("bottom")))) , vec ! []) , vec ! [emg_layout :: ccsa :: CCSSEqExpression :: new (emg_layout :: ccsa :: PredEq :: Eq , emg_layout :: ccsa :: CCSSSvvOpSvvExpr :: new (emg_layout :: ccsa :: ScopeViewVariable :: new (:: std :: option :: Option :: None , :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Id (emg_core :: IdStr :: new ("b2"))) , :: std :: option :: Option :: Some (emg_layout :: ccsa :: PredVariable (emg_core :: IdStr :: new ("top")))) , vec ! []))] , :: std :: option :: Option :: None)]

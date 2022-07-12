@@ -1,23 +1,9 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-18 23:12:03
- * @LastEditTime: 2022-06-23 10:04:19
+ * @LastEditTime: 2022-07-12 18:09:11
  * @LastEditors: Rais
  * @Description: 
- */
-/*
- * @Author: Rais
- * @Date: 2022-06-10 22:34:38
- * @LastEditTime: 2022-06-18 11:59:30
- * @LastEditors: Rais
- * @Description:
- */
-/*
- * @Author: Rais
- * @Date: 2022-06-05 19:54:16
- * @LastEditTime: 2022-06-10 22:30:40
- * @LastEditors: Rais
- * @Description:
  */
 use crate::{
     emg_runtime::{ Layer},

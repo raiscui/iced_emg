@@ -1,0 +1,5 @@
+---
+source: gtree_macro/tests/ccss.rs
+expression: x
+---
+emg_layout :: ccsa :: NameChars :: Id (emg_core :: IdStr :: new ("button"))

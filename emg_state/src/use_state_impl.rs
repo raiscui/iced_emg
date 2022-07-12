@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-07-06 15:56:15
+ * @LastEditTime: 2022-07-11 21:52:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -1225,6 +1225,11 @@ where
     pub fn constant(val: T) -> Self {
         G_STATE_STORE.with(|_g_state_store_refcell| Self(Anchor::constant(val)))
     }
+
+    pub fn into_anchor(self) -> Anchor<T> {
+        self.0
+    }
+
     #[must_use]
     pub const fn anchor(&self) -> &Anchor<T> {
         &self.0

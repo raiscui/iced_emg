@@ -2,7 +2,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-08 22:27:18
+ * @LastEditTime: 2022-07-12 12:42:47
  * @LastEditors: Rais
 * @Description:
 */
@@ -14,8 +14,10 @@ use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo};
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
 use styles::{ CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, LogicLength, px, s};
-use tracing::{ trace,trace_span};
+use tracing::{ trace,trace_span, warn};
 use derive_more::From;
+
+
 
 // ────────────────────────────────────────────────────────────────────────────────
     
@@ -24,7 +26,7 @@ use derive_more::From;
 pub fn layout_calculating<Ix>(
     _id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
     path_edgedata: &EdgeData,//parent
-    layout: StateAnchor<Layout>,
+    layout: &StateAnchor<Layout>,
 ) -> LayoutCalculated 
 where 
     Ix: 'static + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default + std::cmp::Ord+ std::fmt::Display 
@@ -49,52 +51,72 @@ where
             let align_y = layout.then(|l:&Layout|l.align_y.watch().into());
 // ────────────────────────────────────────────────────────────────────────────────
 
-            let width_var  =p_cassowary_map.var("width").unwrap();
-            let width = p_calculated_vars.map(|p_vars|{
-                //  if let Some (val) = p_vars.get(width_var){
-                //     StateAnchor::constant( px(**val).into()).into()
-                    
-                //  }else{
-                //     layout.then(|l:&Layout|l.w.watch().into()).into()
-                //  }
-
-                p_vars.get(width_var).map(|val| **val)
-
-
+            let width_var  =*p_cassowary_map.var("width").unwrap();
+            let width = p_calculated_vars.map(move|p_vars|{
+                p_vars.get(&width_var).map(|val| **val).unwrap()
             });
 
-            let height_var  =p_cassowary_map.var("height").unwrap();
-            let height = p_calculated_vars.map(|p_vars|{
-                // if let Some (val) = p_vars.get(height_var){
-                //    StateAnchor::constant( px(**val).into()).into()
-                   
-                // }else{
-                //    layout.then(|l:&Layout|l.h.watch().into()).into()
-                // }
-
-                p_vars.get(height_var).map(|val| **val)
-
-
+            let height_var  =*p_cassowary_map.var("height").unwrap();
+            let height = p_calculated_vars.map(move|p_vars|{
+                p_vars.get(&height_var).map(|val| **val).unwrap()
             });
 
-            let top_var  =p_cassowary_map.var("top").unwrap();
-            let top = p_calculated_vars.map(|p_vars|{
-                p_vars.get(top_var).map(|val| **val)
+            let top_var  =*p_cassowary_map.var("top").unwrap();
+            let top = p_calculated_vars.map(move|p_vars|{
+                p_vars.get(&top_var).map(|val| **val)
             });
-            let bottom_var  =p_cassowary_map.var("bottom").unwrap();
-            let bottom = p_calculated_vars.map(|p_vars|{
-                p_vars.get(bottom_var).map(|val| **val)
+            let left_var  =*p_cassowary_map.var("left").unwrap();
+            let left = p_calculated_vars.map(move|p_vars|{
+                p_vars.get(&left_var).map(|val| **val)
             });
-            let left_var  =p_cassowary_map.var("left").unwrap();
-            let left = p_calculated_vars.map(|p_vars|{
-                p_vars.get(left_var).map(|val| **val)
+            let bottom_var  =*p_cassowary_map.var("bottom").unwrap();
+            let bottom = p_calculated_vars.map(move|p_vars|{
+                p_vars.get(&bottom_var).map(|val| **val)
             });
-            let right_var  =p_cassowary_map.var("right").unwrap();
-            let right = p_calculated_vars.map(|p_vars|{
-                p_vars.get(right_var).map(|val| **val)
+            
+            let right_var  =*p_cassowary_map.var("right").unwrap();
+            let right = p_calculated_vars.map(move|p_vars|{
+                p_vars.get(&right_var).map(|val| **val)
             });
+
+            let cass_trans:StateAnchor<Translation3<f64>>  =  (p_calc_size_sa,&width,&height,&top,&left,&bottom,&right).map(|p_calc_size:&Vector2<f64>,w:&f64,h:&f64,opt_t:&Option<f64>,opt_b:&Option<f64>,opt_l: &Option<f64>,opt_r: &Option<f64>,|{
+                
+                match (opt_t,opt_l,opt_b,opt_r) {
+                    (None, None, None, None) => Translation3::<f64>::new(0.0,0.0,0.0),
+                    (None, None, None, Some(r)) => {
+                        Translation3::<f64>::new(p_calc_size.x-w-r,0.0,0.0)
+                    },
+                    (None, None, Some(b), None) => {
+                        Translation3::<f64>::new(0.0,p_calc_size.y-h-b,0.0)
+                    },
+                    (None, None, Some(b), Some(r)) => {
+                        Translation3::<f64>::new(p_calc_size.x-w-r,p_calc_size.y-h-b,0.0)
+                    },
+                    (None, Some(l), None, _right) => {
+                        Translation3::<f64>::new(*l,0.0,0.0)
+                    },
+                    (None, Some(l), Some(b), _right) => {
+                        Translation3::<f64>::new(*l,p_calc_size.y-h-b,0.0)
+                    },
+                    (Some(t), None, _bottom, None) => {
+                        Translation3::<f64>::new(0.0,*t,0.0)
+                    },
+                    (Some(t), None, _bottom, Some(r)) => {
+                        Translation3::<f64>::new(p_calc_size.x-w-r,*t,0.0)
+                    },
+                    (Some(t), Some(l), _, _) => {
+                        Translation3::<f64>::new(*l,*t,0.0)
+                    },
+                }
+                
+            });
+
+
 
             
+            
+
+
 
 
 
@@ -161,47 +183,6 @@ where
                 },
             );
 
-            let calculated_origin = p_calculated_vars.then(|p_vars|{
-                let origin_x = if let Some (origin_x_val) = p_vars.get(origin_x_var){
-                    StateAnchor::constant( **origin_x_val)
-                }else{
-                    (p_calc_size_sa, &w).then(
-                        move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor| {
-                           let p_calc_size = *p_calc_size;   
-                           
-                           // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
-                          
-                            sa_w.map(move |w:&GenericSize|->f64{
-                               calculation_w(&p_calc_size, w)
-                           }).into()
-                           
-                       } )
-                };
-
-                let height = if let Some (height_val) = p_vars.get(height_var){
-                    StateAnchor::constant( **height_val)
-                }else{
-                    (p_calc_size_sa, &h).then(
-                        move|p_calc_size: &Vector2<f64>, sa_h: &GenericSizeAnchor| {
-                           let p_calc_size = *p_calc_size;   
-                           
-                           // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
-                          
-                            sa_h.map(move |h:&GenericSize|->f64{
-                               calculation_h(&p_calc_size, h)
-                           }).into()
-                           
-                       } )
-                };
-
-                (&width, &height).map(|w,h|{
-                    Vector2::<f64>::new(*w,*h)
-                }).into()
-
-
-            });
-
-
             let calculated_origin = (p_calc_size_sa,&p_calculated.origin, &p_calculated.align,&calculated_size, &origin_x,&origin_y).then(
                 move |p_calc_size: &Vector2<f64>,p_calc_origin:&Translation3<f64>,p_calc_align:&Translation3<f64>,calc_size: &Vector2<f64>, origin_x: &GenericSizeAnchor,origin_y: &GenericSizeAnchor| {
 
@@ -258,14 +239,34 @@ where
                     ff
                 });
 
-            let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
+            // let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
+            let matrix = cass_trans.map(|x| x.to_homogeneous().into());
 
             // @styles calculation ─────────────────────────────────────────────────────────────────
             // ────────────────────────────────────────────────────────────────────────────────
                 
 
-            let loc_styles = (&calculated_size, &matrix).map( move |calc_size: &Vector2<f64>, mat4: &Mat4| {
-                            trace!( "------------size: {:?}  , matrix: {}", &calc_size, CssTransform::from(*mat4) );
+            // let loc_styles = (&calculated_size, &matrix).map( move |calc_size: &Vector2<f64>, mat4: &Mat4| {
+            //                 trace!( "------------size: {:?}  , matrix: {}", &calc_size, CssTransform::from(*mat4) );
+
+            //             { let _ender = trace_span!( 
+            //                         "-> [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
+            //                         ).entered();
+
+            //                 trace!("loc_styles calculting ===============---------------------================-----------");
+            //                 // log::trace!("-> [ loc_styles ] recalculation..(&calculated_size, &matrix).map ");
+
+
+
+            //                 // TODO use  key 更新 s(),
+            //                 s().w(px(calc_size.x)).h(px(calc_size.y)).transform(*mat4)
+                    
+            //             }
+                
+                        
+            // });
+            let loc_styles = (&width,&height, &matrix).map( move |w,h, mat4: &Mat4| {
+                            trace!( "------------size: w:{:?}  h:{:?}  , matrix: {}", &w,&h,CssTransform::from(*mat4) );
 
                         { let _ender = trace_span!( 
                                     "-> [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
@@ -277,7 +278,7 @@ where
 
 
                             // TODO use  key 更新 s(),
-                            s().w(px(calc_size.x)).h(px(calc_size.y)).transform(*mat4)
+                            s().w(px(*w)).h(px(*h)).transform(*mat4)
                     
                         }
                 

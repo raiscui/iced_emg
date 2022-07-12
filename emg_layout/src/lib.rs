@@ -20,7 +20,7 @@
 // #![feature(trivial_bounds)]
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
-use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc, time::Duration, borrow::Borrow};
+use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc, time::Duration};
 use cassowary::{Variable, Constraint, Expression, WeightedRelation, Solver};
 use ccsa::{CassowaryMap, CCSS, CCSSEqExpression, CCSSSvvOpSvvExpr, NameChars, ScopeViewVariable, CCSSOpSvv, PredOp, PredEq, StrengthAndWeight};
 use emg_hasher::CustomHasher;
@@ -246,6 +246,20 @@ pub struct Layout
 
 impl Layout
 {
+    fn get(&self,prop:&str)->StateVar<GenericSizeAnchor>{
+        match prop {
+            "width" => self.w.clone(),
+            "height" => self.h.clone(),
+            "origin_x" => self.origin_x.clone(),
+            "origin_y" => self.origin_y.clone(),
+            "origin_z" => self.origin_z.clone(),
+            "align_x" => self.align_x.clone(),
+            "align_y" => self.align_y.clone(),
+            "align_z" => self.align_z.clone(),
+            _ => panic!("unknown prop {}",prop),
+        }
+
+    }
     /// Set the layout's size.
     #[cfg(test)]
     fn set_size(&self,
@@ -350,8 +364,9 @@ pub struct LayoutCalculated {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EdgeData {
+    path_layout: StateAnchor<Layout>,
     calculated: LayoutCalculated,
-    cassowary_map:CassowaryMap,
+    cassowary_map:Rc<CassowaryMap>,
     calculated_vars:StateAnchor<Dict<Variable, NotNan<f64>>>,
     pub styles_string: StateAnchor<String>, 
     opt_p_calculated:Option<LayoutCalculated>,//TODO check need ? use for what?
@@ -819,8 +834,12 @@ where
         let nodes:DictPathEiNodeSA<Ix> = id_sv.watch().then(move|id_sa|{
             
             let paths_clone2 = paths_clone.clone();
+            let path_layouts2 = path_layouts.clone(); 
+            let children_nodes2 = children_nodes.clone();
                 
             id_sa.then(move |eid:&EdgeIndex<Ix>|{
+
+            let children_nodes3 = children_nodes2.clone();
 
                 let eid_clone = eid.clone();
                 
@@ -837,27 +856,39 @@ where
                         })
                         .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
 
-                }).map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode| {
+                }) .map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode| {
 
+                    let self_path2 =self_path.clone();
+                    let self_path3 =self_path.clone();
                     let _child_span =
                         span!(Level::TRACE, "[ node recalculation ]:paths change ").entered();
+
+                        //TODO use Dict anchor Collection
+                    let path_layout:StateAnchor<Layout> = path_layouts2.watch().map(move|path_layouts_map:&PathVarMap<Ix, Layout>|{
+                        // println!("--> id: {:?}", &id_sv);
+                        trace!("--> finding path_layout in path_with_ed_node_builder------------------- len:{}",path_layouts_map.len());
+                        // println!("--> layout:{:?}",pls_map.get(&path_clone));
+                        *path_layouts_map.get(&self_path2).unwrap_or(&layout)
+                    });
                         
                        
                     let (opt_p_calculated,layout_calculated,styles_string) =  match p_path_edge_item_node {
                         //NOTE 上一级节点: empty => 此节点是root
-                        EdgeItemNode::Empty => path_ein_empty_node_builder(&layout, self_path,path_layouts,path_styles, other_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &layout, self_path,path_layouts, path_styles, other_styles_sv),
+                        EdgeItemNode::Empty => path_ein_empty_node_builder(&path_layout, self_path,path_styles, other_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &path_layout, self_path, path_styles, other_styles_sv),
                         EdgeItemNode::String(_)  => {
                             todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
                                 
                     };
 
-                    let children_cass_maps_sa = children_nodes.filter_map(|child_path,child_node|{
-                        if child_path.except_tail_match(&self_path) {
+                    //NOTE children cassowary_map
+                    let children_cass_maps_sa:StateAnchor<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>)>> = children_nodes3.filter_map(move |child_path,child_node|{
+                        if child_path.except_tail_match(&self_path3) {
                             match (child_path.last_target(),child_node.as_edge_data()){
                                
-                                (Some(nix), Some(ed)) =>Some( (nix.index().clone(),ed.cassowary_map.clone())),
+                                // (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.path_layout.clone()))),
+                                (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.calculated.size.clone()))),
                                 _=>None
                             }
                         }else{
@@ -866,41 +897,59 @@ where
                     })
                     .map(|x|{
                         x.values().cloned()
-                        .collect::<Dict<Ix, CassowaryMap>>()
+                        .collect::<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>)>>()
                     });
 
 
-                    let constant_sets_sa = (&layout.cassowary.watch(),&children_cass_maps_sa).then(|ccss_list_sa,children_cass_maps|{
-                          ccss_list_sa.map(|ccss_list|{
-
-                            let constant_vec = ccss_list.iter().fold(OrdSet::<Constraint>::new(), |mut constant_sets,CCSS{ svv_op_svvs, eq_exprs, opt_sw }|{
-
-                                let left_expr = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps);
-
-                                let (constants,_) = eq_exprs.iter().fold((constant_sets,left_expr), |(mut constants,left_expr),CCSSEqExpression{ eq, expr }|{
+                    //NOTE 约束
+                    let ccss_list_sa = layout.cassowary.watch().then(|x|x.clone().into_anchor());
+                    let constant_sets_sa = (&ccss_list_sa,&children_cass_maps_sa).then(move |ccss_list,children_cass_maps|{
 
 
-                                    let right_expr = svv_op_svvs_to_expr(expr,children_cass_maps);
+                            let (constant_sets,prop_suggestions) = ccss_list.iter()
+                            .fold((OrdSet::<Constraint>::new(),Dict::<Variable, StateAnchor<f64>>::new()), 
+                            |( constant_sets,mut prop_suggestions0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
 
-                                    let constraint = left_expr | eq_opt_sw_to_weighted_relation(eq,opt_sw)| right_expr;
+                                //TODO use left_prop_gss if loop when use child:layout_calculated
+                                let (left_expr,left_prop_directly_layout_val) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps);
+                                prop_suggestions0 = prop_suggestions0.union(left_prop_directly_layout_val);
+
+                                let (constants,_,prop_suggestions2) = eq_exprs.into_iter().fold((constant_sets,left_expr,prop_suggestions0), |(mut constants,left_expr, prop_suggestions1),CCSSEqExpression{ eq, expr }|{
+
+
+                                    let (right_expr,right_prop_directly_layout_val) = svv_op_svvs_to_expr(expr,children_cass_maps);
+                                    
+
+                                    let constraint = left_expr | eq_opt_sw_to_weighted_relation(eq,opt_sw)| right_expr.clone();
 
                                     constants.insert(constraint);
 
-                                    (constants,right_expr)
+                                    (constants,right_expr,prop_suggestions1.union(right_prop_directly_layout_val))
 
                                 });
-                                constants
+                                (constants,prop_suggestions2)
 
                             });
 
-                            constant_vec
 
+                            //todo use add_edit_variable suggest_value
+                            let prop_suggestions_anchor = prop_suggestions.into_iter().map(|(var,sa_v)|{
+                                
+                                sa_v.map(move |v|{
+                                    var | WeightedRelation::EQ(cassowary::strength::MEDIUM)| *v
+                                }
+                        
+                            ).into_anchor()}).collect::<Anchor<OrdSet<Constraint>>>();
+
+                            prop_suggestions_anchor.map(move |prop_suggestions|{
+                                constant_sets.clone().union(prop_suggestions.clone())
+                            })
                             
-                        }).into()
                         
                     });
 
                     let LayoutCalculated{ size, origin, align, coordinates_trans, matrix, loc_styles } = &layout_calculated;
+                    //NOTE 层建议值 (层当前计算所得)
                     let calculated_prop_val_sa = ( size, origin, align, coordinates_trans ).map(|size, origin, align, coordinates_trans|{
                         let width = size.x;
                         let height = size.y;
@@ -933,12 +982,14 @@ where
 
                     let mut last_observation_constants:OrdSet<Constraint>  =  OrdSet::new();
                     let mut last_observation_props:Dict<IdStr, NotNan<f64>> =  Dict::new();
-                    let current_cassowary_map = CassowaryMap::new();
+                    let current_cassowary_map = Rc::new(CassowaryMap::new());
+                    let current_cassowary_map2 = current_cassowary_map.clone();
 
                     let mut cass_solver = Solver::new();
 
 
                     let calculated_changed_vars_sa  = (&constant_sets_sa,&calculated_prop_val_sa).map_mut( Dict::<Variable,NotNan<f64>>::new(),move |out,newest_constants,newest_prop_vals| {
+                        
                         let mut constants_did_update = false;
                         let mut prop_vals_did_update = false;
 
@@ -982,8 +1033,8 @@ where
                                 ordmap::DiffItem::Update { old:(old_prop,old_v), new:(prop,v) } => {
                                     //TODO check, remove .
                                     assert_eq!(old_prop,prop);
-                                    let var = current_cassowary_map.var(&**prop).unwrap();
-                                    cass_solver.add_edit_variable(*var, cassowary::strength::REQUIRED).unwrap();
+                                    let var = current_cassowary_map2.var(&**prop).unwrap();
+                                    cass_solver.add_edit_variable(*var, cassowary::strength::STRONG * 1000.0).unwrap();
                                     cass_solver.suggest_value(*var, *v);
                                     prop_vals_did_update = true;
 
@@ -1025,6 +1076,7 @@ where
 
 
                     EdgeItemNode::EdgeData(Box::new(EdgeData {
+                        path_layout,
                         calculated: layout_calculated,
                         styles_string,
                         opt_p_calculated,
@@ -1053,9 +1105,9 @@ where
 
 fn eq_opt_sw_to_weighted_relation(
     eq: &PredEq,
-    opt_sw: &Option<StrengthAndWeight>,
+    opt_sw:& Option<StrengthAndWeight>,
 ) -> WeightedRelation {
-    let weight = opt_sw.map_or(cassowary::strength::MEDIUM, |sw| sw.to_number());
+    let weight = opt_sw.as_ref().map_or(cassowary::strength::MEDIUM, |sw| sw.to_number());
     match eq {
         PredEq::Eq => WeightedRelation::EQ(weight),
         PredEq::Lt => todo!(),
@@ -1066,33 +1118,32 @@ fn eq_opt_sw_to_weighted_relation(
 }
 
 
-fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, CassowaryMap>)->Expression 
+fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>)>)->(Expression,Dict<Variable, StateAnchor<f64>>) 
 where
 Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
     let CCSSSvvOpSvvExpr{  svv:main_svv, op_exprs }=svv_op_svvs;
-    let first_var = svv_to_var(main_svv,children_cass_maps);
-    op_exprs.clone().iter().fold(None, |mut exp,op_expr| {
+    let (first_var,first_prop_layout_directly_val_sa)  = svv_to_var(main_svv,children_cass_maps);
+    let mut prop_directly_layout_vals = Dict::unit(first_var, first_prop_layout_directly_val_sa);
+
+    let expr =op_exprs.into_iter().fold(first_var.into(), | exp:Expression,op_expr| {
         let CCSSOpSvv{ op, svv } = op_expr;
-        match exp{
-            None => {
-                Some(first_var + svv_to_var(svv,children_cass_maps))
+        match op{
+            PredOp::Add => {
+                let (var,prop_layout_directly_val_sa)     =svv_to_var(svv,children_cass_maps);
+                prop_directly_layout_vals.insert(var, prop_layout_directly_val_sa);
+                exp + var
+            
             },
-            Some(mut exp) => {
-
-                match op{
-                    PredOp::Add => Some(exp + svv_to_var(svv,children_cass_maps)),
-                    PredOp::Sub => todo!(),
-                    PredOp::Mul => todo!(),
-                }
-
-            }
+            PredOp::Sub => todo!(),
+            PredOp::Mul => todo!(),
         }
    
-    }).unwrap()
+    });
+    (expr,prop_directly_layout_vals)
 }
 
-fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, CassowaryMap>) -> Variable 
+fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>)>) -> (Variable, StateAnchor<f64>) 
 where
 Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
@@ -1108,8 +1159,25 @@ Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Displ
 
                 
                      match children_cass_maps.get(id.as_str()){
-                        Some(cass_map) => {
-                            *cass_map.var(&**prop).unwrap()
+
+                        //TODO real directly layout val(option val), some val if can directly calculated, current only width height
+                        Some((cass_map,directly_layout)) => {
+                            let prop_id_str = prop.as_str();
+                            let prop_id_str2 = (*prop).clone();
+
+                            // let prop_layout_val_sa = layout.then(move |l|{
+                            //     l.get(&*prop_id_str).watch().then(|gsa|gsa.get_anchor()).into()
+                            // });
+                            let prop_layout_val_sa = directly_layout.map(move |l|{
+                                match prop_id_str2.as_str(){
+                                    "width" => l.x,
+                                    "height" => l.y,
+                                    _ => todo!("other directly_layout val ...  not implemented"),
+                                }
+                            });
+
+
+                            (*cass_map.var(prop_id_str).unwrap(),prop_layout_val_sa)
                         },
                         None => todo!(),
                     }
@@ -1139,9 +1207,8 @@ Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Displ
 fn path_with_ed_node_builder<Ix>(
     id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>, 
     ped: &EdgeData,
-    layout: &Layout,
+    path_layout: &StateAnchor<Layout>,
     path: &EPath<Ix>, 
-    path_layouts:StateVar<PathVarMap<Ix, Layout>>,//NOTE 某个 特别指定路径 的layout
     path_styles: StateVar<PathVarMap<Ix, Style>>,
     other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>, LayoutCalculated, StateAnchor<String>) 
 where
@@ -1151,16 +1218,9 @@ Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
 
 
     let p_calculated = ped.calculated.clone();
-    let path_clone = path.clone();
     let path_clone2 = path.clone();
-    let layout_c = *layout;
-    //TODO use Dict anchor Collection
-    let path_layout:StateAnchor<Layout> = path_layouts.watch().map(move|pls_map:&PathVarMap<Ix, Layout>|{
-        // println!("--> id: {:?}", &id_sv);
-        trace!("--> find path_layout in path_with_ed_node_builder------------------- len:{}",pls_map.len());
-        // println!("--> layout:{:?}",pls_map.get(&path_clone));
-        *pls_map.get(&path_clone).unwrap_or(&layout_c)
-    });
+    
+    
     let layout_calculated = layout_calculating(id_sv, ped, path_layout);
     // let p = path.clone();
     let this_path_style_string_sa: StateAnchor<Option<String>> = 
@@ -1197,9 +1257,8 @@ Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
 }
 
 fn path_ein_empty_node_builder<Ix:'static>(
-    layout: &Layout,
+    path_layout: &StateAnchor<Layout>,
     path: &EPath<Ix>, 
-    path_layouts:StateVar<PathVarMap<Ix, Layout>>,
     path_styles:StateVar<PathVarMap<Ix, Style>>, other_styles_sv: StateVar<Style>) -> (Option<LayoutCalculated>,LayoutCalculated, StateAnchor<String>)
  where 
     Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
@@ -1207,16 +1266,8 @@ fn path_ein_empty_node_builder<Ix:'static>(
         // println!("run path_ein_empty_node_builder ******************************************************************");
 
         // ─────────────────────────────────────────────────────────────────
-        let layout_c = *layout;
         let path_clone = path.clone();
-        let path_layout:StateAnchor<Layout> = path_layouts.watch().map(move|pls_map:&PathVarMap<Ix, Layout>|{
-            // println!("--> id: {:?}", &id_sv);
-            trace!("--> find path_layout--in root ----------------- len:{}",pls_map.len());
-            // println!("--> layout:{:?}",pls_map.get(&path_clone));
-            debug_assert!(pls_map.len()<=1_usize);
-            
-            *pls_map.get(&path_clone).unwrap_or(&layout_c)
-        });
+        
         let w = path_layout.then(|l:&Layout|l.w.watch().into());
         let h = path_layout.then(|l:&Layout|l.h.watch().into());
         // let origin_x = path_layout.then(|l:&Layout|l.origin_x.watch().into());

@@ -1,7 +1,9 @@
+use either::Either;
+use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-07-07 10:31:28
+ * @LastEditTime: 2022-07-12 17:54:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,15 +12,17 @@ use parse_display::{Display, FromStr};
 use proc_macro2::{Span, TokenStream};
 use std::{collections::HashMap, rc::Rc};
 
-use quote::{quote_spanned, ToTokens};
-use syn::ext::IdentExt;
+use quote::{quote, quote_spanned, ToTokens, TokenStreamExt};
 use syn::{
     braced, bracketed, parenthesized,
     parse::{discouraged::Speculative, Parse, ParseStream},
     punctuated::Punctuated,
     token, BinOp, Ident, LitFloat, LitInt, LitStr, Token,
 };
+use syn::{ext::IdentExt, spanned::Spanned};
 use tracing::{debug, debug_span, error, instrument};
+
+use crate::quote_option::QuoteOption;
 
 fn size_var_names(d: &Dimension) -> Ident {
     match d {
@@ -122,7 +126,7 @@ impl Parse for Dimension {
 }
 
 #[derive(Debug, Clone, Display)]
-enum Number {
+pub enum Number {
     #[display("{0}")]
     Int(LitInt),
     #[display("{0}")]
@@ -145,7 +149,7 @@ impl Parse for Number {
     }
 }
 #[derive(Debug, Clone, Display)]
-enum NameChars {
+pub enum NameChars {
     #[display("#{0}")]
     Id(Ident), // #xxx
     #[display(".{0}")]
@@ -259,24 +263,27 @@ impl ToTokens for NameChars {
         match self {
             Self::Id(x) => {
                 let str = x.to_string();
-                quote_spanned!(x.span()=> NameChars::Id(IdStr::new(#str))).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_layout::ccsa::NameChars::Id(emg_core::IdStr::new(#str)))
+                    .to_tokens(tokens);
             }
             Self::Class(x) => {
                 let str = x.to_string();
-                quote_spanned!(x.span()=> NameChars::Class(IdStr::new(#str))).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_layout::ccsa::NameChars::Class(emg_core::IdStr::new(#str)))
+                    .to_tokens(tokens);
             }
             Self::Element(x) => {
                 let str = x.to_string();
-                quote_spanned!(x.span()=> NameChars::Element(IdStr::new(#str))).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_layout::ccsa::NameChars::Element(emg_core::IdStr::new(#str)))
+                    .to_tokens(tokens);
             }
             Self::Virtual(_) => todo!(),
             Self::Number(n) => match n {
                 Number::Int(int) => {
-                    quote_spanned!(int.span()=> NameChars::Number( NotNan::new(#int as f64).unwrap() ))
+                    quote_spanned!(int.span()=> emg_layout::ccsa::NameChars::Number( NotNan::new(#int as f64).unwrap() ))
                         .to_tokens(tokens);
                 }
                 Number::Float(float) => {
-                    quote_spanned!(float.span()=> NameChars::Number( NotNan::new(#float).unwrap() ))
+                    quote_spanned!(float.span()=> emg_layout::ccsa::NameChars::Number( NotNan::new(#float).unwrap() ))
                         .to_tokens(tokens);
                 }
             },
@@ -295,6 +302,21 @@ enum PredOp {
     Sub(#[display("-")] Token![-]),
     #[display("{0}")]
     Mul(#[display("*")] Token![*]),
+}
+impl ToTokens for PredOp {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match self {
+            Self::Add(x) => {
+                quote_spanned!(x.span()=> emg_layout::ccsa::PredOp::Add).to_tokens(tokens);
+            }
+            Self::Sub(x) => {
+                quote_spanned!(x.span()=> emg_layout::ccsa::PredOp::Sub).to_tokens(tokens);
+            }
+            Self::Mul(x) => {
+                quote_spanned!(x.span()=> emg_layout::ccsa::PredOp::Mul).to_tokens(tokens);
+            }
+        }
+    }
 }
 
 impl PredOp {
@@ -321,16 +343,6 @@ impl Parse for PredOp {
         }
     }
 }
-// /// `123f64`
-// #[derive(Debug, Clone)]
-// struct PredLiteral(LitFloat);
-// impl Parse for PredLiteral {
-//     fn parse(input: ParseStream) -> syn::Result<Self> {
-//         debug!("in PredLiteral");
-
-//         Ok(Self(input.parse()?))
-//     }
-// }
 
 /// `[var]`
 #[derive(Debug, Clone, Display)]
@@ -346,12 +358,22 @@ impl Parse for PredVariable {
         Ok(Self(var))
     }
 }
+
+impl ToTokens for PredVariable {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let var = self.0.to_string();
+
+        quote_spanned!(self.0.span()=> emg_layout::ccsa::PredVariable(emg_core::IdStr::new(#var)))
+            .to_tokens(tokens);
+    }
+}
+
 fn disp_opt<T: std::fmt::Display>(o: Option<T>) -> String {
     o.map_or("".to_string(), |x| format!("{}", x))
 }
 /// `&name[var]`
 #[derive(Debug, Clone)]
-struct ScopeViewVariable {
+pub struct ScopeViewVariable {
     scope: Option<Scope>,
     view: Option<NameChars>,
     variable: Option<PredVariable>,
@@ -487,6 +509,23 @@ impl Parse for ScopeViewVariable {
     }
 }
 
+impl ToTokens for ScopeViewVariable {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let scope = QuoteOption(self.scope.as_ref());
+        let view = QuoteOption(self.view.as_ref());
+        let variable = QuoteOption(self.variable.as_ref());
+        let span = self
+            .scope
+            .span()
+            .join(self.view.span())
+            .unwrap()
+            .join(self.variable.span())
+            .unwrap();
+        quote_spanned!(span=> emg_layout::ccsa::ScopeViewVariable::new(#scope, #view, #variable))
+            .to_tokens(tokens);
+    }
+}
+
 /// `name[var]`
 #[derive(Debug, Clone)]
 struct PredViewVariable {
@@ -598,10 +637,70 @@ impl Parse for PredExpression {
 /// !weak10   !require
 #[derive(Debug, Clone)]
 enum StrengthAndWeight {
-    Weak(Option<LitInt>),
-    Medium(Option<LitInt>),
-    Strong(Option<LitInt>),
-    Require(Option<LitInt>),
+    Weak(Option<Either<LitInt, LitFloat>>),
+    Medium(Option<Either<LitInt, LitFloat>>),
+    Strong(Option<Either<LitInt, LitFloat>>),
+    Require,
+}
+impl ToTokens for StrengthAndWeight {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Weak(x) => {
+                let xx = x.as_ref().map_or_else(
+                    || quote! { ::std::option::Option::None },
+                    |lint| {
+                        match lint{
+                            Left(xxx) => {
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx as f64).unwrap()) )
+                            },
+                            Right(xxx) => {
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx).unwrap()) )
+                            },
+                        }
+                    },
+                );
+                quote_spanned!(xx.span()=>emg_layout::ccsa::StrengthAndWeight::Weak(#xx))
+                    .to_tokens(tokens);
+            }
+            Self::Medium(x) => {
+                let xx = x.as_ref().map_or_else(
+                    || quote! { ::std::option::Option::None },
+                    |lint| {
+                        match lint{
+                            Left(xxx) => {
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx as f64).unwrap()) )
+                            },
+                            Right(xxx) => {
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx).unwrap()) )
+                            },
+                        }
+                    },
+                );
+                quote_spanned!(xx.span()=>emg_layout::ccsa::StrengthAndWeight::Medium(#xx))
+                    .to_tokens(tokens);
+            }
+            Self::Strong(x) => {
+                let xx = x.as_ref().map_or_else(
+                    || quote! { ::std::option::Option::None },
+                    |lint| {
+                        match lint{
+                            Left(xxx) => {
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx as f64).unwrap()) )
+                            },
+                            Right(xxx) => {
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx).unwrap()) )
+                            },
+                        }
+                    },
+                );
+                quote_spanned!(xx.span()=>emg_layout::ccsa::StrengthAndWeight::Strong(#xx))
+                    .to_tokens(tokens);
+            }
+            Self::Require => {
+                quote!(emg_layout::ccsa::StrengthAndWeight::Require).to_tokens(tokens);
+            }
+        }
+    }
 }
 
 impl std::fmt::Display for StrengthAndWeight {
@@ -628,12 +727,8 @@ impl std::fmt::Display for StrengthAndWeight {
                     write!(f, " !strong")
                 }
             }
-            Self::Require(x) => {
-                if let Some(i) = x {
-                    write!(f, " !require({})", i)
-                } else {
-                    write!(f, " !require")
-                }
+            Self::Require => {
+                write!(f, " !require")
             }
         }
     }
@@ -649,7 +744,10 @@ impl Parse for StrengthAndWeight {
                 let content;
                 let paren_token = parenthesized!(content in input);
                 debug!("got weak number");
-                return Ok(Self::Weak(Some(content.parse()?)));
+                if let Ok(x) = content.parse::<LitInt>() {
+                    return Ok(Self::Weak(Some(Left(x))));
+                }
+                return Ok(Self::Weak(Some(Right(content.parse::<LitFloat>()?))));
             }
             return Ok(Self::Weak(None));
         }
@@ -659,7 +757,10 @@ impl Parse for StrengthAndWeight {
                 let content;
                 let paren_token = parenthesized!(content in input);
                 debug!("got medium number");
-                return Ok(Self::Medium(Some(content.parse()?)));
+                if let Ok(x) = content.parse::<LitInt>() {
+                    return Ok(Self::Medium(Some(Left(x))));
+                }
+                return Ok(Self::Medium(Some(Right(content.parse::<LitFloat>()?))));
             }
             return Ok(Self::Medium(None));
         }
@@ -668,7 +769,10 @@ impl Parse for StrengthAndWeight {
                 let content;
                 let paren_token = parenthesized!(content in input);
                 debug!("got strong number");
-                return Ok(Self::Strong(Some(content.parse()?)));
+                if let Ok(x) = content.parse::<LitInt>() {
+                    return Ok(Self::Strong(Some(Left(x))));
+                }
+                return Ok(Self::Strong(Some(Right(content.parse::<LitFloat>()?))));
             }
             return Ok(Self::Strong(None));
         }
@@ -680,15 +784,15 @@ impl Parse for StrengthAndWeight {
         //     return Ok(Self::Require(None));
         // }
 
-        input.parse::<kw_strength::required>()?;
+        let req = input.parse::<kw_strength::required>()?;
         debug!("find required keyword");
         if input.peek(token::Paren) {
-            let content;
-            let paren_token = parenthesized!(content in input);
-            debug!("got required number");
-            return Ok(Self::Require(Some(content.parse()?)));
+            return Err(syn::Error::new(
+                req.span(),
+                "can't use number behead required keyWord",
+            ));
         }
-        Ok(Self::Require(None))
+        Ok(Self::Require)
     }
 }
 
@@ -705,6 +809,27 @@ enum PredEq {
     Ge(#[display(">=")] Token![>=]),
     #[display(" {0} ")]
     Gt(#[display(">")] Token![>]),
+}
+impl ToTokens for PredEq {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            PredEq::Eq(x) => {
+                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Eq).to_tokens(tokens);
+            }
+            PredEq::Lt(x) => {
+                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Lt).to_tokens(tokens);
+            }
+            PredEq::Le(x) => {
+                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Le).to_tokens(tokens);
+            }
+            PredEq::Ge(x) => {
+                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Ge).to_tokens(tokens);
+            }
+            PredEq::Gt(x) => {
+                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Gt).to_tokens(tokens);
+            }
+        }
+    }
 }
 
 impl PredEq {
@@ -824,43 +949,58 @@ impl Parse for ViewSelector {
 #[derive(Debug, Copy, Clone, Display)]
 enum Scope {
     #[display("&")]
-    Local,
+    Local(Span),
     //
     #[display("^({0})")]
-    Parent(u8),
+    Parent(u8, Span),
     //
     #[display("$")]
-    Global,
+    Global(Span),
 }
 impl Parse for Scope {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         debug!("in Scope");
+        let mut span = input.span();
 
         if input.parse::<Token![&]>().is_ok() {
-            return Ok(Self::Local);
+            return Ok(Self::Local(span));
+        }
+        if input.parse::<Token![$]>().is_ok() {
+            return Ok(Self::Global(span));
         }
         if input.peek(Token![^]) {
             let mut n = 0u8;
             while input.peek(Token![^]) {
+                span.join(input.span()).unwrap();
                 input.parse::<Token![^]>()?;
                 n += 1;
             }
-            return Ok(Self::Parent(n));
+            return Ok(Self::Parent(n, span));
         }
+        return Err(syn::Error::new(input.span(), "expected `&` or `^` or `$`"));
 
-        input.parse::<Token![$]>()?;
-        Ok(Self::Global)
+        // input.parse::<Token![$]>()?;
+        // Ok(Self::Global)
     }
 }
-// #[derive(Debug, Clone)]
-// struct ExplicitGap(ScopeViewVariable);
-// impl Parse for ExplicitGap {
-//     #[instrument(name = "ExplicitGap")]
-//     fn parse(input: ParseStream) -> syn::Result<Self> {
-//         let svv = input.parse::<ScopeViewVariable>()?;
-//         Ok(Self(svv))
-//     }
-// }
+
+impl ToTokens for Scope {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Local(span) => {
+                quote_spanned!(*span=> emg_layout::ccsa::Scope::Local).to_tokens(tokens)
+            }
+
+            Self::Parent(n, span) => {
+                quote_spanned!(*span=> emg_layout::ccsa::Scope::Parent(#n)).to_tokens(tokens)
+            }
+            Self::Global(span) => {
+                quote_spanned!(*span=> emg_layout::ccsa::Scope::Global).to_tokens(tokens)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Gap {
     Var(ScopeViewVariable),
@@ -894,6 +1034,10 @@ impl Parse for Connection {
         if input.peek(Token![-]) {
             debug!("peek - ");
             input.parse::<Token![-]>()?;
+
+            if input.peek(token::Dot3) {
+                return Ok(Self::Eq(Gap::Standard));
+            }
 
             if let Ok(explicit_gap) = input.parse::<ScopeViewVariable>() {
                 debug!("got ScopeViewVariable: {:?}", &explicit_gap);
@@ -1037,7 +1181,13 @@ struct CCSSOpSvv {
     op: PredOp,
     var: ScopeViewVariable,
 }
-
+impl ToTokens for CCSSOpSvv {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self { op, var } = self;
+        quote_spanned! (op.span().join(var.span()).unwrap() => emg_layout::ccsa::CCSSOpSvv::new(#op,#var))
+            .to_tokens(tokens);
+    }
+}
 impl CCSSOpSvv {
     const fn new(op: PredOp, var: ScopeViewVariable) -> Self {
         Self { op, var }
@@ -1045,10 +1195,29 @@ impl CCSSOpSvv {
 }
 
 #[derive(Debug, Clone)]
-struct CCSSSvvOpSvvExpr {
+pub struct CCSSSvvOpSvvExpr {
     svv: ScopeViewVariable,
     op_exprs: Vec<CCSSOpSvv>,
 }
+impl ToTokens for CCSSSvvOpSvvExpr {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self { svv, op_exprs } = self;
+        quote_spanned! (svv.span() => emg_layout::ccsa::CCSSSvvOpSvvExpr::new(#svv,vec![#(#op_exprs),*]))
+            .to_tokens(tokens);
+    }
+}
+
+// impl ToTokens for CCSSSvvOpSvvExpr {
+//     fn to_tokens(&self, tokens: &mut TokenStream) {
+//         let Self { svv, op_exprs } = self;
+//         let mut op_exprs_tokens = TokenStream::new();
+//         for op_expr in op_exprs {
+//             op_expr.to_tokens(&mut op_exprs_tokens);
+//         }
+//         quote_spanned! (svv.span().join(op_exprs_tokens.span()).unwrap() => #svv #op_exprs_tokens)
+//             .to_tokens(tokens);
+//     }
+// }
 
 impl std::fmt::Display for CCSSSvvOpSvvExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1078,7 +1247,13 @@ struct CCSSEqExpression {
     eq: PredEq,
     expr: CCSSSvvOpSvvExpr,
 }
-
+impl ToTokens for CCSSEqExpression {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self { eq, expr } = self;
+        quote_spanned!(eq.span().join(expr.span()).unwrap()=> emg_layout::ccsa::CCSSEqExpression::new(#eq,#expr))
+            .to_tokens(tokens);
+    }
+}
 impl CCSSEqExpression {
     const fn new(eq: PredEq, expr: CCSSSvvOpSvvExpr) -> Self {
         Self { eq, expr }
@@ -1087,12 +1262,23 @@ impl CCSSEqExpression {
 
 #[derive(Debug, Clone)]
 #[allow(clippy::upper_case_acronyms)]
-struct CCSS {
+pub struct CCSS {
     svv_op_svvs: CCSSSvvOpSvvExpr,
     eq_exprs: Vec<CCSSEqExpression>,
     opt_sw: Option<StrengthAndWeight>,
 }
+impl ToTokens for CCSS {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self {
+            svv_op_svvs,
+            eq_exprs,
+            opt_sw,
+        } = self;
+        let opt_sw_quote = QuoteOption(opt_sw.as_ref());
 
+        quote_spanned!(svv_op_svvs.span()=>emg_layout::ccsa::CCSS::new(#svv_op_svvs, vec![#(#eq_exprs),*],#opt_sw_quote)).to_tokens(tokens);
+    }
+}
 impl std::fmt::Display for CCSS {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self {
@@ -1176,9 +1362,9 @@ impl ViewObj {
     }
     fn clone_selector_in(&self, selectors: &mut Vec<ScopeViewVariable>) {
         match self {
-            ViewObj::Splat(splat) => selectors.push(splat.view_selector.view.clone()),
-            ViewObj::ViewSelector(vs) => selectors.push(vs.view.clone()),
-            ViewObj::Point(_) | ViewObj::Or => (),
+            Self::Splat(splat) => selectors.push(splat.view_selector.view.clone()),
+            Self::ViewSelector(vs) => selectors.push(vs.view.clone()),
+            Self::Point(_) | Self::Or => (),
         }
     }
 }
@@ -1572,7 +1758,7 @@ fn get_right_var(
 
 fn get_super_view_name(o: &Options) -> ScopeViewVariable {
     o.map.get("In").map_or_else(
-        || ScopeViewVariable::new_scope(Scope::Local),
+        || ScopeViewVariable::new_scope(Scope::Local(Span::call_site())),
         |in_name| in_name.as_in().cloned().unwrap(),
     )
 }
@@ -1584,7 +1770,13 @@ pub struct VFLStatement {
     tails: Vec<ConnectionView>,
     o: Options,
     selectors: Vec<ScopeViewVariable>,
-    ccsss: Vec<CCSS>,
+    pub ccsss: Vec<CCSS>,
+}
+impl ToTokens for VFLStatement {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let ccsss = &self.ccsss;
+        quote! { emg_core::vector![ #( #ccsss ), * ] }.to_tokens(tokens);
+    }
 }
 
 impl VFLStatement {
@@ -1885,14 +2077,17 @@ impl Parse for VFLStatement {
         // selectors: Vec<NameChars>,
         // ccsss: Vec<CCSS>,
 
-        Ok(Self {
+        let mut vfl_statement = Self {
             d,
             head,
             tails,
             o,
             selectors,
             ccsss: vec![],
-        })
+        };
+        vfl_statement.build();
+
+        Ok(vfl_statement)
     }
 }
 
@@ -1900,6 +2095,16 @@ impl Parse for VFLStatement {
 pub enum Cassowary {
     Vfl(Box<VFLStatement>),
     CCss,
+}
+impl ToTokens for Cassowary {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Vfl(vfl) => {
+                quote_spanned!(vfl.span()=> #vfl).to_tokens(tokens);
+            }
+            Self::CCss => todo!(),
+        }
+    }
 }
 
 impl Parse for Cassowary {
@@ -1920,7 +2125,7 @@ impl Parse for Cassowary {
         }
     }
 }
-struct CCSSSDisp(Vec<CCSS>);
+pub struct CCSSSDisp(pub Vec<CCSS>);
 impl std::fmt::Display for CCSSSDisp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "CCSSS [")?;
@@ -1959,7 +2164,7 @@ mod tests {
             debug!("=========== parse \n {:?}\n",&input);
 
             match syn::parse_str::<VFLStatement>(input) {
-                Ok(mut ok) => {
+                Ok(ok) => {
                     panic!("should error =============\n{:#?}\n", &ok);
                      }
                 Err(error) => println!("...{:?}", error),
@@ -1981,11 +2186,11 @@ mod tests {
             debug!("=========== parse \n {:?}\n",&input);
 
             match syn::parse_str::<VFLStatement>(input) {
-                Ok(mut ok) => {
+                Ok(ok) => {
                     println!("=============\n{:#?}\n", &ok);
                     // insta::assert_debug_snapshot!(name.to_string()+"_prase", &ok);
 
-                    ok.build();
+                    // ok.build();
                     println!("=================== build \n {:#?}\n", ok.ccsss);
                     // insta::assert_debug_snapshot!(name.to_string()+"_ccss", &ok.ccsss);
                     let disp = CCSSSDisp(ok.ccsss);
@@ -2003,36 +2208,6 @@ mod tests {
         });
     }
 
-    #[test]
-    fn name_chars() {
-        // ────────────────────────────────────────────────────────────────────────────────
-        // ────────────────────────────────────────────────────────────────────────────────
-
-        let subscriber = Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
-        // .with(subscriber1);
-        tracing::subscriber::set_global_default(subscriber);
-
-        // ─────────────────────────────────────────────────────────────────
-        // ────────────────────────────────────────────────────────────────────────────────
-
-        fn token_test(input: &str) {
-            match syn::parse_str::<NameChars>(input) {
-                Ok(ok) => {
-                    let x = format!("{}", ok.to_token_stream());
-                    println!("{}", x);
-                    assert_eq!(x.as_str(), r#"NameChars :: Id (IdStr :: new ("button"))"#)
-                }
-                Err(error) => println!("...{:?}", error),
-            }
-        }
-
-        println!();
-        let input = r#" 
-            #button
-        "#;
-
-        token_test(input);
-    }
     #[test]
     fn base() {
         println!();
@@ -2518,7 +2693,7 @@ mod tests {
     #[test]
     fn splats3() {
         let input = r#" 
-        @h (.box)-... gap(10)
+        @h (.box)-... gap(11)
             "#;
 
         token_test("splats3", input);

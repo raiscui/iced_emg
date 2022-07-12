@@ -13,6 +13,7 @@
 use std::error::Error;
 
 use cassowary::Cassowary;
+
 use proc_macro2::{TokenStream, Span, Punct, Spacing};
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
@@ -23,8 +24,10 @@ use syn::{Ident, Token};
 // use uuid::Uuid;
 use nanoid::nanoid;
 use tracing::{debug, instrument};
+
 // ────────────────────────────────────────────────────────────────────────────────
-pub(crate) mod cassowary;
+pub mod cassowary;
+mod quote_option;
 // use proc_macro::Diagnostic;
 pub mod kw {
     // use std::fmt::Debug;
