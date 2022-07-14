@@ -6,7 +6,7 @@ mod ops;
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2022-07-12 18:34:01
+ * @LastEditTime: 2022-07-13 17:55:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -107,6 +107,14 @@ impl ScopeViewVariable {
             view,
             variable,
         }
+    }
+    pub fn turn_with_var(&self, var: &str) -> Self {
+        let Self {
+            scope,
+            view,
+            variable,
+        } = self;
+        Self::new(scope.clone(), view.clone(), Some(PredVariable(var.into())))
     }
     pub fn new_number(number: f64) -> Self {
         Self::new(
@@ -301,8 +309,8 @@ impl CCSS {
         }
     }
 }
-pub struct CCSSSDisp(pub Vector<CCSS>);
-impl std::fmt::Display for CCSSSDisp {
+pub struct CCSSVecDisp(pub Vector<CCSS>);
+impl std::fmt::Display for CCSSVecDisp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "CCSSS [")?;
         for ccss in &self.0 {
@@ -337,7 +345,7 @@ impl std::fmt::Display for CCSSSDisp {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CassowaryMap {
-    map: HashMap<IdStr, Variable>,
+    pub(crate) map: HashMap<IdStr, Variable>,
     v_k: HashMap<Variable, IdStr>,
 }
 
@@ -352,12 +360,16 @@ impl CassowaryMap {
     //     self.map.get(key).copied()
     // }
 
-    pub fn var<BK>(&self, key: &BK) -> Option<&Variable>
+    pub fn prop(&self, var: &Variable) -> Option<&IdStr> {
+        self.v_k.get(var)
+    }
+
+    pub fn var<BK>(&self, key: &BK) -> Option<Variable>
     where
         BK: core::hash::Hash + Eq + ?Sized,
         IdStr: std::borrow::Borrow<BK>,
     {
-        self.map.get(key)
+        self.map.get(key).copied()
     }
 
     pub fn new() -> Self {
@@ -373,33 +385,49 @@ impl CassowaryMap {
         map.insert("height".into(), height);
         v_k.insert(height, "height".into());
 
-        // let z = Variable::new();
-        // map.insert("z".into(), z);
-        // v_k.insert(z, "z".into());
+        let top = Variable::new();
+        map.insert("top".into(), top);
+        v_k.insert(top, "top".into());
 
-        // let origin_x = Variable::new();
-        // map.insert("origin_x".into(), origin_x);
-        // v_k.insert(origin_x, "origin_x".into());
+        let left = Variable::new();
+        map.insert("left".into(), left);
+        v_k.insert(left, "left".into());
 
-        // let origin_y = Variable::new();
-        // map.insert("origin_y".into(), origin_y);
-        // v_k.insert(origin_y, "origin_y".into());
+        let bottom = Variable::new();
+        map.insert("bottom".into(), bottom);
+        v_k.insert(bottom, "bottom".into());
 
-        // let origin_z = Variable::new();
-        // map.insert("origin_z".into(), origin_z);
-        // v_k.insert(origin_z, "origin_z".into());
+        let right = Variable::new();
+        map.insert("right".into(), right);
+        v_k.insert(right, "right".into());
 
-        // let align_x = Variable::new();
-        // map.insert("align_x".into(), align_x);
-        // v_k.insert(align_x, "align_x".into());
+        let z = Variable::new();
+        map.insert("z".into(), z);
+        v_k.insert(z, "z".into());
 
-        // let align_y = Variable::new();
-        // map.insert("align_y".into(), align_y);
-        // v_k.insert(align_y, "align_y".into());
+        let origin_x = Variable::new();
+        map.insert("origin_x".into(), origin_x);
+        v_k.insert(origin_x, "origin_x".into());
 
-        // let align_z = Variable::new();
-        // map.insert("align_z".into(), align_z);
-        // v_k.insert(align_z, "align_z".into());
+        let origin_y = Variable::new();
+        map.insert("origin_y".into(), origin_y);
+        v_k.insert(origin_y, "origin_y".into());
+
+        let origin_z = Variable::new();
+        map.insert("origin_z".into(), origin_z);
+        v_k.insert(origin_z, "origin_z".into());
+
+        let align_x = Variable::new();
+        map.insert("align_x".into(), align_x);
+        v_k.insert(align_x, "align_x".into());
+
+        let align_y = Variable::new();
+        map.insert("align_y".into(), align_y);
+        v_k.insert(align_y, "align_y".into());
+
+        let align_z = Variable::new();
+        map.insert("align_z".into(), align_z);
+        v_k.insert(align_z, "align_z".into());
 
         CassowaryMap { map, v_k }
     }

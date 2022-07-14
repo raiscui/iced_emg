@@ -48,20 +48,19 @@ fn setup_tracing() {
     #[cfg(debug_assertions)]
     {
         let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::DEBUG);
+        config.set_max_level(tracing::Level::WARN);
         config.set_console_config(tracing_wasm::ConsoleConfig::ReportWithConsoleColor);
         // config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
 
         tracing_wasm::set_as_global_default_with_config(config.build());
     }
-    // #[cfg(not(debug_assertions))]
-    // {
-    //     let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-    //     config.set_max_level(tracing::Level::DEBUG);
-    //     config.set_console_config(tracing_wasm::ConsoleConfig::NoReporting);
+    #[cfg(not(debug_assertions))]
+    {
+        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        config.set_max_level(tracing::Level::WARN);
 
-    //     tracing_wasm::set_as_global_default_with_config(config.build());
-    // }
+        tracing_wasm::set_as_global_default_with_config(config.build());
+    }
 }
 
 pub fn main() -> iced::Result {
@@ -285,33 +284,24 @@ impl Application for Counter {
         let an: AnimationE<Message> = anima![width(px(80))];
 
         gtree! {
-            @=a @E=[@h |(button)...| in(#panel) gap(10)]
+            @=a
             Layer [
+
+                @=b @E=[{@v (#taa)(#taa2)},h(px(11))]
+                Layer [
+                    @=taa2 @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
+                    Checkbox::new(false,"xxxss",|_|Message::IncrementPressed)=>[],
+
+                    // @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
+                    @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
+                    Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
+                        bw,
+                    ],
+                ],
+
                 // @=modstatic @Mod ComponentStatic::tree_build(this.clone(), orders.clone()),
 
-                @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
-                Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
-                // Text::new(format!("temp34567845678345678"))=>[
-                    // aw.clone() => |p:&Rc<GElement<Message>>,num|{
-                    //     warn!("run in sa map builder");
-                    //     // if let Some(p_text) = p.as_text(){
-                    //     //     warn!("downcast_ref to text ok");
 
-                    //     //     Rc::new(p_text.clone().with_content( num.to_string()).into())
-                    //     if let Some(p_checkbox) = p.as_generic().and_then(|dyn_gel|dyn_gel.downcast_ref::<Checkbox<Message>>()){
-                    //         warn!("downcast_ref::<Checkbox<Message>> ok");
-
-                    //         Rc::new(p_checkbox.clone().with_label( num.to_string().into()).into())
-                    //     }else{
-                    //         warn!("downcast_ref::<Checkbox<Message>> false");
-                    //         p.clone()
-
-                    //     }
-
-                    // } ,
-                    bw,
-
-                ],
                 node_ref("a"),
 
 

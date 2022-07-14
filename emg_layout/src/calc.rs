@@ -2,19 +2,19 @@
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-12 12:42:47
+ * @LastEditTime: 2022-07-14 13:34:05
  * @LastEditors: Rais
 * @Description:
 */
-use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4};
+use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, ccsa::CassowaryMap};
 
 use emg::EdgeIndex;
 use emg_core::TypeName;
-use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo};
+use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo, Anchor};
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
 use styles::{ CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, LogicLength, px, s};
-use tracing::{ trace,trace_span, warn};
+use tracing::{ trace,trace_span, warn, debug, debug_span, warn_span};
 use derive_more::From;
 
 
@@ -26,6 +26,7 @@ use derive_more::From;
 pub fn layout_calculating<Ix>(
     _id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
     path_edgedata: &EdgeData,//parent
+    current_cassowary_map:&CassowaryMap,
     layout: &StateAnchor<Layout>,
 ) -> LayoutCalculated 
 where 
@@ -33,11 +34,12 @@ where
     
     {
     let _span_ = trace_span!( "->[ layout_calculating ] ").entered();
+    let _debug_span_ = debug_span!( "->[ layout_calculating ] ").entered();
     
             let EdgeData{
                         calculated:p_calculated,
-                        cassowary_map:p_cassowary_map,
                         calculated_vars:p_calculated_vars,
+                        
                 .. }=path_edgedata;
             // ─────────────────────────────────────────────────────────────────
 
@@ -49,63 +51,147 @@ where
             let origin_y = layout.then(|l:&Layout|l.origin_y.watch().into());
             let align_x = layout.then(|l:&Layout|l.align_x.watch().into());
             let align_y = layout.then(|l:&Layout|l.align_y.watch().into());
-// ────────────────────────────────────────────────────────────────────────────────
+            // ─────────────────────────────────────────────────────────────────
 
-            let width_var  =*p_cassowary_map.var("width").unwrap();
-            let width = p_calculated_vars.map(move|p_vars|{
-                p_vars.get(&width_var).map(|val| **val).unwrap()
+            let calculated_size = (p_calc_size_sa, &w,&h).then(
+                move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor,sa_h:&GenericSizeAnchor| {
+                   let p_calc_size = *p_calc_size;   
+                   
+                   // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
+                   let _enter = trace_span!( 
+                       "-> [ calculated_size ] recalculation..(&p_calculated.size, &layout.size.watch()).map ",
+                       ).entered();
+                    (&**sa_w,&**sa_h).map(move |w:&GenericSize,h:&GenericSize|->Vector2<f64>{
+                       //TODO check editor display error 
+                       let new_size = Vector2::<f64>::new(calculation_w(&p_calc_size, w), calculation_h(&p_calc_size, h));
+                       trace!("new size: {}",&new_size);
+                       new_size
+                   }).into()
+               },
+            );
+            let (calculated_width,calculated_height) = calculated_size.map(|size|{
+                (size.x,size.y)
+            }).split();
+            
+            // ────────────────────────────────────────────────────────────────────────────────
+
+            let _debug_span_2 =_debug_span_.clone();
+            let width_var  =current_cassowary_map.var("width").unwrap();
+            let width = p_calculated_vars.then(move|p_vars|{
+                let _debug_span_ = warn_span!( "->[ get self prop calculated value ] ").entered();
+                warn!("p_vars: {:#?},  \n get :{:?}",&p_vars,&width_var);
+                // • • • • •
+                //NOTE 如果 是 root下面的第一阶层节点,如果没定义cassowary constraint 或者定义少量、不涉及某些 Id element, p_calculated_vars 很可能是无 or 不全面的,
+                if let Some(w) = p_vars.get(&width_var).map(|(val,_)| **val){
+                    Anchor::constant(w)
+                }else{
+                    calculated_width.get_anchor()
+                }
             });
+            let height_var  =current_cassowary_map.var("height").unwrap();
+            let height = p_calculated_vars.then(move|p_vars|{
 
-            let height_var  =*p_cassowary_map.var("height").unwrap();
-            let height = p_calculated_vars.map(move|p_vars|{
-                p_vars.get(&height_var).map(|val| **val).unwrap()
+                if let Some(h) = p_vars.get(&height_var).map(|(val,_)| **val){
+                    Anchor::constant(h)
+                 }else{
+                    calculated_height.get_anchor()
+                }
+
             });
-
-            let top_var  =*p_cassowary_map.var("top").unwrap();
+            let top_var  =current_cassowary_map.var("top").unwrap();
             let top = p_calculated_vars.map(move|p_vars|{
-                p_vars.get(&top_var).map(|val| **val)
+                p_vars.get(&top_var).map(|(val,_)| **val)
             });
-            let left_var  =*p_cassowary_map.var("left").unwrap();
+            let left_var  =current_cassowary_map.var("left").unwrap();
             let left = p_calculated_vars.map(move|p_vars|{
-                p_vars.get(&left_var).map(|val| **val)
+                p_vars.get(&left_var).map(|(val,_)| **val)
             });
-            let bottom_var  =*p_cassowary_map.var("bottom").unwrap();
+            let bottom_var  =current_cassowary_map.var("bottom").unwrap();
             let bottom = p_calculated_vars.map(move|p_vars|{
-                p_vars.get(&bottom_var).map(|val| **val)
+                p_vars.get(&bottom_var).map(|(val,_)| **val)
             });
             
-            let right_var  =*p_cassowary_map.var("right").unwrap();
+            let right_var  =current_cassowary_map.var("right").unwrap();
             let right = p_calculated_vars.map(move|p_vars|{
-                p_vars.get(&right_var).map(|val| **val)
+                p_vars.get(&right_var).map(|(val,_)| **val)
             });
 
-            let cass_trans:StateAnchor<Translation3<f64>>  =  (p_calc_size_sa,&width,&height,&top,&left,&bottom,&right).map(|p_calc_size:&Vector2<f64>,w:&f64,h:&f64,opt_t:&Option<f64>,opt_b:&Option<f64>,opt_l: &Option<f64>,opt_r: &Option<f64>,|{
-                
+            //TODO 如果 父层 cassowary 不涉及到 此 element , 那么就需要 进行 原定位计算
+            let cass_trans:StateAnchor<Translation3<f64>>  =  (p_calc_size_sa,&width,&height,&top,&left,&bottom,&right).map(move|p_calc_size:&Vector2<f64>,w:&f64,h:&f64,opt_t:&Option<f64>,opt_l:&Option<f64>,opt_b: &Option<f64>,opt_r: &Option<f64>,|{
+                let _span = debug_span!("cass_trans calculting map").entered();
+                debug!("t:{:?} l:{:?} b:{:?} r:{:?}",opt_t,opt_l,opt_b,opt_r);
                 match (opt_t,opt_l,opt_b,opt_r) {
-                    (None, None, None, None) => Translation3::<f64>::new(0.0,0.0,0.0),
+                    (None, None, None, None) => {
+                        Translation3::<f64>::new(0.,0.,0.0)
+
+                    },
                     (None, None, None, Some(r)) => {
-                        Translation3::<f64>::new(p_calc_size.x-w-r,0.0,0.0)
+                        Translation3::<f64>::new(r-w,0.,0.0)
+
                     },
                     (None, None, Some(b), None) => {
-                        Translation3::<f64>::new(0.0,p_calc_size.y-h-b,0.0)
+                        Translation3::<f64>::new(0.,b-h,0.0)
+
                     },
                     (None, None, Some(b), Some(r)) => {
-                        Translation3::<f64>::new(p_calc_size.x-w-r,p_calc_size.y-h-b,0.0)
+                        Translation3::<f64>::new(r-w,b-h,0.0)
+
                     },
-                    (None, Some(l), None, _right) => {
-                        Translation3::<f64>::new(*l,0.0,0.0)
+                    (None, Some(l), None, None) => {
+                        Translation3::<f64>::new(*l,0.,0.0)
+
                     },
-                    (None, Some(l), Some(b), _right) => {
-                        Translation3::<f64>::new(*l,p_calc_size.y-h-b,0.0)
+                    (None, Some(l), None, Some(r)) => {
+                        assert_eq!(r-l,*w);
+                        Translation3::<f64>::new(*l,0.,0.0)
+
                     },
-                    (Some(t), None, _bottom, None) => {
+                    (None, Some(l), Some(b), None) => {
+                        Translation3::<f64>::new(*l,b-h,0.0)
+                    },
+                    (None, Some(l), Some(b), Some(r)) => {
+                        assert_eq!(r-l,*w);
+                        Translation3::<f64>::new(*l,b-h,0.0)
+                    },
+                    (Some(t), None, None, None) => {
+                        Translation3::<f64>::new(0.,*t,0.0)
+
+                    },
+                    (Some(t), None, None, Some(r)) => {
+                        Translation3::<f64>::new(r-w,*t,0.0)
+                    },
+                    (Some(t), None, Some(b), None) => {
+                        assert_eq!(b-t,*h);
                         Translation3::<f64>::new(0.0,*t,0.0)
                     },
-                    (Some(t), None, _bottom, Some(r)) => {
-                        Translation3::<f64>::new(p_calc_size.x-w-r,*t,0.0)
+                    (Some(t), None, Some(b), Some(r)) => {
+                        assert_eq!(b-t,*h);
+                        Translation3::<f64>::new(r-w,*t,0.0)
+                        
+
                     },
-                    (Some(t), Some(l), _, _) => {
+                    (Some(t), Some(l), None, None) => {
                         Translation3::<f64>::new(*l,*t,0.0)
+
+                    },
+                    (Some(t), Some(l), None, Some(r)) => {
+                        warn!("t:{} l:{} r:{}",t,l,r);
+                           //TODO remove this if release
+                           assert_eq!(r-l,*w);
+                           Translation3::<f64>::new(*l,*t,0.0)
+   
+                    },
+                    (Some(t), Some(l), Some(b), None) => {
+                           //TODO remove this if release
+                           assert_eq!(b-t,*h);
+                           Translation3::<f64>::new(*l,*t,0.0)
+                    },
+                    (Some(t), Some(l), Some(b), Some(r)) => {
+                        //TODO remove this if release
+                        assert_eq!(b-t,*h);
+                        assert_eq!(r-l,*w);
+                        Translation3::<f64>::new(*l,*t,0.0)
+
                     },
                 }
                 
@@ -119,11 +205,11 @@ where
 
 
 
-
-            let origin_x_var  =p_cassowary_map.var("origin_x").unwrap();
-            let origin_y_var  =p_cassowary_map.var("origin_y").unwrap();
-            let align_x_var  =p_cassowary_map.var("align_x").unwrap();
-            let align_y_var  =p_cassowary_map.var("align_y").unwrap();
+            //TODO use this?
+            // let origin_x_var  =current_cassowary_map.var("origin_x").unwrap();
+            // let origin_y_var  =current_cassowary_map.var("origin_y").unwrap();
+            // let align_x_var  =current_cassowary_map.var("align_x").unwrap();
+            // let align_y_var  =current_cassowary_map.var("align_y").unwrap();
 // ────────────────────────────────────────────────────────────────────────────────
 
             // let calculated_size = p_calculated_vars.then(|p_vars|{
@@ -166,22 +252,7 @@ where
 
             // });
 
-            let calculated_size = (p_calc_size_sa, &w,&h).then(
-                 move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor,sa_h:&GenericSizeAnchor| {
-                    let p_calc_size = *p_calc_size;   
-                    
-                    // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
-                    let _enter = trace_span!( 
-                        "-> [ calculated_size ] recalculation..(&p_calculated.size, &layout.size.watch()).map ",
-                        ).entered();
-                     (&**sa_w,&**sa_h).map(move |w:&GenericSize,h:&GenericSize|->Vector2<f64>{
-                        //TODO check editor display error 
-                        let new_size = Vector2::<f64>::new(calculation_w(&p_calc_size, w), calculation_h(&p_calc_size, h));
-                        trace!("new size: {}",&new_size);
-                        new_size
-                    }).into()
-                },
-            );
+            
 
             let calculated_origin = (p_calc_size_sa,&p_calculated.origin, &p_calculated.align,&calculated_size, &origin_x,&origin_y).then(
                 move |p_calc_size: &Vector2<f64>,p_calc_origin:&Translation3<f64>,p_calc_align:&Translation3<f64>,calc_size: &Vector2<f64>, origin_x: &GenericSizeAnchor,origin_y: &GenericSizeAnchor| {
@@ -290,6 +361,7 @@ where
                 origin: calculated_origin,
                 align: calculated_align,
                 coordinates_trans,
+                cass_trans,
                 matrix,
                 // • • • • •
                 loc_styles,

@@ -173,6 +173,14 @@ enum EdgeObject{
     E(Box<syn::Expr>),
     Cassowary(Box<Cassowary>)
 }
+impl ToTokens for EdgeObject {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self{
+            Self::E(expr) => quote_spanned!(expr.span()=>#expr).to_tokens(tokens),
+            Self::Cassowary(cassowary) => quote_spanned!(cassowary.span()=>#cassowary).to_tokens(tokens),
+        };
+    }
+}
 impl Parse for EdgeObject{
     #[instrument(name = "EdgeObject")]
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -191,11 +199,12 @@ impl Parse for EdgeObject{
 
 
 
+
 #[derive(Debug)]
 struct Edge {
     bracket_token: token::Bracket,
-    // content: Punctuated<EdgeObject, Token![,]>,
-    content: Punctuated<syn::Expr, Token![,]>,
+    content: Punctuated<EdgeObject, Token![,]>,
+    // content: Punctuated<syn::Expr, Token![,]>,
 }
 // struct Edge(Option<syn::Expr>);
 
@@ -219,7 +228,7 @@ impl Parse for Edge {
 
         Ok(Self {
             bracket_token,
-            content:Punctuated::<syn::Expr, Token![,]>::default(),
+            content
         })
     }
 }
@@ -230,6 +239,7 @@ impl ToTokens for Edge {
             content,
         } = self;
         let content_iter = content.iter();
+        //NOTE use Rc because dyn
         quote_spanned!(
             bracket_token.span=> vec![#(Rc::new(#content_iter) as Rc<(dyn RefreshFor<EmgEdgeItem<_>>)>),*]
         )
@@ -1196,6 +1206,27 @@ pub fn gtree_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
 mod tests {
 
     use super::*;
+    #[test]
+    fn test_vfl_1() {
+        fn token_test(input: &str) {
+            match syn::parse_str::<Gtree>(input) {
+                Ok(ok) => println!("===>{}", ok.to_token_stream()),
+                Err(error) => println!("...{:?}", error),
+            }
+        }
+
+        println!();
+        let input = r#" 
+        @=root
+                Layer [
+                    @=x111x @E=[{@h (#b1)(#b2)},h(px(11))]
+                    Layer []
+                ]
+        "#;
+
+        token_test(input);
+        println!();
+    }
     #[test]
     fn test_2() {
         fn token_test(input: &str) {

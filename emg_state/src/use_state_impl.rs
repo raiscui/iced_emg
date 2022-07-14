@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-07-11 21:52:36
+ * @LastEditTime: 2022-07-14 00:04:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -1226,6 +1226,7 @@ where
         G_STATE_STORE.with(|_g_state_store_refcell| Self(Anchor::constant(val)))
     }
 
+    #[must_use]
     pub fn into_anchor(self) -> Anchor<T> {
         self.0
     }
@@ -1797,11 +1798,11 @@ pub fn use_state<T>(data: T) -> StateVar<T>
 where
     T: 'static + std::fmt::Debug,
 {
-    info!(
-        "use_state::({}) \n data: {:?}",
-        &std::any::type_name::<T>(),
-        &data
-    );
+    // info!(
+    //     "use_state::({}) \n data: {:?}",
+    //     &std::any::type_name::<T>(),
+    //     &data
+    // );
     trace!(
         "use_state::({}) \n data: {:?}",
         &std::any::type_name::<T>(),

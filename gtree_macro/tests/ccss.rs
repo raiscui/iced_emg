@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 11:27:18
- * @LastEditTime: 2022-07-12 18:34:46
+ * @LastEditTime: 2022-07-12 21:02:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -165,7 +165,7 @@ mod code_test {
             )],
             ::std::option::Option::None,
         )];
-        let res_disp = emg_layout::ccsa::CCSSSDisp(res);
+        let res_disp = emg_layout::ccsa::CCSSVecDisp(res);
         info!("res===\n{}", &res_disp);
         assert_eq!(parsed, format!("{}", res_disp));
     }
@@ -208,7 +208,7 @@ mod code_test {
             )],
             ::std::option::Option::None,
         )];
-        let res_disp = emg_layout::ccsa::CCSSSDisp(res);
+        let res_disp = emg_layout::ccsa::CCSSVecDisp(res);
         info!("res===\n{}", &res_disp);
         assert_eq!(parsed, format!("{}", res_disp));
     }

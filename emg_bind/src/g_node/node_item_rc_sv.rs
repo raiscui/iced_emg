@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-18 12:53:14
- * @LastEditTime: 2022-06-21 23:49:33
+ * @LastEditTime: 2022-07-13 09:51:20
  * @LastEditors: Rais
  * @Description: 
  */
@@ -204,7 +204,10 @@ where
                                     
                                     // NOTE handle note_ref
 
+                                    debug_assert!(!gel.is_node_ref_());
+
                                     if gel.is_node_ref_() {
+                                        //TODO remove this
 
                                             let refs =gel.as_node_ref_().unwrap();
                                             error!("child-- is node ref:{} path:{}",refs,current_path3);
@@ -334,10 +337,11 @@ where
                         if let Some(child_gel) =
                             children.get(eix).and_then(|child| child.as_ref().right())
                         {
-                            if child_gel.is_node_ref_() {
-                                let refs =child_gel.as_node_ref_().unwrap();
-                                error!("child_gel is node ref:{} ",refs);
-                            }
+                            debug_assert!(!child_gel.is_node_ref_());
+                            // if child_gel.is_node_ref_() {
+                            //     let refs =child_gel.as_node_ref_().unwrap();
+                            //     error!("child_gel is node ref:{} ",refs);
+                            // }
 
                             gel_clone.refresh_use(child_gel.as_ref());
                         }

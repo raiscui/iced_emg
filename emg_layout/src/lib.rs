@@ -48,7 +48,7 @@ use styles::{CssHeightTrait, CssTransformTrait, CssWidthTrait};
 // ────────────────────────────────────────────────────────────────────────────────
 
 use indented::indented;
-use tracing::{span, trace_span,error,instrument, trace, Level};
+use tracing::{span, trace_span,error,instrument, trace, Level, warn, debug, info, debug_span, warn_span};
 // ────────────────────────────────────────────────────────────────────────────────
 
 mod calc;
@@ -56,6 +56,8 @@ mod impl_refresh;
 pub mod animation;
 pub mod add_values;
 pub use animation::AnimationE;
+
+use crate::ccsa::{CCSSVecDisp, PredVariable};
 
 pub mod old;
 pub mod ccsa;
@@ -241,7 +243,8 @@ pub struct Layout
     align_x: StateVar<GenericSizeAnchor>,
     align_y: StateVar<GenericSizeAnchor>,
     align_z: StateVar<GenericSizeAnchor>,
-    cassowary:StateVar<StateAnchor<Vector<CCSS>>>,
+    cassowary_constants:StateVar<StateAnchor<Vector<CCSS>>>,
+    cassowary_selectors:StateVar<Vector<ScopeViewVariable>>,
 }
 
 impl Layout
@@ -345,11 +348,12 @@ where
 }
 #[derive(Display, Debug, Clone, PartialEq)]
 #[display(
-    fmt = "{{\nsize:\n{},\norigin:\n{},align:\n{},\ncoordinates_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
+    fmt = "{{\nsize:\n{},\norigin:\n{},\nalign:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
     "indented(size)",
     "indented(origin)",
     "indented(align)",
     "indented(coordinates_trans)",
+    "indented(cass_trans)",
     "indented(matrix)",
     "indented(loc_styles)"
 )]
@@ -358,6 +362,7 @@ pub struct LayoutCalculated {
     origin: StateAnchor<Translation3<f64>>,
     align: StateAnchor<Translation3<f64>>,
     coordinates_trans: StateAnchor<Translation3<f64>>,
+    cass_trans: StateAnchor<Translation3<f64>>,
     matrix: StateAnchor<Mat4>,
     loc_styles: StateAnchor<Style>,
 }
@@ -367,7 +372,7 @@ pub struct EdgeData {
     path_layout: StateAnchor<Layout>,
     calculated: LayoutCalculated,
     cassowary_map:Rc<CassowaryMap>,
-    calculated_vars:StateAnchor<Dict<Variable, NotNan<f64>>>,
+    calculated_vars:StateAnchor<Dict<Variable, (NotNan<f64>,IdStr)>>,
     pub styles_string: StateAnchor<String>, 
     opt_p_calculated:Option<LayoutCalculated>,//TODO check need ? use for what?
     // matrix: M4Data,
@@ -727,8 +732,9 @@ where
             align_x: use_state(align.0),
             align_y: use_state(align.1),
             align_z: use_state(align.2),
-            cassowary: use_state(StateAnchor::constant(vector![])),
-        
+            cassowary_constants: use_state(StateAnchor::constant(vector![])),
+            cassowary_selectors: use_state(vector![]),
+            
 
         };
         // let path_styles= use_state(Dict::unit(EPath::<Ix>::default(), s()));
@@ -769,12 +775,14 @@ where
                 if opt_self_source_nix.is_none(){
                     //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
                     Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
+                    //TODO check why use unit? answer:need for `EdgeItemNode::Empty => path_ein_empty_node_builder`
+                    // Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::new())
                 }else{
-                    let opt_source_nix_clone = opt_self_source_nix.clone();
+                    let opt_some_source_nix_clone = opt_self_source_nix.clone();
                     edges.filter_map(move|someone_eix, e| {
                         
-                        println!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_source_nix_clone);
-                        if   someone_eix.target_nix() == &opt_source_nix_clone {
+                        println!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_some_source_nix_clone);
+                        if   someone_eix.target_nix() == &opt_some_source_nix_clone {
 
                             Some(e.item.edge_nodes.clone())
 
@@ -858,6 +866,10 @@ where
 
                 }) .map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode| {
 
+                    //@ current var=>ix ix=>var cassowary_map
+                    let current_cassowary_map = Rc::new(CassowaryMap::new());
+
+                    
                     let self_path2 =self_path.clone();
                     let self_path3 =self_path.clone();
                     let _child_span =
@@ -871,11 +883,11 @@ where
                         *path_layouts_map.get(&self_path2).unwrap_or(&layout)
                     });
                         
-                       
+                    let is_root = p_path_edge_item_node.is_empty();
                     let (opt_p_calculated,layout_calculated,styles_string) =  match p_path_edge_item_node {
                         //NOTE 上一级节点: empty => 此节点是root
                         EdgeItemNode::Empty => path_ein_empty_node_builder(&path_layout, self_path,path_styles, other_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &path_layout, self_path, path_styles, other_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped,&current_cassowary_map, &path_layout, self_path, path_styles, other_styles_sv),
                         EdgeItemNode::String(_)  => {
                             todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
@@ -901,45 +913,65 @@ where
                     });
 
 
+                 
+
                     //NOTE 约束
-                    let ccss_list_sa = layout.cassowary.watch().then(|x|x.clone().into_anchor());
-                    let constant_sets_sa = (&ccss_list_sa,&children_cass_maps_sa).then(move |ccss_list,children_cass_maps|{
+                    let ccss_list_sa = layout.cassowary_constants.watch().then(|x|x.clone().into_anchor());
+                    //TODO 不要每一次变更 ccss_list ,都全部重新计算 
+                    let constant_sets_sa = (&ccss_list_sa,&children_cass_maps_sa).then(move | ccss_list,children_cass_maps|{
+
+                            let _debug_span_ = warn_span!( "->[ constant_sets_sa calc then ] ").entered();
 
 
                             let (constant_sets,prop_suggestions) = ccss_list.iter()
-                            .fold((OrdSet::<Constraint>::new(),Dict::<Variable, StateAnchor<f64>>::new()), 
-                            |( constant_sets,mut prop_suggestions0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
+                            .fold((OrdSet::<Constraint>::new(),Dict::<Variable, StateAnchor<Option<f64>>>::new()), 
+                            |( mut constant_sets,mut prop_suggestions0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
 
                                 //TODO use left_prop_gss if loop when use child:layout_calculated
-                                let (left_expr,left_prop_directly_layout_val) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps);
-                                prop_suggestions0 = prop_suggestions0.union(left_prop_directly_layout_val);
-
-                                let (constants,_,prop_suggestions2) = eq_exprs.into_iter().fold((constant_sets,left_expr,prop_suggestions0), |(mut constants,left_expr, prop_suggestions1),CCSSEqExpression{ eq, expr }|{
-
-
-                                    let (right_expr,right_prop_directly_layout_val) = svv_op_svvs_to_expr(expr,children_cass_maps);
+                                if let Some((left_expr,left_prop_directly_layout_val,left_all_consensus_constraints)) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps){
                                     
+                                    prop_suggestions0 = prop_suggestions0.union(left_prop_directly_layout_val);
+                                    constant_sets.extend(left_all_consensus_constraints);
 
-                                    let constraint = left_expr | eq_opt_sw_to_weighted_relation(eq,opt_sw)| right_expr.clone();
+                                    let (constants,_,prop_suggestions2) = eq_exprs.into_iter().fold((constant_sets,left_expr,prop_suggestions0), |(mut constants,left_expr, prop_suggestions1),CCSSEqExpression{ eq, expr }|{
 
-                                    constants.insert(constraint);
 
-                                    (constants,right_expr,prop_suggestions1.union(right_prop_directly_layout_val))
+                                        if let Some((right_expr,right_prop_directly_layout_val,right_all_consensus_constraints)) = svv_op_svvs_to_expr(expr,children_cass_maps){
 
-                                });
-                                (constants,prop_suggestions2)
+                                            let constraint = left_expr | eq_opt_sw_to_weighted_relation(eq,opt_sw)| right_expr.clone();
+
+                                            constants.insert(constraint);
+                                            constants.extend(right_all_consensus_constraints);
+
+                                            (constants,right_expr,prop_suggestions1.union(right_prop_directly_layout_val))
+
+                                        }else{
+
+                                            (constants,left_expr, prop_suggestions1)
+
+                                        }
+
+                                    });
+                                    (constants,prop_suggestions2)
+                                }else{
+                                    (constant_sets,prop_suggestions0)
+                                }
 
                             });
+                            warn!("[constant_sets_sa] ccss_list:\n{}", CCSSVecDisp(ccss_list.clone()));
 
 
                             //todo use add_edit_variable suggest_value
                             let prop_suggestions_anchor = prop_suggestions.into_iter().map(|(var,sa_v)|{
                                 
                                 sa_v.map(move |v|{
-                                    var | WeightedRelation::EQ(cassowary::strength::MEDIUM)| *v
+                                    v.as_ref().map(|vv|{
+                                        var | WeightedRelation::EQ(cassowary::strength::WEAK*100.)| *vv
+                                    })
+                                    
                                 }
                         
-                            ).into_anchor()}).collect::<Anchor<OrdSet<Constraint>>>();
+                            ).into_anchor()}).collect::<Anchor<OrdSet<Option<Constraint>>>>().map(|o|o.clone().into_iter().filter_map(|o|o).collect::<OrdSet<Constraint>>());
 
                             prop_suggestions_anchor.map(move |prop_suggestions|{
                                 constant_sets.clone().union(prop_suggestions.clone())
@@ -948,15 +980,18 @@ where
                         
                     });
 
-                    let LayoutCalculated{ size, origin, align, coordinates_trans, matrix, loc_styles } = &layout_calculated;
+                    let LayoutCalculated{ size, origin, align, coordinates_trans,cass_trans, matrix, loc_styles } = &layout_calculated;
                     //NOTE 层建议值 (层当前计算所得)
-                    let calculated_prop_val_sa = ( size, origin, align, coordinates_trans ).map(|size, origin, align, coordinates_trans|{
+                    let current_calculated_prop_val_sa = ( size, origin, align, coordinates_trans ).map(|size, origin, align, coordinates_trans|{
                         let width = size.x;
                         let height = size.y;
                         let origin_x = origin.x;
                         let origin_y = origin.y;
                         let align_x = align.x;
                         let align_y = align.y;
+
+                        //TODO real val because cassowary calc need suggestions???
+                        //TODO bottom right use from bottom or from top??
                         let top  =  0f64;
                         let bottom = height;
                         let left = 0f64;
@@ -982,20 +1017,26 @@ where
 
                     let mut last_observation_constants:OrdSet<Constraint>  =  OrdSet::new();
                     let mut last_observation_props:Dict<IdStr, NotNan<f64>> =  Dict::new();
-                    let current_cassowary_map = Rc::new(CassowaryMap::new());
                     let current_cassowary_map2 = current_cassowary_map.clone();
-
                     let mut cass_solver = Solver::new();
+                 
+                    cass_solver.add_constraints(&[
+                        current_cassowary_map.var("bottom").unwrap() | WeightedRelation::EQ(cassowary::strength::STRONG) | current_cassowary_map.var("top").unwrap() + current_cassowary_map.var("height").unwrap(),
+                        current_cassowary_map.var("right").unwrap() | WeightedRelation::EQ(cassowary::strength::STRONG) | current_cassowary_map.var("left") .unwrap()+ current_cassowary_map.var("width").unwrap(),
+                    ]).unwrap();
 
 
-                    let calculated_changed_vars_sa  = (&constant_sets_sa,&calculated_prop_val_sa).map_mut( Dict::<Variable,NotNan<f64>>::new(),move |out,newest_constants,newest_prop_vals| {
+                    let calculated_changed_vars_sa  = (&constant_sets_sa,&current_calculated_prop_val_sa).map_mut( Dict::<Variable,NotNan<f64>>::new(),move |out,newest_constants,newest_current_prop_vals| {
+                        let _debug_span_ = warn_span!( "->[ calculated_changed_vars_sa calc map_mut ] ").entered();
+                        warn!("[calculated_changed_vars_sa] newest_current_prop_vals :{:?}",&newest_current_prop_vals);
+
                         
                         let mut constants_did_update = false;
                         let mut prop_vals_did_update = false;
 
                         if newest_constants.len() == 0 && last_observation_constants.len() != 0 {
                             for constant in last_observation_constants.iter() {
-                                cass_solver.remove_constraint(constant);
+                                cass_solver.remove_constraint(constant).unwrap();
                             }
                             last_observation_constants.clear();
                             // cass_solver.reset();
@@ -1024,33 +1065,42 @@ where
                         // ────────────────────────────────────────────────────────────────────────────────
 
                             
+                        info!("current_cassowary_map2===== \n all= \n{:?}",&current_cassowary_map2.map);
 
-                        for diff_item in last_observation_props.diff(newest_prop_vals){
+                        for diff_item in last_observation_props.diff(newest_current_prop_vals){
+                            info!("current_cassowary_map2 \n all= \n{:?}",&current_cassowary_map2.map);
+
                             match diff_item {
                                 ordmap::DiffItem::Add(prop, v) => {
-                                    panic!("current props never add (current now)")
+                                    info!("current props  add (maybe first time)");
+                                    // panic!("current_cassowary_map2:want:{:?} \n all= \n{:?}",&prop,&current_cassowary_map2.map);
+                                    let var = current_cassowary_map2.var(&**prop).unwrap();
+                                    cass_solver.add_edit_variable(var, cassowary::strength::STRONG * 1000.0).ok();
+                                    cass_solver.suggest_value(var, *v).unwrap();
+                                    prop_vals_did_update = true;
+
                                 },
-                                ordmap::DiffItem::Update { old:(old_prop,old_v), new:(prop,v) } => {
+                                ordmap::DiffItem::Update { old:(old_prop,_old_v), new:(prop,v) } => {
                                     //TODO check, remove .
                                     assert_eq!(old_prop,prop);
                                     let var = current_cassowary_map2.var(&**prop).unwrap();
-                                    cass_solver.add_edit_variable(*var, cassowary::strength::STRONG * 1000.0).unwrap();
-                                    cass_solver.suggest_value(*var, *v);
+                                    cass_solver.add_edit_variable(var, cassowary::strength::STRONG * 1000.0).ok();
+                                    cass_solver.suggest_value(var, *v).unwrap();
                                     prop_vals_did_update = true;
 
                                 },
                                 ordmap::DiffItem::Remove(_, _) => {
                                     panic!("current props never remove (current now)")
-
                                 },
                             };
 
                         };
-                        last_observation_props = newest_prop_vals.clone();
+                        last_observation_props = newest_current_prop_vals.clone();
 
                         // ────────────────────────────────────────────────────────────────────────────────
                         if constants_did_update || prop_vals_did_update {
                             let changes = cass_solver.fetch_changes();
+                            warn!("cass solver change:{:#?}",&changes);
                             if changes.len() > 0 {
                                 *out =  changes.into();
                                 return true
@@ -1061,10 +1111,32 @@ where
 
                     });
 // ────────────────────────────────────────────────────────────────────────────────
-                    let calculated_vars =  calculated_changed_vars_sa.map_mut(Dict::<Variable, NotNan<f64>>::new(),|out,changed_vars|{
+let current_cassowary_map3 = current_cassowary_map.clone();
+
+                    let calculated_vars =  (&children_cass_maps_sa,&calculated_changed_vars_sa).map_mut(Dict::<Variable, (NotNan<f64>,IdStr)>::new(),move|out,children_cass_maps,changed_vars|{
+                        let _debug_span_ = warn_span!( "->[ calculated_vars calc map_mut ] ").entered();
+
                         if !changed_vars.is_empty() {
+                            warn!("[calculated_vars] changed_vars======== \n{:?}",&changed_vars);
+
+                            //TODO remove if release
                             for (var,v) in changed_vars.iter() {
-                                out.insert(*var,*v);
+                                let id_prop_str =   children_cass_maps.iter().find_map(|(id,(cassowary_map ,_directly_layout))|{
+                                     cassowary_map.prop(&var).map(|prop|{
+                                        let vv:IdStr = (id.to_string() + prop).into();
+                                        vv
+                                     })
+                                }).or_else(||{
+                                    current_cassowary_map3.prop(&var).map(|prop|{
+                                        let vv:IdStr = ("current:".to_string() + prop).into();
+                                        vv
+                                    })
+                                }).unwrap_or_default();
+
+                                warn!("[calculated_vars] changed  prop:{:?}  v:{}",&id_prop_str,&v);
+
+                                
+                                out.insert(*var,(*v,id_prop_str));
                             }
                             return true
                         }
@@ -1118,70 +1190,155 @@ fn eq_opt_sw_to_weighted_relation(
 }
 
 
-fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>)>)->(Expression,Dict<Variable, StateAnchor<f64>>) 
+#[instrument(skip(children_cass_maps))]
+fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>)>)->Option<(Expression,Dict<Variable, StateAnchor<Option<f64>>>,OrdSet<Constraint>) >
 where
-Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
+Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
     let CCSSSvvOpSvvExpr{  svv:main_svv, op_exprs }=svv_op_svvs;
-    let (first_var,first_prop_layout_directly_val_sa)  = svv_to_var(main_svv,children_cass_maps);
-    let mut prop_directly_layout_vals = Dict::unit(first_var, first_prop_layout_directly_val_sa);
+    svv_to_var(main_svv,children_cass_maps).map(|(first_var,first_prop_layout_directly_val_sa,consensus_constraints)  |{
+        let mut prop_directly_layout_vals = Dict::unit(first_var, first_prop_layout_directly_val_sa);
+        let mut all_consensus_constraints : OrdSet<Constraint> = consensus_constraints .into();
 
-    let expr =op_exprs.into_iter().fold(first_var.into(), | exp:Expression,op_expr| {
-        let CCSSOpSvv{ op, svv } = op_expr;
-        match op{
-            PredOp::Add => {
-                let (var,prop_layout_directly_val_sa)     =svv_to_var(svv,children_cass_maps);
-                prop_directly_layout_vals.insert(var, prop_layout_directly_val_sa);
-                exp + var
-            
-            },
-            PredOp::Sub => todo!(),
-            PredOp::Mul => todo!(),
-        }
-   
-    });
-    (expr,prop_directly_layout_vals)
+        add_suggestions_props(main_svv,children_cass_maps,&mut prop_directly_layout_vals,&mut all_consensus_constraints);
+
+        let expr =op_exprs.into_iter().fold(first_var.into(), | exp:Expression,op_expr| {
+            let CCSSOpSvv{ op, svv } = op_expr;
+            match op{
+                PredOp::Add => {
+                    if let Some((var,prop_layout_directly_val_sa,consensus_constraints,))     = svv_to_var(svv,children_cass_maps){
+                        prop_directly_layout_vals.insert(var, prop_layout_directly_val_sa);
+                        all_consensus_constraints.extend(consensus_constraints);
+
+                        add_suggestions_props(svv,children_cass_maps,&mut prop_directly_layout_vals,&mut all_consensus_constraints);
+
+                        exp + var
+                    }else{
+                        exp
+                    }
+                 
+                
+                },
+                PredOp::Sub => todo!(),
+                PredOp::Mul => todo!(),
+            }
+       
+        });
+        (expr,prop_directly_layout_vals,all_consensus_constraints)
+    })
+    
 }
 
-fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>)>) -> (Variable, StateAnchor<f64>) 
+fn add_suggestions_props<Ix>(svv: &ScopeViewVariable,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>)>,prop_directly_layout_vals:&mut Dict<Variable, StateAnchor<Option<f64>>>,all_consensus_constraints :&mut OrdSet<Constraint>) 
 where
-Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
+Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
+    if let Some((var,prop_layout_directly_val_sa,consensus_constraints)) = svv_to_var(&svv.turn_with_var("width"),children_cass_maps){
+        prop_directly_layout_vals.insert(var,prop_layout_directly_val_sa);
+        all_consensus_constraints.extend(consensus_constraints);
+    }else{
+        panic!("svv_op_svvs:turn_with_var(width) not found");
+    }
+    if let Some((var,prop_layout_directly_val_sa,consensus_constraints)) = svv_to_var(&svv.turn_with_var("height"),children_cass_maps){
+        prop_directly_layout_vals.insert(var,prop_layout_directly_val_sa);
+        all_consensus_constraints.extend(consensus_constraints);
+    }else{
+        panic!("svv_op_svvs:turn_with_var(height) not found");
+    }
+}
+
+#[instrument(skip(children_cass_maps))]
+fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>)>) -> Option<(Variable, StateAnchor<Option<f64>>,Vec<Constraint>) >
+where
+Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
+{
+
+    
     let ScopeViewVariable{ scope, view, variable } = scope_view_variable;
     let var = match (scope, view, variable) {
         (None, None, None) => todo!(),
         (None, None, Some(_)) => todo!(),
         (None, Some(_), None) => todo!(),
-        (None, Some(name), Some(prop)) => {
+        (None, Some(name), Some(PredVariable(prop))) => {
 
             match name {
                 NameChars::Id(id) => {
+                    let _debug_span_ = debug_span!( "->[ get child variable ] ").entered();
 
-                
-                     match children_cass_maps.get(id.as_str()){
+                    warn!("[svv_to_var] parsed scope_view_variable,  find child var : child id:{:?} prop:{:?}",&id,&prop);
 
-                        //TODO real directly layout val(option val), some val if can directly calculated, current only width height
-                        Some((cass_map,directly_layout)) => {
-                            let prop_id_str = prop.as_str();
-                            let prop_id_str2 = (*prop).clone();
+                    children_cass_maps.get(id.as_str()).map(|(cass_map,directly_layout_val)|{
+                            warn!("[svv_to_var] got child id:{:?} cass_map: {:?}", &id,&cass_map);
 
-                            // let prop_layout_val_sa = layout.then(move |l|{
-                            //     l.get(&*prop_id_str).watch().then(|gsa|gsa.get_anchor()).into()
-                            // });
-                            let prop_layout_val_sa = directly_layout.map(move |l|{
+
+                            //TODO smallvec
+                            let constants =  match prop.as_str() {
+                                "width" => {
+                                    vec![
+                                        cass_map.var("width").unwrap() | WeightedRelation::EQ(cassowary::strength::STRONG) | cass_map.var("right").unwrap() - cass_map.var("left").unwrap(),
+                                        cass_map.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | 0.0,
+                                        cass_map.var("right").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | cass_map.var("left").unwrap(),
+                                        cass_map.var("left").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                                        ]
+                                },
+                                "height" => {
+                                    vec![
+                                        cass_map.var("height").unwrap() | WeightedRelation::EQ(cassowary::strength::STRONG) | cass_map.var("bottom").unwrap() - cass_map.var("top").unwrap(),
+                                        cass_map.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | 0.0,
+                                        cass_map.var("bottom").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | cass_map.var("top").unwrap(),
+                                        cass_map.var("top").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                                        ]
+                                },
+                                "top" => {
+                                    vec![
+                                        cass_map.var("top").unwrap() | WeightedRelation::EQ(cassowary::strength::STRONG) | cass_map.var("bottom").unwrap() - cass_map.var("height").unwrap(),
+                                        cass_map.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | 0.0,
+                                        cass_map.var("bottom").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | cass_map.var("top").unwrap(),
+                                        cass_map.var("top").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                                        ]
+                                },
+                                "bottom" => {
+                                    vec![
+                                        cass_map.var("bottom").unwrap() | WeightedRelation::EQ(cassowary::strength::STRONG) | cass_map.var("top").unwrap() + cass_map.var("height").unwrap(),
+                                        cass_map.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | 0.0,
+                                        cass_map.var("bottom").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | cass_map.var("top").unwrap(),
+                                        cass_map.var("top").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                                        ]
+                                },
+                                "left" => {
+                                    vec![
+                                        cass_map.var("left").unwrap() | WeightedRelation::EQ(cassowary::strength::STRONG) | cass_map.var("right").unwrap() - cass_map.var("width").unwrap(),
+                                        cass_map.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | 0.0,
+                                        cass_map.var("right").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | cass_map.var("left").unwrap(),
+                                        cass_map.var("left").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                                        ]
+                                },
+                                "right" => {
+                                    vec![
+                                        cass_map.var("right").unwrap() | WeightedRelation::EQ(cassowary::strength::STRONG) | cass_map.var("left").unwrap() + cass_map.var("width").unwrap(),
+                                        cass_map.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | 0.0,
+                                        cass_map.var("right").unwrap() | WeightedRelation::GE(cassowary::strength::STRONG) | cass_map.var("left").unwrap(),
+                                        cass_map.var("left").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                                        ]
+                                },
+                                _ => todo!(),
+                                
+                            };
+                            let prop_id_str2 = prop.clone();
+                            let prop_layout_val_sa = directly_layout_val.map(move |l|{
                                 match prop_id_str2.as_str(){
-                                    "width" => l.x,
-                                    "height" => l.y,
-                                    _ => todo!("other directly_layout val ...  not implemented"),
+                                    "width" => Some(l.x),
+                                    "height" => Some(l.y),
+                                    _ => {
+                                        warn!("other directly_layout val ...  not implemented :{}",&prop_id_str2);
+                                        None
+                                    },
                                 }
                             });
 
 
-                            (*cass_map.var(prop_id_str).unwrap(),prop_layout_val_sa)
-                        },
-                        None => todo!(),
-                    }
-
+                            (cass_map.var(prop).unwrap(),prop_layout_val_sa,constants)
+                    })
                 
 
                 },
@@ -1207,6 +1364,7 @@ Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Displ
 fn path_with_ed_node_builder<Ix>(
     id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>, 
     ped: &EdgeData,
+    current_cassowary_map:&CassowaryMap,
     path_layout: &StateAnchor<Layout>,
     path: &EPath<Ix>, 
     path_styles: StateVar<PathVarMap<Ix, Style>>,
@@ -1221,7 +1379,7 @@ Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord 
     let path_clone2 = path.clone();
     
     
-    let layout_calculated = layout_calculating(id_sv, ped, path_layout);
+    let layout_calculated = layout_calculating(id_sv, ped,current_cassowary_map, path_layout);
     // let p = path.clone();
     let this_path_style_string_sa: StateAnchor<Option<String>> = 
                         path_styles
@@ -1289,7 +1447,8 @@ fn path_ein_empty_node_builder<Ix:'static>(
     let calculated_origin = StateAnchor::constant(Translation3::<f64>::identity());
     let calculated_align = StateAnchor::constant(Translation3::<f64>::identity());
     let coordinates_trans = StateAnchor::constant(Translation3::<f64>::identity());
-    let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
+    let cass_trans = StateAnchor::constant(Translation3::<f64>::identity());
+    let matrix = cass_trans.map(|x| x.to_homogeneous().into());
     let loc_styles = (&calculated_size, &matrix).map(move |size: &Vector2<f64>, mat4: &Mat4| {
             let _enter = span!(Level::TRACE,
                         "-> [root] [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
@@ -1306,6 +1465,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
             origin: calculated_origin,
             align: calculated_align,
             coordinates_trans,
+            cass_trans,
             matrix,
             // • • • • •
             loc_styles,
@@ -1363,6 +1523,14 @@ impl EdgeItemNode {
         } else {
             None
         }
+    }
+
+    /// Returns `true` if the edge item node is [`Empty`].
+    ///
+    /// [`Empty`]: EdgeItemNode::Empty
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        matches!(self, Self::Empty)
     }
 }
 
