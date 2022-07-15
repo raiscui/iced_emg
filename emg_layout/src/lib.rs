@@ -906,7 +906,7 @@ where
                             match (child_path.last_target(),child_node.as_edge_data()){
                                
                                 // (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.path_layout.clone()))),
-                                (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.calculated.suggest_size.clone(),ed.calculated.size_constraints.clone()))),
+                                (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.calculated.size_constraints.clone()))),
                                 _=>None
                             }
                         }else{
@@ -915,7 +915,7 @@ where
                     })
                     .map(|x|{
                         x.values().cloned()
-                        .collect::<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>,StateAnchor<Vec<Constraint>>)>>()
+                        .collect::<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>>()
                     });
                     
 
@@ -931,40 +931,37 @@ where
                             let _debug_span_ = warn_span!( "->[ constant_sets_sa calc then ] ").entered();
 
 
-                            let (constant_sets,prop_suggestions,constraints_sa) = ccss_list.iter()
-                            .fold((OrdSet::<Constraint>::new(),Dict::<Variable, StateAnchor<Option<f64>>>::new(),Vector::<Anchor<Vec<Constraint>>>::new()), 
-                            |( mut constraint_sets,mut prop_suggestions0,mut constraints_sa0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
+                            let (constant_sets,constraints_sa) = ccss_list.iter()
+                            .fold((OrdSet::<Constraint>::new(),Vector::<Anchor<Vec<Constraint>>>::new()), 
+                            |( mut constraint_sets,mut constraints_sa0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
 
                                 //TODO use left_prop_gss if loop when use child:layout_calculated
-                                if let Some((left_expr,left_prop_directly_layout_val,left_all_consensus_constraints,left_all_consensus_constraints_sa)) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps){
+                                if let Some((left_expr,left_all_consensus_constraints_sa)) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps){
                                     
-                                    prop_suggestions0 = prop_suggestions0.union(left_prop_directly_layout_val);
-                                    constraint_sets.extend(left_all_consensus_constraints);
                                     constraints_sa0.append(left_all_consensus_constraints_sa);
 
-                                    let (constants,_,prop_suggestions2,constraints_sa2) = eq_exprs.into_iter().fold((constraint_sets,left_expr,prop_suggestions0,constraints_sa0), |(mut constraints,left_expr, prop_suggestions1,mut constraints_sa1),CCSSEqExpression{ eq, expr }|{
+                                    let (constants,_,constraints_sa2) = eq_exprs.into_iter().fold((constraint_sets,left_expr,constraints_sa0), |(mut constraints,left_expr,mut constraints_sa1),CCSSEqExpression{ eq, expr }|{
 
 
-                                        if let Some((right_expr,right_prop_directly_layout_val,right_all_consensus_constraints,right_all_consensus_constraints_sa)) = svv_op_svvs_to_expr(expr,children_cass_maps){
+                                        if let Some((right_expr,right_all_consensus_constraints_sa)) = svv_op_svvs_to_expr(expr,children_cass_maps){
 
                                             let constraint = left_expr | eq_opt_sw_to_weighted_relation(eq,opt_sw)| right_expr.clone();
 
                                             constraints.insert(constraint);
-                                            constraints.extend(right_all_consensus_constraints);
                                             constraints_sa1.extend(right_all_consensus_constraints_sa);
 
-                                            (constraints,right_expr,prop_suggestions1.union(right_prop_directly_layout_val),constraints_sa1)
+                                            (constraints,right_expr,constraints_sa1)
 
                                         }else{
 
-                                            (constraints,left_expr, prop_suggestions1,constraints_sa1)
+                                            (constraints,left_expr,constraints_sa1)
 
                                         }
 
                                     });
-                                    (constants,prop_suggestions2,constraints_sa2)
+                                    (constants,constraints_sa2)
                                 }else{
-                                    (constraint_sets,prop_suggestions0,constraints_sa0)
+                                    (constraint_sets,constraints_sa0)
                                 }
 
                             });
@@ -978,21 +975,6 @@ where
                             })
 
 
-                            // // //todo use add_edit_variable suggest_value
-                            // let prop_suggestions_anchor = prop_suggestions.into_iter().map(|(var,sa_v)|{
-                                
-                            //     sa_v.map(move |v|{
-                            //         v.as_ref().map(|vv|{
-                            //             var | WeightedRelation::EQ(cassowary::strength::WEAK*100.0)| *vv
-                            //         })
-                                    
-                            //     }
-                        
-                            // ).into_anchor()}).collect::<Anchor<OrdSet<Option<Constraint>>>>().map(|o|o.clone().into_iter().filter_map(|o|o).collect::<OrdSet<Constraint>>());
-
-                            // prop_suggestions_anchor.map(move |prop_suggestions|{
-                            //     constant_sets.clone().union(prop_suggestions.clone())
-                            // })
                             
                         
                     });
@@ -1212,7 +1194,7 @@ let children_for_current_constants_sa =  children_cass_maps_no_val_sa.map(move |
 
                             //TODO remove if release
                             for (var,v) in changed_vars.iter() {
-                                let id_prop_str =   children_cass_maps.iter().find_map(|(id,(cassowary_map ,_directly_layout,_constraints_sa))|{
+                                let id_prop_str =   children_cass_maps.iter().find_map(|(id,(cassowary_map ,..))|{
                                      cassowary_map.prop(&var).map(|prop|{
                                         let vv:IdStr = format!("{} |=> #{}[{}]",&self_path4, &id,&prop).into(); 
                                         vv
@@ -1311,28 +1293,22 @@ fn eq_opt_sw_to_weighted_relation(
 
 
 #[instrument(skip(children_cass_maps))]
-fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>,StateAnchor<Vec<Constraint>>)>) ->Option<(Expression,Dict<Variable, StateAnchor<Option<f64>>>,OrdSet<Constraint>, Vector<Anchor<Vec<Constraint>>>) >
+fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>) ->Option<(Expression, Vector<Anchor<Vec<Constraint>>>) >
 where
 Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
     let CCSSSvvOpSvvExpr{  svv:main_svv, op_exprs }=svv_op_svvs;
-    svv_to_var(main_svv,children_cass_maps).map(|(first_var,first_prop_layout_directly_val_sa,consensus_constraints,consensus_constraints_sa)  |{
-        let mut prop_directly_layout_vals = Dict::unit(first_var, first_prop_layout_directly_val_sa);
-        let mut all_consensus_constraints : OrdSet<Constraint> = consensus_constraints.into();
+    svv_to_var(main_svv,children_cass_maps).map(|(first_var,consensus_constraints_sa)  |{
         let mut all_consensus_constraints_sa : Vector<Anchor<Vec<Constraint>>> = vector![consensus_constraints_sa];
 
-        add_suggestions_props(main_svv,children_cass_maps,&mut prop_directly_layout_vals,&mut all_consensus_constraints);
 
         let expr =op_exprs.into_iter().fold(first_var.into(), | exp:Expression,op_expr| {
             let CCSSOpSvv{ op, svv } = op_expr;
             match op{
                 PredOp::Add => {
-                    if let Some((var,prop_layout_directly_val_sa,consensus_constraints,consensus_constraints_sa,))     = svv_to_var(svv,children_cass_maps){
-                        prop_directly_layout_vals.insert(var, prop_layout_directly_val_sa);
-                        all_consensus_constraints.extend(consensus_constraints);
+                    if let Some((var,consensus_constraints_sa,))     = svv_to_var(svv,children_cass_maps){
                         all_consensus_constraints_sa.push_back(consensus_constraints_sa);
 
-                        add_suggestions_props(svv,children_cass_maps,&mut prop_directly_layout_vals,&mut all_consensus_constraints);
 
                         exp + var
                     }else{
@@ -1346,32 +1322,15 @@ Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default +
             }
        
         });
-        (expr,prop_directly_layout_vals,all_consensus_constraints,all_consensus_constraints_sa)
+        (expr,all_consensus_constraints_sa)
     })
     
 }
 
-//NOTE add width height 常识规则
-fn add_suggestions_props<Ix>(svv: &ScopeViewVariable,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>,StateAnchor<Vec<Constraint>>)>,prop_directly_layout_vals:&mut Dict<Variable, StateAnchor<Option<f64>>>,all_consensus_constraints :&mut OrdSet<Constraint>) 
-where
-Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
-{
-    if let Some((var,prop_layout_directly_val_sa,consensus_constraints,..)) = svv_to_var(&svv.turn_with_var("width"),children_cass_maps){
-        prop_directly_layout_vals.insert(var,prop_layout_directly_val_sa);
-        all_consensus_constraints.extend(consensus_constraints);
-    }else{
-        panic!("svv_op_svvs:turn_with_var(width) not found");
-    }
-    if let Some((var,prop_layout_directly_val_sa,consensus_constraints,..)) = svv_to_var(&svv.turn_with_var("height"),children_cass_maps){
-        prop_directly_layout_vals.insert(var,prop_layout_directly_val_sa);
-        all_consensus_constraints.extend(consensus_constraints);
-    }else{
-        panic!("svv_op_svvs:turn_with_var(height) not found");
-    }
-}
+
 
 #[instrument(skip(children_cass_maps))]
-fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vector2<f64>>,StateAnchor<Vec<Constraint>>)>) -> Option<(Variable, StateAnchor<Option<f64>>,Vec<Constraint>,Anchor<Vec<Constraint>>) >
+fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>) -> Option<(Variable, Anchor<Vec<Constraint>>) >
 where
 Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
@@ -1390,43 +1349,12 @@ Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default +
 
                     warn!("[svv_to_var] parsed scope_view_variable,  find child var : child id:{:?} prop:{:?}",&id,&prop);
 
-                    children_cass_maps.get(id.as_str()).map(|(cass_map,directly_layout_val,size_constraints)|{
+                    children_cass_maps.get(id.as_str()).map(|(cass_map,size_constraints)|{
                             warn!("[svv_to_var] got child id:{:?} cass_map: {:?}", &id,&cass_map);
-
-
-
-                            //TODO smallvec
-                            
-
-                            let constraints = vec![
-                                        cass_map.var("bottom").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | cass_map.var("top").unwrap() + cass_map.var("height").unwrap(),
-                                        cass_map.var("right").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | cass_map.var("left").unwrap()+ cass_map.var("width").unwrap(),
-                                        cass_map.var("bottom").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | cass_map.var("top").unwrap(),
-                                        cass_map.var("right").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | cass_map.var("left").unwrap(),
-                                        cass_map.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                                        cass_map.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                                        cass_map.var("top").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
-                                        cass_map.var("left").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
-
-
-                            ];
-                            // size_constraints.map(|cs|constraints.extend(cs));
-
-                            let prop_id_str2 = prop.clone();
-                            let prop_layout_val_sa = directly_layout_val.map(move |l|{
-                                match prop_id_str2.as_str(){
-                                    "width" => Some(l.x),
-                                    "height" => Some(l.y),
-                                    _ => {
-                                        warn!("other directly_layout val ...  not implemented :{}",&prop_id_str2);
-                                        None
-                                    },
-                                }
-                            });
 
                             let var = cass_map.var(prop).unwrap();
 
-                            (var,prop_layout_val_sa,constraints,size_constraints.get_anchor())
+                            (var,size_constraints.get_anchor())
                     })
                 
 
