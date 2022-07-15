@@ -16,7 +16,7 @@ use emg_layout::{
     add_values::origin_x,
     anima,
     animation::AnimationE,
-    global_clock,
+    css, global_clock,
     styles::{pc, px, width, CssWidth},
     EPath,
 };
@@ -56,10 +56,9 @@ fn setup_tracing() {
     }
     #[cfg(not(debug_assertions))]
     {
-        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::WARN);
-
-        tracing_wasm::set_as_global_default_with_config(config.build());
+        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        // config.set_max_level(tracing::Level::WARN);
+        // tracing_wasm::set_as_global_default_with_config(config.build());
     }
 }
 
@@ -287,28 +286,30 @@ impl Application for Counter {
             @=a
             Layer [
 
-                @=b @E=[{@v (#taa)(#taa2)},h(px(11))]
+                @=b @E=[{@h (#taa)(#taa2)},w(pc(50)),h(pc(50)),css(bg_color(hsl(40,70,30)))]
                 Layer [
-                    @=taa2 @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
-                    Checkbox::new(false,"xxxss",|_|Message::IncrementPressed)=>[],
+                    @=taa2 @E=[w(px(50)),h(px(50)),
+                    //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
+                    css(bg_color(hsl(100,70,30)))]
+                    Layer[],
 
                     // @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
-                    @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
-                    Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
-                        bw,
-                    ],
+                    @=taa @E=[w(pc(50)),h(pc(50)),
+                    //,origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
+                    css(bg_color(hsl(20,70,30)))]
+                    Layer[],
                 ],
 
                 // @=modstatic @Mod ComponentStatic::tree_build(this.clone(), orders.clone()),
 
 
-                node_ref("a"),
+                // node_ref("a"),
 
 
                 @=b2 @E=[
                     an.clone(),
                 // w(px(100)),
-                h(parent!(CssWidth)+px(30)),origin_x(pc(60)),align_y(pc(70))]
+                h(parent!(CssWidth)*0.3),origin_x(pc(50)),align_y(pc(50))]
                 Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
                     On:click move |_root, _vdom, _event| {
 

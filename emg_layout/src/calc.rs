@@ -1,13 +1,16 @@
 
+use std::rc::Rc;
+
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-14 13:34:05
+ * @LastEditTime: 2022-07-15 17:26:33
  * @LastEditors: Rais
 * @Description:
 */
 use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, ccsa::CassowaryMap};
 
+use cassowary::WeightedRelation;
 use emg::EdgeIndex;
 use emg_core::TypeName;
 use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo, Anchor};
@@ -17,7 +20,9 @@ use styles::{ CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, Lo
 use tracing::{ trace,trace_span, warn, debug, debug_span, warn_span};
 use derive_more::From;
 
+use self::cassowary_calc::cassowary_calculation;
 
+mod cassowary_calc;
 
 // ────────────────────────────────────────────────────────────────────────────────
     
@@ -26,7 +31,7 @@ use derive_more::From;
 pub fn layout_calculating<Ix>(
     _id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
     path_edgedata: &EdgeData,//parent
-    current_cassowary_map:&CassowaryMap,
+    current_cassowary_map:&Rc<CassowaryMap>,
     layout: &StateAnchor<Layout>,
 ) -> LayoutCalculated 
 where 
@@ -38,12 +43,16 @@ where
     
             let EdgeData{
                         calculated:p_calculated,
-                        calculated_vars:p_calculated_vars,
-                        
+                        cassowary_calculated_vars:p_calculated_vars,
+                        cassowary_map:p_cassowary_map,
+                        // cassowary_calculated_layout,
                 .. }=path_edgedata;
             // ─────────────────────────────────────────────────────────────────
 
-            let p_calc_size_sa = &p_calculated.size;
+            let p_calc_size_sa = &p_calculated.real_size;
+            //NOTE loop !!
+            // let p_calc_size_sa = &cassowary_calculated_layout.map(|(w,h)|Vector2::<f64>::new(*w,*h));
+
             // ─────────────────────────────────────────────────────────────────
             let w = layout.then(|l:&Layout|l.w.watch().into());
             let h = layout.then(|l:&Layout|l.h.watch().into());
@@ -52,6 +61,33 @@ where
             let align_x = layout.then(|l:&Layout|l.align_x.watch().into());
             let align_y = layout.then(|l:&Layout|l.align_y.watch().into());
             // ─────────────────────────────────────────────────────────────────
+            let width_var  =current_cassowary_map.var("width").unwrap();
+            let height_var  =current_cassowary_map.var("height").unwrap();
+
+            let p_cassowary_map2 = p_cassowary_map.clone();
+            let sa_w = w.then(|w|w.get_anchor());
+            let sa_h = h.then(|h|h.get_anchor());
+
+            let current_cassowary_map2 = current_cassowary_map.clone();
+            let size_constraints = 
+                (&sa_w,&sa_h).map(move |w:&GenericSize,h:&GenericSize|{
+                    let size_constraints = vec![
+                        width_var | WeightedRelation::EQ(cassowary::strength::WEAK*100.0) | cassowary_calculation("width",&p_cassowary_map2, w),
+                        height_var | WeightedRelation::EQ(cassowary::strength::WEAK*100.0) |cassowary_calculation("height",&p_cassowary_map2, h),
+                        // • • • • •
+
+                                        current_cassowary_map2.var("bottom").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map2.var("top").unwrap() + height_var,
+                                        current_cassowary_map2.var("right").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map2.var("left").unwrap()+ width_var,
+                                        current_cassowary_map2.var("bottom").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("top").unwrap(),
+                                        current_cassowary_map2.var("right").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("left").unwrap(),
+                                        width_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
+                                        height_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
+                                        current_cassowary_map2.var("top").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                                        current_cassowary_map2.var("left").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                    ];
+                    size_constraints
+                });
+            
 
             let calculated_size = (p_calc_size_sa, &w,&h).then(
                 move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor,sa_h:&GenericSizeAnchor| {
@@ -76,7 +112,6 @@ where
             // ────────────────────────────────────────────────────────────────────────────────
 
             let _debug_span_2 =_debug_span_.clone();
-            let width_var  =current_cassowary_map.var("width").unwrap();
             let width = p_calculated_vars.then(move|p_vars|{
                 let _debug_span_ = warn_span!( "->[ get self prop calculated value ] ").entered();
                 warn!("p_vars: {:#?},  \n get :{:?}",&p_vars,&width_var);
@@ -88,7 +123,6 @@ where
                     calculated_width.get_anchor()
                 }
             });
-            let height_var  =current_cassowary_map.var("height").unwrap();
             let height = p_calculated_vars.then(move|p_vars|{
 
                 if let Some(h) = p_vars.get(&height_var).map(|(val,_)| **val){
@@ -117,7 +151,7 @@ where
             });
 
             //TODO 如果 父层 cassowary 不涉及到 此 element , 那么就需要 进行 原定位计算
-            let cass_trans:StateAnchor<Translation3<f64>>  =  (p_calc_size_sa,&width,&height,&top,&left,&bottom,&right).map(move|p_calc_size:&Vector2<f64>,w:&f64,h:&f64,opt_t:&Option<f64>,opt_l:&Option<f64>,opt_b: &Option<f64>,opt_r: &Option<f64>,|{
+            let cass_trans:StateAnchor<Translation3<f64>>  =  (&width,&height,&top,&left,&bottom,&right).map(move|w:&f64,h:&f64,opt_t:&Option<f64>,opt_l:&Option<f64>,opt_b: &Option<f64>,opt_r: &Option<f64>,|{
                 let _span = debug_span!("cass_trans calculting map").entered();
                 debug!("t:{:?} l:{:?} b:{:?} r:{:?}",opt_t,opt_l,opt_b,opt_r);
                 match (opt_t,opt_l,opt_b,opt_r) {
@@ -252,18 +286,18 @@ where
 
             // });
 
-            
+            let real_size = (&width, &height).map(|w,h|Vector2::<f64>::new(*w,*h));
 
-            let calculated_origin = (p_calc_size_sa,&p_calculated.origin, &p_calculated.align,&calculated_size, &origin_x,&origin_y).then(
-                move |p_calc_size: &Vector2<f64>,p_calc_origin:&Translation3<f64>,p_calc_align:&Translation3<f64>,calc_size: &Vector2<f64>, origin_x: &GenericSizeAnchor,origin_y: &GenericSizeAnchor| {
+            let calculated_origin = (p_calc_size_sa,&p_calculated.origin, &p_calculated.align,&real_size, &origin_x,&origin_y).then(
+                move |p_calc_size: &Vector2<f64>,p_calc_origin:&Translation3<f64>,p_calc_align:&Translation3<f64>,size:&Vector2<f64>, origin_x: &GenericSizeAnchor,origin_y: &GenericSizeAnchor| {
 
       
-                    let calc_size = *calc_size;
+                    let calc_size = *size;
                     let p_calc_size = *p_calc_size;   
                     let p_calc_origin = *p_calc_origin;
                     let p_calc_align = *p_calc_align;
                     let _enter = trace_span!( 
-                        "-> [ calculated_origin ] recalculation..(&calculated_size, &layout.origin.watch()).map ",
+                        "-> [ calculated_origin ] recalculation..",
                         ).entered();
 
                         (&**origin_x, &**origin_y).map(move|ox:&GenericSize,oy:&GenericSize|{
@@ -303,7 +337,7 @@ where
                         
                     let _g = _span.enter();
 
-                    let ff =  align * origin;
+                    let ff =  origin * align;
                     drop(_g);
                     trace!("coordinates_trans : {:?}",   &ff);
 
@@ -311,31 +345,14 @@ where
                 });
 
             // let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
-            let matrix = cass_trans.map(|x| x.to_homogeneous().into());
+            let matrix = (&cass_trans,&coordinates_trans).map(|cass,defined| (defined* cass).to_homogeneous().into());
+            //TODO suppot use_size blend_origin(0~1) blend_align(0~1) def:0  blend_origin_x ...
+            // let matrix = (&cass_trans,&calculated_origin).map(|cass,origin| (origin*cass).to_homogeneous().into());
+            // let matrix = (&cass_trans,&coordinates_trans).map(|cass,defined| (cass).to_homogeneous().into());
 
             // @styles calculation ─────────────────────────────────────────────────────────────────
             // ────────────────────────────────────────────────────────────────────────────────
                 
-
-            // let loc_styles = (&calculated_size, &matrix).map( move |calc_size: &Vector2<f64>, mat4: &Mat4| {
-            //                 trace!( "------------size: {:?}  , matrix: {}", &calc_size, CssTransform::from(*mat4) );
-
-            //             { let _ender = trace_span!( 
-            //                         "-> [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
-            //                         ).entered();
-
-            //                 trace!("loc_styles calculting ===============---------------------================-----------");
-            //                 // log::trace!("-> [ loc_styles ] recalculation..(&calculated_size, &matrix).map ");
-
-
-
-            //                 // TODO use  key 更新 s(),
-            //                 s().w(px(calc_size.x)).h(px(calc_size.y)).transform(*mat4)
-                    
-            //             }
-                
-                        
-            // });
             let loc_styles = (&width,&height, &matrix).map( move |w,h, mat4: &Mat4| {
                             trace!( "------------size: w:{:?}  h:{:?}  , matrix: {}", &w,&h,CssTransform::from(*mat4) );
 
@@ -350,6 +367,7 @@ where
 
                             // TODO use  key 更新 s(),
                             s().w(px(*w)).h(px(*h)).transform(*mat4)
+                            // s().transform(*mat4)
                     
                         }
                 
@@ -357,7 +375,9 @@ where
             });
 
             LayoutCalculated {
-                size: calculated_size,
+                suggest_size: calculated_size,
+                size_constraints,
+                real_size,
                 origin: calculated_origin,
                 align: calculated_align,
                 coordinates_trans,

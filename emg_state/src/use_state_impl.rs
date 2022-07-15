@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-07-14 00:04:06
+ * @LastEditTime: 2022-07-14 16:37:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -66,6 +66,7 @@ impl Default for GStateStore {
             id_to_key_map: HashMap::default(),
             primary_slotmap: SlotMap::new(),
             // engine: RefCell::new(Engine::new()),
+            //256
             engine: RefCell::new(Engine::new_with_max_height(256)),
         }
     }

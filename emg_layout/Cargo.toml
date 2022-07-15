@@ -20,6 +20,7 @@ bench = false
 
 
 [dependencies]
+either = "1.7.0"
 parse-display = "0.5.5"
 slotmap = "1.0.6"
 
