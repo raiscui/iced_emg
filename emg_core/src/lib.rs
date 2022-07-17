@@ -164,6 +164,8 @@ pub fn parent_str(type_name: &str) -> GenericSize {
 impl Default for GenericSize {
     fn default() -> Self {
         Self::Length(px(0))
+        //TODO init val
+        // Self::Initial
     }
 }
 

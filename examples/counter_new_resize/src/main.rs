@@ -56,9 +56,9 @@ fn setup_tracing() {
     }
     #[cfg(not(debug_assertions))]
     {
-        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        // config.set_max_level(tracing::Level::WARN);
-        // tracing_wasm::set_as_global_default_with_config(config.build());
+        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        config.set_max_level(tracing::Level::WARN);
+        tracing_wasm::set_as_global_default_with_config(config.build());
     }
 }
 
@@ -286,7 +286,9 @@ impl Application for Counter {
             @=a
             Layer [
 
-                @=b @E=[{@h (#taa)(#taa2)},w(pc(50)),h(pc(50)),css(bg_color(hsl(40,70,30)))]
+                @=b @E=[{@h (#taa)(#taa2)},
+                // w(pc(50)),h(pc(50)),
+                css(bg_color(hsl(40,70,30)))]
                 Layer [
                     @=taa2 @E=[w(px(50)),h(px(50)),
                     //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
@@ -295,7 +297,7 @@ impl Application for Counter {
 
                     // @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
                     @=taa @E=[w(pc(50)),h(pc(50)),
-                    //,origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
+                    //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
                     css(bg_color(hsl(20,70,30)))]
                     Layer[],
                 ],

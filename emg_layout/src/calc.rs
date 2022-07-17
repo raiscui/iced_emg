@@ -4,12 +4,13 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-15 17:26:33
+ * @LastEditTime: 2022-07-17 22:11:38
  * @LastEditors: Rais
 * @Description:
 */
 use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, ccsa::CassowaryMap};
 
+use float_cmp::{approx_eq, assert_approx_eq};
 use cassowary::WeightedRelation;
 use emg::EdgeIndex;
 use emg_core::TypeName;
@@ -71,20 +72,48 @@ where
             let current_cassowary_map2 = current_cassowary_map.clone();
             let size_constraints = 
                 (&sa_w,&sa_h).map(move |w:&GenericSize,h:&GenericSize|{
-                    let size_constraints = vec![
-                        width_var | WeightedRelation::EQ(cassowary::strength::WEAK*100.0) | cassowary_calculation("width",&p_cassowary_map2, w),
-                        height_var | WeightedRelation::EQ(cassowary::strength::WEAK*100.0) |cassowary_calculation("height",&p_cassowary_map2, h),
-                        // • • • • •
+                    let mut size_constraints = vec![];
 
-                                        current_cassowary_map2.var("bottom").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map2.var("top").unwrap() + height_var,
-                                        current_cassowary_map2.var("right").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map2.var("left").unwrap()+ width_var,
-                                        current_cassowary_map2.var("bottom").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("top").unwrap(),
-                                        current_cassowary_map2.var("right").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("left").unwrap(),
-                                        width_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                                        height_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                                        current_cassowary_map2.var("top").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
-                                        current_cassowary_map2.var("left").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
-                    ];
+                    let mut skip = false;
+
+                    if let Ok(ww)  = w.try_get_length_value(){
+                        if approx_eq!(f64,ww,0.0,(0.1,2)) {
+                            size_constraints.push(  width_var  | WeightedRelation::EQ(cassowary::strength::WEAK) | 0.0);
+                            skip = true;
+                            
+                        }
+                    }
+                    if let Ok(hh)  = h.try_get_length_value(){
+                        if approx_eq!(f64,hh,0.0,(0.1,2)) {
+                            size_constraints.push(  height_var  | WeightedRelation::EQ(cassowary::strength::WEAK) | 0.0);
+                            skip = true;
+                            
+                        }
+                    }
+
+                    if !skip{
+                        size_constraints.extend([
+                            //NOTE will use for parent cassowary
+                            width_var  | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("width", &p_cassowary_map2, w),
+                            height_var | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("height",&p_cassowary_map2, h),
+                            // • • • • •
+                        ]);
+                    }
+
+                    
+                    size_constraints.extend([
+                        
+                        current_cassowary_map2.var("right").unwrap() - current_cassowary_map2.var("left").unwrap()| WeightedRelation::EQ(cassowary::strength::REQUIRED) | width_var,
+                        current_cassowary_map2.var("bottom").unwrap() - current_cassowary_map2.var("top").unwrap()| WeightedRelation::EQ(cassowary::strength::REQUIRED) | height_var,
+
+                        current_cassowary_map2.var("bottom").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("top").unwrap(),
+                        current_cassowary_map2.var("right").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("left").unwrap(),
+                        width_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
+                        height_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
+                        current_cassowary_map2.var("top").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                        current_cassowary_map2.var("left").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                    ]);
+
                     size_constraints
                 });
             
@@ -114,7 +143,7 @@ where
             let _debug_span_2 =_debug_span_.clone();
             let width = p_calculated_vars.then(move|p_vars|{
                 let _debug_span_ = warn_span!( "->[ get self prop calculated value ] ").entered();
-                warn!("p_vars: {:#?},  \n get :{:?}",&p_vars,&width_var);
+                // warn!("p_vars: {:?},  \n get :{:?}",&p_vars,&width_var);
                 // • • • • •
                 //NOTE 如果 是 root下面的第一阶层节点,如果没定义cassowary constraint 或者定义少量、不涉及某些 Id element, p_calculated_vars 很可能是无 or 不全面的,
                 if let Some(w) = p_vars.get(&width_var).map(|(val,_)| **val){
@@ -152,8 +181,8 @@ where
 
             //TODO 如果 父层 cassowary 不涉及到 此 element , 那么就需要 进行 原定位计算
             let cass_trans:StateAnchor<Translation3<f64>>  =  (&width,&height,&top,&left,&bottom,&right).map(move|w:&f64,h:&f64,opt_t:&Option<f64>,opt_l:&Option<f64>,opt_b: &Option<f64>,opt_r: &Option<f64>,|{
-                let _span = debug_span!("cass_trans calculting map").entered();
-                debug!("t:{:?} l:{:?} b:{:?} r:{:?}",opt_t,opt_l,opt_b,opt_r);
+                let _span = warn_span!("cass_trans calculting map").entered();
+                warn!("[cass_trans] t:{:?} l:{:?} b:{:?} r:{:?}",opt_t,opt_l,opt_b,opt_r);
                 match (opt_t,opt_l,opt_b,opt_r) {
                     (None, None, None, None) => {
                         Translation3::<f64>::new(0.,0.,0.0)
@@ -176,7 +205,7 @@ where
 
                     },
                     (None, Some(l), None, Some(r)) => {
-                        assert_eq!(r-l,*w);
+                        assert_approx_eq!(f64,r-l,*w,(0.1,2));
                         Translation3::<f64>::new(*l,0.,0.0)
 
                     },
@@ -184,7 +213,7 @@ where
                         Translation3::<f64>::new(*l,b-h,0.0)
                     },
                     (None, Some(l), Some(b), Some(r)) => {
-                        assert_eq!(r-l,*w);
+                        assert_approx_eq!(f64,r-l,*w,(0.1,2));
                         Translation3::<f64>::new(*l,b-h,0.0)
                     },
                     (Some(t), None, None, None) => {
@@ -195,11 +224,11 @@ where
                         Translation3::<f64>::new(r-w,*t,0.0)
                     },
                     (Some(t), None, Some(b), None) => {
-                        assert_eq!(b-t,*h);
+                        assert_approx_eq!(f64,b-t,*h,(0.1,2));
                         Translation3::<f64>::new(0.0,*t,0.0)
                     },
                     (Some(t), None, Some(b), Some(r)) => {
-                        assert_eq!(b-t,*h);
+                        assert_approx_eq!(f64,b-t,*h,(0.1,2));
                         Translation3::<f64>::new(r-w,*t,0.0)
                         
 
@@ -211,19 +240,26 @@ where
                     (Some(t), Some(l), None, Some(r)) => {
                         warn!("t:{} l:{} r:{}",t,l,r);
                            //TODO remove this if release
-                           assert_eq!(r-l,*w);
+                           assert_approx_eq!(f64,r-l,*w,(0.1,2));
                            Translation3::<f64>::new(*l,*t,0.0)
    
                     },
                     (Some(t), Some(l), Some(b), None) => {
                            //TODO remove this if release
-                           assert_eq!(b-t,*h);
+                           assert_approx_eq!(f64,b-t,*h,(0.1,2));
                            Translation3::<f64>::new(*l,*t,0.0)
                     },
                     (Some(t), Some(l), Some(b), Some(r)) => {
                         //TODO remove this if release
-                        assert_eq!(b-t,*h);
-                        assert_eq!(r-l,*w);
+
+                        // let mut buffer = ryu::Buffer::new();
+                        // let b_t = buffer.format_finite(b-t);
+                        // let mut buffer2 = ryu::Buffer::new();
+                        // let h_ = buffer2.format_finite(*h);
+                        warn!("b-t:{:.10} h:{:.10}",b-t,*h);
+
+                        // assert_approx_eq!(f64,b-t,*h,(0.1,2));
+                        // assert_approx_eq!(f64,r-l,*w,(0.1,2));
                         Translation3::<f64>::new(*l,*t,0.0)
 
                     },
