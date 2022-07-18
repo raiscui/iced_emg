@@ -934,38 +934,35 @@ where
                             let _debug_span_ = warn_span!( "->[ constant_sets_sa calc then ] ").entered();
 
 
-                            let (constant_sets,constraints_sa,children_vars) = ccss_list.iter()
-                            .fold((OrdSet::<Constraint>::new(),Vector::<Anchor<Vec<Constraint>>>::new(), HashSet::<Variable, BuildHasherDefault<CustomHasher>>::with_hasher(BuildHasherDefault::<CustomHasher>::default())), 
-                            |(  constraint_sets,mut constraints_sa0,mut children_vars0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
+                            let (constant_sets,children_vars) = ccss_list.iter()
+                            .fold((OrdSet::<Constraint>::new(), HashSet::<Variable, BuildHasherDefault<CustomHasher>>::with_hasher(BuildHasherDefault::<CustomHasher>::default())), 
+                            |(  constraint_sets,mut children_vars0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
 
-                                //TODO remove left_all_consensus_constraints_sa because no need, [children_for_current_addition_constants_sa] 
-                                if let Some((left_expr,left_all_consensus_constraints_sa,left_child_vars)) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps){
+                                if let Some((left_expr,left_child_vars)) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps){
                                     
-                                    constraints_sa0.append(left_all_consensus_constraints_sa);
                                     children_vars0 = children_vars0.union(left_child_vars);
 
-                                    let (constants,_,constraints_sa2,children_vars2) = eq_exprs.into_iter().fold((constraint_sets,left_expr,constraints_sa0,children_vars0), |(mut constraints,left_expr,mut constraints_sa1,children_vars1),CCSSEqExpression{ eq, expr }|{
+                                    let (constants,_,children_vars2) = eq_exprs.into_iter().fold((constraint_sets,left_expr,children_vars0), |(mut constraints,left_expr,children_vars1),CCSSEqExpression{ eq, expr }|{
 
 
-                                        if let Some((right_expr,right_all_consensus_constraints_sa,right_child_vars)) = svv_op_svvs_to_expr(expr,children_cass_maps){
+                                        if let Some((right_expr,right_child_vars)) = svv_op_svvs_to_expr(expr,children_cass_maps){
 
                                             let constraint = left_expr | eq_opt_sw_to_weighted_relation(eq,opt_sw)| right_expr.clone();
 
                                             constraints.insert(constraint);
-                                            constraints_sa1.append(right_all_consensus_constraints_sa);
 
-                                            (constraints,right_expr,constraints_sa1,children_vars1.union(right_child_vars))
+                                            (constraints,right_expr,children_vars1.union(right_child_vars))
 
                                         }else{
 
-                                            (constraints,left_expr,constraints_sa1,children_vars1)
+                                            (constraints,left_expr,children_vars1)
 
                                         }
 
                                     });
-                                    (constants,constraints_sa2,children_vars2)
+                                    (constants,children_vars2)
                                 }else{
-                                    (constraint_sets,constraints_sa0,children_vars0)
+                                    (constraint_sets,children_vars0)
                                 }
 
                             });
@@ -1335,13 +1332,13 @@ fn eq_opt_sw_to_weighted_relation(
 
 
 #[instrument(skip(children_cass_maps))]
-fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>) ->Option<(Expression, Vector<Anchor<Vec<Constraint>>>, HashSet<Variable, BuildHasherDefault<CustomHasher>>) >
+fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>) ->Option<(Expression,  HashSet<Variable, BuildHasherDefault<CustomHasher>>) >
 where
 Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
     let CCSSSvvOpSvvExpr{  svv:main_svv, op_exprs }=svv_op_svvs;
-    svv_to_var(main_svv,children_cass_maps).map(|(first_var,first_consensus_constraints_sa)  |{
-        let mut all_consensus_constraints_sa : Vector<Anchor<Vec<Constraint>>> = vector![first_consensus_constraints_sa];
+    svv_to_var(main_svv,children_cass_maps).map(|first_var  |{
+        // let mut all_consensus_constraints_sa : Vector<Anchor<Vec<Constraint>>> = vector![first_consensus_constraints_sa];
         let mut child_vars = HashSet::with_hasher(BuildHasherDefault::<CustomHasher>::default()) .update(first_var);
 
 
@@ -1349,8 +1346,8 @@ Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default +
             let CCSSOpSvv{ op, svv } = op_expr;
             match op{
                 PredOp::Add => {
-                    if let Some((var,consensus_constraints_sa,))     = svv_to_var(svv,children_cass_maps){
-                        all_consensus_constraints_sa.push_back(consensus_constraints_sa);
+                    if let Some(var)     = svv_to_var(svv,children_cass_maps){
+                        // all_consensus_constraints_sa.push_back(consensus_constraints_sa);
                         child_vars.insert(var);
 
                         exp + var
@@ -1365,7 +1362,7 @@ Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default +
             }
        
         });
-        (expr,all_consensus_constraints_sa,child_vars)
+        (expr,child_vars)
     })
     
 }
@@ -1373,7 +1370,7 @@ Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default +
 
 
 #[instrument(skip(children_cass_maps))]
-fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>) -> Option<(Variable, Anchor<Vec<Constraint>>) >
+fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>) -> Option<Variable >
 where
 Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
@@ -1392,12 +1389,12 @@ Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default +
 
                     warn!("[svv_to_var] parsed scope_view_variable,  find child var : child id:{:?} prop:{:?}",&id,&prop);
 
-                    children_cass_maps.get(id.as_str()).map(|(cass_map,size_constraints)|{
+                    children_cass_maps.get(id.as_str()).map(|(cass_map,..)|{
                             warn!("[svv_to_var] got child id:{:?} cass_map: {:?}", &id,&cass_map);
 
                             let var = cass_map.var(prop).unwrap();
 
-                            (var,size_constraints.get_anchor())
+                            var
                     })
                 
 
