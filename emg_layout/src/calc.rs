@@ -4,7 +4,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-17 22:11:38
+ * @LastEditTime: 2022-07-18 16:11:21
  * @LastEditors: Rais
 * @Description:
 */
@@ -44,15 +44,21 @@ where
     
             let EdgeData{
                         calculated:p_calculated,
+                        children_vars_sa:p_children_vars_sa,
                         cassowary_calculated_vars:p_calculated_vars,
                         cassowary_map:p_cassowary_map,
-                        // cassowary_calculated_layout,
+                        cassowary_calculated_layout:p_cassowary_calculated_layout,
                 .. }=path_edgedata;
             // ─────────────────────────────────────────────────────────────────
 
-            let p_calc_size_sa = &p_calculated.real_size;
-            //NOTE loop !!
-            // let p_calc_size_sa = &cassowary_calculated_layout.map(|(w,h)|Vector2::<f64>::new(*w,*h));
+            // let p_calc_size_sa = &p_calculated.real_size;
+            // NOTE p_cassowary_calculated_layout   - parent 自己算的, 
+            // NOTE p_calculated.real_size          - parent 的 parent算的
+            let p_calc_size_sa = &(p_cassowary_calculated_layout,&p_calculated.real_size).map(|(w,h),size|{
+                let w = w.unwrap_or(size.x);
+                let h = h.unwrap_or(size.y);
+                Vector2::<f64>::new(w,h)
+            });
 
             // ─────────────────────────────────────────────────────────────────
             let w = layout.then(|l:&Layout|l.w.watch().into());
@@ -64,54 +70,51 @@ where
             // ─────────────────────────────────────────────────────────────────
             let width_var  =current_cassowary_map.var("width").unwrap();
             let height_var  =current_cassowary_map.var("height").unwrap();
+            let top_var  =current_cassowary_map.var("top").unwrap();
+            let left_var  =current_cassowary_map.var("left").unwrap();
+            let bottom_var  =current_cassowary_map.var("bottom").unwrap();
+            let right_var  =current_cassowary_map.var("right").unwrap();
+// ────────────────────────────────────────────────────────────────────────────────
+
 
             let p_cassowary_map2 = p_cassowary_map.clone();
             let sa_w = w.then(|w|w.get_anchor());
             let sa_h = h.then(|h|h.get_anchor());
 
-            let current_cassowary_map2 = current_cassowary_map.clone();
             let size_constraints = 
                 (&sa_w,&sa_h).map(move |w:&GenericSize,h:&GenericSize|{
                     let mut size_constraints = vec![];
 
-                    let mut skip = false;
 
-                    if let Ok(ww)  = w.try_get_length_value(){
-                        if approx_eq!(f64,ww,0.0,(0.1,2)) {
+                    
+                    if let Ok(ww)   = w.try_get_length_value() &&  approx_eq!(f64,ww,0.0,(0.1,2)){
                             size_constraints.push(  width_var  | WeightedRelation::EQ(cassowary::strength::WEAK) | 0.0);
-                            skip = true;
                             
-                        }
+                    }else{
+                        size_constraints.push(width_var  | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("width", &p_cassowary_map2, w));
+
                     }
-                    if let Ok(hh)  = h.try_get_length_value(){
-                        if approx_eq!(f64,hh,0.0,(0.1,2)) {
+                    if let Ok(hh)  = h.try_get_length_value() && approx_eq!(f64,hh,0.0,(0.1,2)){
                             size_constraints.push(  height_var  | WeightedRelation::EQ(cassowary::strength::WEAK) | 0.0);
-                            skip = true;
                             
-                        }
+                    }else{
+                        size_constraints.push(height_var | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("height",&p_cassowary_map2, h) );
                     }
 
-                    if !skip{
-                        size_constraints.extend([
-                            //NOTE will use for parent cassowary
-                            width_var  | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("width", &p_cassowary_map2, w),
-                            height_var | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("height",&p_cassowary_map2, h),
-                            // • • • • •
-                        ]);
-                    }
+                 
 
                     
                     size_constraints.extend([
                         
-                        current_cassowary_map2.var("right").unwrap() - current_cassowary_map2.var("left").unwrap()| WeightedRelation::EQ(cassowary::strength::REQUIRED) | width_var,
-                        current_cassowary_map2.var("bottom").unwrap() - current_cassowary_map2.var("top").unwrap()| WeightedRelation::EQ(cassowary::strength::REQUIRED) | height_var,
+                        right_var - left_var| WeightedRelation::EQ(cassowary::strength::REQUIRED) | width_var,
+                        bottom_var - top_var| WeightedRelation::EQ(cassowary::strength::REQUIRED) | height_var,
 
-                        current_cassowary_map2.var("bottom").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("top").unwrap(),
-                        current_cassowary_map2.var("right").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("left").unwrap(),
-                        width_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
+                        bottom_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | top_var,
+                        right_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | left_var,
+                        width_var  | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
                         height_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                        current_cassowary_map2.var("top").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
-                        current_cassowary_map2.var("left").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                        top_var | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                        left_var | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
                     ]);
 
                     size_constraints
@@ -161,22 +164,34 @@ where
                 }
 
             });
-            let top_var  =current_cassowary_map.var("top").unwrap();
-            let top = p_calculated_vars.map(move|p_vars|{
-                p_vars.get(&top_var).map(|(val,_)| **val)
+            let top = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+                if p_children_vars.contains(&top_var){
+                    p_vars.get(&top_var).map(|(val,_)| **val)
+                }else{
+                    None
+                }
             });
-            let left_var  =current_cassowary_map.var("left").unwrap();
-            let left = p_calculated_vars.map(move|p_vars|{
+            let left = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+                if p_children_vars.contains(&left_var){
                 p_vars.get(&left_var).map(|(val,_)| **val)
+                }else{
+                    None
+                }
             });
-            let bottom_var  =current_cassowary_map.var("bottom").unwrap();
-            let bottom = p_calculated_vars.map(move|p_vars|{
+            let bottom = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+                if p_children_vars.contains(&bottom_var){
                 p_vars.get(&bottom_var).map(|(val,_)| **val)
+                }else{
+                    None
+                }
             });
             
-            let right_var  =current_cassowary_map.var("right").unwrap();
-            let right = p_calculated_vars.map(move|p_vars|{
+            let right = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+                if p_children_vars.contains(&right_var){
                 p_vars.get(&right_var).map(|(val,_)| **val)
+                }else{
+                    None
+                }
             });
 
             //TODO 如果 父层 cassowary 不涉及到 此 element , 那么就需要 进行 原定位计算

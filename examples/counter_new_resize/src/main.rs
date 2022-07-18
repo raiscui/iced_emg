@@ -56,9 +56,9 @@ fn setup_tracing() {
     }
     #[cfg(not(debug_assertions))]
     {
-        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::WARN);
-        tracing_wasm::set_as_global_default_with_config(config.build());
+        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        // config.set_max_level(tracing::Level::WARN);
+        // tracing_wasm::set_as_global_default_with_config(config.build());
     }
 }
 
