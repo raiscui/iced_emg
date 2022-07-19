@@ -4,12 +4,13 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-18 16:11:21
+ * @LastEditTime: 2022-07-19 12:59:31
  * @LastEditors: Rais
 * @Description:
 */
 use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, ccsa::CassowaryMap};
 
+use derive_more::From;
 use float_cmp::{approx_eq, assert_approx_eq};
 use cassowary::WeightedRelation;
 use emg::EdgeIndex;
@@ -18,8 +19,7 @@ use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo, Anchor};
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
 use styles::{ CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, LogicLength, px, s};
-use tracing::{ trace,trace_span, warn, debug, debug_span, warn_span};
-use derive_more::From;
+use tracing::{trace_span, debug_span, trace, warn_span, warn};
 
 use self::cassowary_calc::cassowary_calculation;
 
@@ -48,8 +48,10 @@ where
                         cassowary_calculated_vars:p_calculated_vars,
                         cassowary_map:p_cassowary_map,
                         cassowary_calculated_layout:p_cassowary_calculated_layout,
+                        
                 .. }=path_edgedata;
-            // ─────────────────────────────────────────────────────────────────
+           
+// ────────────────────────────────────────────────────────────────────────────────
 
             // let p_calc_size_sa = &p_calculated.real_size;
             // NOTE p_cassowary_calculated_layout   - parent 自己算的, 
@@ -67,6 +69,7 @@ where
             let origin_y = layout.then(|l:&Layout|l.origin_y.watch().into());
             let align_x = layout.then(|l:&Layout|l.align_x.watch().into());
             let align_y = layout.then(|l:&Layout|l.align_y.watch().into());
+            let current_cassowary_generals_sa = layout.then(|l|l.cassowary_generals.watch().into());
             // ─────────────────────────────────────────────────────────────────
             let width_var  =current_cassowary_map.var("width").unwrap();
             let height_var  =current_cassowary_map.var("height").unwrap();
@@ -118,6 +121,11 @@ where
                     ]);
 
                     size_constraints
+                });
+
+            let current_cassowary_inherited_generals_sa = (&p_calculated.cassowary_inherited_generals_sa,&current_cassowary_generals_sa).map(|p_cass_inherited_generals,self_generals|{
+                   let f = (**p_cass_inherited_generals).clone() + self_generals.clone();
+                   Rc::new(f)
                 });
             
 
@@ -428,6 +436,7 @@ where
             LayoutCalculated {
                 suggest_size: calculated_size,
                 size_constraints,
+                cassowary_inherited_generals_sa:current_cassowary_inherited_generals_sa,
                 real_size,
                 origin: calculated_origin,
                 align: calculated_align,

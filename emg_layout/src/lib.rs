@@ -15,14 +15,13 @@
 // ────────────────────────────────────────────────────────────────────────────────
 
 
-
 // // 固定 type  T:xxx
 // #![feature(trivial_bounds)]
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
-use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, collections::HashMap, hash::{BuildHasherDefault, Hash}, rc::Rc, time::Duration};
+use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, hash::{BuildHasherDefault, Hash}, rc::Rc, time::Duration};
 use cassowary::{Variable, Constraint, Expression, WeightedRelation, Solver};
-use ccsa::{CassowaryMap, CCSS, CCSSEqExpression, CCSSSvvOpSvvExpr, NameChars, ScopeViewVariable, CCSSOpSvv, PredOp, PredEq, StrengthAndWeight};
+use ccsa::{CassowaryMap, CCSS, CCSSEqExpression, CCSSSvvOpSvvExpr, NameChars, ScopeViewVariable, CCSSOpSvv, PredOp, PredEq, StrengthAndWeight, CassowaryGeneralMap};
 use emg_hasher::CustomHasher;
 
 use calc::layout_calculating;
@@ -30,7 +29,7 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
-use emg_core::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet}, IdStr, NotNan, vector};
+use emg_core::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector};
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
@@ -246,6 +245,7 @@ pub struct Layout
     align_z: StateVar<GenericSizeAnchor>,
     cassowary_constants:StateVar<StateAnchor<Vector<CCSS>>>,
     cassowary_selectors:StateVar<Vector<ScopeViewVariable>>,
+    cassowary_generals:StateVar<CassowaryGeneralMap>
 }
 
 impl Layout
@@ -363,6 +363,7 @@ pub struct LayoutCalculated {
     
     suggest_size: StateAnchor<Vector2<f64>>,
     size_constraints: StateAnchor<Vec<Constraint>>,
+    cassowary_inherited_generals_sa:StateAnchor<Rc<CassowaryGeneralMap>>,
     real_size: StateAnchor<Vector2<f64>>,
     origin: StateAnchor<Translation3<f64>>,
     align: StateAnchor<Translation3<f64>>,
@@ -742,9 +743,11 @@ where
             align_z: use_state(align.2),
             cassowary_constants: use_state(StateAnchor::constant(vector![])),
             cassowary_selectors: use_state(vector![]),
-            
+            cassowary_generals: use_state(CassowaryGeneralMap::new()),
 
         };
+
+     
         // let path_styles= use_state(Dict::unit(EPath::<Ix>::default(), s()));
         let path_styles:StateVar<PathVarMap<Ix, Style>> = use_state(PathVarMap::default());
         let path_layouts:StateVar<PathVarMap<Ix, Layout>> = use_state(PathVarMap::default());
@@ -890,8 +893,18 @@ where
                         // println!("--> id: {:?}", &id_sv);
                         trace!("--> finding path_layout in path_with_ed_node_builder------------------- len:{}",path_layouts_map.len());
                         // println!("--> layout:{:?}",pls_map.get(&path_clone));
+                        //TODO path layout combine def layout 
                         *path_layouts_map.get(&self_path2).unwrap_or(&layout)
                     });
+
+                    //NOTE 约束
+                    let ccss_list_sa = path_layout.then(|layout|{
+                    layout.cassowary_constants.watch().then(|x|x.clone().into_anchor()).into_anchor()
+                    });
+
+                  
+        
+
                         
                     let (opt_p_calculated,layout_calculated,layout_styles_string) =  match p_path_edge_item_node {
                         //NOTE 上一级节点: empty => 此节点是root
@@ -926,10 +939,9 @@ where
 
                  
 
-                    //NOTE 约束
-                    let ccss_list_sa = layout.cassowary_constants.watch().then(|x|x.clone().into_anchor());
+                    
                     //TODO 不要每一次变更 ccss_list ,都全部重新计算 
-                    let (constant_sets_sa,children_vars_sa) = (&ccss_list_sa,&children_cass_maps_sa).map(move | ccss_list,children_cass_maps|{
+                    let (constant_sets_sa,children_vars_sa) = (&ccss_list_sa,&children_cass_maps_sa,&layout_calculated.cassowary_inherited_generals_sa).map(move | ccss_list,children_cass_maps,current_cassowary_inherited_generals|{
 
                             let _debug_span_ = warn_span!( "->[ constant_sets_sa calc then ] ").entered();
 
@@ -938,14 +950,14 @@ where
                             .fold((OrdSet::<Constraint>::new(), HashSet::<Variable, BuildHasherDefault<CustomHasher>>::with_hasher(BuildHasherDefault::<CustomHasher>::default())), 
                             |(  constraint_sets,mut children_vars0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
 
-                                if let Some((left_expr,left_child_vars)) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps){
+                                if let Some((left_expr,left_child_vars)) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps,current_cassowary_inherited_generals){
                                     
                                     children_vars0 = children_vars0.union(left_child_vars);
 
                                     let (constants,_,children_vars2) = eq_exprs.into_iter().fold((constraint_sets,left_expr,children_vars0), |(mut constraints,left_expr,children_vars1),CCSSEqExpression{ eq, expr }|{
 
 
-                                        if let Some((right_expr,right_child_vars)) = svv_op_svvs_to_expr(expr,children_cass_maps){
+                                        if let Some((right_expr,right_child_vars)) = svv_op_svvs_to_expr(expr,children_cass_maps,current_cassowary_inherited_generals){
 
                                             let constraint = left_expr | eq_opt_sw_to_weighted_relation(eq,opt_sw)| right_expr.clone();
 
@@ -981,6 +993,8 @@ where
                             
                         
                     }).split();
+
+                    // let current_cassowary_inherited_generals_val_sa = layout_calculated.cassowary_inherited_generals_sa.map(|x|x.v_v);
 
                     let LayoutCalculated{real_size, origin, align ,..} = &layout_calculated;
                     //NOTE 层建议值 (层当前计算所得)
@@ -1052,6 +1066,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                     let mut last_observation_constants:OrdSet<Constraint>  =  OrdSet::new();
                     let mut last_observation_current_props:Dict<IdStr, NotNan<f64>> =  Dict::new();
                     let mut last_observation_children_for_current_constants :OrdSet<Constraint>  =  OrdSet::new();
+                    let mut last_current_cassowary_inherited_general_vals: Dict<Variable, f64> = Dict::new();
                     let current_cassowary_map2 = current_cassowary_map.clone();
                     let mut cass_solver = Solver::new();
                  
@@ -1068,8 +1083,9 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                     ]).unwrap();
 
                     let calculated_changed_vars_sa  = 
-                        (&children_for_current_addition_constants_sa,&constant_sets_sa,&current_calculated_prop_val_sa)
-                        .map_mut( Dict::<Variable,NotNan<f64>>::new(),move |out,children_for_current_addition_constants,newest_constants,newest_current_prop_vals| {
+                        (&children_for_current_addition_constants_sa,&constant_sets_sa,&current_calculated_prop_val_sa,&layout_calculated.cassowary_inherited_generals_sa)
+                        .map_mut( Dict::<Variable,NotNan<f64>>::new(),move |out,children_for_current_addition_constants,newest_constants,newest_current_prop_vals,current_cassowary_inherited_generals| {
+
                             
                             let _debug_span_ = warn_span!( "->[ calculated_changed_vars_sa calc map_mut ] ").entered();
                             warn!("[calculated_changed_vars_sa] newest_current_prop_vals :{:?}",&newest_current_prop_vals);
@@ -1108,7 +1124,6 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                             }
 
                             let mut constants_did_update = false;
-                            let mut prop_vals_did_update = false;
 
                             if newest_constants.len() == 0 && last_observation_constants.len() != 0 {
                                 for constant in last_observation_constants.iter() {
@@ -1136,12 +1151,48 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                                     };
         
                                 };
-                                last_observation_constants = newest_constants.clone();
+                                if constants_did_update {
+                                    last_observation_constants = newest_constants.clone();
+                                }
 
+                            }
+
+                            // @ current cassowary inherited general vals ────────────────────────────────────────────────────────────────────────────────
+                            let mut general_vals_did_update = false;
+                                
+
+                            for diff_item in last_current_cassowary_inherited_general_vals.diff(&current_cassowary_inherited_generals.v_v){
+
+                                match diff_item {
+                                    ordmap::DiffItem::Add(&var, &v) => {
+                            
+                                        cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
+                                        cass_solver.suggest_value(var, v).unwrap();
+                                        general_vals_did_update = true;
+
+                                    },
+                                    ordmap::DiffItem::Update { old:(&old_var,_old_v), new:(&var,&v) } => {
+                                        //TODO check, remove .
+                                        assert_eq!(old_var,var);
+                                        cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
+                                        cass_solver.suggest_value(var, v).unwrap();
+                                        general_vals_did_update = true;
+
+                                    },
+                                    ordmap::DiffItem::Remove(_, _) => {
+                                        panic!("current inherited general vals never remove (current now)")
+                                    },
+                                };
+
+                            };
+                            if general_vals_did_update{
+                                last_current_cassowary_inherited_general_vals = current_cassowary_inherited_generals.v_v.clone();
                             }
                             
 
                             // ────────────────────────────────────────────────────────────────────────────────
+                            let mut prop_vals_did_update = false;
+
                             let current_calculated_prop_sw_mul = 1.0f64;
                                 
                             info!("current_cassowary_map2===== \n all= \n{:?}",&current_cassowary_map2.map);
@@ -1179,10 +1230,12 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                                 };
 
                             };
-                            last_observation_current_props = newest_current_prop_vals.clone();
+                            if prop_vals_did_update {
+                                last_observation_current_props = newest_current_prop_vals.clone();
+                            }
 
                             // ────────────────────────────────────────────────────────────────────────────────
-                            if constants_did_update || prop_vals_did_update || children_for_current_constants_did_update{
+                            if constants_did_update || prop_vals_did_update || general_vals_did_update|| children_for_current_constants_did_update{
                                 let changes = cass_solver.fetch_changes();
                                 // warn!("cass solver change:{:#?}",&changes);
                                 if changes.len() > 0 {
@@ -1332,12 +1385,12 @@ fn eq_opt_sw_to_weighted_relation(
 
 
 #[instrument(skip(children_cass_maps))]
-fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>) ->Option<(Expression,  HashSet<Variable, BuildHasherDefault<CustomHasher>>) >
+fn svv_op_svvs_to_expr<Ix>(svv_op_svvs:&CCSSSvvOpSvvExpr,children_cass_maps:&Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>,current_cassowary_inherited_generals:&Rc<CassowaryGeneralMap>) ->Option<(Expression,  HashSet<Variable, BuildHasherDefault<CustomHasher>>) >
 where
 Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
     let CCSSSvvOpSvvExpr{  svv:main_svv, op_exprs }=svv_op_svvs;
-    svv_to_var(main_svv,children_cass_maps).map(|first_var  |{
+    svv_to_var(main_svv,children_cass_maps,current_cassowary_inherited_generals).map(|first_var  |{
         // let mut all_consensus_constraints_sa : Vector<Anchor<Vec<Constraint>>> = vector![first_consensus_constraints_sa];
         let mut child_vars = HashSet::with_hasher(BuildHasherDefault::<CustomHasher>::default()) .update(first_var);
 
@@ -1346,7 +1399,7 @@ Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default +
             let CCSSOpSvv{ op, svv } = op_expr;
             match op{
                 PredOp::Add => {
-                    if let Some(var)     = svv_to_var(svv,children_cass_maps){
+                    if let Some(var)     = svv_to_var(svv,children_cass_maps,current_cassowary_inherited_generals){
                         // all_consensus_constraints_sa.push_back(consensus_constraints_sa);
                         child_vars.insert(var);
 
@@ -1370,7 +1423,7 @@ Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default +
 
 
 #[instrument(skip(children_cass_maps))]
-fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>) -> Option<Variable >
+fn svv_to_var<Ix>(scope_view_variable:&ScopeViewVariable,children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>,current_cassowary_inherited_generals:&Rc<CassowaryGeneralMap>) -> Option<Variable >
 where
 Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
 {
@@ -1379,7 +1432,13 @@ Ix:std::fmt::Debug+ Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default +
     let ScopeViewVariable{ scope, view, variable } = scope_view_variable;
     let var = match (scope, view, variable) {
         (None, None, None) => todo!(),
-        (None, None, Some(_)) => todo!(),
+        (None, None, Some(PredVariable(prop))) => {
+            if let Some(v) = current_cassowary_inherited_generals.var(prop){
+                Some(v)
+            }else{
+                todo!("inherited generals: {} -> not find",prop)
+            }
+        },
         (None, Some(_), None) => todo!(),
         (None, Some(name), Some(PredVariable(prop))) => {
 
@@ -1487,6 +1546,8 @@ fn path_ein_empty_node_builder<Ix:'static>(
         
         let w = path_layout.then(|l:&Layout|l.w.watch().into());
         let h = path_layout.then(|l:&Layout|l.h.watch().into());
+        let current_cassowary_generals_sa = path_layout.then(|l|l.cassowary_generals.watch().into());
+
         // let origin_x = path_layout.then(|l:&Layout|l.origin_x.watch().into());
         // let origin_y = path_layout.then(|l:&Layout|l.origin_y.watch().into());
         // let align_x = path_layout.then(|l:&Layout|l.align_x.watch().into());
@@ -1516,6 +1577,14 @@ fn path_ein_empty_node_builder<Ix:'static>(
                     ];
                     size_constraints
                 });
+
+
+
+        let current_cassowary_inherited_generals_sa = current_cassowary_generals_sa.map(|self_generals|{
+            let f = CassowaryGeneralMap::new().with_default() + self_generals.clone();
+            Rc::new(f)
+        });
+
 
         //TODO 如果没有parent 那么 parent 就是 screen w h
     let calculated_size:StateAnchor<Vector2<f64>> = (&w,&h).then(|sa_w: &GenericSizeAnchor,sa_h: &GenericSizeAnchor| {
@@ -1554,6 +1623,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
     let layout_calculated = LayoutCalculated {
             suggest_size: calculated_size,
             size_constraints,
+            cassowary_inherited_generals_sa:current_cassowary_inherited_generals_sa,
             real_size,
             origin: calculated_origin,
             align: calculated_align,

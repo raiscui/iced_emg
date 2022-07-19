@@ -1,12 +1,17 @@
+use std::hash::BuildHasherDefault;
+
 use cassowary::Variable;
 use emg_core::{im::HashMap, IdStr, NotNan, Vector};
+use emg_hasher::CustomHasher;
+use emg_state::Dict;
 use parse_display::{Display, FromStr};
 mod impl_refresh;
 mod ops;
+
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2022-07-13 17:55:50
+ * @LastEditTime: 2022-07-19 13:02:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -344,16 +349,74 @@ impl std::fmt::Display for CCSSVecDisp {
 // }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CassowaryMap {
-    pub(crate) map: HashMap<IdStr, Variable>,
-    v_k: HashMap<Variable, IdStr>,
+pub struct CassowaryGeneralMap {
+    pub(crate) map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
+    pub(crate) v_v: Dict<Variable, f64>,
 }
 
-impl Default for CassowaryMap {
-    fn default() -> Self {
-        Self::new()
+impl CassowaryGeneralMap {
+    pub fn v(&self, var: &Variable) -> Option<f64> {
+        self.v_v.get(var).copied()
+    }
+
+    pub fn var<BK>(&self, key: &BK) -> Option<Variable>
+    where
+        BK: core::hash::Hash + Eq + ?Sized,
+        IdStr: std::borrow::Borrow<BK>,
+    {
+        self.map.get(key).copied()
+    }
+
+    pub fn insert(&mut self, id: IdStr, v: f64) {
+        let var = Variable::new();
+        self.map.insert(id, var);
+        self.v_v.insert(var, v);
+    }
+    pub fn new() -> Self {
+        let map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>> =
+            HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
+        let v_v: Dict<Variable, f64> = Dict::new();
+
+        // let hgap = Variable::new();
+        // map.insert("hgap".into(), hgap);
+        // v_v.insert(hgap, 10.0);
+
+        Self { map, v_v }
+    }
+    pub fn with_default(mut self) -> Self {
+        let hgap = Variable::new();
+        self.map.insert("hgap".into(), hgap);
+        self.v_v.insert(hgap, 10.0);
+
+        let vgap = Variable::new();
+        self.map.insert("vgap".into(), vgap);
+        self.v_v.insert(vgap, 10.0);
+
+        self
     }
 }
+
+impl std::ops::Add for CassowaryGeneralMap {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Self {
+            map: other.map.union(self.map),
+            v_v: other.v_v.union(self.v_v),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CassowaryMap {
+    pub(crate) map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
+    v_k: HashMap<Variable, IdStr, BuildHasherDefault<CustomHasher>>,
+}
+
+// impl Default for CassowaryMap {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }
 
 impl CassowaryMap {
     // fn var(&self, key: &IdStr) -> Option<Variable> {
@@ -373,8 +436,10 @@ impl CassowaryMap {
     }
 
     pub fn new() -> Self {
-        let mut map: HashMap<IdStr, Variable> = HashMap::new();
-        let mut v_k = HashMap::new();
+        let mut map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>> =
+            HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
+        let mut v_k: HashMap<Variable, IdStr, BuildHasherDefault<CustomHasher>> =
+            HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
         // @add self layout ─────────────────────────────────────────────────────────────────
 
         let width = Variable::new();

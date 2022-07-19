@@ -286,7 +286,7 @@ impl Application for Counter {
             @=a
             Layer [
 
-                @=b @E=[{@h (#taa)(#taa2)},
+                @=b @E=[{@h (#taa)-(#taa2)},
                 // w(pc(50)),h(pc(50)),
                 css(bg_color(hsl(40,70,30)))]
                 Layer [
