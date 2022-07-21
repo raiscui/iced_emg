@@ -4,7 +4,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-20 22:39:28
+ * @LastEditTime: 2022-07-21 13:21:15
  * @LastEditors: Rais
 * @Description:
 */
@@ -123,8 +123,9 @@ where
                     size_constraints
                 });
 
-            let current_cassowary_inherited_generals_sa = (&p_calculated.cassowary_inherited_generals_sa,&current_cassowary_generals_sa).map(|p_cass_inherited_generals,self_generals|{
-                   let f = p_cass_inherited_generals.clone() + self_generals.clone();
+            let current_cassowary_map2 = current_cassowary_map.clone();
+            let current_cassowary_inherited_generals_sa = (&p_calculated.cassowary_inherited_generals_sa,&current_cassowary_generals_sa).map(move |p_cass_inherited_generals,self_generals|{
+                   let f = p_cass_inherited_generals.clone() + self_generals.clone() + current_cassowary_map2.clone();
                    Rc::new(f)
                 });
             

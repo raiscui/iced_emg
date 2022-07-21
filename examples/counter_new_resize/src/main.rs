@@ -303,15 +303,17 @@ impl Application for Counter {
                             {
                                 @h |(#b1)-(#b2)|
                             },
-                        // w(px(200)),h(px(200)),
+                        w(px(300)),h(px(300)),
                         css(bg_color(hsl(333,70,20)))]
                         Layer [
-                            @=b1 @E=[w(px(50)),h(px(50)),
+                            @=b1 @E=[
+                                w(px(50)),h(px(50)),
                             //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
                             css(bg_color(hsl(11,70,70)))]
                             Layer[],
 
-                            @=b2 @E=[w(px(50)),h(px(50)),
+                            @=b2 @E=[
+                                w(px(50)),h(px(50)),
                             //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
                             css(bg_color(hsl(33,70,70)))]
                             Layer[],

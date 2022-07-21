@@ -880,6 +880,8 @@ where
 
                 }) .map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode| {
 
+//@=====    each    path    edge    prosess     ============================================================================================================================================
+//
                     //@ current var=>ix ix=>var cassowary_map
                     let current_cassowary_map = Rc::new(CassowaryMap::new());
 
@@ -1021,6 +1023,7 @@ where
                         let left = 0f64;
                         let right = width;
 
+                        //TODO 使用 variable => notnan f64 , 避免后续 计算 每次都要获取 variable.
                         im::ordmap!{
                             IdStr::new("width") => NotNan::new(width).unwrap(),
                             IdStr::new("height") => NotNan::new(height).unwrap(),
@@ -1058,8 +1061,8 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
             // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("left").unwrap()+map.var("width").unwrap(),
             // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("top").unwrap() + map.var("height").unwrap(),
          
-            current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("right").unwrap(),
-            current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("bottom").unwrap(),
+            // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("right").unwrap(),
+            // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("bottom").unwrap(),
          
         ])
         
@@ -1527,9 +1530,10 @@ fn path_ein_empty_node_builder<Ix:'static>(
                 });
 
 
+        let current_cassowary_map3 = current_cassowary_map.clone();
 
-        let current_cassowary_inherited_generals_sa = current_cassowary_generals_sa.map(|self_generals|{
-            let f = self_generals.clone().with_default_not_overwrite();
+        let current_cassowary_inherited_generals_sa = current_cassowary_generals_sa.map(move |self_generals|{
+            let f = self_generals.clone().with_default_not_overwrite() + current_cassowary_map3.clone(); 
             Rc::new(f)
         });
 

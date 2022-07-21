@@ -5,6 +5,7 @@ use emg_core::{im::HashMap, IdStr, NotNan, Vector};
 use emg_hasher::CustomHasher;
 use emg_state::Dict;
 use parse_display::{Display, FromStr};
+use tracing::warn;
 mod impl_refresh;
 mod ops;
 pub mod svv_process;
@@ -12,7 +13,7 @@ pub mod svv_process;
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2022-07-21 10:59:30
+ * @LastEditTime: 2022-07-21 15:03:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -349,6 +350,7 @@ pub struct CassowaryGeneralMap {
     pub(crate) top_map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
     pub(crate) top_v_v: Dict<Variable, f64>,
     pub(crate) parent: Option<Rc<CassowaryGeneralMap>>,
+    // pub(crate) cassowary_map: Option<Rc<CassowaryMap>>,
 }
 
 impl CassowaryGeneralMap {
@@ -416,6 +418,7 @@ impl CassowaryGeneralMap {
             top_map,
             top_v_v,
             parent: None,
+            // cassowary_map: None,
         }
     }
     // pub fn with_default(mut self) -> Self {
@@ -434,14 +437,35 @@ impl CassowaryGeneralMap {
 
 impl std::ops::Add<CassowaryGeneralMap> for Rc<CassowaryGeneralMap> {
     type Output = CassowaryGeneralMap;
-    fn add(self, other: CassowaryGeneralMap) -> CassowaryGeneralMap {
-        CassowaryGeneralMap {
-            map: other.map.union(self.map.clone()),
-            v_v: other.v_v.union(self.v_v.clone()),
-            top_map: self.top_map.clone().union(other.top_map.clone()),
-            top_v_v: self.top_v_v.clone().union(other.top_v_v.clone()),
+    fn add(self, current_new: CassowaryGeneralMap) -> Self::Output {
+        Self::Output {
+            map: current_new.map.union_with(self.map.clone(), |l, _| l),
+            v_v: current_new.v_v.union_with(self.v_v.clone(), |l, _| l),
+            top_map: self
+                .top_map
+                .clone()
+                .union_with(current_new.top_map.clone(), |l, _| l),
+            top_v_v: self
+                .top_v_v
+                .clone()
+                .union_with(current_new.top_v_v.clone(), |l, _| l),
             parent: Some(self),
+            // cassowary_map: current_new.cassowary_map,
         }
+    }
+}
+
+impl std::ops::Add<Rc<CassowaryMap>> for CassowaryGeneralMap {
+    type Output = CassowaryGeneralMap;
+
+    fn add(mut self, self_cassowary_map: Rc<CassowaryMap>) -> Self::Output {
+        self.map = self_cassowary_map
+            .map
+            .clone()
+            .union_with(self.map, |l, _| l);
+
+        // self.cassowary_map = Some(self_cassowary_map);
+        self
     }
 }
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-21 10:50:01
- * @LastEditTime: 2022-07-21 11:50:21
+ * @LastEditTime: 2022-07-21 15:34:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -136,10 +136,23 @@ where
         (None, None, Some(PredVariable(prop)))
         | (Some(Scope::Local), None, Some(PredVariable(prop))) => {
             warn!(
-                "current_cassowary_inherited_generals: {:#?}",
+                "local => current_cassowary_inherited_generals: {:#?}",
                 &current_cassowary_inherited_generals
             );
+            warn!("local => current prop {}", &prop);
+
             if let Some(v) = current_cassowary_inherited_generals.var(prop) {
+                // warn!("local => current prop {} v:{:?}", &prop, &v);
+                // let (current_var, prop_str) = current_cassowary_inherited_generals
+                //     .cassowary_map
+                //     .as_ref()
+                //     .map(|x| (x.var(prop).unwrap(), x.prop(&v).unwrap()))
+                //     .unwrap();
+
+                // warn!(
+                //     "local => current prop => var: {:?}, current_var:{:?} , k:{}",
+                //     &v, current_var, prop_str
+                // );
                 Some(Left(v))
             } else {
                 // None
