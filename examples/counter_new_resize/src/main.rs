@@ -56,9 +56,9 @@ fn setup_tracing() {
     }
     #[cfg(not(debug_assertions))]
     {
-        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        // config.set_max_level(tracing::Level::WARN);
-        // tracing_wasm::set_as_global_default_with_config(config.build());
+        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        config.set_max_level(tracing::Level::WARN);
+        tracing_wasm::set_as_global_default_with_config(config.build());
     }
 }
 
@@ -286,21 +286,59 @@ impl Application for Counter {
             @=a
             Layer [
 
-                @=b @E=[{@h (#taa)-(#taa2)},
-                // w(pc(50)),h(pc(50)),
-                css(bg_color(hsl(40,70,30)))]
+                @=a1 @E=[
+                    {"md"==11},
+                    {"md"==22},
+                ]
                 Layer [
-                    @=taa2 @E=[w(px(50)),h(px(50)),
-                    //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
-                    css(bg_color(hsl(100,70,30)))]
-                    Layer[],
 
-                    // @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
-                    @=taa @E=[w(pc(50)),h(pc(50)),
-                    //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
-                    css(bg_color(hsl(20,70,30)))]
-                    Layer[],
+                    @=a2 @E=[
+                        {"md"==15},
+                        {"md"==30},
+                    ]
+                    Layer [
+                        @=b @E=[
+                            {"md"==10,"my_other_gap"==82},
+                            {"md"==120,"my_other_gap"==28},
+                            {
+                                @h |(#b1)-(#b2)|
+                            },
+                        // w(px(200)),h(px(200)),
+                        css(bg_color(hsl(333,70,20)))]
+                        Layer [
+                            @=b1 @E=[w(px(50)),h(px(50)),
+                            //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
+                            css(bg_color(hsl(11,70,70)))]
+                            Layer[],
+
+                            @=b2 @E=[w(px(50)),h(px(50)),
+                            //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
+                            css(bg_color(hsl(33,70,70)))]
+                            Layer[],
+
+                            // @=b3 @E=[w(px(50)),h(px(50)),
+                            // //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
+                            // css(bg_color(hsl(55,70,70)))]
+                            // Layer[],
+
+                            // @=b4 @E=[w(px(50)),h(px(50)),
+                            // //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
+                            // css(bg_color(hsl(77,70,70)))]
+                            // Layer[],
+
+                            // // // @=taa @E=[w(px(150)),h(px(150)),origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50))]
+                            // @=b5 @E=[w(pc(50)),h(pc(50)),
+                            // //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
+                            // css(bg_color(hsl(55,70,30)))]
+                            // Layer[],
+                        ],
+                    ],
                 ],
+
+
+
+
+
 
                 // @=modstatic @Mod ComponentStatic::tree_build(this.clone(), orders.clone()),
 
@@ -308,25 +346,25 @@ impl Application for Counter {
                 // node_ref("a"),
 
 
-                @=b2 @E=[
-                    an.clone(),
-                // w(px(100)),
-                h(parent!(CssWidth)*0.3),origin_x(pc(50)),align_y(pc(50))]
-                Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
-                    On:click move |_root, _vdom, _event| {
+                // @=b2 @E=[
+                //     an.clone(),
+                // // w(px(100)),
+                // h(parent!(CssWidth)*0.3),origin_x(pc(50)),align_y(pc(50))]
+                // Button::new(Text::new(format!("2 button in quote..{}", "e"))) => [
+                //     On:click move |_root, _vdom, _event| {
 
-                        an.interrupt([
-                            to![width(px(50))],
-                            to![width(pc(100))],
-                        ]);
+                //         an.interrupt([
+                //             to![width(px(50))],
+                //             to![width(pc(100))],
+                //         ]);
 
-                                    a.set(a.get()+1);
+                //                     a.set(a.get()+1);
 
 
-                                    orders.schedule_render()
+                //                     orders.schedule_render()
 
-                                    }
-                ]
+                //                     }
+                // ]
 
 
 

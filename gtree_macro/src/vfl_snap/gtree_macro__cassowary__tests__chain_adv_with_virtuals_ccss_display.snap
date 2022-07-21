@@ -2,7 +2,7 @@
 source: gtree_macro/src/cassowary.rs
 expression: disp
 ---
-CCSSS [
+[
 "LitStr { token: "panel" }"[top] + "LitStr { token: "outer-zone" }"[row_size]  ==  #b1[top],
 #b1[bottom] + "LitStr { token: "zone" }"[col_size]  ==  #b2[top],
 #b2[bottom] + "LitStr { token: "outer-zone" }"[row_size]  ==  "LitStr { token: "panel" }"[bottom],

@@ -12,12 +12,12 @@
 
 use std::error::Error;
 
-use cassowary::Cassowary;
+use cassowary::{Cassowary, ScopeViewVariable};
 
 use proc_macro2::{TokenStream, Span, Punct, Spacing};
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
-use syn::{parse::{Parse, ParseStream, discouraged::Speculative}, braced};
+use syn::{parse::{Parse, ParseStream, discouraged::Speculative}, braced, LitStr};
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
 
 use syn::{Ident, Token};
@@ -171,7 +171,7 @@ impl Parse for AtList {
 #[derive(Debug)]
 enum EdgeObject{
     E(Box<syn::Expr>),
-    Cassowary(Box<Cassowary>)
+    Cassowary(Box<Cassowary>),
 }
 impl ToTokens for EdgeObject {
     fn to_tokens(&self, tokens: &mut TokenStream) {
@@ -184,8 +184,11 @@ impl ToTokens for EdgeObject {
 impl Parse for EdgeObject{
     #[instrument(name = "EdgeObject")]
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        
+        
         if input.peek(token::Brace){
         debug!("====== in EdgeObject peek-> {{}}, will parse cassowary... ");
+
             Ok(Self::Cassowary(input.parse()?))
         }else{
             Ok(Self::E(input.parse()?))
@@ -1048,7 +1051,7 @@ impl ToTokens for Gtree {
             #[allow(unused)]
             use GElement::*;
             #[allow(unused)]
-            use emg_core::{TypeCheck,Vector,IdStr};
+            use emg_core::{TypeCheck,Vector,IdStr,NotNan};
             // #[allow(unused)]
             // pub use emg_bind::serde_closure;
 
@@ -1227,6 +1230,33 @@ mod tests {
         token_test(input);
         println!();
     }
+
+    
+    #[test]
+    fn test_vfl_2() {
+        fn token_test(input: &str) {
+            match syn::parse_str::<Gtree>(input) {
+                Ok(ok) => println!("===>{}", ok.to_token_stream()),
+                Err(error) => println!("...{:?}", error),
+            }
+        }
+
+        println!();
+        let input = r#" 
+        @=root
+                Layer [
+                    @=b @E=[{@h (#b1)-[my_gap]-(#b2)-[my_other_gap]-(#b3)},
+                    {"my_gap"==20,"my_other_gap"==88},
+                    ]
+                    Layer []
+                ]
+        "#;
+
+        token_test(input);
+        println!();
+    }
+
+
     #[test]
     fn test_2() {
         fn token_test(input: &str) {

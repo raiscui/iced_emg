@@ -1,8 +1,8 @@
 ---
-source: gtree_macro/tests/ccss.rs
+source: gtree_macro/tests/test_ccss.rs
 expression: "&disp"
 ---
-CCSSS [
+[
 #b1[bottom]  ==  #b2[top],
 ]
 

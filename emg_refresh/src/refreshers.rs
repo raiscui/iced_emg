@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2022-06-22 21:20:09
+ * @LastEditTime: 2022-07-20 09:47:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -124,7 +124,7 @@ pub trait RefreshFor<Who> {
     fn refresh_for(&self, who: &mut Who);
 }
 impl<Who: Sized, Use: Sized> RefreshFor<Who> for Use {
-    default fn refresh_for(&self, el: &mut Who) {
+    default fn refresh_for(&self, _el: &mut Who) {
         warn!(
             "this is un implemented yet use {} refresh_for {}",
             std::any::type_name::<Use>(),

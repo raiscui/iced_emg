@@ -1,9 +1,11 @@
 mod func;
 mod macros;
 pub mod measures;
+mod tools;
 pub use crate::SVec::{smallvec, SmallVec};
 pub use ::smallvec as SVec;
 pub use dyn_partial_eq;
+pub use tools::*;
 
 pub use im::{vector, Vector};
 pub use im_rc as im;

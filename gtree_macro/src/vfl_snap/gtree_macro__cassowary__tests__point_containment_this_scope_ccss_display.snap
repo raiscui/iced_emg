@@ -2,7 +2,7 @@
 source: gtree_macro/src/cassowary.rs
 expression: disp
 ---
-CCSSS [
+[
 #btn1[right] + &[gap]  ==  &[other_place],
 &[center_x] + &[gap]  ==  #btn2[left],
 ]

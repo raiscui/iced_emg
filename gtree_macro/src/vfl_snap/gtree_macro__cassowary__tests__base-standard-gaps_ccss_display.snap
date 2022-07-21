@@ -2,7 +2,7 @@
 source: gtree_macro/src/cassowary.rs
 expression: disp
 ---
-CCSSS [
+[
 #b1[bottom] + [vgap]  ==  #b2[top],
 #b2[bottom] + [vgap]  ==  #b3[top],
 #b3[bottom] + [vgap]  ==  #b4[top],

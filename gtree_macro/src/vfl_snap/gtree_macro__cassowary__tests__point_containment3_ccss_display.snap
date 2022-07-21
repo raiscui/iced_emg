@@ -2,7 +2,7 @@
 source: gtree_macro/src/cassowary.rs
 expression: disp
 ---
-CCSSS [
+[
 [line] + [hgap]  ==  #box1[left],
 #box1[right] + [hgap]  ==  #box2[left],
 ]

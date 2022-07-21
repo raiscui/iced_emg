@@ -2,7 +2,7 @@
 source: gtree_macro/src/cassowary.rs
 expression: disp
 ---
-CCSSS [
+[
 #b1[right] + 100  ==  #b2[left],
 #b2[right] + 8  ==  #b3[left],
 ]

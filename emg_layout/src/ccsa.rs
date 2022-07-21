@@ -1,4 +1,4 @@
-use std::hash::BuildHasherDefault;
+use std::{hash::BuildHasherDefault, rc::Rc};
 
 use cassowary::Variable;
 use emg_core::{im::HashMap, IdStr, NotNan, Vector};
@@ -7,11 +7,12 @@ use emg_state::Dict;
 use parse_display::{Display, FromStr};
 mod impl_refresh;
 mod ops;
+pub mod svv_process;
 
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2022-07-19 13:02:08
+ * @LastEditTime: 2022-07-21 10:59:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -156,7 +157,7 @@ pub enum PredOp {
 }
 
 #[derive(Debug, Clone, Display, PartialEq, Eq)]
-#[display("{op} {svv}")]
+#[display(" {op} {svv}")]
 pub struct CCSSOpSvv {
     pub op: PredOp,
     pub svv: ScopeViewVariable,
@@ -314,16 +315,9 @@ impl CCSS {
         }
     }
 }
-pub struct CCSSVecDisp(pub Vector<CCSS>);
-impl std::fmt::Display for CCSSVecDisp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "CCSSS [")?;
-        for ccss in &self.0 {
-            writeln!(f, "{},", ccss)?;
-        }
-        writeln!(f, "]")
-    }
-}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GeneralVar(pub IdStr, pub ScopeViewVariable);
 
 // #[derive(Debug, Clone, PartialEq, Eq)]
 // pub(crate) struct CCSSList(Vector<CCSS>);
@@ -352,9 +346,23 @@ impl std::fmt::Display for CCSSVecDisp {
 pub struct CassowaryGeneralMap {
     pub(crate) map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
     pub(crate) v_v: Dict<Variable, f64>,
+    pub(crate) top_map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
+    pub(crate) top_v_v: Dict<Variable, f64>,
+    pub(crate) parent: Option<Rc<CassowaryGeneralMap>>,
 }
 
 impl CassowaryGeneralMap {
+    pub fn top_v(&self, var: &Variable) -> Option<f64> {
+        self.top_v_v.get(var).copied()
+    }
+
+    pub fn top_var<BK>(&self, key: &BK) -> Option<Variable>
+    where
+        BK: core::hash::Hash + Eq + ?Sized,
+        IdStr: std::borrow::Borrow<BK>,
+    {
+        self.top_map.get(key).copied()
+    }
     pub fn v(&self, var: &Variable) -> Option<f64> {
         self.v_v.get(var).copied()
     }
@@ -368,40 +376,71 @@ impl CassowaryGeneralMap {
     }
 
     pub fn insert(&mut self, id: IdStr, v: f64) {
-        let var = Variable::new();
-        self.map.insert(id, var);
-        self.v_v.insert(var, v);
+        if !self.top_map.contains_key(&id) {
+            let var = Variable::new();
+            self.top_map.insert(id.clone(), var);
+            self.top_v_v.insert(var, v);
+        }
+
+        let var2 = Variable::new();
+        self.map.insert(id, var2);
+        self.v_v.insert(var2, v);
+    }
+    fn insert_not_overwrite(&mut self, id: IdStr, v: f64) {
+        if !self.top_map.contains_key(&id) {
+            let var = Variable::new();
+            self.top_map.insert(id.clone(), var);
+            self.top_v_v.insert(var, v);
+        }
+        if !self.map.contains_key(&id) {
+            let var2 = Variable::new();
+            self.map.insert(id, var2);
+            self.v_v.insert(var2, v);
+        }
     }
     pub fn new() -> Self {
-        let map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>> =
+        let top_map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>> =
             HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
-        let v_v: Dict<Variable, f64> = Dict::new();
+        let top_v_v: Dict<Variable, f64> = Dict::new();
+
+        let map = top_map.clone();
+        let v_v = top_v_v.clone();
 
         // let hgap = Variable::new();
         // map.insert("hgap".into(), hgap);
         // v_v.insert(hgap, 10.0);
 
-        Self { map, v_v }
+        Self {
+            map,
+            v_v,
+            top_map,
+            top_v_v,
+            parent: None,
+        }
     }
-    pub fn with_default(mut self) -> Self {
-        let hgap = Variable::new();
-        self.map.insert("hgap".into(), hgap);
-        self.v_v.insert(hgap, 10.0);
+    // pub fn with_default(mut self) -> Self {
+    //     self.insert("hgap".into(), 10.0);
+    //     self.insert("vgap".into(), 10.0);
 
-        let vgap = Variable::new();
-        self.map.insert("vgap".into(), vgap);
-        self.v_v.insert(vgap, 10.0);
+    //     self
+    // }
+    pub fn with_default_not_overwrite(mut self) -> Self {
+        self.insert_not_overwrite("hgap".into(), 10.0);
+        self.insert_not_overwrite("vgap".into(), 10.0);
 
         self
     }
 }
 
-impl std::ops::Add for CassowaryGeneralMap {
-    type Output = Self;
-    fn add(self, other: Self) -> Self {
-        Self {
-            map: other.map.union(self.map),
-            v_v: other.v_v.union(self.v_v),
+impl std::ops::Add<CassowaryGeneralMap> for Rc<CassowaryGeneralMap> {
+    type Output = CassowaryGeneralMap;
+    fn add(self, other: CassowaryGeneralMap) -> CassowaryGeneralMap {
+        CassowaryGeneralMap {
+            map: other.map.union(self.map.clone()),
+            v_v: other.v_v.union(self.v_v.clone()),
+            top_map: self.top_map.clone().union(other.top_map.clone()),
+            top_v_v: self.top_v_v.clone().union(other.top_v_v.clone()),
+            parent: Some(self),
         }
     }
 }

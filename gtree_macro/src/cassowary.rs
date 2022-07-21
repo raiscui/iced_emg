@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-07-13 14:52:12
+ * @LastEditTime: 2022-07-21 11:29:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -79,7 +79,7 @@ mod kw_strength {
 }
 mod kw_opt {
     // use std::fmt::Debug;
-    #![warn(clippy::expl_impl_clone_on_copy)]
+    // #![warn(clippy::expl_impl_clone_on_copy)]
 
     syn::custom_keyword!(chain);
     syn::custom_keyword!(gap);
@@ -478,7 +478,12 @@ impl Parse for ScopeViewVariable {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let scope = input.parse();
         let fork = input.fork();
-        assert!(fork.parse::<Scope>().is_err(), "scope duplicated ");
+
+        // assert!(fork.parse::<Scope>().is_err(), "scope duplicated ");
+
+        if let Ok(scope2) = fork.parse::<Scope>() {
+            return Err(syn::Error::new(scope2.span(), "scope duplicated "));
+        }
 
         let view = input.parse();
         let variable = input.parse();
@@ -813,19 +818,19 @@ enum PredEq {
 impl ToTokens for PredEq {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
-            PredEq::Eq(x) => {
+            Self::Eq(x) => {
                 quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Eq).to_tokens(tokens);
             }
-            PredEq::Lt(x) => {
+            Self::Lt(x) => {
                 quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Lt).to_tokens(tokens);
             }
-            PredEq::Le(x) => {
+            Self::Le(x) => {
                 quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Le).to_tokens(tokens);
             }
-            PredEq::Ge(x) => {
+            Self::Ge(x) => {
                 quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Ge).to_tokens(tokens);
             }
-            PredEq::Gt(x) => {
+            Self::Gt(x) => {
                 quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Gt).to_tokens(tokens);
             }
         }
@@ -977,7 +982,7 @@ impl Parse for Scope {
             }
             return Ok(Self::Parent(n, span));
         }
-        return Err(syn::Error::new(input.span(), "expected `&` or `^` or `$`"));
+        Err(syn::Error::new(input.span(), "expected `&` or `^` or `$`"))
 
         // input.parse::<Token![$]>()?;
         // Ok(Self::Global)
@@ -988,14 +993,14 @@ impl ToTokens for Scope {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Self::Local(span) => {
-                quote_spanned!(*span=> emg_layout::ccsa::Scope::Local).to_tokens(tokens)
+                quote_spanned!(*span=> emg_layout::ccsa::Scope::Local).to_tokens(tokens);
             }
 
             Self::Parent(n, span) => {
-                quote_spanned!(*span=> emg_layout::ccsa::Scope::Parent(#n)).to_tokens(tokens)
+                quote_spanned!(*span=> emg_layout::ccsa::Scope::Parent(#n)).to_tokens(tokens);
             }
             Self::Global(span) => {
-                quote_spanned!(*span=> emg_layout::ccsa::Scope::Global).to_tokens(tokens)
+                quote_spanned!(*span=> emg_layout::ccsa::Scope::Global).to_tokens(tokens);
             }
         }
     }
@@ -1176,7 +1181,7 @@ impl ViewProcessedScopeViewVariable {
 // }
 
 #[derive(Debug, Clone, Display)]
-#[display("{op} {var}")]
+#[display(" {op} {var}")]
 struct CCSSOpSvv {
     op: PredOp,
     var: ScopeViewVariable,
@@ -1223,7 +1228,7 @@ impl std::fmt::Display for CCSSSvvOpSvvExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.svv)?;
         for op in &self.op_exprs {
-            write!(f, " {}", op)?;
+            write!(f, "{}", op)?;
         }
         Ok(())
     }
@@ -2094,8 +2099,29 @@ impl Parse for VFLStatement {
 }
 
 #[derive(Debug)]
+pub struct GeneralVar(LitStr, ScopeViewVariable);
+impl ToTokens for GeneralVar {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self(name, svv) = self;
+        quote_spanned!(name.span()=>emg_layout::ccsa::GeneralVar(emg_core::IdStr::new(#name),#svv))
+            .to_tokens(tokens);
+    }
+}
+
+impl Parse for GeneralVar {
+    #[instrument(name = "GeneralVar")]
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let name: LitStr = input.parse()?;
+        input.parse::<Token![==]>()?;
+        let scope_view_variable = input.parse()?;
+        Ok(GeneralVar(name, scope_view_variable))
+    }
+}
+
+#[derive(Debug)]
 pub enum Cassowary {
     Vfl(Box<VFLStatement>),
+    GeneralVars(Punctuated<GeneralVar, Token![,]>),
     CCss,
 }
 impl ToTokens for Cassowary {
@@ -2103,6 +2129,10 @@ impl ToTokens for Cassowary {
         match self {
             Self::Vfl(vfl) => {
                 quote_spanned!(vfl.span()=> #vfl).to_tokens(tokens);
+            }
+            Self::GeneralVars(gvs) => {
+                let gvs_iter = gvs.iter();
+                quote_spanned!(gvs.span()=>vec![ #(#gvs_iter),* ]).to_tokens(tokens);
             }
             Self::CCss => todo!(),
         }
@@ -2117,7 +2147,12 @@ impl Parse for Cassowary {
         debug!(" in Cassowary find braced \n content-> {:?}", &content);
         // let ident_h = Ident::new("@h", Span::call_site());
 
-        if content.peek(Token![@]) {
+        if content.peek(LitStr) && content.peek2(Token![==]) {
+            let content: Punctuated<GeneralVar, Token![,]> =
+                content.parse_terminated(GeneralVar::parse)?;
+
+            Ok(Self::GeneralVars(content))
+        } else if content.peek(Token![@]) {
             debug!(" find @ , is VFL");
             Ok(Self::Vfl(content.parse()?))
         } else {
@@ -2127,27 +2162,18 @@ impl Parse for Cassowary {
         }
     }
 }
-pub struct CCSSSDisp(pub Vec<CCSS>);
-impl std::fmt::Display for CCSSSDisp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "CCSSS [")?;
-        for ccss in &self.0 {
-            writeln!(f, "{},", ccss)?;
-        }
-        writeln!(f, "]")
-    }
-}
 
 #[cfg(test)]
 mod tests {
 
     use std::path::Path;
 
+    use emg_core::{VecDisp, VectorDisp};
     use quote::ToTokens;
     use tracing::debug;
 
     use crate::{
-        cassowary::{CCSSSDisp, NameChars, VFLStatement},
+        cassowary::{NameChars, VFLStatement},
         Gtree,
     };
     use tracing_subscriber::{prelude::*, registry::Registry};
@@ -2195,7 +2221,7 @@ mod tests {
                     // ok.build();
                     println!("=================== build \n {:#?}\n", ok.ccsss);
                     // insta::assert_debug_snapshot!(name.to_string()+"_ccss", &ok.ccsss);
-                    let disp = CCSSSDisp(ok.ccsss);
+                    let disp = VecDisp(ok.ccsss);
                     println!("=================== build---display \n {}\n", &disp);
 
                     insta::assert_display_snapshot!(name.to_string()+"_ccss_display", disp);

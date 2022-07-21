@@ -2,7 +2,7 @@
 source: gtree_macro/src/cassowary.rs
 expression: disp
 ---
-CCSSS [
+[
 #b1[right]  ==  #b2[left],
 #b2[right]  ==  #b3[left],
 #b1[width]  ==  [colwidth] ==  #b2[width] ==  [colwidth] ==  #b3[width] !strong,

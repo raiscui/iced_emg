@@ -1,6 +1,6 @@
 ---
-source: gtree_macro/src/cassowary.rs
-expression: disp
+source: gtree_macro/tests/test_ccss.rs
+expression: "&disp"
 ---
 [
 #b1[bottom] + [vgap]  ==  #b2[top] !weak,

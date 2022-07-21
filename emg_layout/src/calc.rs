@@ -4,7 +4,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-19 12:59:31
+ * @LastEditTime: 2022-07-20 22:39:28
  * @LastEditors: Rais
 * @Description:
 */
@@ -124,7 +124,7 @@ where
                 });
 
             let current_cassowary_inherited_generals_sa = (&p_calculated.cassowary_inherited_generals_sa,&current_cassowary_generals_sa).map(|p_cass_inherited_generals,self_generals|{
-                   let f = (**p_cass_inherited_generals).clone() + self_generals.clone();
+                   let f = p_cass_inherited_generals.clone() + self_generals.clone();
                    Rc::new(f)
                 });
             
@@ -206,6 +206,7 @@ where
             let cass_trans:StateAnchor<Translation3<f64>>  =  (&width,&height,&top,&left,&bottom,&right).map(move|w:&f64,h:&f64,opt_t:&Option<f64>,opt_l:&Option<f64>,opt_b: &Option<f64>,opt_r: &Option<f64>,|{
                 let _span = warn_span!("cass_trans calculting map").entered();
                 warn!("[cass_trans] t:{:?} l:{:?} b:{:?} r:{:?}",opt_t,opt_l,opt_b,opt_r);
+                const CHECK:bool = false;
                 match (opt_t,opt_l,opt_b,opt_r) {
                     (None, None, None, None) => {
                         Translation3::<f64>::new(0.,0.,0.0)
@@ -228,7 +229,7 @@ where
 
                     },
                     (None, Some(l), None, Some(r)) => {
-                        assert_approx_eq!(f64,r-l,*w,(0.1,2));
+                        if CHECK {assert_approx_eq!(f64,r-l,*w,(0.1,2));}
                         Translation3::<f64>::new(*l,0.,0.0)
 
                     },
@@ -236,7 +237,7 @@ where
                         Translation3::<f64>::new(*l,b-h,0.0)
                     },
                     (None, Some(l), Some(b), Some(r)) => {
-                        assert_approx_eq!(f64,r-l,*w,(0.1,2));
+                        if CHECK {assert_approx_eq!(f64,r-l,*w,(0.1,2));}
                         Translation3::<f64>::new(*l,b-h,0.0)
                     },
                     (Some(t), None, None, None) => {
@@ -247,11 +248,11 @@ where
                         Translation3::<f64>::new(r-w,*t,0.0)
                     },
                     (Some(t), None, Some(b), None) => {
-                        assert_approx_eq!(f64,b-t,*h,(0.1,2));
+                        if CHECK {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
                         Translation3::<f64>::new(0.0,*t,0.0)
                     },
                     (Some(t), None, Some(b), Some(r)) => {
-                        assert_approx_eq!(f64,b-t,*h,(0.1,2));
+                        if CHECK {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
                         Translation3::<f64>::new(r-w,*t,0.0)
                         
 
@@ -263,13 +264,13 @@ where
                     (Some(t), Some(l), None, Some(r)) => {
                         warn!("t:{} l:{} r:{}",t,l,r);
                            //TODO remove this if release
-                           assert_approx_eq!(f64,r-l,*w,(0.1,2));
+                           if CHECK {assert_approx_eq!(f64,r-l,*w,(0.1,2));}
                            Translation3::<f64>::new(*l,*t,0.0)
    
                     },
                     (Some(t), Some(l), Some(b), None) => {
                            //TODO remove this if release
-                           assert_approx_eq!(f64,b-t,*h,(0.1,2));
+                           if CHECK {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
                            Translation3::<f64>::new(*l,*t,0.0)
                     },
                     (Some(t), Some(l), Some(b), Some(r)) => {
