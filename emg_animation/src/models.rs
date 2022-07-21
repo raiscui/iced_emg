@@ -871,7 +871,7 @@ pub fn update_animation_og<Message: std::clone::Clone + std::fmt::Debug>(
 // resolveSteps : List Property -> List (Step msg) -> Time.Posix -> ( List Property, List msg, List (Step msg) )
 
 // resolveSteps : List Property -> List (Step msg) -> Time.Posix -> ( List Property, List msg, List (Step msg) )
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MsgBackIsNew<Message>(SmallVec<[Message; 1]>);
 
 impl<Message> Default for MsgBackIsNew<Message> {

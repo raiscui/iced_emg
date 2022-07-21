@@ -11,7 +11,7 @@ use crate::ccsa::CassowaryMap;
 /*
  * @Author: Rais
  * @Date: 2022-07-15 14:46:40
- * @LastEditTime: 2022-07-15 15:16:53
+ * @LastEditTime: 2022-07-21 17:34:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -57,6 +57,7 @@ pub fn cassowary_calculation(
     w: &GenericSize,
 ) -> Expression {
     match w {
+        GenericSize::None => unreachable!("should used [is_none()] before call this function"),
         GenericSize::Length(logic_l) => {
             cassowary_calculation_logiclength(prop, p_cass_map, logic_l)
         }

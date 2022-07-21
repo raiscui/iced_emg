@@ -4,7 +4,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-21 13:21:15
+ * @LastEditTime: 2022-07-21 17:31:04
  * @LastEditors: Rais
 * @Description:
 */
@@ -90,17 +90,17 @@ where
 
 
                     
-                    if let Ok(ww)   = w.try_get_length_value() &&  approx_eq!(f64,ww,0.0,(0.1,2)){
-                            size_constraints.push(  width_var  | WeightedRelation::EQ(cassowary::strength::WEAK) | 0.0);
+                    // if let Ok(ww)   = w.try_get_length_value() &&  approx_eq!(f64,ww,0.0,(0.1,2)){
+                    if ! w.is_none() {
                             
-                    }else{
+                        
                         size_constraints.push(width_var  | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("width", &p_cassowary_map2, w));
 
                     }
-                    if let Ok(hh)  = h.try_get_length_value() && approx_eq!(f64,hh,0.0,(0.1,2)){
-                            size_constraints.push(  height_var  | WeightedRelation::EQ(cassowary::strength::WEAK) | 0.0);
+                    // if let Ok(hh)  = h.try_get_length_value() && approx_eq!(f64,hh,0.0,(0.1,2)){
+                    if ! h.is_none(){
+                            // size_constraints.push(  height_var  | WeightedRelation::EQ(cassowary::strength::WEAK) | 0.0);
                             
-                    }else{
                         size_constraints.push(height_var | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("height",&p_cassowary_map2, h) );
                     }
 
@@ -109,8 +109,8 @@ where
                     
                     size_constraints.extend([
                         
-                        right_var - left_var| WeightedRelation::EQ(cassowary::strength::REQUIRED) | width_var,
-                        bottom_var - top_var| WeightedRelation::EQ(cassowary::strength::REQUIRED) | height_var,
+                        (right_var - left_var) | WeightedRelation::EQ(cassowary::strength::REQUIRED) | width_var,
+                        (bottom_var - top_var) | WeightedRelation::EQ(cassowary::strength::REQUIRED) | height_var,
 
                         bottom_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | top_var,
                         right_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | left_var,
@@ -128,8 +128,7 @@ where
                    let f = p_cass_inherited_generals.clone() + self_generals.clone() + current_cassowary_map2.clone();
                    Rc::new(f)
                 });
-            
-
+    
             let calculated_size = (p_calc_size_sa, &w,&h).then(
                 move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor,sa_h:&GenericSizeAnchor| {
                    let p_calc_size = *p_calc_size;   
@@ -158,19 +157,12 @@ where
                 // warn!("p_vars: {:?},  \n get :{:?}",&p_vars,&width_var);
                 // • • • • •
                 //NOTE 如果 是 root下面的第一阶层节点,如果没定义cassowary constraint 或者定义少量、不涉及某些 Id element, p_calculated_vars 很可能是无 or 不全面的,
-                if let Some(w) = p_vars.get(&width_var).map(|(val,_)| **val){
-                    Anchor::constant(w)
-                }else{
-                    calculated_width.get_anchor()
-                }
+                p_vars.get(&width_var).map(|(val,_)| **val).map_or_else(|| calculated_width.get_anchor(), Anchor::constant)
+                
             });
             let height = p_calculated_vars.then(move|p_vars|{
 
-                if let Some(h) = p_vars.get(&height_var).map(|(val,_)| **val){
-                    Anchor::constant(h)
-                 }else{
-                    calculated_height.get_anchor()
-                }
+                p_vars.get(&height_var).map(|(val,_)| **val).map_or_else(|| calculated_height.get_anchor(),  Anchor::constant)
 
             });
             let top = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
@@ -207,7 +199,7 @@ where
             let cass_trans:StateAnchor<Translation3<f64>>  =  (&width,&height,&top,&left,&bottom,&right).map(move|w:&f64,h:&f64,opt_t:&Option<f64>,opt_l:&Option<f64>,opt_b: &Option<f64>,opt_r: &Option<f64>,|{
                 let _span = warn_span!("cass_trans calculting map").entered();
                 warn!("[cass_trans] t:{:?} l:{:?} b:{:?} r:{:?}",opt_t,opt_l,opt_b,opt_r);
-                const CHECK:bool = false;
+                let check:bool = false;
                 match (opt_t,opt_l,opt_b,opt_r) {
                     (None, None, None, None) => {
                         Translation3::<f64>::new(0.,0.,0.0)
@@ -230,7 +222,7 @@ where
 
                     },
                     (None, Some(l), None, Some(r)) => {
-                        if CHECK {assert_approx_eq!(f64,r-l,*w,(0.1,2));}
+                        if check {assert_approx_eq!(f64,r-l,*w,(0.1,2));}
                         Translation3::<f64>::new(*l,0.,0.0)
 
                     },
@@ -238,7 +230,7 @@ where
                         Translation3::<f64>::new(*l,b-h,0.0)
                     },
                     (None, Some(l), Some(b), Some(r)) => {
-                        if CHECK {assert_approx_eq!(f64,r-l,*w,(0.1,2));}
+                        if check {assert_approx_eq!(f64,r-l,*w,(0.1,2));}
                         Translation3::<f64>::new(*l,b-h,0.0)
                     },
                     (Some(t), None, None, None) => {
@@ -249,11 +241,11 @@ where
                         Translation3::<f64>::new(r-w,*t,0.0)
                     },
                     (Some(t), None, Some(b), None) => {
-                        if CHECK {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
+                        if check {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
                         Translation3::<f64>::new(0.0,*t,0.0)
                     },
                     (Some(t), None, Some(b), Some(r)) => {
-                        if CHECK {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
+                        if check {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
                         Translation3::<f64>::new(r-w,*t,0.0)
                         
 
@@ -265,13 +257,13 @@ where
                     (Some(t), Some(l), None, Some(r)) => {
                         warn!("t:{} l:{} r:{}",t,l,r);
                            //TODO remove this if release
-                           if CHECK {assert_approx_eq!(f64,r-l,*w,(0.1,2));}
+                           if check {assert_approx_eq!(f64,r-l,*w,(0.1,2));}
                            Translation3::<f64>::new(*l,*t,0.0)
    
                     },
                     (Some(t), Some(l), Some(b), None) => {
                            //TODO remove this if release
-                           if CHECK {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
+                           if check {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
                            Translation3::<f64>::new(*l,*t,0.0)
                     },
                     (Some(t), Some(l), Some(b), Some(r)) => {
@@ -505,6 +497,11 @@ fn calculation_h_logiclength(p_calc_size: &Vector2<f64>, l:&LogicLength)->f64 {
 fn calculation_w(p_calc_size: &Vector2<f64>, w: &GenericSize) -> f64 {
     trace!("calculation_w");
     match w {
+        GenericSize::None=> {
+            
+            0.0
+        },
+
         GenericSize::Length(logic_l) => {
             
             calculation_w_logiclength(p_calc_size,logic_l)
@@ -550,7 +547,10 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
     trace!("calculation_h");
     
     match h {
-
+        GenericSize::None=> {
+            
+            0.0
+        },
         GenericSize::Length(logic_l) => {
             calculation_h_logiclength(p_calc_size,logic_l)
 
@@ -658,6 +658,10 @@ fn calculation_align_x(p_calc_size: &Vector2<f64>, p_calc_origin:&Translation3<f
     trace!("calculation_align");
 
      match align_x {
+        GenericSize::None=> {
+            
+            Translation3::<f64>::default()
+        },
         GenericSize::Length(logic_l) => {
             calculation_align_x_logiclength(p_calc_size,logic_l)
         },
@@ -699,6 +703,10 @@ fn calculation_align_y(p_calc_size: &Vector2<f64>, p_calc_origin:&Translation3<f
 
     
     match align_y {
+        GenericSize::None=> {
+            
+            Translation3::<f64>::default()
+        },
         GenericSize::Length(logic_l) => {
             calculation_align_y_logiclength(p_calc_size, logic_l)
         },
@@ -802,6 +810,10 @@ pub fn calculation_origin_x(p_calc_size: &Vector2<f64>, p_calc_origin:&Translati
     trace!("calculation_origin");
 
      match origin_x {
+        GenericSize::None=> {
+            
+            Translation3::<f64>::default()
+        },
         GenericSize::Length(logic_l) => {
             calculation_origin_x_logiclength(calc_size, logic_l)
         },
@@ -838,6 +850,11 @@ pub fn calculation_origin_y(p_calc_size: &Vector2<f64>, p_calc_origin:&Translati
 
     
      match origin_y {
+        GenericSize::None=> {
+            
+            Translation3::<f64>::default()
+        },
+
         GenericSize::Length(logic_l) => {
             calculation_origin_y_logiclength(calc_size, logic_l)
 

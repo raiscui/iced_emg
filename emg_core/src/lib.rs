@@ -131,7 +131,7 @@ where
 // }
 
 //TODO 创建 (css name, GenericSize) 类型
-#[derive(Display, Clone, Debug, From, PartialEq, PartialOrd, Eq)]
+#[derive(Display, Default, Clone, Debug, From, PartialEq, PartialOrd, Eq)]
 #[display(fmt = "{}")]
 pub enum GenericSize {
     #[display(fmt = "auto")]
@@ -151,6 +151,14 @@ pub enum GenericSize {
     // #[display(fmt = "{}", _0)]
     Calculation(Box<CalcOp<GenericSize>>),
     Parent(TypeName),
+    #[default]
+    None,
+}
+
+impl GenericSize {
+    pub fn zero() -> Self {
+        Self::Length(px(0))
+    }
 }
 
 pub fn parent_ty<T>() -> GenericSize
@@ -163,13 +171,13 @@ pub fn parent_str(type_name: &str) -> GenericSize {
     GenericSize::Parent(TypeName::from(type_name))
 }
 
-impl Default for GenericSize {
-    fn default() -> Self {
-        Self::Length(px(0))
-        //TODO init val
-        // Self::Initial
-    }
-}
+// impl Default for GenericSize {
+//     fn default() -> Self {
+//         Self::Length(px(0))
+//         //TODO init val
+//         // Self::Initial
+//     }
+// }
 
 impl From<f64> for GenericSize {
     fn from(v: f64) -> Self {
@@ -228,6 +236,14 @@ impl GenericSize {
         } else {
             None
         }
+    }
+
+    /// Returns `true` if the generic size is [`None`].
+    ///
+    /// [`None`]: GenericSize::None
+    #[must_use]
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None)
     }
 }
 

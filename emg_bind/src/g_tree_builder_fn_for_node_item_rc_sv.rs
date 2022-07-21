@@ -92,29 +92,7 @@ where
 {
     type Ix = IdStr;
 
-    #[topo::nested]
-    #[instrument(skip(self))]
-    fn setup_wh_edge_in_topo<T: Into<f64> + std::fmt::Debug>(
-        &self,
-        ei: EdgeIndex<Self::Ix>,
-        w: T,
-        h: T,
-    ) -> Result<EmgEdgeItem<Self::Ix>, String> {
-        let mut g = self.borrow_mut();
-        g.nodes_connect_eix(&ei).ok_or("node insert eix fails")?;
-        let source = use_state(ei.source_nix().clone());
-        let target = use_state(ei.target_nix().clone());
-        let edge_item = EmgEdgeItem::default_with_wh_in_topo(
-            source.watch(),
-            target.watch(),
-            self.borrow().get_raw_edges_watch(),
-            w,
-            h,
-        );
-        g.just_insert_edge(ei, Edge::new(source, target, edge_item.clone()));
-
-        Ok(edge_item)
-    }
+    
 
     #[topo::nested]
     #[instrument(skip(self, size, origin, align))]

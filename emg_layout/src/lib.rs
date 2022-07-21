@@ -62,7 +62,6 @@ pub use animation::AnimationE;
 use crate::ccsa::svv_process::{svv_op_svvs_to_expr, eq_opt_sw_to_weighted_relation};
 
 
-pub mod old;
 pub mod ccsa;
 
 
@@ -253,20 +252,20 @@ pub struct Layout
 
 impl Layout
 {
-    fn get(&self,prop:&str)->StateVar<GenericSizeAnchor>{
-        match prop {
-            "width" => self.w.clone(),
-            "height" => self.h.clone(),
-            "origin_x" => self.origin_x.clone(),
-            "origin_y" => self.origin_y.clone(),
-            "origin_z" => self.origin_z.clone(),
-            "align_x" => self.align_x.clone(),
-            "align_y" => self.align_y.clone(),
-            "align_z" => self.align_z.clone(),
-            _ => panic!("unknown prop {}",prop),
-        }
+    // fn get(&self,prop:&str)->StateVar<GenericSizeAnchor>{
+    //     match prop {
+    //         "width" => self.w.clone(),
+    //         "height" => self.h.clone(),
+    //         "origin_x" => self.origin_x.clone(),
+    //         "origin_y" => self.origin_y.clone(),
+    //         "origin_z" => self.origin_z.clone(),
+    //         "align_x" => self.align_x.clone(),
+    //         "align_y" => self.align_y.clone(),
+    //         "align_z" => self.align_z.clone(),
+    //         _ => panic!("unknown prop {}",prop),
+    //     }
 
-    }
+    // }
     /// Set the layout's size.
     #[cfg(test)]
     fn set_size(&self,

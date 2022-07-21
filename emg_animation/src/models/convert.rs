@@ -11,7 +11,7 @@ use super::{Motion, Property};
 /*
  * @Author: Rais
  * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2022-05-18 16:59:53
+ * @LastEditTime: 2022-07-21 17:07:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -62,6 +62,7 @@ impl From<(TypeName, GenericSize)> for PropertyOG {
             GenericSize::StringValue(_) => todo!(),
             GenericSize::Calculation(_) => todo!(),
             GenericSize::Parent(_) => todo!(),
+            GenericSize::None => todo!(),
         }
     }
 }
@@ -75,6 +76,7 @@ impl From<(TypeName, GenericSize)> for Property {
             GenericSize::StringValue(_) => todo!(),
             GenericSize::Calculation(_) => todo!(),
             GenericSize::Parent(_) => todo!(),
+            GenericSize::None => todo!(),
         }
     }
 }
