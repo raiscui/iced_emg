@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-21 10:50:01
- * @LastEditTime: 2022-07-25 10:51:41
+ * @LastEditTime: 2022-07-25 11:02:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -43,18 +43,20 @@ pub(crate) fn eq_opt_sw_to_weighted_relation(
     }
 }
 
-#[instrument(skip(children_cass_maps))]
-pub(crate) fn svv_op_svvs_to_expr<Ix>(
-    svv_op_svvs: &CCSSSvvOpSvvExpr,
-    children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
-    current_cassowary_inherited_generals: &Rc<CassowaryGeneralMap>,
-) -> (
+type SvvOpSvvsToExpr = (
     OrdSet<Constraint>,
     Option<(
         Expression,
         HashSet<Variable, BuildHasherDefault<CustomHasher>>,
     )>,
-)
+);
+
+#[instrument(skip(children_cass_maps))]
+pub(crate) fn svv_op_svvs_to_expr<Ix>(
+    svv_op_svvs: &CCSSSvvOpSvvExpr,
+    children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
+    current_cassowary_inherited_generals: &Rc<CassowaryGeneralMap>,
+) -> SvvOpSvvsToExpr
 where
     Ix: std::fmt::Debug
         + Clone
@@ -319,9 +321,8 @@ fn scope_parent_val(
                     }
     warn!("[svv_to_var] [parent] end, {}: {}", lv, n);
 
-    if let Some(v) = opt_p.as_ref().and_then(|p| p.var(prop)) {
-        Some(Left(v))
-    } else {
-        panic!("parent {}:{} can't get prop:{}", lv, n, prop)
-    }
+    opt_p.as_ref().and_then(|p| p.var(prop)).map_or_else(
+        || panic!("parent {}:{} can't get prop:{}", lv, n, prop),
+        |v| Some(Left(v)),
+    )
 }
