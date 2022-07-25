@@ -20,10 +20,8 @@
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
 use std::{cell::RefCell, clone::Clone, cmp::{Eq, Ord}, hash::{BuildHasherDefault, Hash}, rc::Rc, time::Duration};
-use Either::{Left, Right};
-use cassowary::{Variable, Constraint, Expression, WeightedRelation, Solver};
-use ccsa::{CassowaryMap, CCSS, CCSSEqExpression, CCSSSvvOpSvvExpr, NameChars, ScopeViewVariable, CCSSOpSvv, PredOp, PredEq, StrengthAndWeight, CassowaryGeneralMap};
-use either::Either;
+use cassowary::{Variable, Constraint, WeightedRelation, Solver};
+use ccsa::{CassowaryMap, CCSS, CCSSEqExpression, ScopeViewVariable, CassowaryGeneralMap};
 use emg_hasher::CustomHasher;
 
 use calc::layout_calculating;
@@ -948,45 +946,47 @@ where
 
                     
                     //TODO 不要每一次变更 ccss_list ,都全部重新计算 
+                    //NOTE  [children_vars_sa] used for in child calc ,checkking if not has ,then the [var] is code added, not use add.
                     let (constant_sets_sa,children_vars_sa) = (&ccss_list_sa,&children_cass_maps_sa,&layout_calculated.cassowary_inherited_generals_sa).map(move | ccss_list,children_cass_maps,current_cassowary_inherited_generals|{
 
                             let _debug_span_ = warn_span!( "->[ constant_sets_sa calc then ] ").entered();
 
                             warn!("[constant_sets_sa] ccss_list:\n{}", VectorDisp(ccss_list.clone()));
 
-                            let (constant_sets,children_vars) = ccss_list.iter()
+                            let (constraint_sets_end,children_vars) = ccss_list.iter()
                             .fold((OrdSet::<Constraint>::new(), HashSet::<Variable, BuildHasherDefault<CustomHasher>>::with_hasher(BuildHasherDefault::<CustomHasher>::default())), 
                             |(  constraint_sets,mut children_vars0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
 
-                                if let Some((left_expr,left_child_vars)) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps,current_cassowary_inherited_generals){
+                                if let (left_constraints,Some((left_expr,left_child_vars))) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps,current_cassowary_inherited_generals){
                                     
                                     children_vars0 = children_vars0.union(left_child_vars);
+                                    
 
-                                    let (constants,_,children_vars2) = eq_exprs.into_iter().fold((constraint_sets,left_expr,children_vars0), |(mut constraints,left_expr,children_vars1),CCSSEqExpression{ eq, expr }|{
+                                    let (constraints2,_,children_vars2) = eq_exprs.iter().fold((constraint_sets.union(left_constraints),left_expr,children_vars0), |(mut constraints1,left_expr,children_vars1),CCSSEqExpression{ eq, expr }|{
 
 
-                                        if let Some((right_expr,right_child_vars)) = svv_op_svvs_to_expr(expr,children_cass_maps,current_cassowary_inherited_generals){
+                                        if let (right_constraints, Some((right_expr,right_child_vars))) = svv_op_svvs_to_expr(expr,children_cass_maps,current_cassowary_inherited_generals){
 
-                                            let constraint = left_expr | eq_opt_sw_to_weighted_relation(eq,opt_sw)| right_expr.clone();
+                                            let constraint = left_expr | eq_opt_sw_to_weighted_relation(*eq,opt_sw)| right_expr.clone();
 
-                                            constraints.insert(constraint);
+                                            constraints1.insert(constraint);
 
-                                            (constraints,right_expr,children_vars1.union(right_child_vars))
+                                            (constraints1.union(right_constraints),right_expr,children_vars1.union(right_child_vars))
 
                                         }else{
 
-                                            (constraints,left_expr,children_vars1)
+                                            (constraints1,left_expr,children_vars1)
 
                                         }
 
                                     });
-                                    (constants,children_vars2)
+                                    (constraints2,children_vars2)
                                 }else{
                                     (constraint_sets,children_vars0)
                                 }
 
                             });
-                            warn!("[constant_sets_sa] \n {} \n constant_sets:\n{:#?}", &self_path7,&constant_sets);
+                            warn!("[constant_sets_sa] \n {} \n constant_sets:\n{:#?}", &self_path7,&constraint_sets_end);
 
 
                             // constraints_sa.into_iter().collect::<Anchor<Vector<Vec<Constraint>>>>()
@@ -996,7 +996,7 @@ where
                             //     (x,children_vars.clone())
                             // })
 
-                            (constant_sets,children_vars)
+                            (constraint_sets_end,children_vars)
 
 
                             
@@ -1063,7 +1063,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
             // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("right").unwrap(),
             // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("bottom").unwrap(),
          
-        ])
+        ]);
         
         
     }
@@ -1081,6 +1081,9 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                     let mut last_observation_children_for_current_constants :OrdSet<Constraint>  =  OrdSet::new();
                     let mut last_current_cassowary_inherited_general_vals: Dict<Variable, f64> = Dict::new();
                     let mut last_current_cassowary_top_general_vals: Dict<Variable, f64> = Dict::new();
+                    // let mut last_virtual_constraints: Dict<IdStr, [Constraint; 10]> = Dict::new();
+                    // let mut last_top_virtual_constraints: Dict<IdStr, [Constraint; 10]> = Dict::new();
+
                     let current_cassowary_map2 = current_cassowary_map.clone();
                     let mut cass_solver = Solver::new();
                  
@@ -1109,7 +1112,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                             let mut children_for_current_constants_did_update = false;
 
 
-                            if children_for_current_addition_constants.len() == 0 && last_observation_children_for_current_constants.len() != 0{
+                            if children_for_current_addition_constants.is_empty() && !last_observation_children_for_current_constants.is_empty(){
                                 for constant in last_observation_children_for_current_constants.iter(){
                                     cass_solver.remove_constraint(constant).unwrap();
 
@@ -1141,7 +1144,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
                             let mut constants_did_update = false;
 
-                            if newest_constants.len() == 0 && last_observation_constants.len() != 0 {
+                            if newest_constants.is_empty() && !last_observation_constants.is_empty() {
                                 for constant in last_observation_constants.iter() {
                                     cass_solver.remove_constraint(constant).unwrap();
                                 }
@@ -1290,7 +1293,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                             if constants_did_update || prop_vals_did_update || general_inherited_vals_did_update || general_top_vals_did_update || children_for_current_constants_did_update{
                                 let changes = cass_solver.fetch_changes();
                                 // warn!("cass solver change:{:#?}",&changes);
-                                if changes.len() > 0 {
+                                if !changes.is_empty() {
                                     *out =  changes.into();
                                     return true
                                 }
@@ -1310,12 +1313,12 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                             //TODO remove if release
                             for (var,v) in changed_vars.iter() {
                                 let id_prop_str =   children_cass_maps.iter().find_map(|(id,(cassowary_map ,..))|{
-                                     cassowary_map.prop(&var).map(|prop|{
+                                     cassowary_map.prop(var).map(|prop|{
                                         let vv:IdStr = format!("{} |=> #{}[{}]",&self_path4, &id,&prop).into(); 
                                         vv
                                      })
                                 }).or_else(||{
-                                    current_cassowary_map3.prop(&var).map(|prop|{
+                                    current_cassowary_map3.prop(var).map(|prop|{
                                         let vv:IdStr = format!("{}[{}] ",&self_path4,&prop).into();
                                         vv
                                     })

@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-07-21 11:29:51
+ * @LastEditTime: 2022-07-24 23:02:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -201,6 +201,14 @@ impl NameChars {
     const fn is_number(&self) -> bool {
         matches!(self, Self::Number(..))
     }
+
+    /// Returns `true` if the name chars is [`Virtual`].
+    ///
+    /// [`Virtual`]: NameChars::Virtual
+    #[must_use]
+    pub fn is_virtual(&self) -> bool {
+        matches!(self, Self::Virtual(..))
+    }
 }
 
 impl Parse for NameChars {
@@ -276,7 +284,10 @@ impl ToTokens for NameChars {
                 quote_spanned!(x.span()=> emg_layout::ccsa::NameChars::Element(emg_core::IdStr::new(#str)))
                     .to_tokens(tokens);
             }
-            Self::Virtual(_) => todo!(),
+            Self::Virtual(x) => {
+                quote_spanned!(x.span()=> emg_layout::ccsa::NameChars::Virtual(emg_core::IdStr::new(#x)))
+                    .to_tokens(tokens);
+            }
             Self::Number(n) => match n {
                 Number::Int(int) => {
                     quote_spanned!(int.span()=> emg_layout::ccsa::NameChars::Number( NotNan::new(#int as f64).unwrap() ))
@@ -287,9 +298,9 @@ impl ToTokens for NameChars {
                         .to_tokens(tokens);
                 }
             },
-            Self::Next(_) => todo!(),
-            Self::Last(_) => todo!(),
-            Self::First(_) => todo!(),
+            Self::Next(_) => todo!("Next"),
+            Self::Last(_) => todo!("Last"),
+            Self::First(_) => todo!("First"),
         }
     }
 }
@@ -399,6 +410,9 @@ impl std::fmt::Display for ScopeViewVariable {
 }
 
 impl ScopeViewVariable {
+    fn is_virtual(&self) -> bool {
+        self.view.as_ref().map_or(false, NameChars::is_virtual)
+    }
     #[must_use]
     fn into_next(self, var: Option<Ident>) -> Self {
         Self {
@@ -1134,7 +1148,7 @@ impl Parse for Point {
 #[derive(Debug, Clone)]
 enum ViewProcessedScopeViewVariable {
     Node(ScopeViewVariable),
-    Or,
+    VLine,
 }
 
 impl ViewProcessedScopeViewVariable {
@@ -1142,8 +1156,8 @@ impl ViewProcessedScopeViewVariable {
     ///
     /// [`Or`]: ViewProcessedNameChars::Or
     #[must_use]
-    const fn is_or(&self) -> bool {
-        matches!(self, Self::Or)
+    const fn is_v_line(&self) -> bool {
+        matches!(self, Self::VLine)
     }
 
     const fn as_node(&self) -> Option<&ScopeViewVariable> {
@@ -1154,6 +1168,7 @@ impl ViewProcessedScopeViewVariable {
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn try_into_node(self) -> Result<ScopeViewVariable, Self> {
         if let Self::Node(v) = self {
             Ok(v)
@@ -1321,7 +1336,7 @@ enum ViewObj {
     Point(Point),
 
     /// NOTE  "|"  
-    Or,
+    VLine,
 }
 
 impl ViewObj {
@@ -1348,15 +1363,15 @@ impl ViewObj {
                 pred: x.pred.clone(),
             },
             Self::Point(x) => ViewProcessed {
-                view: ViewProcessedScopeViewVariable::Or,
+                view: ViewProcessedScopeViewVariable::VLine,
                 is_splat: false,
                 is_point: true,
                 pos: Some(x.clone()),
                 connection: None,
                 pred: None,
             },
-            Self::Or => ViewProcessed {
-                view: ViewProcessedScopeViewVariable::Or,
+            Self::VLine => ViewProcessed {
+                view: ViewProcessedScopeViewVariable::VLine,
                 is_splat: false,
                 is_point: false,
                 pos: None,
@@ -1369,7 +1384,7 @@ impl ViewObj {
         match self {
             Self::Splat(splat) => selectors.push(splat.view_selector.view.clone()),
             Self::ViewSelector(vs) => selectors.push(vs.view.clone()),
-            Self::Point(_) | Self::Or => (),
+            Self::Point(_) | Self::VLine => (),
         }
     }
 }
@@ -1380,7 +1395,7 @@ impl std::fmt::Debug for ViewObj {
             Self::Splat(arg0) => f.debug_tuple("Splat").field(arg0).finish(),
             Self::ViewSelector(arg0) => f.debug_tuple("ViewSelector").field(arg0).finish(),
             Self::Point(arg0) => f.debug_tuple("Point").field(arg0).finish(),
-            Self::Or => write!(f, "|"),
+            Self::VLine => write!(f, "|"),
         }
     }
 }
@@ -1417,7 +1432,7 @@ impl Parse for ViewObj {
 
         input.parse::<Token![|]>()?;
         debug!("got |");
-        Ok(Self::Or)
+        Ok(Self::VLine)
     }
 }
 
@@ -1697,7 +1712,7 @@ fn get_left_var(
                 .map(|(op, var)| CCSSOpSvv::new(op, var))
                 .collect(),
         )
-    } else if view.is_or() {
+    } else if view.is_v_line() {
         (
             get_super_view_name(o).with_variable(super_left_var_names(d)),
             vec![],
@@ -1738,7 +1753,7 @@ fn get_right_var(
                 .map(|(op, var)| CCSSOpSvv::new(op, var))
                 .collect(),
         )
-    } else if view.is_or() {
+    } else if view.is_v_line() {
         (
             get_super_view_name(o).with_variable(super_right_var_names(d)),
             vec![],
@@ -1979,7 +1994,7 @@ impl VFLStatement {
         let mut head_view_obj = self.head.processe();
         self.add_splat_if_needed(&head_view_obj);
         let mut head_view = head_view_obj.view.clone();
-        if !head_view.is_or() {
+        if !head_view.is_v_line() {
             chained_views.push_back(head_view.clone());
         }
         self.add_preds(&head_view, head_view_obj.pred.as_ref());
@@ -1987,13 +2002,15 @@ impl VFLStatement {
         let sw = self.o.map.get("SW").and_then(OptionItem::as_sw).cloned();
         debug!("tail {:#?}", self.tails);
 
+        // let mut hold_right = None;
+
         for tail in self.tails.clone() {
             debug!("in tail {:#?}", tail);
             let connection = tail.opt_connection.clone();
             let tail_view_obj = tail.view_obj.processe();
             self.add_splat_if_needed(&tail_view_obj);
             let tail_view = tail_view_obj.view.clone();
-            if !tail_view.is_or() {
+            if !tail_view.is_v_line() {
                 chained_views.push_back(tail_view.clone());
             }
             self.add_preds(&tail_view, tail_view_obj.pred.as_ref());
@@ -2001,7 +2018,8 @@ impl VFLStatement {
             if !(head_view_obj.is_point && tail_view_obj.is_point) {
                 debug!("不全部是 point",);
                 //NOTE 不全部是 point
-                let with_container = (head_view.is_or() || tail_view.is_or())
+                //NOTE used for out-gap
+                let with_container = (head_view.is_v_line() || tail_view.is_v_line())
                     && !(head_view_obj.is_point || tail_view_obj.is_point); //NOTE 都不是
                                                                             // • • • • •
                 let (left_v, mut left_point_op_var) =
@@ -2018,6 +2036,11 @@ impl VFLStatement {
                     svv: left_v,
                     op_exprs: left_point_op_var,
                 };
+
+                // if right_v.is_virtual() {
+                //     hold_right = Some(right_v);
+                // }
+
                 let right_var_op_vars = CCSSSvvOpSvvExpr {
                     svv: right_v,
                     op_exprs: right_point_op_var,
@@ -2099,11 +2122,39 @@ impl Parse for VFLStatement {
 }
 
 #[derive(Debug)]
-pub struct GeneralVar(LitStr, ScopeViewVariable);
+pub struct Virtual(LitStr, Punctuated<GeneralVar, Token![,]>);
+impl ToTokens for Virtual {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Virtual(name, vars) = self;
+        let vars_iter = vars.iter();
+        quote_spanned!(name.span().join(vars.span()).unwrap()=>emg_layout::ccsa::Virtual(emg_core::IdStr::new(#name),vec![ #(#vars_iter),* ]))
+            .to_tokens(tokens);
+    }
+}
+impl Parse for Virtual {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let lit_str: LitStr = input.parse()?;
+        input.parse::<Token![:]>()?;
+
+        let content;
+
+        let _bracket_token = braced!(content in input);
+
+        let content: Punctuated<GeneralVar, Token![,]> =
+            content.parse_terminated(GeneralVar::parse)?;
+
+        Ok(Self(lit_str, content))
+    }
+}
+
+#[derive(Debug)]
+pub struct GeneralVar(Ident, ScopeViewVariable);
 impl ToTokens for GeneralVar {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let Self(name, svv) = self;
-        quote_spanned!(name.span()=>emg_layout::ccsa::GeneralVar(emg_core::IdStr::new(#name),#svv))
+        let GeneralVar(name, svv) = self;
+
+        let name_str = name.to_string();
+        quote_spanned!(name.span().join(svv.span()).unwrap()=>emg_layout::ccsa::GeneralVar(emg_core::IdStr::new(#name_str),#svv))
             .to_tokens(tokens);
     }
 }
@@ -2111,17 +2162,50 @@ impl ToTokens for GeneralVar {
 impl Parse for GeneralVar {
     #[instrument(name = "GeneralVar")]
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let name: LitStr = input.parse()?;
+        // let name: LitStr = input.parse()?;
+        let name = input.call(Ident::parse_any)?;
         input.parse::<Token![==]>()?;
         let scope_view_variable = input.parse()?;
-        Ok(GeneralVar(name, scope_view_variable))
+        Ok(Self(name, scope_view_variable))
+    }
+}
+#[derive(Debug)]
+pub enum DefineVar {
+    General(GeneralVar),
+    Virtual(Virtual),
+}
+impl ToTokens for DefineVar {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::General(general_var) => {
+                quote_spanned!(general_var.span()=> emg_layout::ccsa::CassowaryVar::General( #general_var ))
+                    .to_tokens(tokens);
+            }
+            Self::Virtual(virtual_) => {
+                quote_spanned!(virtual_.span()=> emg_layout::ccsa::CassowaryVar::Virtual( #virtual_ ))
+                .to_tokens(tokens);
+            }
+        }
+    }
+}
+impl Parse for DefineVar {
+    #[instrument(name = "CassowaryVar")]
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        if input.peek(LitStr) && input.peek2(Token![:]) {
+            return Ok(Self::Virtual(input.parse()?));
+        }
+        // else if content.peek(Ident::peek_any) && content.peek2(Token![==]) {
+        //     Ok(Self::General(input.parse()?))
+        // }
+
+        Ok(Self::General(input.parse()?))
     }
 }
 
 #[derive(Debug)]
 pub enum Cassowary {
     Vfl(Box<VFLStatement>),
-    GeneralVars(Punctuated<GeneralVar, Token![,]>),
+    CassowaryVars(Punctuated<DefineVar, Token![,]>),
     CCss,
 }
 impl ToTokens for Cassowary {
@@ -2130,9 +2214,9 @@ impl ToTokens for Cassowary {
             Self::Vfl(vfl) => {
                 quote_spanned!(vfl.span()=> #vfl).to_tokens(tokens);
             }
-            Self::GeneralVars(gvs) => {
-                let gvs_iter = gvs.iter();
-                quote_spanned!(gvs.span()=>vec![ #(#gvs_iter),* ]).to_tokens(tokens);
+            Self::CassowaryVars(vars) => {
+                let vars_iter = vars.iter();
+                quote_spanned!(vars.span()=>vec![ #(#vars_iter),* ]).to_tokens(tokens);
             }
             Self::CCss => todo!(),
         }
@@ -2147,18 +2231,16 @@ impl Parse for Cassowary {
         debug!(" in Cassowary find braced \n content-> {:?}", &content);
         // let ident_h = Ident::new("@h", Span::call_site());
 
-        if content.peek(LitStr) && content.peek2(Token![==]) {
-            let content: Punctuated<GeneralVar, Token![,]> =
-                content.parse_terminated(GeneralVar::parse)?;
-
-            Ok(Self::GeneralVars(content))
-        } else if content.peek(Token![@]) {
+        if content.peek(Token![@]) {
             debug!(" find @ , is VFL");
             Ok(Self::Vfl(content.parse()?))
         } else {
             debug!(" not VFL");
 
-            Ok(Self::CCss)
+            let content: Punctuated<DefineVar, Token![,]> =
+                content.parse_terminated(DefineVar::parse)?;
+
+            Ok(Self::CassowaryVars(content))
         }
     }
 }
@@ -2327,6 +2409,23 @@ mod tests {
             "#;
 
         token_test("virtuals", input);
+    }
+    #[test]
+    fn virtuals2() {
+        //TODO make it auto
+        let input = r#" 
+        @h (#b1)-("vv"(==#b2[left]-#b1[right]-[hgap]))-(#b2)
+            "#;
+
+        token_test("virtuals2", input);
+    }
+    #[test]
+    fn virtuals3() {
+        let input = r#" 
+        @v ("vv")-(#b1)
+            "#;
+
+        token_test("virtuals3", input);
     }
     #[test]
     fn err1() {

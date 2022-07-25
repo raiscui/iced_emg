@@ -1209,6 +1209,10 @@ pub fn gtree_macro(item: TokenStream) -> Result<TokenStream, syn::Error> {
 mod tests {
 
     use super::*;
+
+
+   
+
     #[test]
     fn test_vfl_1() {
         fn token_test(input: &str) {
@@ -1230,6 +1234,7 @@ mod tests {
         token_test(input);
         println!();
     }
+   
 
     
     #[test]
@@ -1254,6 +1259,89 @@ mod tests {
 
         token_test(input);
         println!();
+    }
+
+    #[test]
+    fn test_vfl_3() {
+        fn token_test(input: &str) {
+            match syn::parse_str::<Gtree>(input) {
+                Ok(ok) => println!("===>{}", ok.to_token_stream()),
+                Err(error) => println!("...{:?}", error),
+            }
+        }
+
+        println!();
+        let input = r#" 
+        @=root
+                Layer [
+                    @=x111x @E=[
+                        {md==120},
+                        {"nn":{
+                                width==100,
+                                height==20,
+                            }
+                        }
+                        ]
+                    Layer []
+                ]
+        "#;
+
+        token_test(input);
+        println!();
+        enum A {
+            B,
+            C,
+        }
+
+        
+        // GTreeBuilderElement :: Layer (IdStr :: new_inline ("root") , vec ! [] , vec ! [
+        //     GTreeBuilderElement :: Layer (IdStr :: new_inline ("x111x") , vec ! [
+        //         Rc :: new (vec ! [
+        //             emg_layout :: ccsa :: CassowaryVar :: General (
+        //                 emg_layout :: ccsa :: GeneralVar (
+        //                     emg_core :: IdStr :: new ("md") , 
+        //                     emg_layout :: ccsa :: ScopeViewVariable :: new (
+        //                         :: std :: option :: Option :: None , 
+        //                         :: std :: option :: Option :: Some (
+        //                             emg_layout :: ccsa :: NameChars :: Number (
+        //                                 NotNan :: new (120 as f64) . unwrap ()
+        //                             )
+        //                         ) , 
+        //                         :: std :: option :: Option :: None)
+        //                 )
+        //             )
+        //         ]) as Rc < (dyn RefreshFor < EmgEdgeItem < _ >>) > , 
+
+        //         Rc :: new (vec ! [
+        //             emg_layout :: ccsa :: CassowaryVar :: Virtual (
+        //                 emg_layout :: ccsa :: Virtual (
+        //                     emg_core :: IdStr :: new ("nn") , 
+        //                     vec ! [
+        //                         emg_layout :: ccsa :: GeneralVar (
+        //                             emg_core :: IdStr :: new ("width") , 
+        //                             emg_layout :: ccsa :: ScopeViewVariable :: new (
+        //                                 :: std :: option :: Option :: None , 
+        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (100 as f64) . unwrap ())) , 
+        //                                 :: std :: option :: Option :: None
+        //                             )
+        //                         ) , 
+        //                         emg_layout :: ccsa :: GeneralVar (
+        //                             emg_core :: IdStr :: new ("height") , 
+        //                             emg_layout :: ccsa :: ScopeViewVariable :: new (
+        //                                 :: std :: option :: Option :: None , 
+        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (20 as f64) . unwrap ())) , 
+        //                                 :: std :: option :: Option :: None
+        //                             )
+        //                         )
+        //                     ]
+        //                 )
+        //             )
+        //         ]) as Rc < (dyn RefreshFor < EmgEdgeItem < _ >>) >] , 
+        //         vec ! [])]) ;
+
+        
+            
+        
     }
 
 

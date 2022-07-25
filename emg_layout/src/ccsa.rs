@@ -1,9 +1,19 @@
 use std::{hash::BuildHasherDefault, rc::Rc};
 
-use cassowary::Variable;
-use emg_core::{im::HashMap, IdStr, NotNan, Vector};
+use cassowary::{
+    strength::{REQUIRED, STRONG, WEAK},
+    Constraint, Variable, WeightedRelation,
+};
+use derive_more::From;
+use either::Either::{Left, Right};
+use emg_core::{
+    im::{hashset, HashMap, HashSet},
+    IdStr, NotNan, Vector,
+};
 use emg_hasher::CustomHasher;
 use emg_state::Dict;
+
+use indexmap::IndexMap;
 use parse_display::{Display, FromStr};
 use tracing::warn;
 mod impl_refresh;
@@ -26,7 +36,7 @@ pub enum NameChars<Ix = IdStr> {
     Class(Ix), // .xxx
     #[display("{0}")]
     Element(Ix), // xxxx
-    #[display("\"{0:?}\"")]
+    #[display("\"{0}\"")]
     Virtual(Ix), //"xxx"
     #[display("{0}")]
     Number(NotNan<f64>), // 12 | 12.1
@@ -77,7 +87,7 @@ impl std::ops::Deref for PredVariable {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ScopeViewVariable {
     pub scope: Option<Scope>,
     pub view: Option<NameChars>,
@@ -104,7 +114,8 @@ impl std::fmt::Display for ScopeViewVariable {
 }
 
 impl ScopeViewVariable {
-    pub fn new(
+    #[must_use]
+    pub const fn new(
         scope: Option<Scope>,
         view: Option<NameChars>,
         variable: Option<PredVariable>,
@@ -115,14 +126,19 @@ impl ScopeViewVariable {
             variable,
         }
     }
-    pub fn turn_with_var(&self, var: &str) -> Self {
-        let Self {
-            scope,
-            view,
-            variable,
-        } = self;
-        Self::new(scope.clone(), view.clone(), Some(PredVariable(var.into())))
-    }
+    // #[must_use]
+    // pub fn turn_with_var(&self, var: &str) -> Self {
+    //     let Self {
+    //         scope,
+    //         view,
+    //         variable,
+    //     } = self;
+    //     Self::new(*scope, view.clone(), Some(PredVariable(var.into())))
+    // }
+    /// # Panics
+    ///
+    /// Will panic if number is not nan
+    #[must_use]
     pub fn new_number(number: f64) -> Self {
         Self::new(
             None,
@@ -130,6 +146,7 @@ impl ScopeViewVariable {
             None,
         )
     }
+    #[must_use]
     pub fn new_id_var(id: &str, var: &str) -> Self {
         Self::new(
             None,
@@ -164,23 +181,27 @@ pub struct CCSSOpSvv {
     pub svv: ScopeViewVariable,
 }
 impl CCSSOpSvv {
-    pub fn new(op: PredOp, svv: ScopeViewVariable) -> Self {
+    #[must_use]
+    pub const fn new(op: PredOp, svv: ScopeViewVariable) -> Self {
         Self { op, svv }
     }
 
-    pub fn new_add(svv: ScopeViewVariable) -> Self {
+    #[must_use]
+    pub const fn new_add(svv: ScopeViewVariable) -> Self {
         Self {
             op: PredOp::Add,
             svv,
         }
     }
-    pub fn new_sub(svv: ScopeViewVariable) -> Self {
+    #[must_use]
+    pub const fn new_sub(svv: ScopeViewVariable) -> Self {
         Self {
             op: PredOp::Sub,
             svv,
         }
     }
-    pub fn new_mul(svv: ScopeViewVariable) -> Self {
+    #[must_use]
+    pub const fn new_mul(svv: ScopeViewVariable) -> Self {
         Self {
             op: PredOp::Mul,
             svv,
@@ -194,6 +215,7 @@ pub struct CCSSSvvOpSvvExpr {
 }
 
 impl CCSSSvvOpSvvExpr {
+    #[must_use]
     pub fn new(svv: ScopeViewVariable, op_exprs: Vec<CCSSOpSvv>) -> Self {
         Self { svv, op_exprs }
     }
@@ -202,7 +224,7 @@ impl CCSSSvvOpSvvExpr {
 impl std::fmt::Display for CCSSSvvOpSvvExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.svv)?;
-        for op_expr in self.op_exprs.iter() {
+        for op_expr in &self.op_exprs {
             write!(f, "{}", op_expr)?;
         }
         Ok(())
@@ -217,7 +239,8 @@ pub struct CCSSEqExpression {
 }
 
 impl CCSSEqExpression {
-    pub fn new(eq: PredEq, expr: CCSSSvvOpSvvExpr) -> Self {
+    #[must_use]
+    pub const fn new(eq: PredEq, expr: CCSSSvvOpSvvExpr) -> Self {
         Self { eq, expr }
     }
 }
@@ -231,6 +254,7 @@ pub enum StrengthAndWeight {
 }
 
 impl StrengthAndWeight {
+    #[must_use]
     pub fn to_number(&self) -> f64 {
         match self {
             Self::Weak(opt_n) => opt_n.map_or(cassowary::strength::WEAK, |nn| {
@@ -320,42 +344,144 @@ impl CCSS {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GeneralVar(pub IdStr, pub ScopeViewVariable);
 
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub(crate) struct CCSSList(Vector<CCSS>);
+impl GeneralVar {
+    #[must_use]
+    pub fn with_virtual_name(mut self, name_space: &IdStr) -> Self {
+        self.0 = name_space.clone() + "." + &self.0;
+        self
+    }
+    #[must_use]
+    pub fn new(prop: IdStr) -> Self {
+        Self(prop, ScopeViewVariable::default())
+    }
+}
 
-// impl std::ops::DerefMut for CCSSList {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
+static VIRTUAL_PROPS: [&str; 6] = ["width", "height", "top", "left", "bottom", "right"];
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Virtual(pub IdStr, pub Vec<GeneralVar>);
 
-// impl std::ops::Deref for CCSSList {
-//     type Target = Vector<CCSS>;
+impl Virtual {
+    #[must_use]
+    pub const fn name(&self) -> &IdStr {
+        &self.0
+    }
+}
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
+type VirtualProcessed<'a> = (
+    IndexMap<&'a str, (Variable, Variable, Option<&'a GeneralVar>)>,
+    (ConstraintList, ConstraintList),
+    HashMap<&'a str, Option<&'a GeneralVar>>,
+);
 
-// impl CCSSList {
-//     pub fn new() -> Self {
-//         Self(Vector::new())
-//     }
-// }
+impl Virtual {
+    #[allow(clippy::many_single_char_names)]
+    #[must_use]
+    /// # Panics
+    ///
+    /// Will panic if y is 0
+    pub fn process(&self) -> VirtualProcessed {
+        // let mut added_prop_var = vec![];
+        let mut gvs_map = self
+            .1
+            .iter()
+            .map(|gv| (gv.0.as_str(), Some(gv)))
+            .collect::<HashMap<_, _>>();
+
+        //NOTE need strict order for [w,h,t,l,b,r] iter
+        let gvs_match_props = VIRTUAL_PROPS
+            .iter()
+            .map(|&p| {
+                if let Some(&Some(gv)) = gvs_map.get(p) {
+                    (p, (Variable::new(), Variable::new(), Some(gv)))
+                } else {
+                    (p, (Variable::new(), Variable::new(), None))
+                }
+            })
+            .collect::<IndexMap<_, _>>();
+
+        //NOTE need strict order for [w,h,t,l,b,r] iter
+        let vars_constraints = if let &[(tw, w), (th, h), (tt, t), (tl, l), (tb, b), (tr, r)] =
+            gvs_match_props
+                .iter()
+                .map(|(_, (top_var, var, _))| (*top_var, *var))
+                .collect::<Vec<_>>()
+                .as_slice()
+        {
+            (
+                [
+                    tt | WeightedRelation::EQ(REQUIRED) | (tb - th),
+                    tl | WeightedRelation::EQ(REQUIRED) | (tr - tw),
+                    // tb | WeightedRelation::EQ(REQUIRED) | (tt + th),
+                    // tr | WeightedRelation::EQ(REQUIRED) | (tl + tw),
+                    // tw | WeightedRelation::EQ(REQUIRED) | (tr - tl),
+                    // th | WeightedRelation::EQ(REQUIRED) | (tb - tt),
+                    // .....
+                    tb | WeightedRelation::GE(REQUIRED) | tt,
+                    tr | WeightedRelation::GE(REQUIRED) | tl,
+                    tw | WeightedRelation::GE(REQUIRED) | 0.0,
+                    th | WeightedRelation::GE(REQUIRED) | 0.0,
+                    tt | WeightedRelation::GE(WEAK) | 0.0,
+                    tl | WeightedRelation::GE(WEAK) | 0.0,
+                ],
+                [
+                    t | WeightedRelation::EQ(REQUIRED) | (b - h),
+                    l | WeightedRelation::EQ(REQUIRED) | (r - w),
+                    // b | WeightedRelation::EQ(REQUIRED) | (t + h),
+                    // r | WeightedRelation::EQ(REQUIRED) | (l + w),
+                    // w | WeightedRelation::EQ(REQUIRED) | (r - l),
+                    // h | WeightedRelation::EQ(REQUIRED) | (b - t),
+                    // .....
+                    b | WeightedRelation::GE(REQUIRED) | t,
+                    r | WeightedRelation::GE(REQUIRED) | l,
+                    w | WeightedRelation::GE(REQUIRED) | 0.0,
+                    h | WeightedRelation::GE(REQUIRED) | 0.0,
+                    t | WeightedRelation::GE(WEAK) | 0.0,
+                    l | WeightedRelation::GE(WEAK) | 0.0,
+                    // ────────────────────────────────────────────────────────────────────────────────
+                ],
+            )
+        } else {
+            unreachable!()
+        };
+
+        for p in VIRTUAL_PROPS {
+            let _ = gvs_map.remove(p);
+        }
+
+        (gvs_match_props, vars_constraints, gvs_map)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CassowaryVar {
+    General(GeneralVar),
+    Virtual(Virtual),
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CassowaryGeneralMap {
     pub(crate) map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
     pub(crate) v_v: Dict<Variable, f64>,
+    pub(crate) virtual_constraints:
+        HashMap<IdStr, ConstraintList, BuildHasherDefault<CustomHasher>>,
+    pub(crate) top_virtual_constraints:
+        HashMap<IdStr, ConstraintList, BuildHasherDefault<CustomHasher>>,
     pub(crate) top_map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
     pub(crate) top_v_v: Dict<Variable, f64>,
     pub(crate) parent: Option<Rc<CassowaryGeneralMap>>,
     // pub(crate) cassowary_map: Option<Rc<CassowaryMap>>,
 }
 
+pub type ConstraintList = [Constraint; 8];
+
 impl CassowaryGeneralMap {
-    pub fn top_v(&self, var: &Variable) -> Option<f64> {
-        self.top_v_v.get(var).copied()
+    // #[must_use]
+    // pub fn top_v(&self, var: &Variable) -> Option<f64> {
+    //     self.top_v_v.get(var).copied()
+    // }
+    #[must_use]
+    pub fn constraint(&self, v_name: &str) -> Option<&ConstraintList> {
+        self.virtual_constraints.get(v_name)
     }
 
     pub fn top_var<BK>(&self, key: &BK) -> Option<Variable>
@@ -365,9 +491,10 @@ impl CassowaryGeneralMap {
     {
         self.top_map.get(key).copied()
     }
-    pub fn v(&self, var: &Variable) -> Option<f64> {
-        self.v_v.get(var).copied()
-    }
+    // #[must_use]
+    // pub fn v(&self, var: &Variable) -> Option<f64> {
+    //     self.v_v.get(var).copied()
+    // }
 
     pub fn var<BK>(&self, key: &BK) -> Option<Variable>
     where
@@ -388,6 +515,39 @@ impl CassowaryGeneralMap {
         self.map.insert(id, var2);
         self.v_v.insert(var2, v);
     }
+    pub fn insert_only_var(&mut self, id: IdStr, top_var: Variable, var: Variable) {
+        if !self.top_map.contains_key(&id) {
+            self.top_map.insert(id.clone(), top_var);
+            // self.top_v_v.insert(var, v);
+        }
+
+        self.map.insert(id, var);
+        // self.v_v.insert(var2, v);
+    }
+
+    pub fn insert_constants(
+        &mut self,
+        v_name: IdStr,
+        top_constants: ConstraintList,
+        constants: ConstraintList,
+    ) {
+        if self.top_virtual_constraints.contains_key(&v_name) {
+            self.top_virtual_constraints
+                .insert(v_name.clone(), top_constants);
+        }
+
+        self.virtual_constraints.insert(v_name, constants);
+    }
+
+    pub fn insert_with_var(&mut self, id: IdStr, top_var: Variable, var: Variable, v: f64) {
+        if !self.top_map.contains_key(&id) {
+            self.top_map.insert(id.clone(), top_var);
+            self.top_v_v.insert(top_var, v);
+        }
+
+        self.map.insert(id, var);
+        self.v_v.insert(var, v);
+    }
     fn insert_not_overwrite(&mut self, id: IdStr, v: f64) {
         if !self.top_map.contains_key(&id) {
             let var = Variable::new();
@@ -400,6 +560,7 @@ impl CassowaryGeneralMap {
             self.v_v.insert(var2, v);
         }
     }
+    #[must_use]
     pub fn new() -> Self {
         let top_map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>> =
             HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
@@ -407,6 +568,10 @@ impl CassowaryGeneralMap {
 
         let map = top_map.clone();
         let v_v = top_v_v.clone();
+
+        let virtual_constraints: HashMap<IdStr, ConstraintList, BuildHasherDefault<CustomHasher>> =
+            HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
+        let top_virtual_constraints = virtual_constraints.clone();
 
         // let hgap = Variable::new();
         // map.insert("hgap".into(), hgap);
@@ -418,6 +583,8 @@ impl CassowaryGeneralMap {
             top_map,
             top_v_v,
             parent: None,
+            virtual_constraints,
+            top_virtual_constraints,
             // cassowary_map: None,
         }
     }
@@ -427,11 +594,20 @@ impl CassowaryGeneralMap {
 
     //     self
     // }
+    //TODO global prop config
+    #[must_use]
     pub fn with_default_not_overwrite(mut self) -> Self {
         self.insert_not_overwrite("hgap".into(), 10.0);
         self.insert_not_overwrite("vgap".into(), 10.0);
+        self.insert_not_overwrite("baseline".into(), 16.0);
 
         self
+    }
+}
+
+impl Default for CassowaryGeneralMap {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -449,6 +625,12 @@ impl std::ops::Add<CassowaryGeneralMap> for Rc<CassowaryGeneralMap> {
                 .top_v_v
                 .clone()
                 .union_with(current_new.top_v_v.clone(), |l, _| l),
+            virtual_constraints: current_new
+                .virtual_constraints
+                .union(self.virtual_constraints.clone()),
+            top_virtual_constraints: current_new
+                .top_virtual_constraints
+                .union(self.top_virtual_constraints.clone()),
             parent: Some(self),
             // cassowary_map: current_new.cassowary_map,
         }
@@ -456,7 +638,7 @@ impl std::ops::Add<CassowaryGeneralMap> for Rc<CassowaryGeneralMap> {
 }
 
 impl std::ops::Add<Rc<CassowaryMap>> for CassowaryGeneralMap {
-    type Output = CassowaryGeneralMap;
+    type Output = Self;
 
     fn add(mut self, self_cassowary_map: Rc<CassowaryMap>) -> Self::Output {
         self.map = self_cassowary_map
@@ -469,23 +651,24 @@ impl std::ops::Add<Rc<CassowaryMap>> for CassowaryGeneralMap {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CassowaryMap {
     pub(crate) map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
     v_k: HashMap<Variable, IdStr, BuildHasherDefault<CustomHasher>>,
 }
 
-// impl Default for CassowaryMap {
-//     fn default() -> Self {
-//         Self::new()
-//     }
-// }
+impl Default for CassowaryMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl CassowaryMap {
     // fn var(&self, key: &IdStr) -> Option<Variable> {
     //     self.map.get(key).copied()
     // }
 
+    #[must_use]
     pub fn prop(&self, var: &Variable) -> Option<&IdStr> {
         self.v_k.get(var)
     }
@@ -498,6 +681,7 @@ impl CassowaryMap {
         self.map.get(key).copied()
     }
 
+    #[must_use]
     pub fn new() -> Self {
         let mut map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>> =
             HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
@@ -557,6 +741,6 @@ impl CassowaryMap {
         map.insert("align_z".into(), align_z);
         v_k.insert(align_z, "align_z".into());
 
-        CassowaryMap { map, v_k }
+        Self { map, v_k }
     }
 }

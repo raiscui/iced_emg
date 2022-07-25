@@ -1,0 +1,11 @@
+---
+source: gtree_macro/src/cassowary.rs
+assertion_line: 2308
+expression: disp
+---
+[
+"LitStr { token: "vv" }"[width]  ==  #b2[left] - #b1[right] - [hgap],
+#b1[right] + [hgap]  ==  "LitStr { token: "vv" }"[left],
+"LitStr { token: "vv" }"[right] + [hgap]  ==  #b2[left],
+]
+

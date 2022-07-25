@@ -4,7 +4,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-21 17:31:04
+ * @LastEditTime: 2022-07-22 14:10:27
  * @LastEditors: Rais
 * @Description:
 */
@@ -12,7 +12,7 @@ use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, 
 
 use derive_more::From;
 use float_cmp::{approx_eq, assert_approx_eq};
-use cassowary::WeightedRelation;
+use cassowary::{WeightedRelation, strength::{REQUIRED, WEAK}};
 use emg::EdgeIndex;
 use emg_core::TypeName;
 use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo, Anchor};
@@ -109,15 +109,15 @@ where
                     
                     size_constraints.extend([
                         
-                        (right_var - left_var) | WeightedRelation::EQ(cassowary::strength::REQUIRED) | width_var,
-                        (bottom_var - top_var) | WeightedRelation::EQ(cassowary::strength::REQUIRED) | height_var,
+                        (right_var - left_var) | WeightedRelation::EQ(REQUIRED) | width_var,
+                        (bottom_var - top_var) | WeightedRelation::EQ(REQUIRED) | height_var,
 
-                        bottom_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | top_var,
-                        right_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | left_var,
-                        width_var  | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                        height_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                        top_var | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
-                        left_var | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                        bottom_var | WeightedRelation::GE(REQUIRED) | top_var,
+                        right_var | WeightedRelation::GE(REQUIRED) | left_var,
+                        width_var  | WeightedRelation::GE(REQUIRED) | 0.0,
+                        height_var | WeightedRelation::GE(REQUIRED) | 0.0,
+                        top_var | WeightedRelation::GE(WEAK) | 0.0,
+                        left_var | WeightedRelation::GE(WEAK) | 0.0,
                     ]);
 
                     size_constraints

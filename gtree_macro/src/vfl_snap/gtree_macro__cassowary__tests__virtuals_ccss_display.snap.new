@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+assertion_line: 2291
+expression: disp
+---
+[
+#b1[bottom] + [vgap]  ==  "LitStr { token: "vv" }"[top],
+]
+
