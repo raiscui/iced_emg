@@ -4,11 +4,11 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-22 14:10:27
+ * @LastEditTime: 2022-07-25 12:21:24
  * @LastEditors: Rais
 * @Description:
 */
-use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, ccsa::CassowaryMap};
+use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, ccsa::CassowaryMap, CHILD_PROP_WEIGHT};
 
 use derive_more::From;
 use float_cmp::{approx_eq, assert_approx_eq};
@@ -24,6 +24,7 @@ use tracing::{trace_span, debug_span, trace, warn_span, warn};
 use self::cassowary_calc::cassowary_calculation;
 
 mod cassowary_calc;
+
 
 // ────────────────────────────────────────────────────────────────────────────────
     
@@ -94,14 +95,14 @@ where
                     if ! w.is_none() {
                             
                         
-                        size_constraints.push(width_var  | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("width", &p_cassowary_map2, w));
+                        size_constraints.push(width_var  | WeightedRelation::EQ(CHILD_PROP_WEIGHT) | cassowary_calculation("width", &p_cassowary_map2, w));
 
                     }
                     // if let Ok(hh)  = h.try_get_length_value() && approx_eq!(f64,hh,0.0,(0.1,2)){
                     if ! h.is_none(){
                             // size_constraints.push(  height_var  | WeightedRelation::EQ(cassowary::strength::WEAK) | 0.0);
                             
-                        size_constraints.push(height_var | WeightedRelation::EQ(cassowary::strength::MEDIUM * 0.5) | cassowary_calculation("height",&p_cassowary_map2, h) );
+                        size_constraints.push(height_var | WeightedRelation::EQ(CHILD_PROP_WEIGHT) | cassowary_calculation("height",&p_cassowary_map2, h) );
                     }
 
                  
@@ -156,16 +157,18 @@ where
                 let _debug_span_ = warn_span!( "->[ get self prop calculated value ] ").entered();
                 // warn!("p_vars: {:?},  \n get :{:?}",&p_vars,&width_var);
                 // • • • • •
+                //TODO only width change then do this
                 //NOTE 如果 是 root下面的第一阶层节点,如果没定义cassowary constraint 或者定义少量、不涉及某些 Id element, p_calculated_vars 很可能是无 or 不全面的,
                 p_vars.get(&width_var).map(|(val,_)| **val).map_or_else(|| calculated_width.get_anchor(), Anchor::constant)
                 
             });
             let height = p_calculated_vars.then(move|p_vars|{
-
+                //TODO only height change then do this
                 p_vars.get(&height_var).map(|(val,_)| **val).map_or_else(|| calculated_height.get_anchor(),  Anchor::constant)
 
             });
             let top = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+                //TODO only xx change then do this
                 if p_children_vars.contains(&top_var){
                     p_vars.get(&top_var).map(|(val,_)| **val)
                 }else{
@@ -173,6 +176,7 @@ where
                 }
             });
             let left = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+                //TODO only xx change then do this
                 if p_children_vars.contains(&left_var){
                 p_vars.get(&left_var).map(|(val,_)| **val)
                 }else{
@@ -180,6 +184,7 @@ where
                 }
             });
             let bottom = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+                //TODO only xx change then do this
                 if p_children_vars.contains(&bottom_var){
                 p_vars.get(&bottom_var).map(|(val,_)| **val)
                 }else{
@@ -188,6 +193,7 @@ where
             });
             
             let right = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+                //TODO only xx change then do this
                 if p_children_vars.contains(&right_var){
                 p_vars.get(&right_var).map(|(val,_)| **val)
                 }else{

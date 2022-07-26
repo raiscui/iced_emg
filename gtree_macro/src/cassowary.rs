@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-07-24 23:02:33
+ * @LastEditTime: 2022-07-26 10:49:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -156,8 +156,8 @@ pub enum NameChars {
     Class(Ident), // .xxx
     #[display("{0}")]
     Element(Ident), // xxxx
-    #[display("\"{0:?}\"")]
-    Virtual(LitStr), //"xxx"
+    #[display("\"{0}\"")]
+    Virtual(String), //"xxx"
     #[display("{0}")]
     Number(Number), // 12 | 12.1
     #[display("{0}:next")]
@@ -201,14 +201,6 @@ impl NameChars {
     const fn is_number(&self) -> bool {
         matches!(self, Self::Number(..))
     }
-
-    /// Returns `true` if the name chars is [`Virtual`].
-    ///
-    /// [`Virtual`]: NameChars::Virtual
-    #[must_use]
-    pub fn is_virtual(&self) -> bool {
-        matches!(self, Self::Virtual(..))
-    }
 }
 
 impl Parse for NameChars {
@@ -243,7 +235,7 @@ impl Parse for NameChars {
 
             let r#virtual: LitStr = input.parse()?;
             debug!("got virtual: {:?}", &r#virtual);
-            return Ok(Self::Virtual(r#virtual));
+            return Ok(Self::Virtual(r#virtual.value()));
         }
         debug!("not Virtual : {:?}", &input);
 
@@ -290,11 +282,11 @@ impl ToTokens for NameChars {
             }
             Self::Number(n) => match n {
                 Number::Int(int) => {
-                    quote_spanned!(int.span()=> emg_layout::ccsa::NameChars::Number( NotNan::new(#int as f64).unwrap() ))
+                    quote_spanned!(int.span()=> emg_layout::ccsa::NameChars::Number( emg_core::NotNan::new(#int as f64).unwrap() ))
                         .to_tokens(tokens);
                 }
                 Number::Float(float) => {
-                    quote_spanned!(float.span()=> emg_layout::ccsa::NameChars::Number( NotNan::new(#float).unwrap() ))
+                    quote_spanned!(float.span()=> emg_layout::ccsa::NameChars::Number( emg_core::NotNan::new(#float).unwrap() ))
                         .to_tokens(tokens);
                 }
             },
@@ -410,9 +402,6 @@ impl std::fmt::Display for ScopeViewVariable {
 }
 
 impl ScopeViewVariable {
-    fn is_virtual(&self) -> bool {
-        self.view.as_ref().map_or(false, NameChars::is_virtual)
-    }
     #[must_use]
     fn into_next(self, var: Option<Ident>) -> Self {
         Self {
@@ -2037,10 +2026,6 @@ impl VFLStatement {
                     op_exprs: left_point_op_var,
                 };
 
-                // if right_v.is_virtual() {
-                //     hold_right = Some(right_v);
-                // }
-
                 let right_var_op_vars = CCSSSvvOpSvvExpr {
                     svv: right_v,
                     op_exprs: right_point_op_var,
@@ -2716,7 +2701,7 @@ mod tests {
     #[test]
     fn predicate_connected() {
         let input = r#" 
-        @h (#b1(<=100))(#b2(==#b1))
+        @h |(#b1(<=100))(#b2(==#b1))|
             "#;
 
         token_test("predicate_connected", input);
@@ -2780,7 +2765,16 @@ mod tests {
     #[test]
     fn chain_single_view_with_equality() {
         let input = r#" 
-        @v (#b1(==100!strong)) chain-centerX chain-width( 50 !weak(10))
+        @v (#b1(==100!strong))(#b2) chain-centerX chain-width( 50 !weak(10))
+            "#;
+
+        token_test("chain_single_view_with_equality", input);
+    }
+    #[test]
+    //TODO need support
+    fn chain_single_view_with_equality2() {
+        let input = r#" 
+        @v (#b1(==100!strong))(#b2) chain-centerX chain-width( [xx]-50 !weak(10))
             "#;
 
         token_test("chain_single_view_with_equality", input);

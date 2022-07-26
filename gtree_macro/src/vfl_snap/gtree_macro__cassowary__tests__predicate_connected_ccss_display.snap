@@ -4,7 +4,9 @@ expression: disp
 ---
 [
 #b1[width]  <=  100,
+&[left]  ==  #b1[left],
 #b2[width]  ==  #b1[width],
 #b1[right]  ==  #b2[left],
+#b2[right]  ==  &[right],
 ]
 

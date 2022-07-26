@@ -1,0 +1,9 @@
+---
+source: gtree_macro/tests/test_ccss.rs
+expression: "&disp"
+---
+[
+#b1[right] + 100  ==  #b2[left],
+#b2[right] + 8  ==  #b3[left],
+]
+

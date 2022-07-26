@@ -1,0 +1,10 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+"vv"[width]  ==  #b2[left] - #b1[right] - [hgap],
+#b1[right] + [hgap]  ==  "vv"[left],
+"vv"[right] + [hgap]  ==  #b2[left],
+]
+

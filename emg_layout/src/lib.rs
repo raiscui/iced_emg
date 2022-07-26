@@ -65,6 +65,10 @@ pub mod ccsa;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
+static CURRENT_PROP_WEIGHT :f64 = cassowary::strength::MEDIUM * 1.5;
+static CHILD_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 0.9;
+
+// ────────────────────────────────────────────────────────────────────────────────
 
 
 thread_local! {
@@ -1244,7 +1248,6 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                             // ────────────────────────────────────────────────────────────────────────────────
                             let mut prop_vals_did_update = false;
 
-                            let current_calculated_prop_sw_mul = 1.0f64;
                                 
                             info!("current_cassowary_map2===== \n all= \n{:?}",&current_cassowary_map2.map);
 
@@ -1255,7 +1258,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                                     ordmap::DiffItem::Add(prop, v) => {
                                         //TODO use option , not this
                                         match prop.as_str() {
-                                            "width" | "height" | "bottom" | "right" if approx_eq!(f64,v.into_inner(),0.0,(0.001,2)) => {
+                                            "width" | "height" | "bottom" | "right" if approx_eq!(f64,v.into_inner(),0.0,(0.01,2)) => {
                                                     continue;
                                             }
                                             _ => {}
@@ -1265,7 +1268,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                                         info!("current props  add (maybe first time)");
                                         // panic!("current_cassowary_map2:want:{:?} \n all= \n{:?}",&prop,&current_cassowary_map2.map);
                                         let var = current_cassowary_map2.var(&**prop).unwrap();
-                                        cass_solver.add_edit_variable(var, cassowary::strength::MEDIUM * current_calculated_prop_sw_mul).ok();
+                                        cass_solver.add_edit_variable(var, CURRENT_PROP_WEIGHT).ok();
                                         cass_solver.suggest_value(var, *v).unwrap();
                                         prop_vals_did_update = true;
 
@@ -1274,7 +1277,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                                         //TODO check, remove .
                                         assert_eq!(old_prop,prop);
                                         let var = current_cassowary_map2.var(&**prop).unwrap();
-                                        cass_solver.add_edit_variable(var, cassowary::strength::MEDIUM * current_calculated_prop_sw_mul).ok();
+                                        cass_solver.add_edit_variable(var, CURRENT_PROP_WEIGHT).ok();
                                         cass_solver.suggest_value(var, *v).unwrap();
                                         prop_vals_did_update = true;
 

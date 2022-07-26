@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 11:27:18
- * @LastEditTime: 2022-07-19 23:00:07
+ * @LastEditTime: 2022-07-25 11:48:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -470,6 +470,347 @@ mod code_test {
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
                         emg_core::IdStr::new("b5")
+                    )),
+                    ::std::option::Option::None
+                )
+            ],
+        );
+
+        info!("selector: {}", VectorDisp(selector.clone()));
+        insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+        insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
+        });
+
+        let res_disp = VectorDisp(res);
+        info!("res===\n{}", &res_disp);
+        assert_eq!(parsed, format!("{}", res_disp));
+    }
+
+    #[test]
+    fn base4() {
+        let input = r#" 
+        @v |(#sub)| in("parent")
+            "#;
+
+        let name = &"base4";
+        let parsed = token_2_code_test(name, input);
+
+        let (res, selector) = (
+            emg_core::vector![
+                emg_layout::ccsa::CCSS::new(
+                    emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                        emg_layout::ccsa::ScopeViewVariable::new(
+                            ::std::option::Option::None,
+                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Virtual(
+                                emg_core::IdStr::new("parent")
+                            )),
+                            ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                emg_core::IdStr::new("top")
+                            ))
+                        ),
+                        vec![]
+                    ),
+                    vec![emg_layout::ccsa::CCSSEqExpression::new(
+                        emg_layout::ccsa::PredEq::Eq,
+                        emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                    emg_core::IdStr::new("sub")
+                                )),
+                                ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                    emg_core::IdStr::new("top")
+                                ))
+                            ),
+                            vec![]
+                        )
+                    )],
+                    ::std::option::Option::None
+                ),
+                emg_layout::ccsa::CCSS::new(
+                    emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                        emg_layout::ccsa::ScopeViewVariable::new(
+                            ::std::option::Option::None,
+                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                emg_core::IdStr::new("sub")
+                            )),
+                            ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                emg_core::IdStr::new("bottom")
+                            ))
+                        ),
+                        vec![]
+                    ),
+                    vec![emg_layout::ccsa::CCSSEqExpression::new(
+                        emg_layout::ccsa::PredEq::Eq,
+                        emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Virtual(
+                                    emg_core::IdStr::new("parent")
+                                )),
+                                ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                    emg_core::IdStr::new("bottom")
+                                ))
+                            ),
+                            vec![]
+                        )
+                    )],
+                    ::std::option::Option::None
+                )
+            ],
+            emg_core::vector![emg_layout::ccsa::ScopeViewVariable::new(
+                ::std::option::Option::None,
+                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(emg_core::IdStr::new(
+                    "sub"
+                ))),
+                ::std::option::Option::None
+            )],
+        );
+
+        info!("selector: {}", VectorDisp(selector.clone()));
+        insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+        insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
+        });
+
+        let res_disp = VectorDisp(res);
+        info!("res===\n{}", &res_disp);
+        assert_eq!(parsed, format!("{}", res_disp));
+    }
+
+    #[test]
+    fn base5() {
+        let input = r#" 
+        @h (#b1)-100-(#b2)-8-(#b3)
+            "#;
+
+        let name = &"base5";
+        let parsed = token_2_code_test(name, input);
+
+        let (res, selector) = (
+            emg_core::vector![
+                emg_layout::ccsa::CCSS::new(
+                    emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                        emg_layout::ccsa::ScopeViewVariable::new(
+                            ::std::option::Option::None,
+                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                emg_core::IdStr::new("b1")
+                            )),
+                            ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                emg_core::IdStr::new("right")
+                            ))
+                        ),
+                        vec![emg_layout::ccsa::CCSSOpSvv::new(
+                            emg_layout::ccsa::PredOp::Add,
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Number(
+                                    emg_core::NotNan::new(100 as f64).unwrap()
+                                )),
+                                ::std::option::Option::None
+                            )
+                        )]
+                    ),
+                    vec![emg_layout::ccsa::CCSSEqExpression::new(
+                        emg_layout::ccsa::PredEq::Eq,
+                        emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                    emg_core::IdStr::new("b2")
+                                )),
+                                ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                    emg_core::IdStr::new("left")
+                                ))
+                            ),
+                            vec![]
+                        )
+                    )],
+                    ::std::option::Option::None
+                ),
+                emg_layout::ccsa::CCSS::new(
+                    emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                        emg_layout::ccsa::ScopeViewVariable::new(
+                            ::std::option::Option::None,
+                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                emg_core::IdStr::new("b2")
+                            )),
+                            ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                emg_core::IdStr::new("right")
+                            ))
+                        ),
+                        vec![emg_layout::ccsa::CCSSOpSvv::new(
+                            emg_layout::ccsa::PredOp::Add,
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Number(
+                                    emg_core::NotNan::new(8 as f64).unwrap()
+                                )),
+                                ::std::option::Option::None
+                            )
+                        )]
+                    ),
+                    vec![emg_layout::ccsa::CCSSEqExpression::new(
+                        emg_layout::ccsa::PredEq::Eq,
+                        emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                    emg_core::IdStr::new("b3")
+                                )),
+                                ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                    emg_core::IdStr::new("left")
+                                ))
+                            ),
+                            vec![]
+                        )
+                    )],
+                    ::std::option::Option::None
+                )
+            ],
+            emg_core::vector![
+                emg_layout::ccsa::ScopeViewVariable::new(
+                    ::std::option::Option::None,
+                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                        emg_core::IdStr::new("b1")
+                    )),
+                    ::std::option::Option::None
+                ),
+                emg_layout::ccsa::ScopeViewVariable::new(
+                    ::std::option::Option::None,
+                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                        emg_core::IdStr::new("b2")
+                    )),
+                    ::std::option::Option::None
+                ),
+                emg_layout::ccsa::ScopeViewVariable::new(
+                    ::std::option::Option::None,
+                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                        emg_core::IdStr::new("b3")
+                    )),
+                    ::std::option::Option::None
+                )
+            ],
+        );
+
+        info!("selector: {}", VectorDisp(selector.clone()));
+        insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+        insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
+        });
+
+        let res_disp = VectorDisp(res);
+        info!("res===\n{}", &res_disp);
+        assert_eq!(parsed, format!("{}", res_disp));
+    }
+
+    #[test]
+    fn base6() {
+        let input = r#" 
+        @h (#b1)-[my_gap]-(#b2)-[my_other_gap]-(#b3)
+            "#;
+
+        let name = &"base6";
+        let parsed = token_2_code_test(name, input);
+
+        let (res, selector) = (
+            emg_core::vector![
+                emg_layout::ccsa::CCSS::new(
+                    emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                        emg_layout::ccsa::ScopeViewVariable::new(
+                            ::std::option::Option::None,
+                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                emg_core::IdStr::new("b1")
+                            )),
+                            ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                emg_core::IdStr::new("right")
+                            ))
+                        ),
+                        vec![emg_layout::ccsa::CCSSOpSvv::new(
+                            emg_layout::ccsa::PredOp::Add,
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                    emg_core::IdStr::new("my_gap")
+                                ))
+                            )
+                        )]
+                    ),
+                    vec![emg_layout::ccsa::CCSSEqExpression::new(
+                        emg_layout::ccsa::PredEq::Eq,
+                        emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                    emg_core::IdStr::new("b2")
+                                )),
+                                ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                    emg_core::IdStr::new("left")
+                                ))
+                            ),
+                            vec![]
+                        )
+                    )],
+                    ::std::option::Option::None
+                ),
+                emg_layout::ccsa::CCSS::new(
+                    emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                        emg_layout::ccsa::ScopeViewVariable::new(
+                            ::std::option::Option::None,
+                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                emg_core::IdStr::new("b2")
+                            )),
+                            ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                emg_core::IdStr::new("right")
+                            ))
+                        ),
+                        vec![emg_layout::ccsa::CCSSOpSvv::new(
+                            emg_layout::ccsa::PredOp::Add,
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                    emg_core::IdStr::new("my_other_gap")
+                                ))
+                            )
+                        )]
+                    ),
+                    vec![emg_layout::ccsa::CCSSEqExpression::new(
+                        emg_layout::ccsa::PredEq::Eq,
+                        emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
+                            emg_layout::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                                    emg_core::IdStr::new("b3")
+                                )),
+                                ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
+                                    emg_core::IdStr::new("left")
+                                ))
+                            ),
+                            vec![]
+                        )
+                    )],
+                    ::std::option::Option::None
+                )
+            ],
+            emg_core::vector![
+                emg_layout::ccsa::ScopeViewVariable::new(
+                    ::std::option::Option::None,
+                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                        emg_core::IdStr::new("b1")
+                    )),
+                    ::std::option::Option::None
+                ),
+                emg_layout::ccsa::ScopeViewVariable::new(
+                    ::std::option::Option::None,
+                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                        emg_core::IdStr::new("b2")
+                    )),
+                    ::std::option::Option::None
+                ),
+                emg_layout::ccsa::ScopeViewVariable::new(
+                    ::std::option::Option::None,
+                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                        emg_core::IdStr::new("b3")
                     )),
                     ::std::option::Option::None
                 )

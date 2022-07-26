@@ -56,9 +56,9 @@ fn setup_tracing() {
     }
     #[cfg(not(debug_assertions))]
     {
-        let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
-        config.set_max_level(tracing::Level::WARN);
-        tracing_wasm::set_as_global_default_with_config(config.build());
+        // let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
+        // config.set_max_level(tracing::Level::WARN);
+        // tracing_wasm::set_as_global_default_with_config(config.build());
     }
 }
 
@@ -303,8 +303,8 @@ impl Application for Counter {
                         @=b @E=[
                             {md==120,my_other_gap==28},
                             {"nn":{
-                                    width==99,
-                                    height==29,
+                                    // width==0,
+                                    // height==29,
                                     // top==0,
                                     // left==0,
                                     // bottom==20,
@@ -312,13 +312,12 @@ impl Application for Counter {
                                 }
                             },
                             {
-                                @h (#b1)-("nn"[width])-(#b2)
+                                @h (#b1)(#b2) chain-height chain-width(250)
                             },
                         w(pc(50)),h(pc(50)),
                         css(bg_color(hsl(333,70,20)))
                         ]
                         Layer [
-
 
                             @E=[
                                 {md==10},
@@ -329,13 +328,15 @@ impl Application for Counter {
                             Layer[],
 
                             @=b1 @E=[
-                                w(px(50)),h(px(50)),
+                                w(px(50)),
+                                h(px(50)),
                             //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
                             css(bg_color(hsl(11,70,70)))]
                             Layer[],
 
                             @=b2 @E=[
-                                w(pc(50)),h(pc(50)),
+                                w(pc(50)),
+                                h(pc(50)),
                             //origin_x(pc(50)),origin_y(pc(0)),align_x(pc(50)),align_y(pc(50)),
                             css(bg_color(hsl(33,70,70)))]
                             Layer[],
