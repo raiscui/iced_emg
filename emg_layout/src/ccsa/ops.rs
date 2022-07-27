@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 15:41:55
- * @LastEditTime: 2022-07-12 16:05:41
+ * @LastEditTime: 2022-07-27 14:11:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -43,11 +43,11 @@ impl std::ops::Mul<Self> for ScopeViewVariable {
 }
 
 impl std::ops::Add<ScopeViewVariable> for CCSSSvvOpSvvExpr {
-    type Output = CCSSSvvOpSvvExpr;
-    fn add(self, other: ScopeViewVariable) -> CCSSSvvOpSvvExpr {
+    type Output = Self;
+    fn add(self, other: ScopeViewVariable) -> Self {
         let mut op_exprs = self.op_exprs;
         op_exprs.push(CCSSOpSvv::new_add(other));
-        CCSSSvvOpSvvExpr {
+        Self {
             svv: self.svv,
             op_exprs,
         }
@@ -55,11 +55,11 @@ impl std::ops::Add<ScopeViewVariable> for CCSSSvvOpSvvExpr {
 }
 
 impl std::ops::Sub<ScopeViewVariable> for CCSSSvvOpSvvExpr {
-    type Output = CCSSSvvOpSvvExpr;
-    fn sub(self, other: ScopeViewVariable) -> CCSSSvvOpSvvExpr {
+    type Output = Self;
+    fn sub(self, other: ScopeViewVariable) -> Self {
         let mut op_exprs = self.op_exprs;
         op_exprs.push(CCSSOpSvv::new_sub(other));
-        CCSSSvvOpSvvExpr {
+        Self {
             svv: self.svv,
             op_exprs,
         }
@@ -67,11 +67,11 @@ impl std::ops::Sub<ScopeViewVariable> for CCSSSvvOpSvvExpr {
 }
 
 impl std::ops::Mul<ScopeViewVariable> for CCSSSvvOpSvvExpr {
-    type Output = CCSSSvvOpSvvExpr;
-    fn mul(self, other: ScopeViewVariable) -> CCSSSvvOpSvvExpr {
+    type Output = Self;
+    fn mul(self, other: ScopeViewVariable) -> Self {
         let mut op_exprs = self.op_exprs;
         op_exprs.push(CCSSOpSvv::new_mul(other));
-        CCSSSvvOpSvvExpr {
+        Self {
             svv: self.svv,
             op_exprs,
         }

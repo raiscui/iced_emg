@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-26 14:57:02
- * @LastEditTime: 2022-07-21 16:27:25
+ * @LastEditTime: 2022-07-27 13:55:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -416,7 +416,7 @@ where
                 trace!("\nhandle_children:\n inserted edge: {:#?}",&nix);
 
 
-                let path = (&*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
+                let path = (*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
@@ -475,7 +475,7 @@ where
                     .setup_default_edge_in_topo(EdgeIndex::new(parent_nix, nix.clone()))
                     .unwrap();
 
-                let path = (&*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
+                let path = (*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
@@ -504,7 +504,7 @@ where
                 let this = self.clone();
                 let this2 = self.clone();
 
-                let current_path = (&*illicit::expect::<EPath<Self::Ix>>()).clone();
+                let current_path = (*illicit::expect::<EPath<Self::Ix>>()).clone();
 
                 // let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
                 // let update_id = TopoKey::new(topo::CallId::current());

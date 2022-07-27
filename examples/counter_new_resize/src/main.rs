@@ -314,7 +314,8 @@ impl Application for Counter {
                             {
                                 @h (#b1)(#b2) chain-height chain-width(250)
                             },
-                        w(pc(50)),h(pc(50)),
+                        // w(pc(50)),
+                        // h(pc(50)),
                         css(bg_color(hsl(333,70,20)))
                         ]
                         Layer [

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-06-22 21:39:15
+ * @LastEditTime: 2022-07-27 16:30:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -26,6 +26,7 @@ use tracing::{debug, warn};
 
 
 pub trait DowncastSelf {
+    #[must_use]
     fn downcast_self(&self) -> Self;
 }
 
@@ -113,7 +114,7 @@ pub enum GElement<Message> {
     // InsideDirectUseSa_(StateAnchor<Rc<Self>>),//NOTE generate by tree builder use into()
     #[from(ignore)]
     SaNode_(StateAnchor<Rc<Self>>),
-    EvolutionaryFactor(Rc<dyn Evolution<StateAnchor<Rc<GElement<Message>>>>>),
+    EvolutionaryFactor(Rc<dyn Evolution<StateAnchor<Rc<Self>>>>),
     EmptyNeverUse,
 }
 
@@ -136,11 +137,13 @@ impl<Who:'static> core::cmp::PartialEq<dyn Evolution<Who> >
     }
 }
 
+type SaMapAction<Message, Use> = Rc<dyn Fn(&Rc<GElement<Message>>,&Use)->Rc<GElement<Message>>>;
+
 #[derive(Clone)]
-pub struct SaWithMapFn<Use:Clone,Message> { u_s_e: StateAnchor<Use>, map_action: Rc<dyn Fn(&Rc<GElement<Message>>,&Use)->Rc<GElement<Message>>> }
+pub struct SaWithMapFn<Use:Clone,Message> { u_s_e: StateAnchor<Use>, map_action: SaMapAction<Message, Use> }
 
 impl<Use: Clone, Message> SaWithMapFn<Use, Message> {
-    pub fn new(u_s_e:StateAnchor<Use>,map_action:Rc<dyn Fn(&Rc<GElement<Message>>,&Use)->Rc<GElement<Message>>>)->Self{
+    pub fn new(u_s_e:StateAnchor<Use>,map_action:SaMapAction<Message, Use>)->Self{
         Self{
             u_s_e,
             map_action
@@ -160,10 +163,10 @@ impl<Use:PartialEq+Clone, Message> PartialEq for SaWithMapFn<Use, Message>  {
 
 
 
-impl<Use:Clone,Message> Evolution<StateAnchor<Rc<GElement<Message>>>> for SaWithMapFn<Use,Message>
+impl<Use,Message> Evolution<StateAnchor<Rc<GElement<Message>>>> for SaWithMapFn<Use,Message>
 where 
-    Use: PartialEq+'static,
-    Message:PartialEq+Clone+'static
+    Use: Clone+PartialEq+'static,
+    Message:PartialEq+Clone+'static,
 {
     fn evolution(&self,who:&StateAnchor<Rc<GElement<Message>>>) ->StateAnchor<Rc<GElement<Message>>> {
         let func = self.map_action.clone();
@@ -197,7 +200,7 @@ impl<Use,Message> From<SaWithMapFn<Use,Message>> for GElement<Message>
 where 
     Use:PartialEq+Clone+'static,
     Message:Clone+PartialEq+'static,
-    StateAnchor<Use>:Evolution<StateAnchor<Rc<GElement<Message>>>>
+    StateAnchor<Use>:Evolution<StateAnchor<Rc<Self>>>
 
     {
         fn from(sa_with_fn: SaWithMapFn<Use,Message>) -> Self {
@@ -208,18 +211,11 @@ impl<Use,Message> From<StateAnchor<Use>> for GElement<Message>
 where 
     Use:'static,
     Message:'static,
-    StateAnchor<Use>:Evolution<StateAnchor<Rc<GElement<Message>>>>
+    StateAnchor<Use>:Evolution<StateAnchor<Rc<Self>>>
     {
         fn from(sa_use: StateAnchor<Use>) -> Self {
 
-            if let Some(s)= (&sa_use as &dyn Any ).downcast_ref::<StateAnchor<Rc<GElement<Message>>>>().cloned(){
-                // Self::InsideDirectUseSa_(s)
-                Self::SaNode_(s)
-
-            }else{
-                Self::EvolutionaryFactor(Rc::new(sa_use))
-
-            }
+            (&sa_use as &dyn Any ).downcast_ref::<StateAnchor<Rc<Self>>>().cloned().map_or_else(|| Self::EvolutionaryFactor(Rc::new(sa_use)), |s| Self::SaNode_(s))
         
         }
     }
@@ -261,7 +257,7 @@ mod evolution_test{
         }) };
 
         let ge = use_state( GElement::<Message>::EmptyNeverUse).watch();
-        let _x  = GElement::<Message>::EvolutionaryFactor(Rc::new(f) );
+        let _x  = GElement::<Message>::EvolutionaryFactor(Rc::new(f.clone()) );
         let _xxx :GElement<Message>  = f.into();
         let _x2  = GElement::<Message>::EvolutionaryFactor(Rc::new(a.watch()) as Rc<dyn Evolution<StateAnchor<Rc<GElement<Message>>>>>);
         let _x2  = GElement::<Message>::EvolutionaryFactor(Rc::new(ge) as Rc<dyn Evolution<StateAnchor<Rc<GElement<Message>>>>>);
@@ -400,7 +396,7 @@ where
         }
     }
 
-    pub fn as_text(&self) -> Option<&Text> {
+    pub const fn as_text(&self) -> Option<&Text> {
         if let Self::Text_(v) = self {
             Some(v)
         } else {

@@ -1,21 +1,18 @@
 use std::{hash::BuildHasherDefault, rc::Rc};
 
 use cassowary::{
-    strength::{REQUIRED, STRONG, WEAK},
+    strength::{REQUIRED, WEAK},
     Constraint, Variable, WeightedRelation,
 };
 use derive_more::From;
-use either::Either::{Left, Right};
-use emg_core::{
-    im::{hashset, HashMap, HashSet},
-    IdStr, NotNan, Vector,
-};
+
+use emg_core::{im::HashMap, IdStr, NotNan};
 use emg_hasher::CustomHasher;
 use emg_state::Dict;
 
 use indexmap::IndexMap;
 use parse_display::{Display, FromStr};
-use tracing::warn;
+
 mod impl_refresh;
 mod ops;
 pub mod svv_process;
@@ -155,13 +152,13 @@ impl ScopeViewVariable {
         )
     }
 
-    pub(crate) fn scope(&self) -> Option<Scope> {
-        self.scope
-    }
+    // pub(crate) fn scope(&self) -> Option<Scope> {
+    //     self.scope
+    // }
 
-    pub(crate) fn view(&self) -> Option<&NameChars> {
-        self.view.as_ref()
-    }
+    // pub(crate) fn view(&self) -> Option<&NameChars> {
+    //     self.view.as_ref()
+    // }
 }
 
 #[derive(Debug, Clone, Display, PartialEq, Eq)]
@@ -328,6 +325,7 @@ impl std::fmt::Display for CCSS {
 }
 
 impl CCSS {
+    #[must_use]
     pub fn new(
         svv_op_svvs: CCSSSvvOpSvvExpr,
         eq_exprs: Vec<CCSSEqExpression>,

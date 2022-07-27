@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-21 10:50:01
- * @LastEditTime: 2022-07-25 11:02:51
+ * @LastEditTime: 2022-07-27 13:42:53
  * @LastEditors: Rais
  * @Description:
  */
-
+#![allow(clippy::match_same_arms)]
 use std::{
     hash::{BuildHasherDefault, Hash},
     rc::Rc,

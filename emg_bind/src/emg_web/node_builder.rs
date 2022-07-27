@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-06-21 22:44:06
+ * @LastEditTime: 2022-07-27 14:14:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,153 +15,21 @@ use derive_more::From;
 
 use emg_core::IdStr;
 use seed_styles::GlobalStyleSV;
-use tracing::{debug, error, trace};
+use tracing::{debug, trace};
 
 use crate::{
     dodrio::{self, bumpalo, Node, RootRender, VdomWeak},
     map_fn_callback_return_to_option_ms, Bus, GElement, Widget,
 };
 use std::{collections::VecDeque, rc::Rc, string::String};
-// use emg_core::Vector;
-// ────────────────────────────────────────────────────────────────────────────────
-// #[dyn_partial_eq]
-// pub trait NodeBuilder<Message>: DynPartialEq // DynPartialEq
-// // Message: 'static,
-// {
-//     fn generate_element_builder<'b>(
-//         &self,
-//         bump: &'b bumpalo::Bump,
-//         bus: &Bus<Message>,
-//         style_sheet: &GlobalStyleSV,
-//     ) -> ElementBuilder<
-//         'b,
-//         bumpalo::collections::Vec<'b, Listener<'b>>,
-//         bumpalo::collections::Vec<'b, Attribute<'b>>,
-//         bumpalo::collections::Vec<'b, Node<'b>>,
-//     >;
-// }
-
-// impl<Message> core::cmp::Eq for dyn NodeBuilder<Message> + '_ {}
-
-// impl<Message> core::cmp::PartialEq for dyn NodeBuilder<Message> + '_ {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.box_eq(other.as_any())
-//     }
-// }
-// impl<Message> core::cmp::PartialEq<dyn NodeBuilder<Message> + '_>
-//     for Box<dyn NodeBuilder<Message> + '_>
-// {
-//     fn eq(&self, other: &dyn NodeBuilder<Message>) -> bool {
-//         self.box_eq(other.as_any())
-//     }
-// }
-
-// default impl<Message, Who> Widget<Message> for Who
-// where
-//     Message: 'static + Clone + std::cmp::PartialEq,
-//     Who: NodeBuilder<Message>,
-// {
-//     fn node<'b>(
-//         &self,
-//         bump: &'b bumpalo::Bump,
-//         bus: &Bus<Message>,
-//         style_sheet: &GlobalStyleSV,
-//     ) -> dodrio::Node<'b> {
-//         self.generate_element_builder(bump, bus, style_sheet)
-//             .finish()
-//     }
-// }
-
-// impl<Message> core::cmp::PartialEq<dyn NodeBuilder<Message> + '_>
-//     for Rc<dyn NodeBuilder<Message> + '_>
-// {
-//     fn eq(&self, other: &dyn NodeBuilder<Message>) -> bool {
-//         self.box_eq(other.as_any())
-//     }
-// }
-
-// ────────────────────────────────────────────────────────────────────────────────
-// impl<Message> core::cmp::PartialEq for Box<dyn NodeBuilder<Message> + '_> {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.box_eq(other.as_any())
-//     }
-// }
-
-// impl<Message> core::cmp::PartialEq<&Self> for Box<dyn NodeBuilder<Message> + '_> {
-//     fn eq(&self, other: &&Self) -> bool {
-//         self.box_eq(other.as_any())
-//     }
-// }
-// ────────────────────────────────────────────────────────────────────────────────
-
-// pub type ListenerCallback = Box<dyn EventCallbackClone + 'static>;
-
-// pub trait EventCallbackClone: Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) + DynClone {}
-// dyn_clone::clone_trait_object!(EventCallbackClone);
-
-// ────────────────────────────────────────────────────────────────────────────────
-
-// pub trait EventCbClone<Message>:
-//     Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>
-// {
-//     fn clone_box(&self) -> Box<dyn EventCbClone<Message>>;
-// }
-
-// impl<Message, T> EventCbClone<Message> for T
-// where
-//     T: 'static + Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message> + Clone,
-// {
-//     fn clone_box(&self) -> Box<dyn EventCbClone<Message>> {
-//         Box::new(self.clone())
-//     }
-// }
-
-// impl<Message> Clone for Box<dyn EventCbClone<Message>> {
-//     fn clone(&self) -> Self {
-//         (**self).clone_box()
-//     }
-// }
-// ────────────────────────────────────────────────────────────────────────────────
-// pub trait EventMessageCbClone<Message>: Fn() -> Message {
-//     fn clone_box(&self) -> Box<dyn EventMessageCbClone<Message>>;
-// }
-
-// impl<Message, T> EventMessageCbClone<Message> for T
-// where
-//     T: 'static + Fn() -> Message + Clone,
-// {
-//     fn clone_box(&self) -> Box<dyn EventMessageCbClone<Message>> {
-//         Box::new(self.clone())
-//     }
-// }
-
-// impl<Message> Clone for Box<dyn EventMessageCbClone<Message>> {
-//     fn clone(&self) -> Self {
-//         (**self).clone_box()
-//     }
-// }
-// ────────────────────────────────────────────────────────────────────────────────
-
-// pub struct EventCallbackCloneStatic<T>(T)
-// where
-//     T: EventCallbackClone + 'static;
-
-// impl<T> EventCallbackCloneStatic<T>
-// where
-//     T: EventCallbackClone + 'static,
-// {
-//     pub fn new(f: T) -> Self {
-//         Self(f)
-//     }
-// }
 
 type EventNameString = IdStr;
 
+type EventCallbackFn<Message> =
+    Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>;
+
 #[derive(Clone)]
-pub struct EventCallback<Message>(
-    EventNameString,
-    Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>,
-);
+pub struct EventCallback<Message>(EventNameString, EventCallbackFn<Message>);
 
 impl<Message> PartialEq for EventCallback<Message>
 where
@@ -198,10 +66,7 @@ where
 
 impl<Message> EventCallback<Message> {
     #[must_use]
-    pub fn new(
-        name: EventNameString,
-        cb: Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>,
-    ) -> Self {
+    pub fn new(name: EventNameString, cb: EventCallbackFn<Message>) -> Self {
         Self(name, cb)
     }
 }
@@ -368,7 +233,11 @@ impl<Message> NodeBuilderWidget<Message> {
     /// # Errors
     ///
     /// Will return `Err` if `gel` does not Layer_(_) | Button_(_) | Text_(_)
+    /// # Panics
+    ///
+    /// Will panic if xxxx
     #[allow(clippy::result_unit_err)]
+    #[allow(clippy::match_same_arms)]
     pub fn try_new_use(gel: &GElement<Message>) -> Result<Self, ()> {
         use GElement::{Button_, Layer_, Text_};
         match gel {

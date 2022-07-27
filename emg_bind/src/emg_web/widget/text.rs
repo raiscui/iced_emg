@@ -1,7 +1,7 @@
 /*
 * @Author: Rais
 * @Date: 2021-05-07 13:46:16
- * @LastEditTime: 2022-06-20 13:28:55
+ * @LastEditTime: 2022-07-27 13:45:57
  * @LastEditors: Rais
 * @Description:
 */
@@ -53,6 +53,7 @@ impl Text {
         self.content = label.into();
         self
     }
+    #[must_use]
     pub fn with_content<T: Into<IdStr>>(mut self, label: T) -> Self {
         self.content = label.into();
         self

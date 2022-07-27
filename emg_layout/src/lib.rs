@@ -353,9 +353,9 @@ where
 }
 #[derive(Display, Debug, Clone, PartialEq)]
 #[display(
-    fmt = "{{\nsuggest size:\n{},\nreal size:\n{},\norigin:\n{},\nalign:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
-    "indented(suggest_size)",
-    "indented(real_size)",
+    fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
+    // "indented(suggest_size)",
+    "indented(cass_or_calc_size)",
     "indented(origin)",
     "indented(align)",
     "indented(coordinates_trans)",
@@ -365,10 +365,10 @@ where
 )]
 pub struct LayoutCalculated {
     
-    suggest_size: StateAnchor<Vector2<f64>>,
+    // suggest_size: StateAnchor<Vector2<f64>>,
     size_constraints: StateAnchor<Vec<Constraint>>,
     cassowary_inherited_generals_sa:StateAnchor<Rc<CassowaryGeneralMap>>,
-    real_size: StateAnchor<Vector2<f64>>,
+    cass_or_calc_size: StateAnchor<Vector2<f64>>,
     origin: StateAnchor<Translation3<f64>>,
     align: StateAnchor<Translation3<f64>>,
     coordinates_trans: StateAnchor<Translation3<f64>>,
@@ -479,9 +479,11 @@ impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
         Self(vec)
     }
 
+    #[must_use]
     pub fn last_target(&self) -> Option<&NodeIndex<Ix>> {
          self.0.last().and_then(|e| e.target_nix().as_ref())
     }
+    #[must_use]
     pub fn except_tail_match(&self,other_no_tail:&EPath<Ix>) -> bool {
         if self.0.len() -1 != other_no_tail.0.len() {
             return false;
@@ -857,7 +859,6 @@ where
         let nodes:DictPathEiNodeSA<Ix> = id_sv.watch().then(move|id_sa|{
             
             let paths_clone2 = paths_clone.clone();
-            let path_layouts2 = path_layouts.clone(); 
             let children_nodes2 = children_nodes.clone();
                 
             id_sa.then(move |eid:&EdgeIndex<Ix>|{
@@ -885,6 +886,14 @@ where
 //
                     //@ current var=>ix ix=>var cassowary_map
                     let current_cassowary_map = Rc::new(CassowaryMap::new());
+                    
+                    let width_var  =current_cassowary_map.var("width").unwrap();
+                    let height_var  =current_cassowary_map.var("height").unwrap();
+                    let top_var  =current_cassowary_map.var("top").unwrap();
+                    let left_var  =current_cassowary_map.var("left").unwrap();
+                    let bottom_var  = current_cassowary_map.var("bottom").unwrap();
+                    let right_var  = current_cassowary_map.var("right").unwrap();
+                    
 
                     
                     let self_path2 =self_path.clone();
@@ -898,7 +907,7 @@ where
                         span!(Level::TRACE, "[ node recalculation ]:paths change ").entered();
 
                         //TODO use Dict anchor Collection
-                    let path_layout:StateAnchor<Layout> = path_layouts2.watch().map(move|path_layouts_map:&PathVarMap<Ix, Layout>|{
+                    let path_layout:StateAnchor<Layout> = path_layouts.watch().map(move|path_layouts_map:&PathVarMap<Ix, Layout>|{
                         // println!("--> id: {:?}", &id_sv);
                         trace!("--> finding path_layout in path_with_ed_node_builder------------------- len:{}",path_layouts_map.len());
                         // println!("--> layout:{:?}",pls_map.get(&path_clone));
@@ -1009,9 +1018,9 @@ where
 
                     // let current_cassowary_inherited_generals_val_sa = layout_calculated.cassowary_inherited_generals_sa.map(|x|x.v_v);
 
-                    let LayoutCalculated{real_size, origin, align ,..} = &layout_calculated;
+                    let LayoutCalculated{cass_or_calc_size, origin, align ,..} = &layout_calculated;
                     //NOTE 层建议值 (层当前计算所得)
-                    let current_calculated_prop_val_sa = ( real_size, origin, align ).map(|size, origin, align|{
+                    let current_calculated_prop_val_sa = ( cass_or_calc_size, origin, align ).map(|size, origin, align|{
                         let width = size.x;
                         let height = size.y;
                         let origin_x = origin.x;
@@ -1094,15 +1103,15 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                     //NOTE current default constraints
                     cass_solver.add_constraints(&[
                         //NOTE add for current cassowary
-                        current_cassowary_map.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                        current_cassowary_map.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                        // current_cassowary_map.var("width").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map.var("right").unwrap() - current_cassowary_map.var("left").unwrap(),
-                        // current_cassowary_map.var("height").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map.var("bottom").unwrap() - current_cassowary_map.var("top").unwrap(),
+                        width_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
+                        height_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
+                        // width_var | WeightedRelation::EQ(cassowary::strength::REQUIRED) | right_var - left_var,
+                        // height_var | WeightedRelation::EQ(cassowary::strength::REQUIRED) | bottom_var - top_var,
 
-                        current_cassowary_map.var("top").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | 0.0,
-                        current_cassowary_map.var("left").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | 0.0,
-                        current_cassowary_map.var("bottom").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map.var("height").unwrap(),
-                        current_cassowary_map.var("right").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map.var("width").unwrap()
+                        top_var | WeightedRelation::EQ(cassowary::strength::REQUIRED) | 0.0,
+                        left_var | WeightedRelation::EQ(cassowary::strength::REQUIRED) | 0.0,
+                        bottom_var | WeightedRelation::EQ(cassowary::strength::REQUIRED) | height_var,
+                        right_var | WeightedRelation::EQ(cassowary::strength::REQUIRED) | width_var
                     ]).unwrap();
 
                     let calculated_changed_vars_sa  = 
@@ -1346,13 +1355,12 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
                     //TODO check diff with [calculated], because calculated_vars may re suggestion some value.
                     //TODO replace current_cassowary_map4.var("width") use   width
-                    let current_cassowary_map4 = current_cassowary_map.clone();
                     let cassowary_calculated_layout = cassowary_calculated_vars.map(move |cassowary_vars|{
                         warn!("[calculated_vars] [calculated_cassowary_layout] total  prop:\n{:#?} ",&cassowary_vars);
 
 
-                        let w  =cassowary_vars.get(&current_cassowary_map4.var("width").unwrap()).map(|x|x.0.into_inner());
-                        let h  =cassowary_vars.get(&current_cassowary_map4.var("height").unwrap()).map(|x|x.0.into_inner());
+                        let w  =cassowary_vars.get(&width_var).map(|x|x.0.into_inner());
+                        let h  =cassowary_vars.get(&height_var).map(|x|x.0.into_inner());
                         // let top = cassowary_vars.get(&current_cassowary_map4.var("top").unwrap()).map(|x|x.0.into_inner());
                         // let left = cassowary_vars.get(&current_cassowary_map4.var("left").unwrap()).map(|x|x.0.into_inner());
                         // let bottom = cassowary_vars.get(&current_cassowary_map4.var("bottom").unwrap()).map(|x|x.0.into_inner());
@@ -1513,6 +1521,12 @@ fn path_ein_empty_node_builder<Ix:'static>(
         let sa_h = h.then(|h|h.get_anchor());
         let width_var  =current_cassowary_map.var("width").unwrap();
         let height_var  =current_cassowary_map.var("height").unwrap();
+        let top_var  =current_cassowary_map.var("top").unwrap();
+        let left_var  =current_cassowary_map.var("left").unwrap();
+        let bottom_var  = current_cassowary_map.var("bottom").unwrap();
+        let right_var  = current_cassowary_map.var("right").unwrap();
+        // ─────────────────────────────────────────────────────────────────
+
         let current_cassowary_map2 = current_cassowary_map.clone();
 
         let size_constraints = 
@@ -1522,14 +1536,14 @@ fn path_ein_empty_node_builder<Ix:'static>(
                         height_var | WeightedRelation::EQ(cassowary::strength::REQUIRED) |h.get_length_value(),
                         // • • • • •
 
-                                        current_cassowary_map2.var("bottom").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map2.var("top").unwrap() + height_var,
-                                        current_cassowary_map2.var("right").unwrap() | WeightedRelation::EQ(cassowary::strength::REQUIRED) | current_cassowary_map2.var("left").unwrap()+ width_var,
-                                        current_cassowary_map2.var("bottom").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("top").unwrap(),
-                                        current_cassowary_map2.var("right").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | current_cassowary_map2.var("left").unwrap(),
-                                        width_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                                        height_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
-                                        current_cassowary_map2.var("top").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
-                                        current_cassowary_map2.var("left").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                        bottom_var | WeightedRelation::EQ(cassowary::strength::REQUIRED) | (top_var + height_var),
+                        right_var | WeightedRelation::EQ(cassowary::strength::REQUIRED) | (left_var+ width_var),
+                        bottom_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | top_var,
+                        right_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | left_var,
+                        width_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
+                        height_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
+                        top_var | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
+                        left_var | WeightedRelation::GE(cassowary::strength::WEAK) | 0.0,
                     ];
                     size_constraints
                 });
@@ -1544,21 +1558,15 @@ fn path_ein_empty_node_builder<Ix:'static>(
 
 
         //TODO 如果没有parent 那么 parent 就是 screen w h
-    let calculated_size:StateAnchor<Vector2<f64>> = (&w,&h).then(|sa_w: &GenericSizeAnchor,sa_h: &GenericSizeAnchor| {
-            (&**sa_w,&**sa_h).map(|w:&GenericSize,h:&GenericSize|->Vector2<f64>{
+    let cass_or_calc_size:StateAnchor<Vector2<f64>> = (&sa_w,&sa_h).map(|w: &GenericSize,h: &GenericSize| {
+            
                 //TODO check editor display error 
                 Vector2::<f64>::new(w.get_length_value(), h.get_length_value())
-            }).into()    
+            
             
         });
 
-    let real_size:StateAnchor<Vector2<f64>> = (&w,&h).then(|sa_w: &GenericSizeAnchor,sa_h: &GenericSizeAnchor| {
-        (&**sa_w,&**sa_h).map(|w:&GenericSize,h:&GenericSize|->Vector2<f64>{
-            //TODO check editor display error 
-            Vector2::<f64>::new(w.get_length_value(), h.get_length_value())
-        }).into()    
-        
-    });
+  
 
         //TODO 审视是否要自定义定位
     let calculated_origin = StateAnchor::constant(Translation3::<f64>::identity());
@@ -1566,7 +1574,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
     let coordinates_trans = StateAnchor::constant(Translation3::<f64>::identity());
     let cass_trans = StateAnchor::constant(Translation3::<f64>::identity());
     let matrix = cass_trans.map(|x| x.to_homogeneous().into());
-    let loc_styles = (&calculated_size, &matrix).map(move |size: &Vector2<f64>, mat4: &Mat4| {
+    let loc_styles = (&cass_or_calc_size, &matrix).map(move |size: &Vector2<f64>, mat4: &Mat4| {
             let _enter = span!(Level::TRACE,
                         "-> [root] [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
                         )
@@ -1578,10 +1586,10 @@ fn path_ein_empty_node_builder<Ix:'static>(
             s().w(px(size.x)).h(px(size.y)).transform(*mat4)
         });
     let layout_calculated = LayoutCalculated {
-            suggest_size: calculated_size,
+           
             size_constraints,
             cassowary_inherited_generals_sa:current_cassowary_inherited_generals_sa,
-            real_size,
+            cass_or_calc_size,
             origin: calculated_origin,
             align: calculated_align,
             coordinates_trans,
@@ -1708,7 +1716,7 @@ mod tests {
     use emg_state::StateVar;
     use emg_core::vector;
  
-    use styles::{CssWidth, CssHeight,bg_color, h, hsl, pc, width, CssBackgroundColor};
+    use styles::{CssWidth, CssHeight,bg_color, h, hsl, pc, width, CssBackgroundColor, CssBackgroundColorTrait};
     use tracing::{debug, info, span, warn};
 
     use tracing_flame::FlameLayer;
@@ -2089,7 +2097,7 @@ mod tests {
                     .and_then(EdgeItemNode::as_edge_data)
                     .unwrap()
                     .calculated
-                    .size
+                    .cass_or_calc_size
                     .get(),
                 Vector2::<f64>::new(12., 10.)
             );
@@ -2135,7 +2143,7 @@ mod tests {
                     .and_then(EdgeItemNode::as_edge_data)
                     .unwrap()
                     .calculated
-                    .size
+                    .cass_or_calc_size
                     .get(),
                     Vector2::<f64>::new(100.0, 100.0)
             );
@@ -2419,7 +2427,7 @@ mod tests {
                     .and_then(EdgeItemNode::as_edge_data)
                     .unwrap()
                     .calculated
-                    .size
+                    .cass_or_calc_size
                     .get(),
                 Vector2::<f64>::new(12., 200.)
             );
@@ -2465,7 +2473,7 @@ mod tests {
                     .and_then(EdgeItemNode::as_edge_data)
                     .unwrap()
                     .calculated
-                    .size
+                    .cass_or_calc_size
                     .get(),
                     Vector2::<f64>::new(100.0, 100.0)
             );

@@ -1,8 +1,7 @@
 use std::rc::Rc;
 
-use cassowary::{Expression, Variable};
-use emg_core::{GenericSize, IdStr, NotNan};
-use emg_state::{Dict, StateAnchor};
+use cassowary::Expression;
+use emg_core::GenericSize;
 use seed_styles as styles;
 use seed_styles::LogicLength;
 
@@ -33,10 +32,7 @@ pub fn cassowary_calculation_logiclength(
                 | styles::Unit::Vh => {
                     todo!()
                 }
-                styles::Unit::Pc => {
-                    let f = p_cass_map.var(prop).unwrap() * v;
-                    (p_cass_map.var(prop).unwrap() * (v * 0.01)).into()
-                }
+                styles::Unit::Pc => (p_cass_map.var(prop).unwrap() * (v * 0.01)).into(),
             }
         }
         LogicLength::Calculation(calc_op) => match calc_op.as_ref() {

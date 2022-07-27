@@ -4,14 +4,14 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-25 12:21:24
+ * @LastEditTime: 2022-07-27 15:05:02
  * @LastEditors: Rais
 * @Description:
 */
 use crate::{EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4, ccsa::CassowaryMap, CHILD_PROP_WEIGHT};
 
 use derive_more::From;
-use float_cmp::{approx_eq, assert_approx_eq};
+use float_cmp::{assert_approx_eq};
 use cassowary::{WeightedRelation, strength::{REQUIRED, WEAK}};
 use emg::EdgeIndex;
 use emg_core::TypeName;
@@ -46,7 +46,7 @@ where
             let EdgeData{
                         calculated:p_calculated,
                         children_vars_sa:p_children_vars_sa,
-                        cassowary_calculated_vars:p_calculated_vars,
+                        cassowary_calculated_vars:p_cass_calculated_vars,
                         cassowary_map:p_cassowary_map,
                         cassowary_calculated_layout:p_cassowary_calculated_layout,
                         
@@ -57,9 +57,18 @@ where
             // let p_calc_size_sa = &p_calculated.real_size;
             // NOTE p_cassowary_calculated_layout   - parent 自己算的, 
             // NOTE p_calculated.real_size          - parent 的 parent算的
-            let p_calc_size_sa = &(p_cassowary_calculated_layout,&p_calculated.real_size).map(|(w,h),size|{
-                let w = w.unwrap_or(size.x);
-                let h = h.unwrap_or(size.y);
+            // let p_cass_or_calc_size_sa = &(p_cassowary_calculated_layout,&p_calculated.cass_or_calc_size).map(|(w,h),size|{
+            //     // let w = w.unwrap_or(size.x);
+            //     // let h = h.unwrap_or(size.y);
+            //     let w = w.unwrap();
+            //     let h = h.unwrap();
+            //     Vector2::<f64>::new(w,h)
+            // });
+            let p_cass_p_size_sa = p_cassowary_calculated_layout.map(|(w,h)|{
+                // let w = w.unwrap_or(size.x);
+                // let h = h.unwrap_or(size.y);
+                let w = w.unwrap();
+                let h = h.unwrap();
                 Vector2::<f64>::new(w,h)
             });
 
@@ -82,11 +91,11 @@ where
 
 
             let p_cassowary_map2 = p_cassowary_map.clone();
-            let sa_w = w.then(|w|w.get_anchor());
-            let sa_h = h.then(|h|h.get_anchor());
+            let sa_gs_w = w.then(|w|w.get_anchor());
+            let sa_gs_h = h.then(|h|h.get_anchor());
 
             let size_constraints = 
-                (&sa_w,&sa_h).map(move |w:&GenericSize,h:&GenericSize|{
+                (&sa_gs_w,&sa_gs_h).map(move |w:&GenericSize,h:&GenericSize|{
                     let mut size_constraints = vec![];
 
 
@@ -130,44 +139,46 @@ where
                    Rc::new(f)
                 });
     
-            let calculated_size = (p_calc_size_sa, &w,&h).then(
-                move|p_calc_size: &Vector2<f64>, sa_w: &GenericSizeAnchor,sa_h:&GenericSizeAnchor| {
+        
+            let no_cass_downgrade_calculated_size = (&p_cass_p_size_sa, &sa_gs_w,&sa_gs_h).map(
+                move|p_calc_size: &Vector2<f64>, w: &GenericSize,h:&GenericSize| {
                    let p_calc_size = *p_calc_size;   
                    
-                   // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent
-                   let _enter = trace_span!( 
-                       "-> [ calculated_size ] recalculation..(&p_calculated.size, &layout.size.watch()).map ",
-                       ).entered();
-                    (&**sa_w,&**sa_h).map(move |w:&GenericSize,h:&GenericSize|->Vector2<f64>{
+                   // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent, 如果 w, h 独立 不依赖, 分开计算suggest_calculated_width suggest_calculated_height
+                  
                        //TODO check editor display error 
                        let new_size = Vector2::<f64>::new(calculation_w(&p_calc_size, w), calculation_h(&p_calc_size, h));
                        trace!("new size: {}",&new_size);
                        new_size
-                   }).into()
                },
             );
-            let (calculated_width,calculated_height) = calculated_size.map(|size|{
+
+            
+            let (no_cass_downgrade_calculated_width,no_cass_downgrade_calculated_height) = no_cass_downgrade_calculated_size.map(|size|{
                 (size.x,size.y)
             }).split();
             
             // ────────────────────────────────────────────────────────────────────────────────
 
-            let _debug_span_2 =_debug_span_.clone();
-            let width = p_calculated_vars.then(move|p_vars|{
+            
+            //NOTE used for suggest in current cassowary , with in [cass_or_calc_size]
+            let cass_or_calc_width = p_cass_calculated_vars.then(move|p_vars|{
                 let _debug_span_ = warn_span!( "->[ get self prop calculated value ] ").entered();
                 // warn!("p_vars: {:?},  \n get :{:?}",&p_vars,&width_var);
                 // • • • • •
                 //TODO only width change then do this
                 //NOTE 如果 是 root下面的第一阶层节点,如果没定义cassowary constraint 或者定义少量、不涉及某些 Id element, p_calculated_vars 很可能是无 or 不全面的,
-                p_vars.get(&width_var).map(|(val,_)| **val).map_or_else(|| calculated_width.get_anchor(), Anchor::constant)
+                p_vars.get(&width_var).map(|(val,_)| **val).map_or_else(|| no_cass_downgrade_calculated_width.get_anchor(), Anchor::constant)
                 
             });
-            let height = p_calculated_vars.then(move|p_vars|{
+
+            //NOTE used for suggest in current cassowary , with in [cass_or_calc_size]
+            let cass_or_calc_height = p_cass_calculated_vars.then(move|p_vars|{
                 //TODO only height change then do this
-                p_vars.get(&height_var).map(|(val,_)| **val).map_or_else(|| calculated_height.get_anchor(),  Anchor::constant)
+                p_vars.get(&height_var).map(|(val,_)| **val).map_or_else(|| no_cass_downgrade_calculated_height.get_anchor(),  Anchor::constant)
 
             });
-            let top = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+            let top = (p_children_vars_sa,p_cass_calculated_vars).map(move|p_children_vars,p_vars|{
                 //TODO only xx change then do this
                 if p_children_vars.contains(&top_var){
                     p_vars.get(&top_var).map(|(val,_)| **val)
@@ -175,7 +186,7 @@ where
                     None
                 }
             });
-            let left = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+            let left = (p_children_vars_sa,p_cass_calculated_vars).map(move|p_children_vars,p_vars|{
                 //TODO only xx change then do this
                 if p_children_vars.contains(&left_var){
                 p_vars.get(&left_var).map(|(val,_)| **val)
@@ -183,7 +194,7 @@ where
                     None
                 }
             });
-            let bottom = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+            let bottom = (p_children_vars_sa,p_cass_calculated_vars).map(move|p_children_vars,p_vars|{
                 //TODO only xx change then do this
                 if p_children_vars.contains(&bottom_var){
                 p_vars.get(&bottom_var).map(|(val,_)| **val)
@@ -192,7 +203,7 @@ where
                 }
             });
             
-            let right = (p_children_vars_sa,p_calculated_vars).map(move|p_children_vars,p_vars|{
+            let right = (p_children_vars_sa,p_cass_calculated_vars).map(move|p_children_vars,p_vars|{
                 //TODO only xx change then do this
                 if p_children_vars.contains(&right_var){
                 p_vars.get(&right_var).map(|(val,_)| **val)
@@ -202,7 +213,7 @@ where
             });
 
             //TODO 如果 父层 cassowary 不涉及到 此 element , 那么就需要 进行 原定位计算
-            let cass_trans:StateAnchor<Translation3<f64>>  =  (&width,&height,&top,&left,&bottom,&right).map(move|w:&f64,h:&f64,opt_t:&Option<f64>,opt_l:&Option<f64>,opt_b: &Option<f64>,opt_r: &Option<f64>,|{
+            let cass_trans:StateAnchor<Translation3<f64>>  =  (&cass_or_calc_width,&cass_or_calc_height,&top,&left,&bottom,&right).map(move|w:&f64,h:&f64,opt_t:&Option<f64>,opt_l:&Option<f64>,opt_b: &Option<f64>,opt_r: &Option<f64>,|{
                 let _span = warn_span!("cass_trans calculting map").entered();
                 warn!("[cass_trans] t:{:?} l:{:?} b:{:?} r:{:?}",opt_t,opt_l,opt_b,opt_r);
                 let check:bool = false;
@@ -272,7 +283,7 @@ where
                            if check {assert_approx_eq!(f64,b-t,*h,(0.1,2));}
                            Translation3::<f64>::new(*l,*t,0.0)
                     },
-                    (Some(t), Some(l), Some(b), Some(r)) => {
+                    (Some(t), Some(l), Some(b), Some(_r)) => {
                         //TODO remove this if release
 
                         // let mut buffer = ryu::Buffer::new();
@@ -345,9 +356,10 @@ where
 
             // });
 
-            let real_size = (&width, &height).map(|w,h|Vector2::<f64>::new(*w,*h));
+            //NOTE used for suggest in current cassowary , and children [suggest_calculated_size]
+            let cass_or_calc_size = (&cass_or_calc_width, &cass_or_calc_height).map(|w,h|Vector2::<f64>::new(*w,*h));
 
-            let calculated_origin = (p_calc_size_sa,&p_calculated.origin, &p_calculated.align,&real_size, &origin_x,&origin_y).then(
+            let calculated_origin = (&p_cass_p_size_sa,&p_calculated.origin, &p_calculated.align,&cass_or_calc_size, &origin_x,&origin_y).then(
                 move |p_calc_size: &Vector2<f64>,p_calc_origin:&Translation3<f64>,p_calc_align:&Translation3<f64>,size:&Vector2<f64>, origin_x: &GenericSizeAnchor,origin_y: &GenericSizeAnchor| {
 
       
@@ -367,7 +379,7 @@ where
                 },
             );
 
-            let calculated_align:StateAnchor<Translation3<f64>> = (p_calc_size_sa,&p_calculated.origin, &p_calculated.align, &align_x, &align_y).then(
+            let calculated_align:StateAnchor<Translation3<f64>> = (&p_cass_p_size_sa,&p_calculated.origin, &p_calculated.align, &align_x, &align_y).then(
                 move |p_calc_size: &Vector2<f64>,p_calc_origin:&Translation3<f64>,p_calc_align:&Translation3<f64>, align_x: &GenericSizeAnchor, align_y: &GenericSizeAnchor| {
                     // let p_calc_size= *p_calc_size;
 
@@ -412,7 +424,7 @@ where
             // @styles calculation ─────────────────────────────────────────────────────────────────
             // ────────────────────────────────────────────────────────────────────────────────
                 
-            let loc_styles = (&width,&height, &matrix).map( move |w,h, mat4: &Mat4| {
+            let loc_styles = (&cass_or_calc_width,&cass_or_calc_height, &matrix).map( move |w,h, mat4: &Mat4| {
                             trace!( "------------size: w:{:?}  h:{:?}  , matrix: {}", &w,&h,CssTransform::from(*mat4) );
 
                         { let _ender = trace_span!( 
@@ -425,8 +437,8 @@ where
 
 
                             // TODO use  key 更新 s(),
-                            s().w(px(*w)).h(px(*h)).transform(*mat4)
-                            // s().transform(*mat4)
+                            // s().w(px(*w)).h(px(*h)).transform(*mat4)
+                            s().transform(*mat4)
                     
                         }
                 
@@ -434,10 +446,10 @@ where
             });
 
             LayoutCalculated {
-                suggest_size: calculated_size,
+                // suggest_size: suggest_calculated_size,
                 size_constraints,
                 cassowary_inherited_generals_sa:current_cassowary_inherited_generals_sa,
-                real_size,
+                cass_or_calc_size,
                 origin: calculated_origin,
                 align: calculated_align,
                 coordinates_trans,

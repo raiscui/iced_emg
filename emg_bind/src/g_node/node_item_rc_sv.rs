@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-18 12:53:14
- * @LastEditTime: 2022-07-13 09:51:20
+ * @LastEditTime: 2022-07-27 14:07:35
  * @LastEditors: Rais
  * @Description: 
  */
@@ -309,7 +309,7 @@ where
                         error!("self is node ref:{} ",refs);
                          graph_rc7
                                                     .borrow()
-                                                    .get_node_item_use_ix(&refs)
+                                                    .get_node_item_use_ix(refs)
                                                     .map(|x| x.gel_sa.watch().get_anchor().then(|aa|aa.clone().into())).unwrap()
                     }else{
                         g_sa2.clone().into()
@@ -330,7 +330,7 @@ where
                 &styles_string_sa,
             )
                 .map(move |out_eix_s, children, gel, edge_styles| {
-                    let mut gel_clone = (&**gel).clone();
+                    let mut gel_clone = (**gel).clone();
                     
 
                     for eix in out_eix_s {

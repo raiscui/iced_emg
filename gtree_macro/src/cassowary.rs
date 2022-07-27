@@ -3,16 +3,16 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-07-26 10:49:33
+ * @LastEditTime: 2022-07-27 16:26:48
  * @LastEditors: Rais
  * @Description:
  */
 use im_rc::{vector, Vector};
-use parse_display::{Display, FromStr};
+use parse_display::Display;
 use proc_macro2::{Span, TokenStream};
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
-use quote::{quote, quote_spanned, ToTokens, TokenStreamExt};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::{
     braced, bracketed, parenthesized,
     parse::{discouraged::Speculative, Parse, ParseStream},
@@ -169,10 +169,10 @@ pub enum NameChars {
 }
 
 impl NameChars {
-    fn into_next(self) -> Self {
-        assert!(!self.is_id());
-        Self::Next(Box::new(self))
-    }
+    // fn into_next(self) -> Self {
+    //     assert!(!self.is_id());
+    //     Self::Next(Box::new(self))
+    // }
     fn make_next(&self) -> Self {
         assert!(!self.is_id());
         Self::Next(Box::new(self.clone()))
@@ -282,7 +282,7 @@ impl ToTokens for NameChars {
             }
             Self::Number(n) => match n {
                 Number::Int(int) => {
-                    quote_spanned!(int.span()=> emg_layout::ccsa::NameChars::Number( emg_core::NotNan::new(#int as f64).unwrap() ))
+                    quote_spanned!(int.span()=> emg_layout::ccsa::NameChars::Number( emg_core::NotNan::new(#int.into()).unwrap() ))
                         .to_tokens(tokens);
                 }
                 Number::Float(float) => {
@@ -326,12 +326,12 @@ impl PredOp {
     fn new_add() -> Self {
         Self::Add(token::Add::default())
     }
-    fn new_sub() -> Self {
-        Self::Sub(token::Sub::default())
-    }
-    fn new_mul() -> Self {
-        Self::Mul(token::Star::default())
-    }
+    // fn new_sub() -> Self {
+    //     Self::Sub(token::Sub::default())
+    // }
+    // fn new_mul() -> Self {
+    //     Self::Mul(token::Star::default())
+    // }
 }
 impl Parse for PredOp {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -570,24 +570,18 @@ impl Parse for PredView {
 #[derive(Debug, Clone)]
 enum PredExpressionItem {
     PredOp(PredOp),
-    // PredLiteral(PredLiteral),
     ScopeViewVariable(ScopeViewVariable),
-    //
-    // PredVariable(PredVariable),
-    // PredViewVariable(PredViewVariable),
-    // PredView(PredView),
-    // ViewPropInsideBuild(ViewProp),
 }
 
-impl PredExpressionItem {
-    const fn as_scope_view_variable(&self) -> Option<&ScopeViewVariable> {
-        if let Self::ScopeViewVariable(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-}
+// impl PredExpressionItem {
+//     const fn as_scope_view_variable(&self) -> Option<&ScopeViewVariable> {
+//         if let Self::ScopeViewVariable(v) = self {
+//             Some(v)
+//         } else {
+//             None
+//         }
+//     }
+// }
 impl Parse for PredExpressionItem {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         debug!("in PredExpressionItem");
@@ -645,6 +639,7 @@ impl Parse for PredExpression {
 /// !weak10   !require
 #[derive(Debug, Clone)]
 enum StrengthAndWeight {
+    //TODO use Number struct
     Weak(Option<Either<LitInt, LitFloat>>),
     Medium(Option<Either<LitInt, LitFloat>>),
     Strong(Option<Either<LitInt, LitFloat>>),
@@ -659,7 +654,7 @@ impl ToTokens for StrengthAndWeight {
                     |lint| {
                         match lint{
                             Left(xxx) => {
-                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx as f64).unwrap()) )
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx.into()).unwrap()) )
                             },
                             Right(xxx) => {
                                 quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx).unwrap()) )
@@ -676,7 +671,7 @@ impl ToTokens for StrengthAndWeight {
                     |lint| {
                         match lint{
                             Left(xxx) => {
-                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx as f64).unwrap()) )
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx.into()).unwrap()) )
                             },
                             Right(xxx) => {
                                 quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx).unwrap()) )
@@ -693,7 +688,7 @@ impl ToTokens for StrengthAndWeight {
                     |lint| {
                         match lint{
                             Left(xxx) => {
-                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx as f64).unwrap()) )
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx.into()).unwrap()) )
                             },
                             Right(xxx) => {
                                 quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx).unwrap()) )
@@ -1583,6 +1578,7 @@ impl OptionItem {
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn try_into_chain(self) -> Result<Chain, Self> {
         if let Self::Chain(v) = self {
             Ok(v)
@@ -2235,14 +2231,11 @@ mod tests {
 
     use std::path::Path;
 
-    use emg_core::{VecDisp, VectorDisp};
+    use emg_core::VecDisp;
     use quote::ToTokens;
     use tracing::debug;
 
-    use crate::{
-        cassowary::{NameChars, VFLStatement},
-        Gtree,
-    };
+    use crate::{cassowary::VFLStatement, Gtree};
     use tracing_subscriber::{prelude::*, registry::Registry};
 
     fn token_expect_error(name: &str, input: &str) {

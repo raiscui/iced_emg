@@ -3,7 +3,7 @@ use std::{any::Any, rc::Rc};
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2022-06-22 21:38:14
+ * @LastEditTime: 2022-07-27 14:19:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -114,6 +114,7 @@ impl<Message> RefreshFor<GElement<Message>> for i32
 where
     Message: 'static,
 {
+    #[allow(clippy::match_same_arms)]
     fn refresh_for(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
@@ -132,7 +133,7 @@ where
 
                 // self.try_refresh_for(x);
                 // w.try_refresh_use(Box::new(*self));
-                (&mut **w).refresh_use(self);
+                (**w).refresh_use(self);
 
                 // w.refresh_for_use(self);
             }

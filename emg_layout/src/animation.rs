@@ -710,7 +710,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
     use emg_animation::{interrupt, models::Property, opacity, style, to, Tick};
-    use emg_core::{into_smvec, smallvec, vector, IdStr, Vector};
+    use emg_core::{into_smvec, smallvec, vector, IdStr};
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
     };
@@ -724,8 +724,8 @@ mod tests {
     use super::AnimationE;
     use tracing::{debug, warn, Level};
 
-    use tracing_flame::FlameLayer;
-    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    // use tracing_flame::FlameLayer;
+    // use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
     fn _init() {
         // let _el = env_logger::try_init();

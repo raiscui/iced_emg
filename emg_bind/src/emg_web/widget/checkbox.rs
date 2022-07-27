@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-06-22 21:27:48
+ * @LastEditTime: 2022-07-27 13:44:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -238,6 +238,7 @@ impl<Message> RefreshFor<Checkbox<Message>> for GElement<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
+    #[allow(clippy::match_same_arms)]
     fn refresh_for(&self, who_checkbox: &mut Checkbox<Message>) {
         match self {
             Self::Layer_(_l) => {
@@ -259,8 +260,8 @@ where
             Self::Event_(_) => {
                 todo!();
             }
-            Self::Generic_(_g_self) => {
-                error!("use Generic refresh_for Checkbox :{}", _g_self.type_name());
+            Self::Generic_(g_self) => {
+                error!("use Generic refresh_for Checkbox :{}", g_self.type_name());
 
                 //TODO 反射?
                 // todo!("reflection? ",);
@@ -269,7 +270,7 @@ where
             Self::EmptyNeverUse => panic!("EmptyNeverUse never here"),
             Self::SaNode_(_) => todo!(),
 
-            GElement::EvolutionaryFactor(_) => todo!(),
+            Self::EvolutionaryFactor(_) => todo!(),
         };
     }
 }
@@ -279,6 +280,7 @@ impl<Message> RefreshFor<GElement<Message>> for Checkbox<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
+    #[allow(clippy::match_same_arms)]
     fn refresh_for(&self, who: &mut GElement<Message>) {
         match who {
             GElement::Layer_(l) => {
@@ -350,7 +352,7 @@ where
             &who, &self
         );
 
-        who.label = format!("checkbox i32: {}", self).into()
+        who.label = format!("checkbox i32: {}", self).into();
     }
 }
 // impl<Message, Use: Sized + Clone + std::fmt::Debug + 'static> TryRefreshFor<Checkbox<Message>>
@@ -382,7 +384,7 @@ where
             std::any::type_name::<Self>()
         );
         if let Some(x) = any.downcast_ref::<Box<dyn RefreshFor<Self>>>() {
-            self.refresh_use(x)
+            self.refresh_use(x);
         }
         // if let Some(u_s_e_rf) = any.downcast_ref::<Rc<dyn RefreshFor<Self>>>() {
         //     self.refresh_for_use(&**u_s_e_rf);

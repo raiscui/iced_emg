@@ -10,14 +10,13 @@
 
 // use trace_var::trace_var;
 
-use std::error::Error;
 
-use cassowary::{Cassowary, ScopeViewVariable};
+use cassowary::Cassowary;
 
-use proc_macro2::{TokenStream, Span, Punct, Spacing};
+use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
-use syn::{parse::{Parse, ParseStream, discouraged::Speculative}, braced, LitStr};
+use syn::{parse::{Parse, ParseStream, discouraged::Speculative}};
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
 
 use syn::{Ident, Token};
@@ -450,7 +449,7 @@ impl ToTokens for GRefresher {
 #[derive(Debug, Clone)]
 struct SaGel {
     pub left: Box<syn::Expr>,
-    pub map_fn_token: token::FatArrow,
+    pub _map_fn_token: token::FatArrow,
     pub right: Box<syn::ExprClosure>,
 }
 
@@ -458,7 +457,7 @@ impl Parse for SaGel {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         Ok(Self {
             left: input.parse()?,
-            map_fn_token: input.parse()?,
+            _map_fn_token: input.parse()?,
             right: input.parse()?,
         })
     }
@@ -1288,6 +1287,7 @@ mod tests {
 
         token_test(input);
         println!();
+        #[allow(unused)]
         enum A {
             B,
             C,
