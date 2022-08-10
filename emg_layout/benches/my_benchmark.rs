@@ -19,7 +19,7 @@ use emg_animation::{
     },
     opacity, opacity_og, replace, replace_og, style, style_og, to, to_og, AmState, AmStateOG, Tick,
 };
-use emg_core::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
+use emg_common::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
 use emg_layout::{global_clock, AnimationE};
 use emg_state::{topo, CloneStateVar};
 use seed_styles::{height, px, width, Unit};

@@ -2,4 +2,4 @@
 source: gtree_macro/tests/test_ccss.rs
 expression: x
 ---
-emg_layout :: ccsa :: NameChars :: Id (emg_core :: IdStr :: new ("button"))
+emg_layout :: ccsa :: NameChars :: Id (emg_common :: IdStr :: new ("button"))

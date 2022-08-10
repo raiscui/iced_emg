@@ -1,46 +1,40 @@
-// #![feature(generic_associated_types)]
-use anchors::dict_k_into;
-use emg_animation::{interrupt, opacity, style, to};
-
-use emg_bind::{
-    better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
-    button, edge_index_no_source, emg_msg,
-    event::Event,
-    g_node::node_item_rc_sv::{GelType, GraphType},
-    Application, Button, Checkbox, Command, Element, GElement, GTreeBuilderElement, GraphMethods,
-    GraphView, Orders, Subscription, Text,
-};
-
-use emg_core::{into_vector, parent, vector, IdStr, TypeCheckObjectSafe};
-use emg_layout::{
-    add_values::origin_x,
-    anima,
-    animation::AnimationE,
-    css, global_clock,
-    styles::{pc, px, width, CssWidth},
-    EPath,
-};
-use emg_refresh::RefreshUse;
-
-use emg_state::{topo, CloneStateVar, Dict};
-use emg_state::{CloneStateAnchor, StateAnchor};
-use std::convert::TryFrom;
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
     time::Duration,
 };
 
-use emg_state::{dict, use_state, StateVar};
+// use emg_animation::{interrupt, opacity, style, to};
 
-use iced::{Align, Column, Error, Settings};
-extern crate gtree;
+// use emg_bind::{
+//     better_any::{impl_tid, tid, type_id, Tid, TidExt},
+//     button, edge_index_no_source,
+//     event::Event,
+//      Button, Checkbox, Element, GElement, GraphMethods,
+//     GraphView, Subscription, Text,
+// };
 
-use gtree::gtree;
+// use emg_common::{into_vector, parent, IdStr, TypeCheckObjectSafe};
+// use emg_bind::layout::{
+//     add_values::origin_x,
+//     css, global_clock,
+//     styles::{pc, CssWidth},
+// };
 
-use seed_styles::w;
-use tracing::{debug, debug_span, trace, warn};
-use tracing::{info, trace_span};
+use emg_bind::{
+    better_any::TidAble,
+    common::{px, vector, IdStr},
+    emg::edge_index_no_source,
+    emg_msg, gtree,
+    layout::{anima, global_clock, styles::width, AnimationE, EPath},
+    runtime::{Application, Command, GTreeBuilderElement, Orders},
+    state::{use_state, CloneStateAnchor, StateVar},
+    topo,
+    widget::*,
+    GelType, GraphType, Settings,
+};
+// use seed_styles::w;
+use tracing::warn;
 fn setup_tracing() {
     // #[cfg(debug_assertions)]
     console_error_panic_hook::set_once();
@@ -62,7 +56,7 @@ fn setup_tracing() {
     }
 }
 
-pub fn main() -> iced::Result {
+pub fn main() -> emg_bind::Result {
     // GraphType::init();
     // GraphType::get_mut_graph_with(|g| {
     //     g.insert_node(
@@ -80,8 +74,8 @@ pub fn main() -> iced::Result {
 #[derive(Debug)]
 struct Counter {
     value: i32,
-    increment_button: button::State,
-    decrement_button: button::State,
+    // increment_button: button::State,
+    // decrement_button: button::State,
     ddd: StateVar<i32>,
     dt: StateVar<Duration>,
     dt2: Cell<Duration>,
@@ -109,7 +103,7 @@ enum Message {
     IncrementPressed,
     DecrementPressed,
     // None,
-    Event(Event),
+    // Event(Event),
     X,
     Y,
 }
@@ -141,7 +135,7 @@ impl ComponentStatic {
 }
 //@ App
 impl Application for Counter {
-    type Executor = iced::executor::Default;
+    type Executor = emg_bind::executor::Default;
     type Message = Message;
     type Flags = ();
     // type GTreeBuilderElement<'a> = GTreeBuilderElement<'a, Message>;
@@ -156,8 +150,8 @@ impl Application for Counter {
         (
             Self {
                 value: 1,
-                increment_button: Default::default(),
-                decrement_button: Default::default(),
+                // increment_button: Default::default(),
+                // decrement_button: Default::default(),
                 ddd: use_state(1),
                 dt: global_clock(),
                 dt2: Cell::new(Duration::ZERO),
@@ -188,52 +182,51 @@ impl Application for Counter {
             }
             Message::DecrementPressed => {
                 self.value -= 1;
-            }
-            Message::Event(e) => {
-                let _g = trace_span!("sys env").entered();
-                trace!("sys event: {:?}", &e);
-                match e {
-                    Event::Window(we) => {
-                        match we {
-                            emg_bind::window::Event::Resized {
-                                /// The new width of the window (in units)
-                                width,
-                                /// The new height of the window (in units)
-                                height,
-                            } => {
-                                self.ddd.set(width as i32);
-                                graph.edge_item_set_size(
-                                    &edge_index_no_source("a"),
-                                    px(width),
-                                    px(height),
-                                );
-                            }
-                        }
-                    }
-                    Event::OnAnimationFrame(new) => {
-                        // warn!("message: OnAnimationFrame");
+            } // Message::Event(e) => {
+              //     let _g = trace_span!("sys env").entered();
+              //     trace!("sys event: {:?}", &e);
+              //     match e {
+              //         Event::Window(we) => {
+              //             match we {
+              //                 emg_bind::window::Event::Resized {
+              //                     /// The new width of the window (in units)
+              //                     width,
+              //                     /// The new height of the window (in units)
+              //                     height,
+              //                 } => {
+              //                     self.ddd.set(width as i32);
+              //                     graph.edge_item_set_size(
+              //                         &edge_index_no_source("a"),
+              //                         px(width),
+              //                         px(height),
+              //                     );
+              //                 }
+              //             }
+              //         }
+              //         Event::OnAnimationFrame(new) => {
+              //             // warn!("message: OnAnimationFrame");
 
-                        // let _g = debug_span!("sys-env:on animation").entered();
-                        // let dt = self.dt.get_with(|old| new.0 - (*old));
-                        // debug!("update->on animation: {:?}", &dt);
-                        // self.dt.set(new.0);
-                        // self.dt2.set(dt);
+              //             // let _g = debug_span!("sys-env:on animation").entered();
+              //             // let dt = self.dt.get_with(|old| new.0 - (*old));
+              //             // debug!("update->on animation: {:?}", &dt);
+              //             // self.dt.set(new.0);
+              //             // self.dt2.set(dt);
 
-                        // // self.an.update_animation();
+              //             // // self.an.update_animation();
 
-                        // // emg_animation::update(new, &mut self.an);
+              //             // // emg_animation::update(new, &mut self.an);
 
-                        // // self.ffxx.set(emg_layout::styles::w(pc(self
-                        // //     .an
-                        // //     .get_position(0)
-                        // //     * 100.)));
+              //             // // self.ffxx.set(emg_layout::styles::w(pc(self
+              //             // //     .an
+              //             // //     .get_position(0)
+              //             // //     * 100.)));
 
-                        // orders.after_next_render("am", |tick| {
-                        //     Message::Event(Event::OnAnimationFrame(tick))
-                        // });
-                    }
-                }
-            }
+              //             // orders.after_next_render("am", |tick| {
+              //             //     Message::Event(Event::OnAnimationFrame(tick))
+              //             // });
+              //         }
+              //     }
+              // }
         };
         Command::none()
     }
@@ -264,11 +257,11 @@ impl Application for Counter {
         //     .into()
     }
 
-    fn subscription(&self) -> Subscription<Self::Message> {
-        trace!("init subscription");
-        // subscription::events().map(Message::Event)
-        Subscription::none()
-    }
+    // fn subscription(&self) -> Subscription<Self::Message> {
+    //     trace!("init subscription");
+    //     // subscription::events().map(Message::Event)
+    //     Subscription::none()
+    // }
 
     fn tree_build(
         this: Rc<RefCell<Self>>,

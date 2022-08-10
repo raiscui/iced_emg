@@ -14,7 +14,7 @@ use derive_more::From;
 use float_cmp::{assert_approx_eq};
 use cassowary::{WeightedRelation, strength::{REQUIRED, WEAK}};
 use emg::EdgeIndex;
-use emg_core::TypeName;
+use emg_common::TypeName;
 use emg_state::{StateAnchor, StateMultiAnchor, StateVar, topo, Anchor};
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
@@ -480,8 +480,8 @@ fn calculation_w_logiclength(p_calc_size: &Vector2<f64>, l:&LogicLength)->f64 {
         },
         LogicLength::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => calculation_w_logiclength(p_calc_size,a)*b.into_inner(),
-                emg_core::CalcOp::Add { a, b } => calculation_w_logiclength(p_calc_size,a)+calculation_w_logiclength(p_calc_size,b),
+                emg_common::CalcOp::Mul { a, b } => calculation_w_logiclength(p_calc_size,a)*b.into_inner(),
+                emg_common::CalcOp::Add { a, b } => calculation_w_logiclength(p_calc_size,a)+calculation_w_logiclength(p_calc_size,b),
             }
         },
     }
@@ -506,8 +506,8 @@ fn calculation_h_logiclength(p_calc_size: &Vector2<f64>, l:&LogicLength)->f64 {
         },
         LogicLength::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => calculation_h_logiclength(p_calc_size,a)*b.into_inner(),
-                emg_core::CalcOp::Add { a, b } => calculation_h_logiclength(p_calc_size,a)+calculation_w_logiclength(p_calc_size,b),
+                emg_common::CalcOp::Mul { a, b } => calculation_h_logiclength(p_calc_size,a)*b.into_inner(),
+                emg_common::CalcOp::Add { a, b } => calculation_h_logiclength(p_calc_size,a)+calculation_w_logiclength(p_calc_size,b),
             }
         },
     }
@@ -534,10 +534,10 @@ fn calculation_w(p_calc_size: &Vector2<f64>, w: &GenericSize) -> f64 {
         },
         GenericSize::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => {
+                emg_common::CalcOp::Mul { a, b } => {
                      calculation_w(p_calc_size, a)*b.into_inner()
                 },
-                emg_core::CalcOp::Add { a, b } => {
+                emg_common::CalcOp::Add { a, b } => {
                     calculation_w(p_calc_size, a)+ calculation_w(p_calc_size,b)
 
                 },
@@ -581,10 +581,10 @@ fn calculation_h(p_calc_size: &Vector2<f64>, h: &GenericSize) -> f64 {
         },
         GenericSize::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => {
+                emg_common::CalcOp::Mul { a, b } => {
                     calculation_h(p_calc_size, a)*b.into_inner()
                 },
-                emg_core::CalcOp::Add { a, b } => {
+                emg_common::CalcOp::Add { a, b } => {
                       calculation_h(p_calc_size, a)+ calculation_h(p_calc_size,b)
 
                 },
@@ -635,8 +635,8 @@ fn calculation_align_x_logiclength(p_calc_size: &Vector2<f64>, l:&LogicLength)->
         },
         LogicLength::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => calculation_align_x_logiclength(p_calc_size,a).vector.scale(b.into_inner()).into(),
-                emg_core::CalcOp::Add { a, b } => calculation_align_x_logiclength(p_calc_size,a)*
+                emg_common::CalcOp::Mul { a, b } => calculation_align_x_logiclength(p_calc_size,a).vector.scale(b.into_inner()).into(),
+                emg_common::CalcOp::Add { a, b } => calculation_align_x_logiclength(p_calc_size,a)*
                 calculation_align_x_logiclength(p_calc_size,b),
             }
         },
@@ -665,8 +665,8 @@ fn calculation_align_y_logiclength(p_calc_size: &Vector2<f64>, l:&LogicLength)->
         },
         LogicLength::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } =>  calculation_align_y_logiclength(p_calc_size,a).vector.scale(b.into_inner()).into(),
-                emg_core::CalcOp::Add { a, b } => calculation_align_y_logiclength(p_calc_size,a)*calculation_align_y_logiclength(p_calc_size,b),
+                emg_common::CalcOp::Mul { a, b } =>  calculation_align_y_logiclength(p_calc_size,a).vector.scale(b.into_inner()).into(),
+                emg_common::CalcOp::Add { a, b } => calculation_align_y_logiclength(p_calc_size,a)*calculation_align_y_logiclength(p_calc_size,b),
             }
         },
     }
@@ -692,14 +692,14 @@ fn calculation_align_x(p_calc_size: &Vector2<f64>, p_calc_origin:&Translation3<f
         },
         GenericSize::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => {
+                emg_common::CalcOp::Mul { a, b } => {
 
                     // let scaling = nalgebra::Similarity3::from_scaling(b.into_inner());
                   calculation_align_x(p_calc_size, p_calc_origin,p_calc_align,a).vector.scale(b.into_inner()) .into()
                    
                     
                 },
-                emg_core::CalcOp::Add { a, b } => {
+                emg_common::CalcOp::Add { a, b } => {
                       calculation_align_x(p_calc_size, p_calc_origin,p_calc_align, a)* calculation_align_x(p_calc_size, p_calc_origin,p_calc_align,b)
                 }
             }
@@ -737,13 +737,13 @@ fn calculation_align_y(p_calc_size: &Vector2<f64>, p_calc_origin:&Translation3<f
         },
         GenericSize::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => {
+                emg_common::CalcOp::Mul { a, b } => {
                   
                   calculation_align_y(p_calc_size, p_calc_origin,p_calc_align,a).vector.scale(b.into_inner()).into()
                    
 
                 },
-                emg_core::CalcOp::Add { a, b } => {
+                emg_common::CalcOp::Add { a, b } => {
                     calculation_align_y(p_calc_size, p_calc_origin,p_calc_align, a) * calculation_align_y(p_calc_size, p_calc_origin,p_calc_align,b)
                 }
             }
@@ -788,8 +788,8 @@ fn calculation_origin_x_logiclength(calc_size: &Vector2<f64>, l:&LogicLength)-> 
         },
         LogicLength::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } =>  calculation_origin_x_logiclength(calc_size,a).vector.scale(b.into_inner()).into(),
-                emg_core::CalcOp::Add { a, b } => calculation_origin_x_logiclength(calc_size,a)*calculation_origin_x_logiclength(calc_size,b),
+                emg_common::CalcOp::Mul { a, b } =>  calculation_origin_x_logiclength(calc_size,a).vector.scale(b.into_inner()).into(),
+                emg_common::CalcOp::Add { a, b } => calculation_origin_x_logiclength(calc_size,a)*calculation_origin_x_logiclength(calc_size,b),
             }
         },
     }
@@ -817,8 +817,8 @@ fn calculation_origin_y_logiclength(calc_size: &Vector2<f64>, l:&LogicLength)->T
         },
         LogicLength::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => calculation_origin_y_logiclength(calc_size,a).vector.scale(b.into_inner()).into() ,
-                emg_core::CalcOp::Add { a, b } => calculation_origin_y_logiclength(calc_size,a)*calculation_origin_y_logiclength(calc_size,b),
+                emg_common::CalcOp::Mul { a, b } => calculation_origin_y_logiclength(calc_size,a).vector.scale(b.into_inner()).into() ,
+                emg_common::CalcOp::Add { a, b } => calculation_origin_y_logiclength(calc_size,a)*calculation_origin_y_logiclength(calc_size,b),
             }
         },
     }
@@ -843,10 +843,10 @@ pub fn calculation_origin_x(p_calc_size: &Vector2<f64>, p_calc_origin:&Translati
         },
         GenericSize::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => {
+                emg_common::CalcOp::Mul { a, b } => {
                      calculation_origin_x(p_calc_size, p_calc_origin,p_calc_align,calc_size,a).vector.scale(b.into_inner()) .into()
                 },
-                emg_core::CalcOp::Add { a, b } => {
+                emg_common::CalcOp::Add { a, b } => {
                     calculation_origin_x(p_calc_size, p_calc_origin,p_calc_align,calc_size, a) * calculation_origin_x(p_calc_size, p_calc_origin,p_calc_align,calc_size,b)
                 }
             }
@@ -886,10 +886,10 @@ pub fn calculation_origin_y(p_calc_size: &Vector2<f64>, p_calc_origin:&Translati
         },
         GenericSize::Calculation(calc_op) => {
             match calc_op.as_ref() {
-                emg_core::CalcOp::Mul { a, b } => {
+                emg_common::CalcOp::Mul { a, b } => {
                     calculation_origin_y(p_calc_size, p_calc_origin,p_calc_align,calc_size,a) .vector.scale(b.into_inner()).into()
                 },
-                emg_core::CalcOp::Add { a, b } => {
+                emg_common::CalcOp::Add { a, b } => {
                     calculation_origin_y(p_calc_size, p_calc_origin,p_calc_align,calc_size, a) * calculation_origin_y(p_calc_size, p_calc_origin,p_calc_align,calc_size,b)
                 }
             }

@@ -389,7 +389,7 @@ mod refresh_test {
 
     use emg::{edge_index_no_source, node_index};
     use emg_animation::to;
-    use emg_core::{into_smvec, vector, IdStr};
+    use emg_common::{into_smvec, vector, IdStr};
     use emg_refresh::RefreshForUse;
     use emg_state::{use_state, CloneStateVar, Dict, StateVar};
     use seed_styles as styles;

@@ -6,7 +6,7 @@ use cassowary::{
 };
 use derive_more::From;
 
-use emg_core::{im::HashMap, IdStr, NotNan};
+use emg_common::{im::HashMap, IdStr, NotNan};
 use emg_hasher::CustomHasher;
 use emg_state::Dict;
 

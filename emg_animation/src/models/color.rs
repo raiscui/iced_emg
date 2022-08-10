@@ -1,4 +1,4 @@
-use emg_core::vector;
+use emg_common::vector;
 use seed_styles::Unit;
 
 /*

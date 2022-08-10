@@ -19,9 +19,10 @@ mod render;
 use std::{collections::VecDeque, convert::TryInto};
 // ────────────────────────────────────────────────────────────────────────────────
 // use emg_debuggable::dbg4;
+pub use emg_common;
 use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
 
-use emg_core::{vector, SmallVec, Vector};
+use emg_common::{vector, SmallVec, Vector};
 use models::{
     map_to_motion, map_to_motion_og, update_animation_og, Animation, AnimationOG, Interpolation,
     Property, Step, StepOG,
@@ -405,13 +406,12 @@ where
 {
     Step::To(props)
 }
-
 #[macro_export]
 macro_rules! to {
 
     ( $( $element:expr ) , * ) => {
         {
-            $crate::models::Step::To( emg_core::smallvec![ $( $element.into() ),*])
+            $crate::models::Step::To( $crate::emg_common::smallvec![ $( $element.into() ),*])
 
         }
     };
@@ -494,7 +494,7 @@ impl<T> fmt::Debug for Debuggable<T> {
 mod tests {
     use std::time::Duration;
 
-    use emg_core::vector;
+    use emg_common::vector;
 
     use crate::{
         extract_initial_wait_og, fill, interrupt_og,

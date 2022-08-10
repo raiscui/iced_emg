@@ -1,8 +1,8 @@
 pub mod color;
 pub mod convert;
 pub mod opacity;
-use emg_core::{measures::Unit, smallvec, IdStr, SmallVec, TypeName};
-use emg_core::{vector, Vector};
+use emg_common::{measures::Unit, smallvec, IdStr, SmallVec, TypeName};
+use emg_common::{vector, Vector};
 // use iter_fixed::IntoIteratorFixed;
 use crate::{Debuggable, MOTION_SIZE, PROP_SIZE};
 use derive_more::Display;
@@ -896,7 +896,7 @@ impl<Message> DerefMut for MsgBackIsNew<Message> {
 mod resolve_steps_test {
     use std::{collections::VecDeque, time::Duration};
 
-    use emg_core::{into_smvec, into_vector, vector, SmallVec, Vector};
+    use emg_common::{into_smvec, into_vector, vector, SmallVec, Vector};
     use seed_styles::{px, width};
 
     use crate::{models::resolve_steps, to, to_og, PROP_SIZE};
@@ -1214,7 +1214,7 @@ where
 
 #[cfg(test)]
 mod replace_props_test {
-    use emg_core::{into_smvec, into_vector, SmallVec, Vector};
+    use emg_common::{into_smvec, into_vector, SmallVec, Vector};
     use seed_styles::{height, px, width};
 
     use crate::{models::Property, PROP_SIZE};
@@ -2110,7 +2110,7 @@ fn start_towards_og(
 
 #[cfg(test)]
 mod tests_zip_all {
-    use emg_core::{into_smvec, into_vector, SmallVec, Vector};
+    use emg_common::{into_smvec, into_vector, SmallVec, Vector};
 
     use crate::{
         models::{zip_properties_greedy_og, Property},

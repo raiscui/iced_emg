@@ -29,11 +29,11 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
-use emg_core::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector, VectorDisp};
+use emg_common::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector, VectorDisp};
 use emg::{Edge, EdgeIndex, NodeIndex, };
 use emg_refresh::RefreshFor;
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
-use emg_core::Vector;
+use emg_common::Vector;
 use float_cmp::approx_eq;
 use na::{Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3,Vector2, Vector3};
 use nalgebra as na;
@@ -56,6 +56,7 @@ mod impl_refresh;
 pub mod animation;
 pub mod add_values;
 pub use animation::AnimationE;
+pub use emg_common;
 
 use crate::ccsa::svv_process::{svv_op_svvs_to_expr, eq_opt_sw_to_weighted_relation};
 
@@ -1711,10 +1712,10 @@ mod tests {
 
 
     use emg::{edge_index, edge_index_no_source, node_index};
-    use emg_core::{parent, IdStr};
+    use emg_common::{parent, IdStr};
     use emg_refresh::RefreshForUse;
     use emg_state::StateVar;
-    use emg_core::vector;
+    use emg_common::vector;
  
     use styles::{CssWidth, CssHeight,bg_color, h, hsl, pc, width, CssBackgroundColor, CssBackgroundColorTrait};
     use tracing::{debug, info, span, warn};

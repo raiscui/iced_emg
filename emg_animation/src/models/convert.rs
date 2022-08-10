@@ -1,4 +1,4 @@
-use emg_core::{
+use emg_common::{
     measures::ExactLengthSimplex, GenericSize, TypeCheck, TypeCheckObjectSafe, TypeName,
 };
 use seed_styles::{CssHeight, CssWidth, LogicLength, Unit};

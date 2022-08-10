@@ -8,7 +8,7 @@
 #[cfg(test)]
 mod code_test {
 
-    use emg_core::{IdStr, VecDisp, VectorDisp};
+    use emg_common::{IdStr, VecDisp, VectorDisp};
     use gtree_macro::cassowary::*;
     use quote::ToTokens;
     use std::path::Path;
@@ -96,10 +96,10 @@ mod code_test {
         let code = emg_layout::ccsa::ScopeViewVariable::new_id_var("button", "width");
         let code_gen = emg_layout::ccsa::ScopeViewVariable::new(
             ::std::option::Option::None,
-            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(emg_core::IdStr::new(
+            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(emg_common::IdStr::new(
                 "button",
             ))),
-            ::std::option::Option::Some(emg_layout::ccsa::PredVariable(emg_core::IdStr::new(
+            ::std::option::Option::Some(emg_layout::ccsa::PredVariable(emg_common::IdStr::new(
                 "width",
             ))),
         );
@@ -137,15 +137,15 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_core::vector![emg_layout::ccsa::CCSS::new(
+            emg_common::vector![emg_layout::ccsa::CCSS::new(
                 emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                     emg_layout::ccsa::ScopeViewVariable::new(
                         ::std::option::Option::None,
                         ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                            emg_core::IdStr::new("b1")
+                            emg_common::IdStr::new("b1")
                         )),
                         ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                            emg_core::IdStr::new("right")
+                            emg_common::IdStr::new("right")
                         ))
                     ),
                     vec![]
@@ -156,10 +156,10 @@ mod code_test {
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b2")
+                                emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("left")
+                                emg_common::IdStr::new("left")
                             ))
                         ),
                         vec![]
@@ -167,18 +167,18 @@ mod code_test {
                 )],
                 ::std::option::Option::None
             )],
-            emg_core::vector![
+            emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b1")
+                        emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b2")
+                        emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
                 )
@@ -204,15 +204,15 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_core::vector![emg_layout::ccsa::CCSS::new(
+            emg_common::vector![emg_layout::ccsa::CCSS::new(
                 emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                     emg_layout::ccsa::ScopeViewVariable::new(
                         ::std::option::Option::None,
                         ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                            emg_core::IdStr::new("b1")
+                            emg_common::IdStr::new("b1")
                         )),
                         ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                            emg_core::IdStr::new("bottom")
+                            emg_common::IdStr::new("bottom")
                         ))
                     ),
                     vec![]
@@ -223,10 +223,10 @@ mod code_test {
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b2")
+                                emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("top")
+                                emg_common::IdStr::new("top")
                             ))
                         ),
                         vec![]
@@ -234,18 +234,18 @@ mod code_test {
                 )],
                 ::std::option::Option::None
             )],
-            emg_core::vector![
+            emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b1")
+                        emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b2")
+                        emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
                 )
@@ -271,16 +271,16 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_core::vector![
+            emg_common::vector![
                 emg_layout::ccsa::CCSS::new(
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b1")
+                                emg_common::IdStr::new("b1")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("bottom")
+                                emg_common::IdStr::new("bottom")
                             ))
                         ),
                         vec![emg_layout::ccsa::CCSSOpSvv::new(
@@ -289,7 +289,7 @@ mod code_test {
                                 ::std::option::Option::None,
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("vgap")
+                                    emg_common::IdStr::new("vgap")
                                 ))
                             )
                         )]
@@ -300,10 +300,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_core::IdStr::new("b2")
+                                    emg_common::IdStr::new("b2")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("top")
+                                    emg_common::IdStr::new("top")
                                 ))
                             ),
                             vec![]
@@ -318,10 +318,10 @@ mod code_test {
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b2")
+                                emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("bottom")
+                                emg_common::IdStr::new("bottom")
                             ))
                         ),
                         vec![emg_layout::ccsa::CCSSOpSvv::new(
@@ -330,7 +330,7 @@ mod code_test {
                                 ::std::option::Option::None,
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("vgap")
+                                    emg_common::IdStr::new("vgap")
                                 ))
                             )
                         )]
@@ -341,10 +341,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_core::IdStr::new("b3")
+                                    emg_common::IdStr::new("b3")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("top")
+                                    emg_common::IdStr::new("top")
                                 ))
                             ),
                             vec![]
@@ -359,10 +359,10 @@ mod code_test {
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b3")
+                                emg_common::IdStr::new("b3")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("bottom")
+                                emg_common::IdStr::new("bottom")
                             ))
                         ),
                         vec![emg_layout::ccsa::CCSSOpSvv::new(
@@ -371,7 +371,7 @@ mod code_test {
                                 ::std::option::Option::None,
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("vgap")
+                                    emg_common::IdStr::new("vgap")
                                 ))
                             )
                         )]
@@ -382,10 +382,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_core::IdStr::new("b4")
+                                    emg_common::IdStr::new("b4")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("top")
+                                    emg_common::IdStr::new("top")
                                 ))
                             ),
                             vec![]
@@ -400,10 +400,10 @@ mod code_test {
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b4")
+                                emg_common::IdStr::new("b4")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("bottom")
+                                emg_common::IdStr::new("bottom")
                             ))
                         ),
                         vec![emg_layout::ccsa::CCSSOpSvv::new(
@@ -412,7 +412,7 @@ mod code_test {
                                 ::std::option::Option::None,
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("vgap")
+                                    emg_common::IdStr::new("vgap")
                                 ))
                             )
                         )]
@@ -423,10 +423,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_core::IdStr::new("b5")
+                                    emg_common::IdStr::new("b5")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("top")
+                                    emg_common::IdStr::new("top")
                                 ))
                             ),
                             vec![]
@@ -437,39 +437,39 @@ mod code_test {
                     ))
                 )
             ],
-            emg_core::vector![
+            emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b1")
+                        emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b2")
+                        emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b3")
+                        emg_common::IdStr::new("b3")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b4")
+                        emg_common::IdStr::new("b4")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b5")
+                        emg_common::IdStr::new("b5")
                     )),
                     ::std::option::Option::None
                 )
@@ -496,16 +496,16 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_core::vector![
+            emg_common::vector![
                 emg_layout::ccsa::CCSS::new(
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Virtual(
-                                emg_core::IdStr::new("parent")
+                                emg_common::IdStr::new("parent")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("top")
+                                emg_common::IdStr::new("top")
                             ))
                         ),
                         vec![]
@@ -516,10 +516,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_core::IdStr::new("sub")
+                                    emg_common::IdStr::new("sub")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("top")
+                                    emg_common::IdStr::new("top")
                                 ))
                             ),
                             vec![]
@@ -532,10 +532,10 @@ mod code_test {
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("sub")
+                                emg_common::IdStr::new("sub")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("bottom")
+                                emg_common::IdStr::new("bottom")
                             ))
                         ),
                         vec![]
@@ -546,10 +546,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Virtual(
-                                    emg_core::IdStr::new("parent")
+                                    emg_common::IdStr::new("parent")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("bottom")
+                                    emg_common::IdStr::new("bottom")
                                 ))
                             ),
                             vec![]
@@ -558,11 +558,11 @@ mod code_test {
                     ::std::option::Option::None
                 )
             ],
-            emg_core::vector![emg_layout::ccsa::ScopeViewVariable::new(
+            emg_common::vector![emg_layout::ccsa::ScopeViewVariable::new(
                 ::std::option::Option::None,
-                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(emg_core::IdStr::new(
-                    "sub"
-                ))),
+                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    emg_common::IdStr::new("sub")
+                )),
                 ::std::option::Option::None
             )],
         );
@@ -587,16 +587,16 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_core::vector![
+            emg_common::vector![
                 emg_layout::ccsa::CCSS::new(
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b1")
+                                emg_common::IdStr::new("b1")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("right")
+                                emg_common::IdStr::new("right")
                             ))
                         ),
                         vec![emg_layout::ccsa::CCSSOpSvv::new(
@@ -604,7 +604,7 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Number(
-                                    emg_core::NotNan::new(100 as f64).unwrap()
+                                    emg_common::NotNan::new(100 as f64).unwrap()
                                 )),
                                 ::std::option::Option::None
                             )
@@ -616,10 +616,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_core::IdStr::new("b2")
+                                    emg_common::IdStr::new("b2")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("left")
+                                    emg_common::IdStr::new("left")
                                 ))
                             ),
                             vec![]
@@ -632,10 +632,10 @@ mod code_test {
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b2")
+                                emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("right")
+                                emg_common::IdStr::new("right")
                             ))
                         ),
                         vec![emg_layout::ccsa::CCSSOpSvv::new(
@@ -643,7 +643,7 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Number(
-                                    emg_core::NotNan::new(8 as f64).unwrap()
+                                    emg_common::NotNan::new(8 as f64).unwrap()
                                 )),
                                 ::std::option::Option::None
                             )
@@ -655,10 +655,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_core::IdStr::new("b3")
+                                    emg_common::IdStr::new("b3")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("left")
+                                    emg_common::IdStr::new("left")
                                 ))
                             ),
                             vec![]
@@ -667,25 +667,25 @@ mod code_test {
                     ::std::option::Option::None
                 )
             ],
-            emg_core::vector![
+            emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b1")
+                        emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b2")
+                        emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b3")
+                        emg_common::IdStr::new("b3")
                     )),
                     ::std::option::Option::None
                 )
@@ -712,16 +712,16 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_core::vector![
+            emg_common::vector![
                 emg_layout::ccsa::CCSS::new(
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b1")
+                                emg_common::IdStr::new("b1")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("right")
+                                emg_common::IdStr::new("right")
                             ))
                         ),
                         vec![emg_layout::ccsa::CCSSOpSvv::new(
@@ -730,7 +730,7 @@ mod code_test {
                                 ::std::option::Option::None,
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("my_gap")
+                                    emg_common::IdStr::new("my_gap")
                                 ))
                             )
                         )]
@@ -741,10 +741,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_core::IdStr::new("b2")
+                                    emg_common::IdStr::new("b2")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("left")
+                                    emg_common::IdStr::new("left")
                                 ))
                             ),
                             vec![]
@@ -757,10 +757,10 @@ mod code_test {
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
                             ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                emg_core::IdStr::new("b2")
+                                emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                emg_core::IdStr::new("right")
+                                emg_common::IdStr::new("right")
                             ))
                         ),
                         vec![emg_layout::ccsa::CCSSOpSvv::new(
@@ -769,7 +769,7 @@ mod code_test {
                                 ::std::option::Option::None,
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("my_other_gap")
+                                    emg_common::IdStr::new("my_other_gap")
                                 ))
                             )
                         )]
@@ -780,10 +780,10 @@ mod code_test {
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
                                 ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_core::IdStr::new("b3")
+                                    emg_common::IdStr::new("b3")
                                 )),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
-                                    emg_core::IdStr::new("left")
+                                    emg_common::IdStr::new("left")
                                 ))
                             ),
                             vec![]
@@ -792,25 +792,25 @@ mod code_test {
                     ::std::option::Option::None
                 )
             ],
-            emg_core::vector![
+            emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b1")
+                        emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b2")
+                        emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                        emg_core::IdStr::new("b3")
+                        emg_common::IdStr::new("b3")
                     )),
                     ::std::option::Option::None
                 )

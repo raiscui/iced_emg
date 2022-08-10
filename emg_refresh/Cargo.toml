@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 emg_state = { path = "../emg_state" }
-emg_core = { path = "../emg_core" }
+emg_common = { path = "../emg_common" }
 
 dyn_partial_eq = { path = "../../dyn_partial_eq" }
 

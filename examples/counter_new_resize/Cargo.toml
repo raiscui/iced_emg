@@ -11,17 +11,8 @@ split-debuginfo = "unpacked"
 
 [dependencies]
 emg_bind = { path = "../../emg_bind" }
-emg_refresh = { path = "../../emg_refresh" }
-emg_state = { path = "../../emg_state" }
-emg_layout = { path = "../../emg_layout" }
-emg_animation = { path = "../../emg_animation" }
-gtree = { path = "../../gtree" }
-emg_core = { path = "../../emg_core" }
 
 #
-iced = { path = "../../../iced" }
-seed_styles = { path = "../../../styles_hooks/seed_styles" }
-anchors = { path = "../../../anchors" }
 
 
 tracing = "0.1"

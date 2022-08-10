@@ -24,7 +24,7 @@ tracing = "0.1"
 # emg_orders = { path = "../emg_orders"}
 # emg_debuggable = { path = "../emg_debuggable" }
 emg_state = { path = "../emg_state" }
-emg_core = { path = "../emg_core" }
+emg_common = { path = "../emg_common" }
 seed_styles = { path = "../../styles_hooks/seed_styles" }
 ordered-float = "3.0.0"
 derive_more = "0.99"

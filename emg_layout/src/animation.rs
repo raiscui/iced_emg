@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-07-08 16:02:46
+ * @LastEditTime: 2022-08-10 18:27:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,17 +9,16 @@
 mod define;
 mod func;
 
+use emg_common::{vector, SmallVec, Vector};
+use emg_state::{
+    state_store, topo, use_state, use_state_impl::TopoKey, Anchor, CloneStateAnchor, CloneStateVar,
+    StateAnchor, StateMultiAnchor, StateVar,
+};
 use std::{
     cell::{Cell, RefCell},
     collections::VecDeque,
     rc::Rc,
     time::Duration,
-};
-
-use emg_core::{vector, SmallVec, Vector};
-use emg_state::{
-    state_store, topo, use_state, use_state_impl::TopoKey, Anchor, CloneStateAnchor, CloneStateVar,
-    StateAnchor, StateMultiAnchor, StateVar,
 };
 
 use emg_animation::{
@@ -89,7 +88,7 @@ where
 macro_rules! anima {
     ( $( $element:expr ) , * ) => {
         {
-            let mut v = emg_core::SmallVec::new();
+            let mut v = $crate::emg_common::SmallVec::new();
 
             $(
                 v.push($element.into());
@@ -710,7 +709,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
     use emg_animation::{interrupt, models::Property, opacity, style, to, Tick};
-    use emg_core::{into_smvec, smallvec, vector, IdStr};
+    use emg_common::{into_smvec, smallvec, vector, IdStr};
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
     };

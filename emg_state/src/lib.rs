@@ -16,7 +16,7 @@ pub use anchors::dict;
 pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::MultiAnchor as AnchorMultiAnchor;
 pub use anchors::singlethread::Var;
-use emg_core::GenericSize;
+use emg_common::GenericSize;
 pub use topo;
 pub use use_state_impl::state_store;
 pub use use_state_impl::state_store_with;

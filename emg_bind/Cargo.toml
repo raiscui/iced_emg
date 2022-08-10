@@ -9,7 +9,6 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 keywords = ["web", "iced", "emg"]
 categories = ["web"]
-resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [profile.dev]
@@ -19,55 +18,35 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-pool = ["emg_core/pool", "emg/pool", "seed_styles/pool"]
+pool = []
 
 
 [dependencies]
-
-vec-string = "0.1.1"
-
-cfg-if = "1.0.0"
-iced = { path = "../../iced" }
+gtree = { path = "../gtree" }
+emg_layout = { path = "../emg_layout" }
+emg_refresh = { path = "../emg_refresh" }
+emg_state = { path = "../emg_state" }
+emg_common = { path = "../emg_common" }
+emg_futures = { path = "../emg_futures" }
+emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
+emg_animation = { path = "../emg_animation" }
 emg = { path = "../../emg" }
+#--------------
 # functionate = { path = "../../functionate" }
 # overloadf = { path = "../../overloadf" }
-illicit = "1.1.2"
 # log = "0.4"
 # lazy_static = "1.4.0"
-dyn-clone = "1.0.6"
 # downcast-rs = "1.2.0"
-dyn-clonable = "0.9.0"
-
-better_any = { path = "../../better_any/better_any", features = [
-    "nightly",
-    "derive",
-] }
-emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
-
-strum = "0.24.0"
-strum_macros = "0.24.0"
-
-match_any = "1.0.1"
-
-emg_state = { path = "../emg_state" }
-emg_refresh = { path = "../emg_refresh" }
-emg_layout = { path = "../emg_layout" }
-emg_animation = { path = "../emg_animation" }
-emg_orders = { path = "../emg_orders" }
 
 
 iced_style = { path = "../../iced/style" }
 # from_variants = "0.5.0"
-derive_more = "0.99"
 # delegate = "0.6.1"
 
 
 tracing = "0.1"
 
-indexmap = "1.9"
 # rustc-hash = "1.1.0"
-emg_core = { path = "../emg_core" }
-emg_hasher = { path = "../emg_hasher" }
 
 # tinyvec = { version = "1.5.1", features = ["alloc"] }
 # smallvec = { version = "1.8.0", features = ["const_generics", "union"] }
@@ -82,45 +61,13 @@ emg_hasher = { path = "../emg_hasher" }
 
 # [target.'cfg(target_arch = "wasm32")'.dependencies]
 
-wasm-bindgen-futures = "^0.4"
-dodrio = { path = "../../dodrio" }
-seed_styles = { path = "../../styles_hooks/seed_styles" }
 
 # uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
 # console_log = { version = "0.2", features = ["color"] }
-iced_web = { path = "../../iced/web" }
+# iced_web = { path = "../../iced/web" }
 # tracing-wasm = "0.2.0"
 # console_error_panic_hook = "0.1.6"
-wasm-bindgen = "0.2"
-either = "1.7.0"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2.7", features = ["js"] }
 
 
-[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-console_error_panic_hook = "0.1"
-tracing-wasm = "0.2"
-wasm-bindgen-test = "0.3"
-
-
-#for app
-[dependencies.iced_futures]
-# version = "0.2"
-path = "../../iced/futures"
-
-# for app
-[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-version = "^0.3"
-features = [
-    "Window",
-    "console",
-    "Document",
-    "HtmlElement",
-    "HtmlInputElement",
-    "Event",
-    "EventTarget",
-    "InputEvent",
-    "KeyboardEvent",
-    "IdleRequestOptions",
-]
+# [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+emg_web = { path = "../emg_web" }

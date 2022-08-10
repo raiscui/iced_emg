@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use cassowary::Expression;
-use emg_core::GenericSize;
+use emg_common::GenericSize;
 use seed_styles as styles;
 use seed_styles::LogicLength;
 
@@ -36,10 +36,10 @@ pub fn cassowary_calculation_logiclength(
             }
         }
         LogicLength::Calculation(calc_op) => match calc_op.as_ref() {
-            emg_core::CalcOp::Mul { a, b } => {
+            emg_common::CalcOp::Mul { a, b } => {
                 cassowary_calculation_logiclength(prop, p_cass_map, a) * b.into_inner()
             }
-            emg_core::CalcOp::Add { a, b } => {
+            emg_common::CalcOp::Add { a, b } => {
                 cassowary_calculation_logiclength(prop, p_cass_map, a)
                     + cassowary_calculation_logiclength(prop, p_cass_map, b)
             }
@@ -65,10 +65,10 @@ pub fn cassowary_calculation(
             todo!()
         }
         GenericSize::Calculation(calc_op) => match calc_op.as_ref() {
-            emg_core::CalcOp::Mul { a, b } => {
+            emg_common::CalcOp::Mul { a, b } => {
                 cassowary_calculation(prop, p_cass_map, a) * b.into_inner()
             }
-            emg_core::CalcOp::Add { a, b } => {
+            emg_common::CalcOp::Add { a, b } => {
                 cassowary_calculation(prop, p_cass_map, a)
                     + cassowary_calculation(prop, p_cass_map, b)
             }

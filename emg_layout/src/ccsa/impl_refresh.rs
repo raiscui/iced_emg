@@ -6,7 +6,7 @@
  * @Description:
  */
 
-use emg_core::Vector;
+use emg_common::Vector;
 use emg_refresh::{RefreshFor, RefreshUseNoWarper, RefreshWhoNoWarper};
 use emg_state::CloneStateVar;
 

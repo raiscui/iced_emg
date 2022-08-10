@@ -34,7 +34,7 @@ parse-display = "0.5.5"
 
 [dev-dependencies]
 emg_layout = { path = "../emg_layout" }
-emg_core = { path = "../emg_core" }
+emg_common = { path = "../emg_common" }
 tracing-subscriber = "0.3"
 tracing-tree = "0.2.1"
 insta = "1"

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-06-15 16:38:57
+ * @LastEditTime: 2022-08-10 10:20:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,8 +10,8 @@ pub use emg::EdgeIndex;
 pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::{edge_index_no_source, Node, Outgoing};
-use emg_core::vector;
-use emg_core::IdStr;
+use emg_common::vector;
+use emg_common::IdStr;
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
 use emg_refresh::RefreshForUse;
 use emg_state::{CloneStateAnchor, StateAnchor};
@@ -20,10 +20,10 @@ use tracing::{instrument, trace, trace_span};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub type N<Message> = StateAnchor<GElement<Message>>;
+type N<Message> = StateAnchor<GElement<Message>>;
 // pub type N< Message> = RefCell<GElement< Message>>;
-pub type E<Ix> = EmgEdgeItem<Ix>;
-pub type GraphType<Message, Ix = IdStr> = Graph<N<Message>, E<Ix>, Ix>;
+type E<Ix> = EmgEdgeItem<Ix>;
+type GraphType<Message, Ix = IdStr> = Graph<N<Message>, E<Ix>, Ix>;
 
 pub trait GraphView {
     type N;

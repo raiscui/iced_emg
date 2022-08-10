@@ -1,5 +1,5 @@
 use emg_animation::{func::list_find_dup, props::is_transformation, PROP_SIZE};
-use emg_core::SmallVec;
+use emg_common::SmallVec;
 use tracing::error;
 
 use crate::animation::StateVarProperty;

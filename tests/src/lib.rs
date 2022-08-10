@@ -27,8 +27,8 @@ mod wasm_test {
         subscription, Application, Button, Checkbox, Command, Element, GTreeBuilderElement,
         GraphMethods, GraphType, GraphView, Orders, Subscription, Text, Tick,
     };
-    use emg_core::{into_vector, vector, into_smvec, IdStr};
-    use emg_core::{parent, TypeCheck, TypeCheckObjectSafe};
+    use emg_common::{into_vector, vector, into_smvec, IdStr};
+    use emg_common::{parent, TypeCheck, TypeCheckObjectSafe};
     use emg_layout::{
         global_clock,
         add_values::origin_x,

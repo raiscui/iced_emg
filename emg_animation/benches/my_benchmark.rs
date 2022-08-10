@@ -15,7 +15,7 @@ enum Message {
 mod need {
 
     use emg_animation::models::PropertyOG;
-    use emg_core::{smallvec, SmallVec};
+    use emg_common::{smallvec, SmallVec};
     use tracing::warn;
     pub fn zip_properties_greedy_mut_8(
         initial_props: &mut SmallVec<[PropertyOG; 8]>,
@@ -153,7 +153,7 @@ use emg_animation::{
     },
     to, to_og,
 };
-use emg_core::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
+use emg_common::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
 use need::{zip_properties_greedy_mut_3, zip_properties_greedy_mut_8};
 use seed_styles::{height, px, width, Unit};
 

@@ -13,7 +13,7 @@ use std::{
 
 use cassowary::{Constraint, Expression, Variable, WeightedRelation};
 use either::Either;
-use emg_core::{
+use emg_common::{
     im::{ordset, HashSet, OrdSet},
     IdStr,
 };

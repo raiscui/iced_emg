@@ -243,7 +243,7 @@ impl ToTokens for Edge {
         let content_iter = content.iter();
         //NOTE use Rc because dyn
         quote_spanned!(
-            bracket_token.span=> vec![#(Rc::new(#content_iter) as Rc<(dyn RefreshFor<EmgEdgeItem<_>>)>),*]
+            bracket_token.span=> vec![#(Rc::new(#content_iter) as Rc<dyn RefreshFor<EmgEdgeItem<_>>>),*]
         )
         .to_tokens(tokens);
     }
@@ -1031,26 +1031,21 @@ impl ToTokens for Gtree {
         let token = quote_spanned! {root.span()=> {
 
             #[allow(unused)]
-            use emg_bind::{ EventCallback, EventMessage, GElement,
-                GTreeBuilderElement,node_ref
+            use emg_bind::{
+                common::{
+                    better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
+                    IdStr, TypeCheck,
+                },
+                layout::{add_values::*, css, styles::*, EmgEdgeItem},
+                refresh::{EqRefreshFor, RefreshFor, RefreshUse, Refresher},
+                runtime::{node_ref, EventCallback, EventMessage, GElement, GTreeBuilderElement},
+                state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
             };
-            use emg_bind::better_any::{
-                impl_tid, tid, type_id, Tid, TidAble, TidExt,
-            };
-            #[allow(unused)]
-            use emg_layout::{css, styles::*,add_values::*,EmgEdgeItem};
-            #[allow(unused)]
-            use emg_refresh::{EqRefreshFor,RefreshFor,Refresher,RefreshUse};
-
-            #[allow(unused)]
-            use emg_state::{use_state, StateMultiAnchor,CloneStateVar,CloneStateAnchor};
 
             #[allow(unused)]
             use std::rc::Rc;
-            #[allow(unused)]
-            use GElement::*;
-            #[allow(unused)]
-            use emg_core::{TypeCheck,Vector,IdStr,NotNan};
+            // #[allow(unused)]
+            // use GElement::*;
             // #[allow(unused)]
             // pub use emg_bind::serde_closure;
 
@@ -1299,7 +1294,7 @@ mod tests {
         //         Rc :: new (vec ! [
         //             emg_layout :: ccsa :: CassowaryVar :: General (
         //                 emg_layout :: ccsa :: GeneralVar (
-        //                     emg_core :: IdStr :: new ("md") , 
+        //                     emg_common :: IdStr :: new ("md") , 
         //                     emg_layout :: ccsa :: ScopeViewVariable :: new (
         //                         :: std :: option :: Option :: None , 
         //                         :: std :: option :: Option :: Some (
@@ -1315,10 +1310,10 @@ mod tests {
         //         Rc :: new (vec ! [
         //             emg_layout :: ccsa :: CassowaryVar :: Virtual (
         //                 emg_layout :: ccsa :: Virtual (
-        //                     emg_core :: IdStr :: new ("nn") , 
+        //                     emg_common :: IdStr :: new ("nn") , 
         //                     vec ! [
         //                         emg_layout :: ccsa :: GeneralVar (
-        //                             emg_core :: IdStr :: new ("width") , 
+        //                             emg_common :: IdStr :: new ("width") , 
         //                             emg_layout :: ccsa :: ScopeViewVariable :: new (
         //                                 :: std :: option :: Option :: None , 
         //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (100 as f64) . unwrap ())) , 
@@ -1326,7 +1321,7 @@ mod tests {
         //                             )
         //                         ) , 
         //                         emg_layout :: ccsa :: GeneralVar (
-        //                             emg_core :: IdStr :: new ("height") , 
+        //                             emg_common :: IdStr :: new ("height") , 
         //                             emg_layout :: ccsa :: ScopeViewVariable :: new (
         //                                 :: std :: option :: Option :: None , 
         //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (20 as f64) . unwrap ())) , 

@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-07-27 16:26:48
+ * @LastEditTime: 2022-08-10 23:48:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -263,30 +263,30 @@ impl ToTokens for NameChars {
         match self {
             Self::Id(x) => {
                 let str = x.to_string();
-                quote_spanned!(x.span()=> emg_layout::ccsa::NameChars::Id(emg_core::IdStr::new(#str)))
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameChars::Id(emg_bind::common::IdStr::new(#str)))
                     .to_tokens(tokens);
             }
             Self::Class(x) => {
                 let str = x.to_string();
-                quote_spanned!(x.span()=> emg_layout::ccsa::NameChars::Class(emg_core::IdStr::new(#str)))
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameChars::Class(emg_bind::common::IdStr::new(#str)))
                     .to_tokens(tokens);
             }
             Self::Element(x) => {
                 let str = x.to_string();
-                quote_spanned!(x.span()=> emg_layout::ccsa::NameChars::Element(emg_core::IdStr::new(#str)))
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameChars::Element(emg_bind::common::IdStr::new(#str)))
                     .to_tokens(tokens);
             }
             Self::Virtual(x) => {
-                quote_spanned!(x.span()=> emg_layout::ccsa::NameChars::Virtual(emg_core::IdStr::new(#x)))
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameChars::Virtual(emg_bind::common::IdStr::new(#x)))
                     .to_tokens(tokens);
             }
             Self::Number(n) => match n {
                 Number::Int(int) => {
-                    quote_spanned!(int.span()=> emg_layout::ccsa::NameChars::Number( emg_core::NotNan::new(#int.into()).unwrap() ))
+                    quote_spanned!(int.span()=> emg_bind::layout::ccsa::NameChars::Number( emg_bind::common::NotNan::new(#int.into()).unwrap() ))
                         .to_tokens(tokens);
                 }
                 Number::Float(float) => {
-                    quote_spanned!(float.span()=> emg_layout::ccsa::NameChars::Number( emg_core::NotNan::new(#float).unwrap() ))
+                    quote_spanned!(float.span()=> emg_bind::layout::ccsa::NameChars::Number( emg_bind::common::NotNan::new(#float).unwrap() ))
                         .to_tokens(tokens);
                 }
             },
@@ -310,13 +310,13 @@ impl ToTokens for PredOp {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
             Self::Add(x) => {
-                quote_spanned!(x.span()=> emg_layout::ccsa::PredOp::Add).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::PredOp::Add).to_tokens(tokens);
             }
             Self::Sub(x) => {
-                quote_spanned!(x.span()=> emg_layout::ccsa::PredOp::Sub).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::PredOp::Sub).to_tokens(tokens);
             }
             Self::Mul(x) => {
-                quote_spanned!(x.span()=> emg_layout::ccsa::PredOp::Mul).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::PredOp::Mul).to_tokens(tokens);
             }
         }
     }
@@ -366,7 +366,7 @@ impl ToTokens for PredVariable {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let var = self.0.to_string();
 
-        quote_spanned!(self.0.span()=> emg_layout::ccsa::PredVariable(emg_core::IdStr::new(#var)))
+        quote_spanned!(self.0.span()=> emg_bind::layout::ccsa::PredVariable(emg_bind::common::IdStr::new(#var)))
             .to_tokens(tokens);
     }
 }
@@ -529,7 +529,7 @@ impl ToTokens for ScopeViewVariable {
             .unwrap()
             .join(self.variable.span())
             .unwrap();
-        quote_spanned!(span=> emg_layout::ccsa::ScopeViewVariable::new(#scope, #view, #variable))
+        quote_spanned!(span=> emg_bind::layout::ccsa::ScopeViewVariable::new(#scope, #view, #variable))
             .to_tokens(tokens);
     }
 }
@@ -654,15 +654,15 @@ impl ToTokens for StrengthAndWeight {
                     |lint| {
                         match lint{
                             Left(xxx) => {
-                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx.into()).unwrap()) )
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_bind::common::NotNan::new(#xxx.into()).unwrap()) )
                             },
                             Right(xxx) => {
-                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx).unwrap()) )
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_bind::common::NotNan::new(#xxx).unwrap()) )
                             },
                         }
                     },
                 );
-                quote_spanned!(xx.span()=>emg_layout::ccsa::StrengthAndWeight::Weak(#xx))
+                quote_spanned!(xx.span()=>emg_bind::layout::ccsa::StrengthAndWeight::Weak(#xx))
                     .to_tokens(tokens);
             }
             Self::Medium(x) => {
@@ -671,15 +671,15 @@ impl ToTokens for StrengthAndWeight {
                     |lint| {
                         match lint{
                             Left(xxx) => {
-                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx.into()).unwrap()) )
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_bind::common::NotNan::new(#xxx.into()).unwrap()) )
                             },
                             Right(xxx) => {
-                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx).unwrap()) )
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_bind::common::NotNan::new(#xxx).unwrap()) )
                             },
                         }
                     },
                 );
-                quote_spanned!(xx.span()=>emg_layout::ccsa::StrengthAndWeight::Medium(#xx))
+                quote_spanned!(xx.span()=>emg_bind::layout::ccsa::StrengthAndWeight::Medium(#xx))
                     .to_tokens(tokens);
             }
             Self::Strong(x) => {
@@ -688,19 +688,19 @@ impl ToTokens for StrengthAndWeight {
                     |lint| {
                         match lint{
                             Left(xxx) => {
-                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx.into()).unwrap()) )
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_bind::common::NotNan::new(#xxx.into()).unwrap()) )
                             },
                             Right(xxx) => {
-                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_core::NotNan::new(#xxx).unwrap()) )
+                                quote_spanned! (xxx.span()=> ::std::option::Option::Some( emg_bind::common::NotNan::new(#xxx).unwrap()) )
                             },
                         }
                     },
                 );
-                quote_spanned!(xx.span()=>emg_layout::ccsa::StrengthAndWeight::Strong(#xx))
+                quote_spanned!(xx.span()=>emg_bind::layout::ccsa::StrengthAndWeight::Strong(#xx))
                     .to_tokens(tokens);
             }
             Self::Require => {
-                quote!(emg_layout::ccsa::StrengthAndWeight::Require).to_tokens(tokens);
+                quote!(emg_bind::layout::ccsa::StrengthAndWeight::Require).to_tokens(tokens);
             }
         }
     }
@@ -817,19 +817,19 @@ impl ToTokens for PredEq {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Self::Eq(x) => {
-                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Eq).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::PredEq::Eq).to_tokens(tokens);
             }
             Self::Lt(x) => {
-                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Lt).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::PredEq::Lt).to_tokens(tokens);
             }
             Self::Le(x) => {
-                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Le).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::PredEq::Le).to_tokens(tokens);
             }
             Self::Ge(x) => {
-                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Ge).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::PredEq::Ge).to_tokens(tokens);
             }
             Self::Gt(x) => {
-                quote_spanned!(x.span()=> emg_layout::ccsa::PredEq::Gt).to_tokens(tokens);
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::PredEq::Gt).to_tokens(tokens);
             }
         }
     }
@@ -991,14 +991,14 @@ impl ToTokens for Scope {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Self::Local(span) => {
-                quote_spanned!(*span=> emg_layout::ccsa::Scope::Local).to_tokens(tokens);
+                quote_spanned!(*span=> emg_bind::layout::ccsa::Scope::Local).to_tokens(tokens);
             }
 
             Self::Parent(n, span) => {
-                quote_spanned!(*span=> emg_layout::ccsa::Scope::Parent(#n)).to_tokens(tokens);
+                quote_spanned!(*span=> emg_bind::layout::ccsa::Scope::Parent(#n)).to_tokens(tokens);
             }
             Self::Global(span) => {
-                quote_spanned!(*span=> emg_layout::ccsa::Scope::Global).to_tokens(tokens);
+                quote_spanned!(*span=> emg_bind::layout::ccsa::Scope::Global).to_tokens(tokens);
             }
         }
     }
@@ -1188,7 +1188,7 @@ struct CCSSOpSvv {
 impl ToTokens for CCSSOpSvv {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let Self { op, var } = self;
-        quote_spanned! (op.span().join(var.span()).unwrap() => emg_layout::ccsa::CCSSOpSvv::new(#op,#var))
+        quote_spanned! (op.span().join(var.span()).unwrap() => emg_bind::layout::ccsa::CCSSOpSvv::new(#op,#var))
             .to_tokens(tokens);
     }
 }
@@ -1206,7 +1206,7 @@ pub struct CCSSSvvOpSvvExpr {
 impl ToTokens for CCSSSvvOpSvvExpr {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let Self { svv, op_exprs } = self;
-        quote_spanned! (svv.span() => emg_layout::ccsa::CCSSSvvOpSvvExpr::new(#svv,vec![#(#op_exprs),*]))
+        quote_spanned! (svv.span() => emg_bind::layout::ccsa::CCSSSvvOpSvvExpr::new(#svv,vec![#(#op_exprs),*]))
             .to_tokens(tokens);
     }
 }
@@ -1254,7 +1254,7 @@ struct CCSSEqExpression {
 impl ToTokens for CCSSEqExpression {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let Self { eq, expr } = self;
-        quote_spanned!(eq.span().join(expr.span()).unwrap()=> emg_layout::ccsa::CCSSEqExpression::new(#eq,#expr))
+        quote_spanned!(eq.span().join(expr.span()).unwrap()=> emg_bind::layout::ccsa::CCSSEqExpression::new(#eq,#expr))
             .to_tokens(tokens);
     }
 }
@@ -1280,7 +1280,7 @@ impl ToTokens for CCSS {
         } = self;
         let opt_sw_quote = QuoteOption(opt_sw.as_ref());
 
-        quote_spanned!(svv_op_svvs.span()=>emg_layout::ccsa::CCSS::new(#svv_op_svvs, vec![#(#eq_exprs),*],#opt_sw_quote)).to_tokens(tokens);
+        quote_spanned!(svv_op_svvs.span()=>emg_bind::layout::ccsa::CCSS::new(#svv_op_svvs, vec![#(#eq_exprs),*],#opt_sw_quote)).to_tokens(tokens);
     }
 }
 impl std::fmt::Display for CCSS {
@@ -1781,7 +1781,7 @@ impl ToTokens for VFLStatement {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ccsss = &self.ccsss;
         let selectors = &self.selectors;
-        quote! { (emg_core::vector![ #( #ccsss ), * ],emg_core::vector![ #( #selectors ), * ]) }
+        quote! { (emg_bind::common::vector![ #( #ccsss ), * ],emg_bind::common::vector![ #( #selectors ), * ]) }
             .to_tokens(tokens);
     }
 }
@@ -2108,7 +2108,7 @@ impl ToTokens for Virtual {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let Virtual(name, vars) = self;
         let vars_iter = vars.iter();
-        quote_spanned!(name.span().join(vars.span()).unwrap()=>emg_layout::ccsa::Virtual(emg_core::IdStr::new(#name),vec![ #(#vars_iter),* ]))
+        quote_spanned!(name.span().join(vars.span()).unwrap()=>emg_bind::layout::ccsa::Virtual(emg_bind::common::IdStr::new(#name),vec![ #(#vars_iter),* ]))
             .to_tokens(tokens);
     }
 }
@@ -2135,7 +2135,7 @@ impl ToTokens for GeneralVar {
         let GeneralVar(name, svv) = self;
 
         let name_str = name.to_string();
-        quote_spanned!(name.span().join(svv.span()).unwrap()=>emg_layout::ccsa::GeneralVar(emg_core::IdStr::new(#name_str),#svv))
+        quote_spanned!(name.span().join(svv.span()).unwrap()=>emg_bind::layout::ccsa::GeneralVar(emg_bind::common::IdStr::new(#name_str),#svv))
             .to_tokens(tokens);
     }
 }
@@ -2159,11 +2159,11 @@ impl ToTokens for DefineVar {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Self::General(general_var) => {
-                quote_spanned!(general_var.span()=> emg_layout::ccsa::CassowaryVar::General( #general_var ))
+                quote_spanned!(general_var.span()=> emg_bind::layout::ccsa::CassowaryVar::General( #general_var ))
                     .to_tokens(tokens);
             }
             Self::Virtual(virtual_) => {
-                quote_spanned!(virtual_.span()=> emg_layout::ccsa::CassowaryVar::Virtual( #virtual_ ))
+                quote_spanned!(virtual_.span()=> emg_bind::layout::ccsa::CassowaryVar::Virtual( #virtual_ ))
                 .to_tokens(tokens);
             }
         }
@@ -2231,7 +2231,7 @@ mod tests {
 
     use std::path::Path;
 
-    use emg_core::VecDisp;
+    use emg_common::VecDisp;
     use quote::ToTokens;
     use tracing::debug;
 

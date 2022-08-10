@@ -5,7 +5,7 @@
  * @LastEditors: Rais
  * @Description:
  */
-use emg_core::dyn_partial_eq::DynPartialEq;
+use emg_common::dyn_partial_eq::DynPartialEq;
 use emg_state::StateAnchor;
 use std::{any::Any, rc::Rc};
 use tracing::warn;

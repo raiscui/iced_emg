@@ -18,122 +18,69 @@
 // bumpalo
 // #![feature(allocator_api)]
 // #![feature(generic_associated_types)]
+// ────────────────────────────────────────────────────────────────────────────────
 
-pub mod emg_web;
-#[cfg(not(target_arch = "wasm32"))]
-pub use iced as runtime;
+// ────────────────────────────────────────────────────────────────────────────────
 
+pub mod executor;
+
+// ────────────────────────────────────────────────────────────────────────────────
+pub use emg;
+pub use emg_common as common;
+pub use emg_common::any;
+pub use emg_common::better_any;
+pub use emg_common::result::Result;
+pub use emg_layout as layout;
+pub use emg_msg_macro::emg_msg;
+pub use emg_refresh as refresh;
+pub use emg_state as state;
+pub use emg_state::topo;
 #[cfg(target_arch = "wasm32")]
-pub use iced_web as iced_runtime;
+pub use emg_web as runtime;
+pub use gtree::gtree;
+// pub use sandbox::Sandbox;
+// #[cfg(target_arch = "wasm32")]
+// pub use runtime::settings;
 
+pub use crate::runtime::widget;
 #[cfg(target_arch = "wasm32")]
-pub use emg_web as emg_runtime;
-
-mod g_element;
-mod g_tree_builder;
+pub use crate::runtime::Settings;
+#[cfg(target_arch = "wasm32")]
+pub use crate::runtime::{GelType, GraphType};
 // mod g_tree_builder_fn_for_node_item;
 // mod g_tree_builder_fn_for_node_item_rc;
-mod g_tree_builder_fn_for_node_item_rc_sv;
 // mod graph_store;
-mod animation;
-mod bind_view;
-pub mod g_node;
-// mod gid;
-mod graph_layout;
-mod impl_refresh;
-mod orders;
-mod sandbox;
-// ────────────────────────────────────────────────────────────────────────────────
-// ────────────────────────────────────────────────────────────────────────────────
-// ────────────────────────────────────────────────────────────────────────────────
-// pub use gid::Gid;
-pub mod event;
-pub mod window;
 
 // ────────────────────────────────────────────────────────────────────────────────
-pub use emg_animation::Tick;
-pub use emg_orders::Orders;
 // mod state_store;
 // mod topo_store;
-pub use bind_view::*;
-pub use emg::{edge_index_no_source, Outgoing};
-pub use emg_msg_macro::emg_msg;
-pub use emg_runtime::*;
-pub use g_element::*;
-pub use g_tree_builder::*;
-pub use graph_layout::*;
-pub use sandbox::Sandbox;
 
 const VEC_SMALL: usize = 4;
 
-// pub use state_store::GStateStore;
-// pub use state_store::G_STATE_STORE;
-// pub use topo_store::use_state;
-// pub use topo_store::CloneState;
-// pub use topo_store::StateAccess;
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
-// @TODO Refactor once `optin_builtin_traits` or `negative_impls`
-// @TODO is stable (https://github.com/seed-rs/seed/issues/391).
-// --
-// @TODO Remove `'static` bound from all `MsU`s once `optin_builtin_traits`, `negative_impls`
-// @TODO or https://github.com/rust-lang/rust/issues/41875 is stable.
-#[macro_export]
-macro_rules! map_callback_return_to_option_ms {
-    ($cb_type:ty, $callback:expr, $panic_text:literal, $output_type:tt) => {{
-        let t_type = std::any::TypeId::of::<MsU>();
-        if t_type == std::any::TypeId::of::<Message>() {
-            $output_type::new(move |value| {
-                (&mut Some($callback.call_once((value,))) as &mut dyn std::any::Any)
-                    .downcast_mut::<Option<Message>>()
-                    .and_then(Option::take)
-            })
-        } else if t_type == std::any::TypeId::of::<Option<Message>>() {
-            $output_type::new(move |value| {
-                (&mut $callback.call_once((value,)) as &mut dyn std::any::Any)
-                    .downcast_mut::<Option<Message>>()
-                    .and_then(Option::take)
-            })
-        } else if t_type == std::any::TypeId::of::<()>() {
-            $output_type::new(move |value| {
-                $callback.call_once((value,));
-                None
-            }) as $output_type<$cb_type>
-        } else {
-            panic!($panic_text);
-        }
-    }};
-}
-#[macro_export]
-macro_rules! map_fn_callback_return_to_option_ms {
-    ($cb_type:ty,( $( $value:ident ) , * ), $callback:expr, $panic_text:literal, $output_type:tt) => {{
-        let t_type = std::any::TypeId::of::<MsU>();
-        if t_type == std::any::TypeId::of::<Message>() {
-            $output_type::new(move |$($value),*| {
-                (&mut Some($callback.call(($($value),*))) as &mut dyn std::any::Any)
-                    .downcast_mut::<Option<Message>>()
-                    .and_then(Option::take)
-            })
-        } else if t_type == std::any::TypeId::of::<Option<Message>>() {
-            $output_type::new(move |$($value),*| {
-                (&mut $callback.call(($($value),*)) as &mut dyn std::any::Any)
-                    .downcast_mut::<Option<Message>>()
-                    .and_then(Option::take)
-            })
-        } else if t_type == std::any::TypeId::of::<()>() {
-            $output_type::new(move |$($value),*| {
-                $callback.call(($($value),*));
-                None
-            }) as $output_type<$cb_type>
-        } else {
-            panic!($panic_text);
-        }
-    }};
-}
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod tests {
+
+    #[allow(unused)]
+    use crate::{
+        common::{
+            better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
+            IdStr, TypeCheck,
+        },
+        layout::{add_values::*, css, styles::*, EmgEdgeItem},
+        refresh::{EqRefreshFor, RefreshFor, RefreshUse, Refresher},
+        runtime::{node_ref, EventCallback, EventMessage, GElement, GTreeBuilderElement},
+        state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
+    };
+
+    #[allow(unused)]
+    use std::rc::Rc;
+    // #[allow(unused)]
+    // use GElement::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn xx() {
+        // let f = node_ref();
     }
 }

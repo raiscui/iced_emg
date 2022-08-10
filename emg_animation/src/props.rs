@@ -1,4 +1,4 @@
-use emg_core::{SmallVec, Vector};
+use emg_common::{SmallVec, Vector};
 use tracing::error;
 
 use crate::models::PropertyOG;

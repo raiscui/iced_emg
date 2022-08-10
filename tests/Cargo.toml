@@ -23,7 +23,7 @@ emg_layout = { path = "../emg_layout" }
 emg_animation = { path = "../emg_animation" }
 gtree = { path = "../gtree" }
 seed_styles = { path = "../../styles_hooks/seed_styles" }
-emg_core = { path = "../emg_core" }
+emg_common = { path = "../emg_common" }
 anchors = { path = "../../anchors" }
 
 
