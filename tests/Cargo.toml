@@ -14,7 +14,6 @@ emg_bind = { path = "../emg_bind" }
 rustc-hash = "1.1.0"
 
 
-iced = { path = "../../iced" }
 # iced_web = "0.3"
 
 emg_refresh = { path = "../emg_refresh" }
