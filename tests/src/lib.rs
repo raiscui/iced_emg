@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-06-23 23:34:22
+ * @LastEditTime: 2022-08-11 16:39:13
  * @LastEditors: Rais
  * @Description: 
  */
@@ -41,7 +41,6 @@ mod wasm_test {
 
     use emg_state::{use_state, StateVar};
 
-    use iced::{Align, Column, Error, Settings};
     extern crate gtree;
 
     use gtree::gtree;

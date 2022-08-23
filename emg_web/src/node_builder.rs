@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-08-10 18:11:01
+ * @LastEditTime: 2022-08-18 10:58:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -425,7 +425,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 #[allow(unused)]
 mod node_builder_test {
     use emg_common::vector;

@@ -6,7 +6,7 @@ use std::fmt;
 
 impl<T> Action<T> {
     /// Applies a transformation to the result of a [`Command`].
-    #[cfg(target_arch = "wasm32")]
+    // #[cfg(target_arch = "wasm32")]
     pub fn map<A>(self, f: impl Fn(T) -> A + 'static) -> Action<A>
     where
         T: 'static,

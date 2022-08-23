@@ -1,65 +1,31 @@
-pub mod any;
-pub use better_any;
-pub mod error;
 mod func;
 mod macros;
-pub mod measures;
-pub mod result;
 mod tools;
+// ────────────────────────────────────────────────────────────────────────────────
+pub mod any;
+pub mod keyboard;
+pub mod measures;
+pub mod mouse;
+pub mod time;
+// ────────────────────────────────────────────────────────────────────────────────
+pub type Pos = na::Point2<f32>;
 pub use crate::SVec::{smallvec, SmallVec};
 pub use ::smallvec as SVec;
+pub use better_any;
+pub use compact_str::CompactString as IdStr;
 pub use dyn_partial_eq;
-pub use tools::*;
-
-pub use error::Error;
 pub use im::{vector, Vector};
 pub use im_rc as im;
 pub use measures::*;
+pub use nalgebra as na;
 pub use ordered_float::NotNan;
+pub use tools::*;
 // ────────────────────────────────────────────────────────────────────────────────
+
 use derive_more::{Display, From};
 // pub use smol_str::SmolStr as IdStr;
 // pub use smartstring::alias::String as SmString;
-pub use compact_str::CompactString as IdStr;
 // use compact_str::CompactString as SmString;
-
-// #[derive(Clone, Default, Display, Eq, PartialEq, Debug, Hash, PartialOrd, Ord)]
-// pub struct IdStr(SmString);
-
-// impl std::ops::Deref for IdStr {
-//     type Target = SmString;
-
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
-// impl From<std::string::String> for IdStr {
-//     fn from(string: std::string::String) -> Self {
-//         Self(string.into())
-//     }
-// }
-// impl From<&str> for IdStr {
-//     fn from(string: &str) -> Self {
-//         Self(string.into())
-//     }
-// }
-
-// impl IdStr {
-//     #[inline]
-//     pub fn new_inline(text: &str) -> Self {
-//         // let mut string = SmString::new();
-//         // string.push_str(text);
-//         // Self(string)
-//         let len = text.len();
-//         if len >= 10 {
-//             warn!("IdStr new_inline: {:?}", &text);
-//         }
-//         Self(SmString::new_inline(text))
-//     }
-//     pub fn new(text: &str) -> Self {
-//         Self(SmString::new(text))
-//     }
-// }
 
 // pub use tinyvec::{tiny_vec, TinyVec};
 // ────────────────────────────────────────────────────────────────────────────────

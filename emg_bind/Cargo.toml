@@ -16,8 +16,10 @@ split-debuginfo = "unpacked"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+
 [features]
-default = []
+default = ["gpu"]
+gpu = ["emg_winit", "emg_piet_gpu", "emg_element/gpu", "emg_graphics_backend"]
 pool = []
 
 
@@ -31,42 +33,18 @@ emg_futures = { path = "../emg_futures" }
 emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
 emg_animation = { path = "../emg_animation" }
 emg = { path = "../../emg" }
+emg_element = { path = "../emg_element" }
+
 #--------------
-# functionate = { path = "../../functionate" }
-# overloadf = { path = "../../overloadf" }
-# log = "0.4"
-# lazy_static = "1.4.0"
-# downcast-rs = "1.2.0"
-
-
-# from_variants = "0.5.0"
-# delegate = "0.6.1"
-
-
+emg_graphics_backend = { path = "../emg_graphics_backend", optional = true }
+emg_winit = { path = "../emg_winit", optional = true }
+#---------------
 tracing = "0.1"
-
-# rustc-hash = "1.1.0"
-
-# tinyvec = { version = "1.5.1", features = ["alloc"] }
-# smallvec = { version = "1.8.0", features = ["const_generics", "union"] }
-
-# emg_debuggable = { path = "../emg_debuggable" }
-# stream_throttle ={ version = "0.4.0",default-features = false, features = ["timer-futures-timer"], path = "../../stream-throttle"}
+thiserror = "1.0"
 
 
-# [patch.crates-io]
-# dodrio={path="../../dodrio"}
-
-
-# [target.'cfg(target_arch = "wasm32")'.dependencies]
-
-
-# uuid = { version = "0.8", features = ["v4", "wasm-bindgen"] }
-# console_log = { version = "0.2", features = ["color"] }
-# iced_web = { path = "../../iced/web" }
-# tracing-wasm = "0.2.0"
-# console_error_panic_hook = "0.1.6"
-
-
-# [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 emg_web = { path = "../emg_web" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }

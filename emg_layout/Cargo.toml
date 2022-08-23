@@ -26,7 +26,7 @@ either = "1.7.0"
 parse-display = "0.5.5"
 slotmap = "1.0.6"
 
-nalgebra = "0.31.0"
+nalgebra = "0.31.1"
 # nalgebra = "0.29.0"
 derive_more = "0.99"
 seed_styles = { path = "../../styles_hooks/seed_styles" }

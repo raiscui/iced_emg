@@ -11,7 +11,7 @@ use std::marker::PhantomData;
 /// [`Command`] or [`Subscription`] and get notified of the results!
 #[derive(Debug)]
 // pub struct Runtime<Hasher, Event, Executor, Sender, Message> {
-pub struct Runtime<Executor, Sender, Message> {
+pub struct FutureRuntime<Executor, Sender, Message> {
     executor: Executor,
     sender: Sender,
     // subscriptions: subscription::Tracker<Hasher, Event>,
@@ -19,7 +19,7 @@ pub struct Runtime<Executor, Sender, Message> {
 }
 
 // impl<Hasher, Event, Executor, Sender, Message> Runtime<Hasher, Event, Executor, Sender, Message>
-impl<Executor, Sender, Message> Runtime<Executor, Sender, Message>
+impl<Executor, Sender, Message> FutureRuntime<Executor, Sender, Message>
 where
     // Hasher: std::hash::Hasher + Default,
     // Event: Send + Clone + 'static,

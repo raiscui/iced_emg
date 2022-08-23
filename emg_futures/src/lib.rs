@@ -1,16 +1,18 @@
+// ────────────────────────────────────────────────────────────────────────────────
+
 mod command;
+mod future_runtime;
 mod maybe_send;
-mod runtime;
 
 pub mod backend;
 pub mod executor;
 
 pub use command::Command;
 pub use executor::Executor;
+pub use future_runtime::FutureRuntime;
 pub use futures;
 pub use maybe_send::MaybeSend;
 pub use platform::*;
-pub use runtime::Runtime;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod platform {

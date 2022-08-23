@@ -5,6 +5,7 @@ members = [
     "gtree_macro",
     "gtree",
     "emg_common",
+    "emg_element",
     "emg_layout",
     "emg_bind",
     "emg_refresh",
@@ -17,7 +18,13 @@ members = [
     "emg_hasher",
     "emg_web",
     "emg_futures",
+    "emg_native",
+    "emg_winit",
+    "emg_piet_gpu",
+    "emg_renderer",
+    "emg_graphics_backend",
     "tests",
     "examples/counter_new_resize",
+    "examples/counter",
 ]
 # exclude = [""]

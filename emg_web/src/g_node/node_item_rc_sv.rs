@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-18 12:53:14
- * @LastEditTime: 2022-08-10 18:19:56
+ * @LastEditTime: 2022-08-18 18:19:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -344,6 +344,7 @@ where
                 .map(move |out_eix_s, children, gel, edge_styles| {
                     let mut gel_clone = (**gel).clone();
 
+                    //TODO 合并 此处和下方 两次 for (移动此处)
                     for eix in out_eix_s {
                         if let Some(child_gel) =
                             children.get(eix).and_then(|child| child.as_ref().right())

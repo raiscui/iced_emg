@@ -1,8 +1,9 @@
 //! EMG application.
+use emg_futures::FutureRuntime;
 /*
  * @Author: Rais
  * @Date: 2021-03-04 10:02:43
- * @LastEditTime: 2022-08-09 23:02:10
+ * @LastEditTime: 2022-08-23 15:56:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -111,18 +112,18 @@ pub trait Application {
 
         let (sender, receiver) = futures::channel::mpsc::unbounded();
 
-        let mut runtime = emg_futures::Runtime::new(
+        let mut future_runtime = FutureRuntime::new(
             Self::Executor::new().expect("Create executor"),
             sender.clone(),
         );
         let orders = OrdersContainer::<Self::Message>::new(Bus::new(sender.clone()));
 
-        let (app, command) = runtime.enter(|| Self::new(flags.flags, &orders));
+        let (app, command) = future_runtime.enter(|| Self::new(flags.flags, &orders));
 
         let mut title = app.title();
         document.set_title(&title);
 
-        run_command(command, &mut runtime);
+        run_command(command, &mut future_runtime);
         // runtime.spawn(command);
 
         let application = Rc::new(RefCell::new(app));
@@ -157,7 +158,7 @@ pub trait Application {
             let _g_event_loop = debug_span!("event_loop", ?message).entered();
             debug!("receiver-message: {:?}", message);
             // let (command, subscription) = runtime.enter(|| {
-            let command = runtime.enter(|| {
+            let command = future_runtime.enter(|| {
                 let update_span = trace_span!("application->update");
                 // let sub_span = trace_span!("application->subscription");
                 let command = update_span.in_scope(|| {
@@ -178,7 +179,7 @@ pub trait Application {
             {
                 let _g = trace_span!("application->spawn command").entered();
                 // runtime.spawn(command);
-                run_command(command, &mut runtime);
+                run_command(command, &mut future_runtime);
             }
             {
                 let _g = trace_span!("application->track subscription").entered();
@@ -212,7 +213,7 @@ pub trait Application {
 
 fn run_command<Message: 'static + Send, E: Executor>(
     command: Command<Message>,
-    runtime: &mut emg_futures::Runtime<
+    runtime: &mut FutureRuntime<
         E,
         emg_futures::futures::channel::mpsc::UnboundedSender<Message>,
         Message,
@@ -276,11 +277,11 @@ where
         let _g = debug_span!("application->render").entered();
         debug!("render");
 
-        let ui = self.application.borrow();
+        let app_ref = self.application.borrow();
         let emg_graph_ref = self.g.borrow();
 
         let view_span = trace_span!("application->view");
-        let element = view_span.in_scope(|| ui.view(&*emg_graph_ref));
+        let element = view_span.in_scope(|| app_ref.view(&*emg_graph_ref));
 
         // get_caller_location2();
         // get_caller_location3();
@@ -288,6 +289,7 @@ where
         let css = GlobalStyleSV::default_topo();
 
         let node_span = trace_span!("application->element.node");
+        //TODO 集成 node() 动作到 anchor 增量计算. (可能要 缓存 每一个节点生成的 Node)
         let node = node_span.in_scope(|| {
             element
                 .as_dyn_node_widget()

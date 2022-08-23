@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-09 22:14:02
- * @LastEditTime: 2022-08-09 22:55:10
+ * @LastEditTime: 2022-08-11 14:26:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,6 @@ pub use action::Action;
 
 use std::fmt;
 
-#[cfg(target_arch = "wasm32")]
 use std::future::Future;
 
 /// A set of asynchronous actions to be performed by some runtime.
@@ -34,7 +33,7 @@ impl<T> Command<T> {
     #[cfg(target_arch = "wasm32")]
     pub fn perform<A>(
         future: impl Future<Output = T> + 'static,
-        f: impl Fn(T) -> A + 'static + Send,
+        f: impl Fn(T) -> A + 'static,
     ) -> Command<A> {
         use emg_futures::futures::FutureExt;
 

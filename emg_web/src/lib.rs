@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:05:39
- * @LastEditTime: 2022-08-10 18:05:49
+ * @LastEditTime: 2022-08-23 15:58:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -31,6 +31,7 @@ mod hasher;
 mod impl_refresh;
 mod node_builder;
 mod orders;
+mod result;
 mod sandbox;
 mod settings;
 mod window;
@@ -39,11 +40,10 @@ mod g_node;
 pub mod widget;
 
 // ────────────────────────────────────────────────────────────────────────────────
+pub use crate::result::Result;
 pub use bus::Bus;
 pub use command::Command;
 pub use dodrio;
-pub use emg_common::error::Error;
-pub use emg_common::result::Result;
 pub use g_element::{node_ref, GElement};
 pub use g_node::node_item_rc_sv::{GelType, GraphType};
 pub use g_tree_builder::GTreeBuilderElement;

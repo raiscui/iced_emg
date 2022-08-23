@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-08-10 18:08:49
+ * @LastEditTime: 2022-08-12 16:34:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -197,7 +197,9 @@ impl<Use, Message> From<SaWithMapFn<Use, Message>> for GElement<Message>
 where
     Use: PartialEq + Clone + 'static,
     Message: Clone + PartialEq + 'static,
-    StateAnchor<Use>: Evolution<StateAnchor<Rc<Self>>>,
+    //TODO check StateAnchor<Use>: Evolution<StateAnchor<Rc<Self>>>  or "SaWithMapFn<Use, Message>: Evolution<StateAnchor<Rc<Self>>>"
+    SaWithMapFn<Use, Message>: Evolution<StateAnchor<Rc<Self>>>,
+    // StateAnchor<Use>: Evolution<StateAnchor<Rc<Self>>>,
 {
     fn from(sa_with_fn: SaWithMapFn<Use, Message>) -> Self {
         Self::EvolutionaryFactor(Rc::new(sa_with_fn))
@@ -211,11 +213,12 @@ where
 {
     fn from(sa_use: StateAnchor<Use>) -> Self {
         (&sa_use as &dyn Any)
+            //TODO is should check can downcast_ref to StateAnchor<Self>?
             .downcast_ref::<StateAnchor<Rc<Self>>>()
             .cloned()
             .map_or_else(
                 || Self::EvolutionaryFactor(Rc::new(sa_use)),
-                |s| Self::SaNode_(s),
+                |s| Self::SaNode_(s), //NOTE: is StateAnchor<Rc<Self>>
             )
     }
 }
