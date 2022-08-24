@@ -64,8 +64,8 @@ impl Compositor {
 
         let swapchain = unsafe {
             self.instance.swapchain(
-                self.settings.width / 2,
-                self.settings.height / 2,
+                self.settings.width,
+                self.settings.height,
                 &device,
                 &self.surface,
             )?

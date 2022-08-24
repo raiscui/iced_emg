@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2022-08-22 23:37:04
+ * @LastEditTime: 2022-08-24 11:05:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -37,8 +37,13 @@ impl Backend {
                 .map(|_| session.create_semaphore())
                 .collect::<Result<Vec<_>, Box<dyn std::error::Error>>>()?;
 
-            let renderer = Renderer::new(&session, settings.width, settings.height, NUM_FRAMES)?;
-            let mut render_driver = RenderDriver::new(&session, NUM_FRAMES, renderer);
+            let renderer = Renderer::new(
+                &session,
+                settings.width * 2,
+                settings.height * 2,
+                NUM_FRAMES,
+            )?;
+            let render_driver = RenderDriver::new(&session, NUM_FRAMES, renderer);
 
             Ok(Self {
                 swapchain,

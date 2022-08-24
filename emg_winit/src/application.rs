@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2022-08-24 01:14:27
+ * @LastEditTime: 2022-08-24 11:41:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,7 @@ use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
 use emg_graphics_backend::window::{compositor, Compositor};
 use emg_native::{program::Program, Event, Renderer};
-use tracing::info;
+use tracing::{info, instrument};
 // use emg_native::user_interface::{self, UserInterface};
 
 /// An interactive, native cross-platform application.
@@ -35,6 +35,7 @@ use tracing::info;
 /// can be toggled by pressing `F12`.
 pub trait Application: GraphProgram {
     /// The data needed to initialize your [`Application`].
+
     type Flags;
     type Renderer: Renderer<ImplRenderContext = Self::ImplRenderContext>;
 
@@ -108,6 +109,7 @@ pub trait Application: GraphProgram {
 
 /// Runs an [`Application`] with an executor, compositor, and the provided
 /// settings.
+#[instrument(skip_all, name = "winit->run")]
 pub fn run<A, E, C>(
     settings: Settings<A::Flags>,
     compositor_settings: C::Settings,
@@ -238,6 +240,7 @@ where
     })
 }
 
+#[instrument(skip_all)]
 async fn run_instance<A, E, C>(
     mut application: A,
     mut compositor: C,
@@ -287,6 +290,7 @@ async fn run_instance<A, E, C>(
     debug.startup_finished();
 
     while let Some(winit_event) = receiver.next().await {
+        info!("winit event: {:?}", &winit_event);
         match winit_event {
             event::Event::MainEventsCleared => {
                 if native_events.is_empty() && messages.is_empty() {
@@ -382,6 +386,7 @@ async fn run_instance<A, E, C>(
                 messages.push(message);
             }
             event::Event::RedrawRequested(_) => {
+                info!("redraw request");
                 // let physical_size = state.physical_size();
 
                 // if physical_size.width == 0 || physical_size.height == 0 {

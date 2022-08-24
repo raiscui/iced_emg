@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-08-10 23:48:56
+ * @LastEditTime: 2022-08-24 11:35:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -342,7 +342,11 @@ impl Parse for PredOp {
             BinOp::Add(x) => Ok(Self::Add(x)),
             BinOp::Sub(x) => Ok(Self::Sub(x)),
             BinOp::Mul(x) => Ok(Self::Mul(x)),
-            _ => panic!("[PredOp] op not support :{:?}", pred_op),
+            // _ => panic!("[PredOp] op not support :{:?}", pred_op),
+            _ => Err(syn::Error::new(
+                pred_op.span(),
+                format!("[PredOp] op not support :{:?}", pred_op),
+            )),
         }
     }
 }
@@ -622,7 +626,13 @@ impl Parse for PredExpression {
                     PredExpressionItem::ScopeViewVariable(x) if op.is_some() => {
                         exps.push((op.take().unwrap(), x));
                     }
-                    _ => panic!("[PredExpression] 运算顺序错误 ,必须 一个 op + 一个 var 一对 "),
+                    // _ => panic!("[PredExpression] 运算顺序错误 ,必须 一个 op + 一个 var 一对 "),
+                    _ => {
+                        return Err(syn::Error::new(
+                            input.span(),
+                            "[PredExpression] 运算顺序错误 ,必须 一个 op + 一个 var 一对 ",
+                        ))
+                    }
                 }
             } else if !input.is_empty() {
                 panic!("[PredExpression] input not empty {:?}", input)
