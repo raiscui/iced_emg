@@ -37,7 +37,7 @@ pub trait Application: GraphProgram {
     /// The data needed to initialize your [`Application`].
 
     type Flags;
-    type Renderer: Renderer<ImplRenderContext = Self::ImplRenderContext>;
+    // type Renderer: Renderer<ImplRenderContext = Self::ImplRenderContext>;
 
     /// Initializes the [`Application`] with the flags provided to
     /// [`run`] as part of the [`Settings`].
@@ -190,7 +190,7 @@ where
     // let root = application.tree_build();
     // let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
     // emg_graph_rc_refcell.handle_root_in_topo(&root);
-    let emg_graph_rc_refcell = application.graph_setup();
+    let emg_graph_rc_refcell = application.graph_setup(&renderer);
 
     let mut instance = Box::pin(run_instance::<A, E, C>(
         application,

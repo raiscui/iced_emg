@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2022-08-23 13:37:04
+ * @LastEditTime: 2022-08-24 14:24:36
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::{
      
-    g_node::{EmgNodeItem, node_item_rc_sv::{GraphType, NItem, GelType}},
+    g_node::{EmgNodeItem, GraphType, NItem, GelType},
      GElement, g_tree_builder::{GTreeBuilderFn, GTreeBuilderElement}, widget::Layer,
 };
 use emg::{edge_index_no_source, node_index, Edge, EdgeIndex, EdgeCollect, NodeIndex};

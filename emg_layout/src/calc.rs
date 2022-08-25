@@ -4,7 +4,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-27 15:05:02
+ * @LastEditTime: 2022-08-25 16:20:11
  * @LastEditors: Rais
 * @Description:
 */
@@ -415,8 +415,9 @@ where
                     ff
                 });
 
+            let calculated_translation = (&cass_trans,&coordinates_trans).map(|cass,defined| cass *defined );
             // let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
-            let matrix = (&cass_trans,&coordinates_trans).map(|cass,defined| (defined* cass).to_homogeneous().into());
+            let matrix = calculated_translation.map(|translation| translation.to_homogeneous().into());
             //TODO suppot use_size blend_origin(0~1) blend_align(0~1) def:0  blend_origin_x ...
             // let matrix = (&cass_trans,&calculated_origin).map(|cass,origin| (origin*cass).to_homogeneous().into());
             // let matrix = (&cass_trans,&coordinates_trans).map(|cass,defined| (cass).to_homogeneous().into());
@@ -452,6 +453,7 @@ where
                 cass_or_calc_size,
                 origin: calculated_origin,
                 align: calculated_align,
+                translation:calculated_translation,
                 coordinates_trans,
                 cass_trans,
                 matrix,

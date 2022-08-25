@@ -354,11 +354,12 @@ where
 }
 #[derive(Display, Debug, Clone, PartialEq)]
 #[display(
-    fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
+    fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},translation:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
     // "indented(suggest_size)",
     "indented(cass_or_calc_size)",
     "indented(origin)",
     "indented(align)",
+    "indented(translation)",
     "indented(coordinates_trans)",
     "indented(cass_trans)",
     "indented(matrix)",
@@ -372,6 +373,7 @@ pub struct LayoutCalculated {
     cass_or_calc_size: StateAnchor<Vector2<f64>>,
     origin: StateAnchor<Translation3<f64>>,
     align: StateAnchor<Translation3<f64>>,
+    translation:StateAnchor<Translation3<f64>>,
     coordinates_trans: StateAnchor<Translation3<f64>>,
     cass_trans: StateAnchor<Translation3<f64>>,
     matrix: StateAnchor<Mat4>,
@@ -388,6 +390,7 @@ pub struct EdgeData {
     cassowary_calculated_layout:StateAnchor<(Option<f64>,Option<f64>)>,
     pub styles_string: StateAnchor<String>, 
     // pub info_string: StateAnchor<String>, 
+    pub layout_end: StateAnchor<(Translation3<f64>, f64, f64)>,
     opt_p_calculated:Option<LayoutCalculated>,//TODO check need ? use for what?
     // matrix: M4Data,
                                         // transforms_am: Transforms,
@@ -552,7 +555,7 @@ where
     path_styles: StateVar<PathVarMap<Ix, Style>>, //TODO check use
     path_layouts:StateVar<PathVarMap<Ix, Layout>>,// layout only for one path 
 
-    pub other_styles: StateVar<Style>,
+    pub other_css_styles: StateVar<Style>,
     // no self  first try
     pub edge_nodes:DictPathEiNodeSA<Ix>, //TODO with self?  not with self?  (current with self)
     store:Rc<RefCell<GStateStore>>
@@ -570,7 +573,7 @@ Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id && self.paths == other.paths && self.layout == other.layout && self.path_styles == other.path_styles
-        && self.other_styles == other.other_styles && self.edge_nodes == other.edge_nodes
+        && self.other_css_styles == other.other_css_styles && self.edge_nodes == other.edge_nodes
     }
 }
 impl<
@@ -592,7 +595,7 @@ impl<
             indented(DictDisplay(self.paths.get())),
             indented(&self.layout),
             indented(PathVarMapDisplay(self.path_styles.get())),
-            indented(&self.other_styles),
+            indented(&self.other_css_styles),
             indented(DictDisplay(self.edge_nodes.get())),
         );
         write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
@@ -760,7 +763,7 @@ where
         let path_layouts:StateVar<PathVarMap<Ix, Layout>> = use_state(PathVarMap::default());
       
 
-        let other_styles_sv = use_state(s());
+        let other_css_styles_sv = use_state(s());
 
         let opt_self_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
             let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
@@ -927,8 +930,8 @@ where
                         
                     let (opt_p_calculated,layout_calculated,layout_styles_string) =  match p_path_edge_item_node {
                         //NOTE 上一级节点: empty => 此节点是root
-                        EdgeItemNode::Empty => path_ein_empty_node_builder(&path_layout, self_path,&current_cassowary_map,path_styles, other_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped,&current_cassowary_map, &path_layout, self_path, path_styles, other_styles_sv),
+                        EdgeItemNode::Empty => path_ein_empty_node_builder(&path_layout, self_path,&current_cassowary_map,path_styles, other_css_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped,&current_cassowary_map, &path_layout, self_path, path_styles, other_css_styles_sv),
                         EdgeItemNode::String(_)  => {
                             todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
@@ -1379,8 +1382,10 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
                     });
 
+                    let layout_end = (&layout_calculated.translation,&cassowary_calculated_layout).map(|trans,(w,h)|(*trans,w.expect("width must have"),h.expect("height must have")));
+
                  
-                    let styles_string:StateAnchor<String> = (&info_string,&layout_styles_string, &cassowary_calculated_layout).map(move |info,layout_styles,(w,h,..)|{
+                    let styles_string:StateAnchor<String> = (&info_string,&layout_styles_string, &cassowary_calculated_layout).map(move |info,layout_styles,(w,h)|{
 
                         warn!("[calculated_vars] [info] total  info:\n{} ",&info);
 
@@ -1414,7 +1419,9 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                         cassowary_calculated_vars,
                         cassowary_calculated_layout,
                         styles_string,
+                        layout_end,
                         opt_p_calculated,
+                        
                     }))
                 }).into()
 
@@ -1429,7 +1436,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
             
             path_styles,
             path_layouts,
-            other_styles: other_styles_sv,
+            other_css_styles: other_css_styles_sv,
             edge_nodes: nodes,
             store:state_store()
         }
@@ -1574,6 +1581,8 @@ fn path_ein_empty_node_builder<Ix:'static>(
     let calculated_align = StateAnchor::constant(Translation3::<f64>::identity());
     let coordinates_trans = StateAnchor::constant(Translation3::<f64>::identity());
     let cass_trans = StateAnchor::constant(Translation3::<f64>::identity());
+    let calculated_translation = (&cass_trans,&coordinates_trans).map(|cass,defined| cass *defined );
+
     let matrix = cass_trans.map(|x| x.to_homogeneous().into());
     let loc_styles = (&cass_or_calc_size, &matrix).map(move |size: &Vector2<f64>, mat4: &Mat4| {
             let _enter = span!(Level::TRACE,
@@ -1593,6 +1602,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
             cass_or_calc_size,
             origin: calculated_origin,
             align: calculated_align,
+            translation:calculated_translation,
             coordinates_trans,
             cass_trans,
             matrix,
@@ -1611,7 +1621,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
                         )
                 .entered();
 
-                //NOTE fold because edge no in , path_styles only one values.
+                //NOTE fold because edge has no in , path_styles only one values. fold max run only once;
                 let ps = path_styles.values().fold(String::default(), |acc,v|{
                     format!("{}{}",acc,v.render())
                 });

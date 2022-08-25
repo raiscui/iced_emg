@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2022-07-12 18:15:14
+ * @LastEditTime: 2022-08-25 14:58:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -187,7 +187,7 @@ where
     {
         // @ 不唯一, 多次会重复 ─────────────────────────────────────────────────────────────────
 
-        ed.other_styles.set_with(|s| {
+        ed.other_css_styles.set_with(|s| {
             let mut tmp_s = s.clone();
             let t = css.0.clone();
 

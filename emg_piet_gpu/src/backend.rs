@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2022-08-24 11:05:58
+ * @LastEditTime: 2022-08-25 11:16:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -35,7 +35,7 @@ impl Backend {
         unsafe {
             let present_semaphores = (0..NUM_FRAMES)
                 .map(|_| session.create_semaphore())
-                .collect::<Result<Vec<_>, Box<dyn std::error::Error>>>()?;
+                .collect::<Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>>>()?;
 
             let renderer = Renderer::new(
                 &session,

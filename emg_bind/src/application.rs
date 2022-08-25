@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2022-08-24 00:53:20
+ * @LastEditTime: 2022-08-24 12:38:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -186,6 +186,7 @@ where
     A: Application,
     <A as Application>::Message: 'static,
 {
+    type Renderer = crate::Renderer;
     type GraphType = element::GraphType<A::Message>;
     type GTreeBuilder = Rc<RefCell<Self::GraphType>>;
     type GElementType = element::GElement<A::Message>;
@@ -198,7 +199,7 @@ where
         self.0.tree_build()
     }
 
-    fn graph_setup(&self) -> Self::GTreeBuilder {
+    fn graph_setup(&self, renderer: &Self::Renderer) -> Self::GTreeBuilder {
         let emg_graph = <Self::GraphType>::default();
         let root = self.0.tree_build();
         let emg_graph_rc_refcell: Rc<RefCell<Self::GraphType>> = Rc::new(RefCell::new(emg_graph));
@@ -218,7 +219,6 @@ where
     <A as Application>::Message: 'static,
 {
     type Flags = A::Flags;
-    type Renderer = crate::Renderer;
 
     fn new(flags: Self::Flags) -> (Self, Command<A::Message>) {
         let (app, command) = A::new(flags);

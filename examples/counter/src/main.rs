@@ -92,10 +92,16 @@ impl Sandbox for Counter {
             @=a
             Layer [
                 @=a1 @E=[
-                    {md==22},
-                    w(pc(100)),h(pc(100)),
+                        {md==22},
+                        w(pc(100)),h(pc(100)),
+                    ]
+                Layer [
+                    @=a2 @E=[
+                        {md==22},
+                        w(pc(100)),h(pc(100)),
+                    ]
+                    Layer []
                 ]
-                Layer []
             ]
         }
     }
