@@ -46,7 +46,9 @@ fn tracing_init() {
 }
 
 pub fn main() -> emg_bind::Result {
+    #[cfg(debug_assertions)]
     tracing_init();
+    
     Counter::run(Settings::default())
 }
 
