@@ -56,7 +56,7 @@ impl<B: Backend> emg_native::Renderer for Renderer<B> {
 
     fn new_paint_ctx(&self) -> PaintCtx<Self::ImplRenderContext> {
         let new_render_ctx = self.backend.new_render_ctx();
-        PaintCtx::new(WidgetState::new(None), new_render_ctx)
+        PaintCtx::new(WidgetState::default(), new_render_ctx)
     }
     fn on_loop_destroyed(&mut self) {
         self.backend.on_loop_destroyed();

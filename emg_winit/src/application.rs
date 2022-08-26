@@ -1,18 +1,18 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2022-08-24 11:41:36
+ * @LastEditTime: 2022-08-26 18:00:42
  * @LastEditors: Rais
  * @Description:
  */
 //! Create interactive, native cross-platform applications.
-use std::ops::Deref;
-
 use crate::clipboard::{self, Clipboard};
 use crate::conversion;
 use crate::mouse;
 use crate::renderer;
 use crate::{Command, Debug, Error, Executor, FutureRuntime, Mode, Proxy, Settings};
+use emg_state::use_state_impl::CloneStateVar;
+use std::ops::Deref;
 
 use emg_element::{GTreeBuilderElement, GTreeBuilderFn, GraphProgram, GraphType, Widget};
 use emg_futures::futures;
@@ -169,6 +169,14 @@ where
             .append_child(&canvas)
             .expect("Append canvas to HTML body");
     }
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    let dpr = window.scale_factor();
+    let size: (f64, f64) = window.inner_size().to_logical::<f64>(dpr).into();
+    info!("Window size: {:?} {:?}", size, dpr);
+    emg_layout::global_width().set(size.0);
+    emg_layout::global_height().set(size.1);
+    // ────────────────────────────────────────────────────────────────────────────────
 
     let mut clipboard = Clipboard::connect(&window);
 

@@ -20,3 +20,4 @@ emg_renderer = { path = "../emg_renderer" }
 
 #-----
 dyn-clone = "1.0.9"
+tracing = "0.1"

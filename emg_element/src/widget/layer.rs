@@ -2,7 +2,7 @@ use std::{clone::Clone, cmp::PartialEq};
 
 use emg_common::IdStr;
 use emg_native::Rect;
-use tracing::{instrument, trace};
+use tracing::{info, instrument, trace};
 
 use crate::GElement;
 
@@ -101,16 +101,20 @@ where
 {
     #[instrument(skip(ctx), name = "Layer paint")]
     fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>) {
-        // let rect = ctx.size().to_rect();
-        let rect = Rect::new(0.0, 0.0, 100.0, 100.0);
-        trace!("[layer] print... {}", &rect);
+        let rect = ctx.size().to_rect();
+        info!("[layer] print... {}", &rect);
 
-        ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
+        //TODO remove this (debug things)
+        if self.id == "debug_layer" {
+            ctx.fill(rect, &emg_native::Color::rgb8(70, 0, 0));
+        } else {
+            ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
+        }
+        // ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
+
         // ctx.save().unwrap();
         for child in &self.children {
-            // todo!("impl paint");
-            // let w = child.as_dyn_node_widget();
-            // w.paint(ctx);
+            child.paint(ctx);
         }
     }
 }

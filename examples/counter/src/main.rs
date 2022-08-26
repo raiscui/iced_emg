@@ -89,16 +89,15 @@ impl Sandbox for Counter {
         // orders: impl Orders<Self::Message> + 'static,
     ) -> GTreeBuilderElement<Self::Message> {
         gtree! {
-            @=a
+            @=debug_layer
             Layer [
                 @=a1 @E=[
-                        {md==22},
-                        w(pc(100)),h(pc(100)),
+                        origin_x(pc(50)),align_x(pc(50)),
+                        w(pc(50)),h(pc(50)),
                     ]
                 Layer [
                     @=a2 @E=[
-                        {md==22},
-                        w(pc(100)),h(pc(100)),
+                        w(pc(50)),h(pc(50)),
                     ]
                     Layer []
                 ]
@@ -108,9 +107,9 @@ impl Sandbox for Counter {
 
     #[instrument(skip(self, g), ret)]
     fn view(&self, g: &GraphType<Self::Message>) -> GelType<Self::Message> {
-        g.get_node_item_use_ix(&IdStr::new_inline("a"))
+        g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
             .unwrap()
-            .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")]))
+            .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]))
             .get()
     }
 }

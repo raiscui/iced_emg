@@ -1,18 +1,24 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-08-20 17:30:25
+ * @LastEditTime: 2022-08-26 18:31:57
  * @LastEditors: Rais
  * @Description:
  */
 
 use std::ops::{Deref, DerefMut};
 
+use emg_common::na::Translation3;
+use tracing::error;
+
 use crate::Size;
+
+//TODO move to global
+pub const DPR: f64 = 2.0;
 
 pub struct PaintCtx<RenderContext> {
     // pub(crate) state: &'a mut ContextState<'b>,
-    pub(crate) widget_state: WidgetState,
+    widget_state: WidgetState,
     /// The render context for actually painting.
     pub render_ctx: RenderContext,
     // /// The z-order paint operations.
@@ -23,7 +29,10 @@ pub struct PaintCtx<RenderContext> {
     // pub(crate) depth: u32,
 }
 
-impl<RenderContext> PaintCtx<RenderContext> {
+impl<RenderContext> PaintCtx<RenderContext>
+where
+    RenderContext: crate::RenderContext,
+{
     pub fn new(widget_state: WidgetState, render_ctx: RenderContext) -> Self {
         Self {
             widget_state,
@@ -32,7 +41,24 @@ impl<RenderContext> PaintCtx<RenderContext> {
     }
 
     pub fn size(&self) -> Size {
-        self.widget_state.size()
+        self.widget_state.size() * DPR
+    }
+
+    pub fn set_widget_state(&mut self, widget_state: WidgetState) {
+        self.widget_state = widget_state;
+    }
+
+    pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx<RenderContext>)) {
+        if let Err(e) = self.render_ctx.save() {
+            error!("Failed to save RenderContext: '{}'", e);
+            return;
+        }
+
+        f(self);
+
+        if let Err(e) = self.render_ctx.restore() {
+            error!("Failed to restore RenderContext: '{}'", e);
+        }
     }
 }
 
@@ -50,12 +76,13 @@ impl<RenderContext> DerefMut for PaintCtx<RenderContext> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone, Default, PartialEq, Debug)]
 pub struct WidgetState {
     // pub(crate) id: WidgetId,
     /// The size of the child; this is the value returned by the child's layout
     /// method.
     size: Size,
+    pub translation: Translation3<f64>,
     // /// The origin of the child in the parent's coordinate space; together with
     // /// `size` these constitute the child's layout rect.
     // origin: Point,
@@ -115,11 +142,12 @@ pub struct WidgetState {
 }
 impl WidgetState {
     // pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
-    pub fn new(size: Option<Size>) -> WidgetState {
+    pub fn new(size: (f64, f64), trans: Translation3<f64>) -> WidgetState {
         WidgetState {
             // id,
             // origin: Point::ORIGIN,
-            size: size.unwrap_or_default(),
+            size: Size::new(size.0, size.1),
+            translation: trans,
             // is_expecting_set_origin_call: true,
             // paint_insets: Insets::ZERO,
             // invalid: Region::EMPTY,

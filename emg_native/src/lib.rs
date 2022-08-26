@@ -1,13 +1,13 @@
 #![feature(fn_traits)]
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod bus;
-
 pub mod clipboard;
 pub mod command;
 pub mod event;
 pub mod future_runtime;
 pub mod keyboard;
 pub mod mouse;
+pub mod paint_ctx;
 pub mod program;
 pub mod renderer;
 pub mod system;
@@ -35,6 +35,7 @@ pub use future_runtime::FutureRuntime;
 // pub use hasher::Hasher;
 // pub use layout::Layout;
 // pub use overlay::Overlay;
+pub use paint_ctx::{PaintCtx, WidgetState, DPR};
 pub use program::Program;
 pub use renderer::*;
 // pub use shell::Shell;

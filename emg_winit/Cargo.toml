@@ -19,6 +19,8 @@ system = ["sysinfo"]
 emg_native = { path = "../emg_native" }
 emg_futures = { path = "../emg_futures" }
 emg_graphics_backend = { path = "../emg_graphics_backend" }
+emg_layout = { path = "../emg_layout" }
+emg_state = { path = "../emg_state" }
 #---
 emg_element = { path = "../emg_element" }
 

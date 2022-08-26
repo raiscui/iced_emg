@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-08-24 01:16:23
+ * @LastEditTime: 2022-08-26 18:33:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,8 +20,9 @@
 
 use derive_more::From;
 
-use emg_common::IdStr;
-use tracing::{debug, instrument, trace};
+use emg_common::{na::Translation3, IdStr, NotNan};
+use emg_native::{WidgetState, DPR};
+use tracing::{debug, info, instrument, trace};
 
 use crate::{widget::Widget, GElement};
 use std::{collections::VecDeque, rc::Rc, string::String};
@@ -196,7 +197,6 @@ impl<Message> std::fmt::Debug for EventNode<Message>
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Eq)]
 pub struct NodeBuilderWidget<Message, RenderContext> {
     id: IdStr,
     //TODO : in areas heap
@@ -204,7 +204,9 @@ pub struct NodeBuilderWidget<Message, RenderContext> {
     //TODO use vec deque
     event_callbacks: VecDeque<EventNode<Message>>,
     // event_callbacks: Vector<EventNode<Message>>,
-    layout_str: String,
+    // layout_str: String,
+    // layout_end: (Translation3<NotNan<f64>>, NotNan<f64>, NotNan<f64>),
+    widget_state: WidgetState,
 }
 
 impl<Message, RenderContext> PartialEq for NodeBuilderWidget<Message, RenderContext> {
@@ -212,7 +214,8 @@ impl<Message, RenderContext> PartialEq for NodeBuilderWidget<Message, RenderCont
         self.id == other.id
             && self.widget == other.widget
             && self.event_callbacks == other.event_callbacks
-            && self.layout_str == other.layout_str
+            && self.widget_state == other.widget_state
+        // && self.layout_str == other.layout_str
     }
 }
 
@@ -222,7 +225,7 @@ impl<Message, RenderContext> Clone for NodeBuilderWidget<Message, RenderContext>
             id: self.id.clone(),
             widget: self.widget.clone(),
             event_callbacks: self.event_callbacks.clone(),
-            layout_str: self.layout_str.clone(),
+            widget_state: self.widget_state, // layout_str: self.layout_str.clone(),
         }
     }
 }
@@ -242,7 +245,7 @@ impl<Message, RenderContext> std::fmt::Debug for NodeBuilderWidget<Message, Rend
         f.debug_struct("NodeBuilderWidget")
             .field("widget", &widget)
             .field("event_callbacks", &self.event_callbacks)
-            .field("layout", &self.layout_str)
+            .field("widget_state", &self.widget_state)
             .finish()
     }
 }
@@ -258,7 +261,10 @@ impl<Message, RenderContext> std::fmt::Debug for NodeBuilderWidget<Message, Rend
 //     }
 // }
 impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
-    fn new(gel: GElement<Message, RenderContext>) -> Self {
+    fn new(
+        gel: GElement<Message, RenderContext>,
+        layout_end: &(Translation3<f64>, f64, f64),
+    ) -> Self {
         //TODO check in debug , combine  use  try_new_use
         match &gel {
             // Builder_(_builder) => {
@@ -293,11 +299,14 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
         //     //TODO add type_name
         //TODO setup real id in build
 
+        let widget_state = WidgetState::new((layout_end.1, layout_end.2), layout_end.0);
+
         Self {
             id: IdStr::new_inline(""),
             widget: Box::new(gel),
             event_callbacks: VecDeque::default(),
-            layout_str: String::default(),
+            // layout_str: String::default(),
+            widget_state,
         }
     }
     /// # Errors
@@ -324,14 +333,16 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
     //         GElement::EvolutionaryFactor(_) => todo!(),
     //     }
     // }
+
     //TODO use try into
     #[allow(clippy::match_same_arms)]
     pub fn try_new_use(
         gel: GElement<Message, RenderContext>,
+        layout_end: &(Translation3<f64>, f64, f64), //TODO use edge_layout_end_sa anchor
     ) -> Result<Self, GElement<Message, RenderContext>> {
         match gel {
             // Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
-            GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(gel)),
+            GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(gel, layout_end)),
             GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
             // GElement::Refresher_(_) | GElement::Event_(_) => Err(()),
             GElement::Refresher_(_) => Err(gel),
@@ -350,9 +361,9 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
         self.id = id;
     }
 
-    pub fn add_styles_string(&mut self, styles: &str) {
-        self.layout_str += styles;
-    }
+    // pub fn add_styles_string(&mut self, styles: &str) {
+    //     self.layout_str += styles;
+    // }
     pub fn add_event_callback(&mut self, event_callback: EventNode<Message>) {
         self.event_callbacks.push_back(event_callback);
     }
@@ -433,18 +444,23 @@ where
     // Message: PartialEq + 'static + std::clone::Clone,
 {
     #[instrument(skip(ctx), name = "NodeBuilderWidget paint")]
-
     fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>) {
-        // let rect = ctx.size().to_rect();
-        // ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
-        // ctx.save().unwrap();
-        // for child in &self.children {
-        //     todo!("impl GElement paint");
-        //     // let w = child.as_dyn_node_widget();
-        //     // w.paint(ctx);
-        // }
-        // todo!()
-        self.widget().paint(ctx);
+        ctx.set_widget_state(self.widget_state);
+        ctx.with_save(|ctx| {
+            info!(
+                "NodeBuilderWidget::render: translate: {:?}",
+                (
+                    self.widget_state.translation.x,
+                    self.widget_state.translation.y,
+                )
+            );
+            ctx.transform(emg_native::Affine::translate((
+                self.widget_state.translation.x * DPR,
+                self.widget_state.translation.y * DPR,
+            )));
+
+            self.widget().paint(ctx);
+        });
     }
 }
 

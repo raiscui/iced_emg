@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2022-08-25 18:15:53
+ * @LastEditTime: 2022-08-26 16:08:47
  * @LastEditors: Rais
  * @Description: 
  */
@@ -359,10 +359,11 @@ where
                 &gel_sa_no_sv,
                 &edge_layout_end_sa
             )
+            //TODO out the edge_layout_end_sa , edge change 不影响 不rebuild [NodeBuilderWidget]
                 .map(move |out_eix_s, children, gel, layout_end| {
                     //NOTE children: [right] for gel, [left](eg: event) for NodeBuilderWidget
                      
-
+                    //TODO crate some method check self change, children change
 
                     let mut gel_clone = (**gel).clone();
 
@@ -378,7 +379,7 @@ where
                             //     error!("child_gel is node ref:{} ",refs);
                             // }
 
-                            gel_clone.refresh_use(child_gel.as_ref());
+                            gel_clone.refresh_use(child_gel.as_ref());//TODO use rc
                         }
                     }
 
@@ -389,7 +390,7 @@ where
                     //     }
                     // }
                     //TODO build edge info into [NodeBuilderWidget]
-                    match NodeBuilderWidget::<Message, RenderContext>::try_new_use(gel_clone) {
+                    match NodeBuilderWidget::<Message, RenderContext>::try_new_use(gel_clone,layout_end) {
                         Ok(mut node_builder_widget) => {
                             
                             let _g = trace_span!("-> in NodeBuilderWidget").entered();
@@ -397,13 +398,13 @@ where
                             // node_builder_widget.set_id(format!("{}", cix));
                             node_builder_widget.set_id(nix4.clone());
 
-                            //TODO use StateAnchor ? for child edge change
-                            trace!("[combine view gel] edge::path:  {}", path3);
-                            trace!("[combine view gel] styles---------------> {}", &edge_styles);
-                            debug!("[combine view gel] edge::path:  {}", path3);
-                            debug!("[combine view gel] styles---------------> {}", &edge_styles);
+                            // // TODO use StateAnchor ? for child edge change
+                            // trace!("[combine view gel] edge::path:  {}", path3);
+                            // trace!("[combine view gel] styles---------------> {}", &edge_styles);
+                            // debug!("[combine view gel] edge::path:  {}", path3);
+                            // debug!("[combine view gel] styles---------------> {}", &edge_styles);
 
-                            node_builder_widget.add_styles_string(edge_styles.as_str());
+                            // node_builder_widget.add_styles_string(edge_styles.as_str());
 
                             // if !event_callbacks.is_empty() {
                             //     for callback in event_callbacks {

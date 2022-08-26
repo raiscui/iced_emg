@@ -69,6 +69,8 @@ pub mod ccsa;
 static CURRENT_PROP_WEIGHT :f64 = cassowary::strength::MEDIUM * 1.5;
 static CHILD_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 0.9;
 
+pub type LayoutEndType = (Translation3<f64>, f64, f64);
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 
@@ -390,7 +392,7 @@ pub struct EdgeData {
     cassowary_calculated_layout:StateAnchor<(Option<f64>,Option<f64>)>,
     pub styles_string: StateAnchor<String>, 
     // pub info_string: StateAnchor<String>, 
-    pub layout_end: StateAnchor<(Translation3<f64>, f64, f64)>,
+    pub layout_end: StateAnchor<LayoutEndType>,
     opt_p_calculated:Option<LayoutCalculated>,//TODO check need ? use for what?
     // matrix: M4Data,
                                         // transforms_am: Transforms,
@@ -668,6 +670,7 @@ where
     }
    
 }
+
 
 impl<Ix> EmgEdgeItem<Ix>
 where
@@ -1382,7 +1385,14 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
                     });
 
-                    let layout_end = (&layout_calculated.translation,&cassowary_calculated_layout).map(|trans,(w,h)|(*trans,w.expect("width must have"),h.expect("height must have")));
+                    let layout_end:StateAnchor<LayoutEndType> = (&layout_calculated.translation,&cassowary_calculated_layout).map(|trans,(w,h)|
+                        // (
+                        //     Translation3::new(NotNan::new(trans.x ).unwrap(),NotNan::new(trans.y ).unwrap(),NotNan::new(trans.z ).unwrap() ) ,
+                        //     w.and_then(|w|NotNan::new(w).ok()).unwrap(),
+                        //     h.and_then(|h|NotNan::new(h).ok()).unwrap()
+                        // )
+                        (*trans,w.expect("width must have"),h.expect("height must have"))
+                    );
 
                  
                     let styles_string:StateAnchor<String> = (&info_string,&layout_styles_string, &cassowary_calculated_layout).map(move |info,layout_styles,(w,h)|{
