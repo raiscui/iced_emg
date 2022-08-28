@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2022-08-26 16:08:47
+ * @LastEditTime: 2022-08-27 23:19:02
  * @LastEditors: Rais
  * @Description: 
  */
@@ -23,7 +23,7 @@ use emg_refresh::{RefreshForUse, RefreshUse};
 use emg_state::{
     Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar,
 };
-use tracing::{debug, error, trace, trace_span, warn};
+use tracing::{debug, error, trace, trace_span, info_span, info, event, Level, warn};
 // use vec_string::VecString;
 
 use crate::{GElement, NodeBuilderWidget};
@@ -66,6 +66,7 @@ where
         let paths_ord_map_pool_0: OrdMapPool<EPath<IdStr>, ()> = OrdMapPool::new(POOL_SIZE);
 
         let paths_sa = incoming_eix_sa.then(move |ins| {
+            let _span = info_span!("paths_sa recalculation").entered();
             let ord_map_pool = paths_ord_map_pool_0.clone();
             ins.iter()
                 .map(|in_eix| {
@@ -202,6 +203,8 @@ where
             OrdMapPool::new(POOL_SIZE);
 
         let paths_view_gel_sa = paths_sa.map_(move |current_path, _| {
+            let _span = info_span!("----[paths_view_gel_sa] recalculation,( in [Dict] paths_sa.map_ => --------------------)",%current_path).entered();
+
             let current_path_clone2 = current_path.clone();
             let graph_rc4 = graph_rc3.clone();
 
@@ -211,6 +214,8 @@ where
                 //TODO move [children_view_gel_sv_sa] here, directly use [children_view_gel_sv_sa]
                 children_view_gel_sv_sa
                     .filter_map(move |k_child_path, v_child_gel_sv_sa| {
+                        let _span = info_span!("[this_path_children_sa] recalculation,( in [Dict] children_view_gel_sv_sa.filter_map => )",current_path = %current_path_clone2).entered();
+
                         let mut child_path_clone = k_child_path.clone();
                         //TODO check [current_child_ei] 唯一
                         let current_child_ei = child_path_clone.pop_back().unwrap();
@@ -302,7 +307,8 @@ where
             
             //TODO use filter_map for not edges change recalculation
             let edge_layout_end_sa = graph_rc.borrow().edges.watch().then(move |es| {
-                
+                let _span = info_span!("[edge_layout_end_sa] recalculation, ([edges]=>then)",current = %path2).entered();
+
                 let path3 = path2.clone();
 
                 es.get(path2.last().unwrap())
@@ -310,6 +316,8 @@ where
                     .item
                     .edge_nodes
                     .then(move |e_nodes| {
+                        let _span = info_span!("[edge_layout_end_sa] recalculation, ([edge_nodes]=>then)",current = %path3).entered();
+
                         // let all_paths =  e_nodes.keys().cloned().collect::<Vec<_>>().vec_string();
 
                         e_nodes
@@ -361,6 +369,8 @@ where
             )
             //TODO out the edge_layout_end_sa , edge change 不影响 不rebuild [NodeBuilderWidget]
                 .map(move |out_eix_s, children, gel, layout_end| {
+                    let _span = info_span!("building [NodeBuilderWidget] recalculation",current = %path3).entered();
+
                     //NOTE children: [right] for gel, [left](eg: event) for NodeBuilderWidget
                      
                     //TODO crate some method check self change, children change
@@ -383,7 +393,7 @@ where
                         }
                     }
 
-                    debug!("[combine view gel] gel_clone: {}", gel_clone);
+                    debug!("gel_clone: {}", &gel_clone);
                     // for child in children {
                     //     if let Some(child_gel) = child.as_ref().right() {
                     //         gel_clone.refresh_for_use(child_gel);
@@ -434,7 +444,7 @@ where
                 
                         },
                         Err(other_gel) => {
-                            trace!(
+                            warn!(
                                 "[combine view gel] NodeBuilderWidget::<Message>::try_from  error use:",
                                 // current_node_clone.borrow()
                             );

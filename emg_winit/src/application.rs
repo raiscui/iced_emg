@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2022-08-26 18:00:42
+ * @LastEditTime: 2022-08-26 23:37:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -298,7 +298,7 @@ async fn run_instance<A, E, C>(
     debug.startup_finished();
 
     while let Some(winit_event) = receiver.next().await {
-        info!("winit event: {:?}", &winit_event);
+        info!(target:"winit event", ?winit_event);
         match winit_event {
             event::Event::MainEventsCleared => {
                 if native_events.is_empty() && messages.is_empty() {

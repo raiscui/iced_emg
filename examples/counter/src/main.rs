@@ -14,32 +14,34 @@ fn tracing_init() {
 
     let out_layer = 
     // tracing_subscriber::fmt::layer()
-    tracing_tree::HierarchicalLayer::new(2) 
+    tracing_tree::HierarchicalLayer::new(2) .with_indent_lines(true)
     // .with_targets(true)
         .with_filter(tracing_subscriber::filter::filter_fn(|metadata| {
+            // println!("metadata: {:?}",&metadata.fields().field("event").map(|x|x.to_string()));
             !metadata.target().contains("emg_layout")
                 && !metadata.target().contains("anchors")
                 && !metadata.target().contains("emg_state")
                 && !metadata.target().contains("cassowary")
-        }))
-        .with_filter(tracing_subscriber::filter::LevelFilter::INFO);
+                && !metadata.target().contains("winit event")
+                // && !metadata.fields().field("event").map(|x|x.to_string())
+                // && !metadata.target().contains("winit event: DeviceEvent")
 
-    let def_subscriber = tracing_subscriber::fmt()
-        // .with_test_writer()
-        // .with_max_level(tracing::Level::TRACE)
-        // .with_env_filter("emg_layout=error")
-        .with_span_events(
-            tracing_subscriber::fmt::format::FmtSpan::ACTIVE, //         | tracing_subscriber::fmt::format::FmtSpan::ENTER
-                                                              //         | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
-        )
-        .without_time()
-        .finish();
+        }))
+        .with_filter(tracing_subscriber::filter::LevelFilter::DEBUG);
+
+    // let def_subscriber = tracing_subscriber::fmt()
+    //     // .with_test_writer()
+    //     // .with_max_level(tracing::Level::TRACE)
+    //     // .with_env_filter("emg_layout=error")
+    //     .with_span_events(
+    //         tracing_subscriber::fmt::format::FmtSpan::ACTIVE, //         | tracing_subscriber::fmt::format::FmtSpan::ENTER
+    //                                                           //         | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
+    //     )
+    //     .without_time()
+    //     .finish();
 
     tracing_subscriber::registry()
-        .with(
-            
-                out_layer,
-        )
+        .with( out_layer )
         .init();
 
     // tracing_subscriber::Registry::default().with(tracing_tree::HierarchicalLayer::new(2));

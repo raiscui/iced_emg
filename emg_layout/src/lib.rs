@@ -805,7 +805,7 @@ where
                     let opt_some_source_nix_clone = opt_self_source_nix.clone();
                     edges.filter_map(move|someone_eix, e| {
                         
-                        println!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_some_source_nix_clone);
+                        debug!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_some_source_nix_clone);
                         if   someone_eix.target_nix() == &opt_some_source_nix_clone {
 
                             Some(e.item.edge_nodes.clone())

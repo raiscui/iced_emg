@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2022-08-24 14:24:36
+ * @LastEditTime: 2022-08-27 12:28:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -26,7 +26,7 @@ use emg_state::{
 };
 use indexmap::IndexSet;
 use std::{cell::{RefCell, Ref}, hash::BuildHasherDefault, rc::Rc, ops::Deref};
-use tracing::{debug, instrument, trace, trace_span, warn, info};
+use tracing::{debug, instrument, trace, trace_span, warn, info, info_span};
 
 struct GraphNodeBuilder<Message,RenderContext,Ix=IdStr> 
 where 
@@ -241,6 +241,7 @@ RenderContext: 'static
     }
 
     #[allow(clippy::too_many_lines)]
+    #[instrument(skip(self,tree_element))]
     #[topo::nested]
     fn handle_children_in_topo(
         &self,
@@ -253,11 +254,11 @@ RenderContext: 'static
             //
             GTreeBuilderElement::Layer(org_id, edge_refreshers, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
-                info!("\n handle children [Layer]: org_id: {:?},  id : {:?}", org_id, id);
                 let _span =
-                    trace_span!("-> handle_children_in_topo [layer] ", ?id, ?parent_nix).entered();
+                    info_span!("-> [layer] ",?org_id, ?id, ?parent_nix).entered();
+                
 
-                trace!("\nhandle_children:\n{:?}==>{:#?}", &id, &children_list);
+                trace!("handle_children:\n{:?}==>{:#?}", &id, &children_list);
 
 
                 //NOTE current node 因为dyn 节点 插入新节点时候 没有删除原存在节点,所以会重复走 handle_children_in_topo, 当前这里处理是ID存在就全部跳过
