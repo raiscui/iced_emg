@@ -2,7 +2,7 @@ use std::{clone::Clone, cmp::PartialEq};
 
 use emg_common::IdStr;
 use emg_native::Rect;
-use tracing::{info, instrument, trace};
+use tracing::{info, instrument, trace, Span};
 
 use crate::GElement;
 
@@ -95,26 +95,54 @@ impl<Message, RenderContext> Layer<Message, RenderContext> {
 #[cfg(all(feature = "gpu"))]
 impl<Message, RenderContext> crate::Widget<Message, RenderContext> for Layer<Message, RenderContext>
 where
-    RenderContext: emg_native::RenderContext + 'static,
+    RenderContext: emg_native::RenderContext + Clone + PartialEq + 'static,
     Message: 'static,
     // Message: PartialEq + 'static + std::clone::Clone,
 {
-    #[instrument(skip(ctx), name = "Layer paint")]
-    fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>) {
-        let rect = ctx.size().to_rect();
-        info!("[layer] print... {}", &rect);
+    // #[instrument(skip(ctx), name = "Layer paint")]
+    // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>) {
+    //     let rect = ctx.size().to_rect();
+    //     info!("[layer] print... {}", &rect);
 
-        //TODO remove this (debug things)
-        if self.id == "debug_layer" {
-            ctx.fill(rect, &emg_native::Color::rgb8(70, 0, 0));
-        } else {
-            ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
-        }
-        // ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
+    //     //TODO remove this (debug things)
+    //     if self.id == "debug_layer" {
+    //         ctx.fill(rect, &emg_native::Color::rgb8(70, 0, 0));
+    //     } else {
+    //         ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
+    //     }
+    //     // ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
 
-        // ctx.save().unwrap();
+    //     // ctx.save().unwrap();
+    //     for child in &self.children {
+    //         child.paint(ctx);
+    //     }
+    // }
+
+    fn paint_sa(
+        &self,
+        ctx: emg_state::StateAnchor<emg_native::PaintCtx<RenderContext>>,
+    ) -> emg_state::StateAnchor<emg_native::PaintCtx<RenderContext>> {
+        let id = self.id.clone();
+        let span = illicit::expect::<Span>();
+
+        let mut out_ctx = ctx.map(move |incoming_ctx| {
+            info!(parent: &*span, "Layer[{}]::paint -> ctx.map -> recalculating ", &id);
+            let mut new_ctx = incoming_ctx.clone();
+            let rect = new_ctx.size().to_rect();
+            if id == "debug_layer" {
+                new_ctx.fill(rect, &emg_native::Color::rgb8(70, 0, 0));
+            } else {
+                new_ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
+            }
+            new_ctx
+        });
         for child in &self.children {
-            child.paint(ctx);
+            out_ctx = child.paint_sa(out_ctx.clone());
         }
+        out_ctx
+        // self.children
+        //     .clone()
+        //     .into_iter()
+        //     .fold(out_ctx, |acc_ctx, child| child.paint_sa(&acc_ctx))
     }
 }

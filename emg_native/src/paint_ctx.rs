@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-08-26 18:31:57
+ * @LastEditTime: 2022-08-29 12:54:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,6 +9,7 @@
 use std::ops::{Deref, DerefMut};
 
 use emg_common::na::Translation3;
+use emg_state::StateAnchor;
 use tracing::error;
 
 use crate::Size;
@@ -16,6 +17,7 @@ use crate::Size;
 //TODO move to global
 pub const DPR: f64 = 2.0;
 
+#[derive(Clone, Default, PartialEq)]
 pub struct PaintCtx<RenderContext> {
     // pub(crate) state: &'a mut ContextState<'b>,
     widget_state: WidgetState,
@@ -49,16 +51,22 @@ where
     }
 
     pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx<RenderContext>)) {
-        if let Err(e) = self.render_ctx.save() {
-            error!("Failed to save RenderContext: '{}'", e);
-            return;
-        }
+        self.render_ctx
+            .save()
+            .expect("Failed to save RenderContext");
+        // if let Err(e) = self.render_ctx.save() {
+        //     error!("Failed to save RenderContext: '{}'", e);
+        //     return;
+        // }
 
         f(self);
 
-        if let Err(e) = self.render_ctx.restore() {
-            error!("Failed to restore RenderContext: '{}'", e);
-        }
+        self.render_ctx
+            .restore()
+            .expect("Failed to restore RenderContext");
+        // if let Err(e) = self.render_ctx.restore() {
+        //     error!("Failed to restore RenderContext: '{}'", e);
+        // }
     }
 }
 

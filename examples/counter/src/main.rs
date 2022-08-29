@@ -5,8 +5,8 @@ use emg_bind::{
     emg::edge_index_no_source,
     emg_msg, gtree,
     layout::EPath,
-    state::CloneStateAnchor,
-    Sandbox, Settings,
+    state::{CloneStateAnchor, StateAnchor},
+    Sandbox, Settings, runtime, renderer,
 };
 use tracing::instrument;
 fn tracing_init() {
@@ -101,7 +101,8 @@ impl Sandbox for Counter {
                     ]
                 Layer [
                     @=a2 @E=[
-                        w(pc(50)),h(pc(50)),
+                        origin_x(pc(-10)),align_x(pc(100)),
+                        w(px(100)),h(px(100)),
                     ]
                     Layer []
                 ]
@@ -109,11 +110,24 @@ impl Sandbox for Counter {
         }
     }
 
-    #[instrument(skip(self, g), ret)]
-    fn view(&self, g: &GraphType<Self::Message>) -> GelType<Self::Message> {
-        g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
+    #[instrument(skip(self, g))]
+    fn ctx(
+            &self,
+            g: &GraphType<Self::Message>,
+        ) -> StateAnchor<runtime::PaintCtx<renderer::RenderCtx> > {
+            let ctx =StateAnchor::constant( runtime::PaintCtx::<renderer::RenderCtx>::default());
+            g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
             .unwrap()
-            .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]))
-            .get()
+            .build_ctx_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]),ctx)
+            
     }
+
+
+    // #[instrument(skip(self, g), ret)]
+    // fn view(&self, g: &GraphType<Self::Message>) -> GelType<Self::Message> {
+    //     g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
+    //         .unwrap()
+    //         .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]))
+    //         .get()
+    // }
 }

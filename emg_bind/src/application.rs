@@ -1,13 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2022-08-24 12:38:50
+ * @LastEditTime: 2022-08-29 16:17:44
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive cross-platform applications.
 
 use emg_element::GTreeBuilderFn;
+use emg_state::StateAnchor;
 use tracing::instrument;
 
 use crate::{element, window, Command, Executor, Settings};
@@ -63,8 +64,13 @@ pub trait Application: Sized {
     /// Returns the widgets to display in the [`Application`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
+    // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
     // fn view(&mut self) -> GElement<Self::Message>;
+
+    fn ctx(
+        &self,
+        g: &element::GraphType<Self::Message>,
+    ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>>;
 
     // /// Returns the current [`Theme`] of the [`Application`].
     // ///
@@ -195,7 +201,7 @@ where
     fn tree_build(
         &self,
         // orders: impl Orders<Self::Message> + 'static,
-    ) -> emg_element::GTreeBuilderElement<Self::Message, Self::ImplRenderContext> {
+    ) -> element::GTreeBuilderElement<Self::Message> {
         self.0.tree_build()
     }
 
@@ -207,9 +213,17 @@ where
         emg_graph_rc_refcell
     }
 
+    // #[instrument(skip(self, g))]
+    // fn view(&self, g: &Self::GraphType) -> Self::RefedGelType {
+    //     self.0.view(g)
+    // }
+
     #[instrument(skip(self, g))]
-    fn view(&self, g: &Self::GraphType) -> Self::RefedGelType {
-        self.0.view(g)
+    fn ctx(
+        &self,
+        g: &Self::GraphType,
+    ) -> StateAnchor<crate::runtime::PaintCtx<Self::ImplRenderContext>> {
+        self.0.ctx(g)
     }
 }
 

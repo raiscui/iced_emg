@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-12 14:43:52
- * @LastEditTime: 2022-08-23 12:07:41
+ * @LastEditTime: 2022-08-29 15:42:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ use crate::{Command, RenderContext, Widget};
 /// The core of a user interface application following The Elm Architecture.
 pub trait Program: Sized {
     /// The graphics backend to use to draw the [`Program`].
-    type ImplRenderContext: RenderContext;
+    type ImplRenderContext: RenderContext + Clone + PartialEq;
 
     /// The type of __messages__ your [`Program`] will produce.
     type Message: std::fmt::Debug + Send;

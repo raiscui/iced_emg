@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-08-26 18:33:30
+ * @LastEditTime: 2022-08-29 17:41:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,8 +21,10 @@
 use derive_more::From;
 
 use emg_common::{na::Translation3, IdStr, NotNan};
+use emg_layout::LayoutEndType;
 use emg_native::{WidgetState, DPR};
-use tracing::{debug, info, instrument, trace};
+use emg_state::{StateAnchor, StateMultiAnchor};
+use tracing::{debug, info, info_span, instrument, trace};
 
 use crate::{widget::Widget, GElement};
 use std::{collections::VecDeque, rc::Rc, string::String};
@@ -206,7 +208,7 @@ pub struct NodeBuilderWidget<Message, RenderContext> {
     // event_callbacks: Vector<EventNode<Message>>,
     // layout_str: String,
     // layout_end: (Translation3<NotNan<f64>>, NotNan<f64>, NotNan<f64>),
-    widget_state: WidgetState,
+    widget_state: StateAnchor<WidgetState>,
 }
 
 impl<Message, RenderContext> PartialEq for NodeBuilderWidget<Message, RenderContext> {
@@ -225,7 +227,7 @@ impl<Message, RenderContext> Clone for NodeBuilderWidget<Message, RenderContext>
             id: self.id.clone(),
             widget: self.widget.clone(),
             event_callbacks: self.event_callbacks.clone(),
-            widget_state: self.widget_state, // layout_str: self.layout_str.clone(),
+            widget_state: self.widget_state.clone(), // layout_str: self.layout_str.clone(),
         }
     }
 }
@@ -261,10 +263,7 @@ impl<Message, RenderContext> std::fmt::Debug for NodeBuilderWidget<Message, Rend
 //     }
 // }
 impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
-    fn new(
-        gel: GElement<Message, RenderContext>,
-        layout_end: &(Translation3<f64>, f64, f64),
-    ) -> Self {
+    fn new(gel: GElement<Message, RenderContext>, layout_end: &StateAnchor<LayoutEndType>) -> Self {
         //TODO check in debug , combine  use  try_new_use
         match &gel {
             // Builder_(_builder) => {
@@ -299,7 +298,8 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
         //     //TODO add type_name
         //TODO setup real id in build
 
-        let widget_state = WidgetState::new((layout_end.1, layout_end.2), layout_end.0);
+        // let widget_state = WidgetState::new((layout_end.1, layout_end.2), layout_end.0);
+        let widget_state = layout_end.map(|&(trans, w, h)| WidgetState::new((w, h), trans));
 
         Self {
             id: IdStr::new_inline(""),
@@ -337,8 +337,8 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
     //TODO use try into
     #[allow(clippy::match_same_arms)]
     pub fn try_new_use(
-        gel: GElement<Message, RenderContext>,
-        layout_end: &(Translation3<f64>, f64, f64), //TODO use edge_layout_end_sa anchor
+        gel: GElement<Message, RenderContext>, //TODO use anchor instead
+        layout_end: &StateAnchor<LayoutEndType>,
     ) -> Result<Self, GElement<Message, RenderContext>> {
         match gel {
             // Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
@@ -430,6 +430,14 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
         &self.widget
     }
 
+    #[must_use]
+    #[allow(clippy::borrowed_box)]
+    pub fn get_widget(self) -> Box<GElement<Message, RenderContext>> {
+        //TODO use cow/beef
+
+        self.widget
+    }
+
     pub fn widget_mut(&mut self) -> &mut GElement<Message, RenderContext> {
         &mut self.widget
     }
@@ -439,28 +447,74 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
 impl<Message, RenderContext> crate::Widget<Message, RenderContext>
     for NodeBuilderWidget<Message, RenderContext>
 where
-    RenderContext: emg_native::RenderContext + 'static,
+    RenderContext: emg_native::RenderContext + Clone + PartialEq + 'static,
     Message: 'static,
     // Message: PartialEq + 'static + std::clone::Clone,
 {
-    #[instrument(skip(ctx), name = "NodeBuilderWidget paint")]
-    fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>) {
-        ctx.set_widget_state(self.widget_state);
-        ctx.with_save(|ctx| {
-            info!(
-                "NodeBuilderWidget::render: translate: {:?}",
-                (
-                    self.widget_state.translation.x,
-                    self.widget_state.translation.y,
-                )
-            );
-            ctx.transform(emg_native::Affine::translate((
-                self.widget_state.translation.x * DPR,
-                self.widget_state.translation.y * DPR,
-            )));
+    // #[instrument(skip(ctx), name = "NodeBuilderWidget paint")]
+    // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>) {
+    //     ctx.set_widget_state(self.widget_state);
+    //     ctx.with_save(|ctx| {
+    //         info!(
+    //             "NodeBuilderWidget::render: translate: {:?}",
+    //             (
+    //                 self.widget_state.translation.x,
+    //                 self.widget_state.translation.y,
+    //             )
+    //         );
+    //         ctx.transform(emg_native::Affine::translate((
+    //             self.widget_state.translation.x * DPR,
+    //             self.widget_state.translation.y * DPR,
+    //         )));
 
-            self.widget().paint(ctx);
+    //         self.widget().paint(ctx);
+    //     });
+    // }
+    // #[instrument(skip(ctx), name = "NodeBuilderWidget [paint]")]
+    // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>) {
+    //     panic!("NodeBuilderWidget no paint");
+    // }
+
+    #[instrument(skip(self, ctx), name = "NodeBuilderWidget paint")]
+    fn paint_sa(
+        &self,
+        ctx: StateAnchor<crate::PaintCtx<RenderContext>>,
+    ) -> StateAnchor<crate::PaintCtx<RenderContext>> {
+        let id1 = self.id.clone();
+        let id2 = self.id.clone();
+        let span1 = info_span!("NodeBuilderWidget::paint_sa", id = %self.id);
+        let span2 = span1.clone();
+        let span3 = span1.clone();
+
+        let current_ctx = (&ctx, &self.widget_state).map(move |incoming_ctx, widget_state| {
+            // let id = id.clone();
+            let _span = span1.clone().entered();
+            info!(
+                parent: &span1,
+                "NodeBuilderWidget::paint-> (&ctx, &self.widget_state).map -> recalculating [{}]",
+                &id1
+            );
+            let mut incoming_ctx_mut = incoming_ctx.clone();
+            incoming_ctx_mut.set_widget_state(*widget_state);
+            incoming_ctx_mut.save().expect("save ctx failed");
+            incoming_ctx_mut.transform(emg_native::Affine::translate((
+                widget_state.translation.x * DPR,
+                widget_state.translation.y * DPR,
+            )));
+            incoming_ctx_mut
         });
+        illicit::Layer::new()
+            .offer(span3)
+            .enter(|| self.widget.paint_sa(current_ctx))
+            .map(move |out_ctx| {
+                info!(
+                    parent: &span2,
+                    " widget.paint end -> recalculating restore [{}]", &id2
+                );
+                let mut out_ctx_mut = out_ctx.clone();
+                out_ctx_mut.restore().expect("restore ctx failed");
+                out_ctx_mut
+            })
     }
 }
 

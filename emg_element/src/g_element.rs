@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2022-08-23 00:28:45
+ * @LastEditTime: 2022-08-29 17:02:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,7 +23,7 @@ use derive_more::From;
 // use dyn_clonable::clonable;
 use std::{any::Any, rc::Rc};
 use strum::Display;
-use tracing::{instrument, warn};
+use tracing::{info, instrument, warn};
 
 #[allow(clippy::module_name_repetitions)]
 // #[clonable]
@@ -377,7 +377,7 @@ impl<Message, RenderContext> GElement<Message, RenderContext>
     pub fn as_dyn_node_widget(&self) -> &dyn Widget<Message, RenderContext>
     where
         Message: 'static,
-        RenderContext: crate::RenderContext + 'static,
+        RenderContext: crate::RenderContext + Clone + PartialEq + 'static,
     {
         use GElement::{
             Builder_, EmptyNeverUse, EvolutionaryFactor, Generic_, Layer_, NodeRef_, Refresher_,
@@ -463,11 +463,47 @@ where
 
 impl<Message, RenderContext> Widget<Message, RenderContext> for GElement<Message, RenderContext>
 where
-    RenderContext: emg_native::RenderContext + 'static,
+    RenderContext: emg_native::RenderContext + Clone + PartialEq + 'static,
     Message: 'static,
 {
-    #[instrument(skip(ctx), name = "GElement paint")]
-    fn paint(&self, ctx: &mut emg_native::PaintCtx<RenderContext>) {
-        self.as_dyn_node_widget().paint(ctx);
+    // #[instrument(skip(ctx), name = "GElement paint")]
+    // fn paint(&self, ctx: &mut emg_native::PaintCtx<RenderContext>) {
+    //     self.as_dyn_node_widget().paint(ctx)
+    // }
+
+    #[instrument(skip(self, ctx), name = "GElement paint",fields(self = %self))]
+    #[inline]
+    fn paint_sa(
+        &self,
+        ctx: StateAnchor<emg_native::PaintCtx<RenderContext>>,
+    ) -> StateAnchor<emg_native::PaintCtx<RenderContext>> {
+        // match self {
+        //     GElement::Builder_(b) => b.paint_sa(ctx),
+        //     _ => unreachable!("not builder element no paint_sa {:?}", &self),
+        // }
+
+        use GElement::{
+            Builder_, EmptyNeverUse, EvolutionaryFactor, Generic_, Layer_, NodeRef_, Refresher_,
+            SaNode_,
+        };
+        match_any!(self,
+
+            // Builder_( x)| Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
+            Builder_( x)| Layer_(x) => x.paint_sa(ctx),
+            // Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
+            Refresher_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
+            Generic_(x) => {
+                warn!("Generic_:: Generic_ paint_sa");
+                 x.paint_sa(ctx)
+                // panic!("Generic_ should be Builder here");
+                },
+            NodeRef_(_)=> panic!("TryFrom<GElement to dyn Widget: \n     GElement::NodeIndex_() should handle before."),
+            SaNode_(_)=>todo!(),
+            EmptyNeverUse=> panic!("EmptyNeverUse never here"),
+            EvolutionaryFactor(_)=> todo!()
+
+
+
+        )
     }
 }

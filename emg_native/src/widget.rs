@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2022-08-23 00:30:10
+ * @LastEditTime: 2022-08-29 15:24:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,6 +24,7 @@
 
 use dyn_clone::DynClone;
 use emg_common::dyn_partial_eq::DynPartialEq;
+use emg_state::StateAnchor;
 
 use crate::Bus;
 
@@ -34,7 +35,12 @@ where
     // fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
     // fn xx(&self, _bus: &Bus<Message>) {}
-    fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
+    // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
+    // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
+    fn paint_sa(
+        &self,
+        ctx: StateAnchor<crate::PaintCtx<RenderContext>>,
+    ) -> StateAnchor<crate::PaintCtx<RenderContext>>;
 }
 
 impl<Message, RenderContext> core::cmp::Eq for dyn Widget<Message, RenderContext> + '_ {}

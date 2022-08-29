@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2022-08-27 12:28:24
+ * @LastEditTime: 2022-08-28 23:12:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -31,7 +31,7 @@ use tracing::{debug, instrument, trace, trace_span, warn, info, info_span};
 struct GraphNodeBuilder<Message,RenderContext,Ix=IdStr> 
 where 
 Message:  'static, 
-RenderContext:'static,
+RenderContext:crate::RenderContext +'static,
 Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default + 'static, 
 {
     graph_rc: Rc<RefCell<GraphType<Message,RenderContext,Ix>>>,
@@ -46,7 +46,7 @@ Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default 
 impl<Message,RenderContext> GraphNodeBuilder<Message,RenderContext, IdStr>
 where 
 Message: 'static, 
-RenderContext:'static,
+RenderContext:crate::RenderContext +'static,
 
 {
     fn new(graph_rc: Rc<RefCell<GraphType<Message, RenderContext,IdStr>>>) -> Self { Self { graph_rc,key:None,gel_state: None,incoming_eix_set:None,outgoing_eix_set:None} }
@@ -98,7 +98,7 @@ impl<Message,RenderContext> GTreeBuilderFn<Message,RenderContext> for Rc<RefCell
 // where
 //     Message: std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug,
 where 
-RenderContext: 'static 
+RenderContext:  crate::RenderContext +'static 
 {
     type Ix = IdStr;
     type GraphType= GraphType<Message,RenderContext>;

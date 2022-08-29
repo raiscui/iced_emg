@@ -1,15 +1,14 @@
-use core::borrow;
-use std::{cell::RefCell, ops::Deref, rc::Rc};
-
-use emg_native::{Program, RenderContext, Renderer, Widget};
-use tracing::instrument;
+use crate::PaintCtx;
+use emg_native::{Program, Renderer, Widget};
+use emg_state::StateAnchor;
+use std::ops::Deref;
 
 use crate::GTreeBuilderElement;
 
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2022-08-24 12:37:54
+ * @LastEditTime: 2022-08-29 16:18:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -32,5 +31,6 @@ pub trait GraphProgram: Program {
 
     fn graph_setup(&self, renderer: &Self::Renderer) -> Self::GTreeBuilder;
 
-    fn view(&self, g: &Self::GraphType) -> Self::RefedGelType;
+    // fn view(&self, g: &Self::GraphType) -> Self::RefedGelType;
+    fn ctx(&self, g: &Self::GraphType) -> StateAnchor<PaintCtx<Self::ImplRenderContext>>;
 }

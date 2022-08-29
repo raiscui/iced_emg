@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2022-08-27 23:19:02
+ * @LastEditTime: 2022-08-29 15:36:05
  * @LastEditors: Rais
  * @Description: 
  */
@@ -19,6 +19,7 @@ use either::Either::{self, Left, Right};
 use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_common::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
+use emg_native::{PaintCtx, Widget};
 use emg_refresh::{RefreshForUse, RefreshUse};
 use emg_state::{
     Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar,
@@ -49,7 +50,7 @@ type CurrentPathChildrenEixGElSA<Message,RenderContext> =
 impl<Message,RenderContext> EmgNodeItem<NItem<Message,RenderContext>, GelType<Message,RenderContext>>
 where
     Message: 'static,
-    RenderContext: 'static,
+    RenderContext: crate::RenderContext+'static,
     // Dict<EPath<Ix>, EmgNodeItem<Message, Ix>>: PartialEq,
 {
     #[allow(clippy::too_many_lines)]
@@ -360,15 +361,14 @@ where
             //TODO children Dict 细化 reduce, use diffitem 更新 gel_clone (参考 cass 储存 dict 对比 dict ,diff 更新的方式)
             //TODO 不太行 children变更 会使 current item  不可预计的改变 ,无法
             // (&outgoing_eix_sa_clone,&gel_sa_no_sv,&before_ctx)
-
             (
                 &outgoing_eix_sa_clone,
                 &this_path_children_sa,
                 &gel_sa_no_sv,
-                &edge_layout_end_sa
+                
             )
             //TODO out the edge_layout_end_sa , edge change 不影响 不rebuild [NodeBuilderWidget]
-                .map(move |out_eix_s, children, gel, layout_end| {
+                .map(move |out_eix_s, children, gel| {
                     let _span = info_span!("building [NodeBuilderWidget] recalculation",current = %path3).entered();
 
                     //NOTE children: [right] for gel, [left](eg: event) for NodeBuilderWidget
@@ -400,7 +400,7 @@ where
                     //     }
                     // }
                     //TODO build edge info into [NodeBuilderWidget]
-                    match NodeBuilderWidget::<Message, RenderContext>::try_new_use(gel_clone,layout_end) {
+                    match NodeBuilderWidget::<Message, RenderContext>::try_new_use(gel_clone,&edge_layout_end_sa) {
                         Ok(mut node_builder_widget) => {
                             
                             let _g = trace_span!("-> in NodeBuilderWidget").entered();
@@ -477,5 +477,16 @@ where
     #[must_use]
     pub fn get_gel_rc_sa(&self) -> Rc<StateAnchor<Rc<GElement<Message,RenderContext>>>> {
         self.gel_sa.get_rc()
+    }
+
+    pub fn build_ctx_sa(&self,eix: &EPath<IdStr>, ctx:StateAnchor< PaintCtx<RenderContext>>) ->StateAnchor<PaintCtx<RenderContext>>
+    where RenderContext:Clone +PartialEq
+    {       
+        //TODO eix use anchor instead
+            self.get_view_gelement_sa(eix).then(move |gel|{
+                let ctx_clone = ctx.clone();
+                let gel_clone =gel.clone();
+                gel_clone.paint_sa(ctx_clone).get_anchor()
+            })
     }
 }

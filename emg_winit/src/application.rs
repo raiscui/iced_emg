@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2022-08-26 23:37:56
+ * @LastEditTime: 2022-08-29 15:43:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,6 +19,7 @@ use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
 use emg_graphics_backend::window::{compositor, Compositor};
 use emg_native::{program::Program, Event, Renderer};
+use emg_state::CloneStateAnchor;
 use tracing::{info, instrument};
 // use emg_native::user_interface::{self, UserInterface};
 
@@ -283,10 +284,12 @@ async fn run_instance<A, E, C>(
     //     &mut debug,
     // ));
 
-    let mut ctx = renderer.new_paint_ctx();
+    // let ctx = renderer.new_paint_ctx();
     //view
-    let mut element = application.view(&g.graph());
-    element.paint(&mut ctx);
+    let ctx_sa = application.ctx(&g.graph());
+    let mut ctx = ctx_sa.get();
+    // let mut element = application.view(&g.graph());
+
     // window.request_redraw();
 
     //base node  = renderer.layout
@@ -353,7 +356,9 @@ async fn run_instance<A, E, C>(
                     //     state.logical_size(),
                     //     &mut debug,
                     // ));
-                    element = application.view(&g.graph());
+
+                    //TODO check rebuild need
+                    // element = application.view(&g.graph());
 
                     if should_exit {
                         break;
@@ -370,7 +375,8 @@ async fn run_instance<A, E, C>(
                 //     state.cursor_position(),
                 // );
                 info!("element painting");
-                element.paint(&mut ctx);
+                // element.paint(&mut ctx);
+                ctx = ctx_sa.get();
 
                 debug.draw_finished();
 

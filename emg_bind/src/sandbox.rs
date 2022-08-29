@@ -1,3 +1,5 @@
+use emg_state::StateAnchor;
+
 use crate::{element, Application, Command, Error, Settings};
 
 pub trait Sandbox {
@@ -24,7 +26,12 @@ pub trait Sandbox {
     /// Returns the widgets to display in the [`Sandbox`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
+    // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
+
+    fn ctx(
+        &self,
+        g: &element::GraphType<Self::Message>,
+    ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>>;
 
     // /// Returns the current [`Theme`] of the [`Sandbox`].
     // ///
@@ -107,8 +114,15 @@ where
 
         Command::none()
     }
-    fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message> {
-        T::view(self, g)
+    // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message> {
+    //     T::view(self, g)
+    // }
+
+    fn ctx(
+        &self,
+        g: &element::GraphType<Self::Message>,
+    ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>> {
+        T::ctx(self, g)
     }
 
     // fn theme(&self) -> Self::Theme {

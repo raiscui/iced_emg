@@ -33,7 +33,7 @@ pub mod settings;
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[cfg(all(feature = "gpu"))]
-use emg_piet_gpu as renderer;
+pub use emg_piet_gpu as renderer;
 #[cfg(all(feature = "gpu"))]
 pub use emg_winit as runtime;
 // ────────────────────────────────────────────────────────────────────────────────
