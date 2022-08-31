@@ -4,7 +4,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-08-25 16:20:11
+ * @LastEditTime: 2022-08-31 09:28:26
  * @LastEditors: Rais
 * @Description:
 */
@@ -30,9 +30,9 @@ mod cassowary_calc;
     
 // #[track_caller]
 #[topo::nested]
-pub fn layout_calculating<Ix>(
+pub fn layout_calculating<Ix,RenderCtx>(
     _id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
-    path_edgedata: &EdgeData,//parent
+    path_edgedata: &EdgeData<RenderCtx>,//parent
     current_cassowary_map:&Rc<CassowaryMap>,
     layout: &StateAnchor<Layout>,
 ) -> LayoutCalculated 
@@ -860,6 +860,7 @@ pub fn calculation_origin_x(p_calc_size: &Vector2<f64>, p_calc_origin:&Translati
                     Translation3::<f64>::new( v,0.,0.)
                 },
                 ParentCalculated::V2(_) => unimplemented!("unsupported type"),
+                //TODO check is only use t.x
                 ParentCalculated::T3(t) => *t,
             }
         }
@@ -903,6 +904,7 @@ pub fn calculation_origin_y(p_calc_size: &Vector2<f64>, p_calc_origin:&Translati
                     Translation3::<f64>::new( 0.,v,0.)
                 },
                 ParentCalculated::V2(_) => unimplemented!("unsupported type"),
+                //TODO check is only use t.y
                 ParentCalculated::T3(t) => *t,
             }
         }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-08-29 17:41:45
+ * @LastEditTime: 2022-08-31 12:54:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,8 +21,9 @@
 use derive_more::From;
 
 use emg_common::{na::Translation3, IdStr, NotNan};
-use emg_layout::LayoutEndType;
+use emg_layout::{EdgeCtx, LayoutEndType};
 use emg_native::{WidgetState, DPR};
+use emg_refresh::RefreshForUse;
 use emg_state::{StateAnchor, StateMultiAnchor};
 use tracing::{debug, info, info_span, instrument, trace};
 
@@ -262,8 +263,11 @@ impl<Message, RenderContext> std::fmt::Debug for NodeBuilderWidget<Message, Rend
 //         }
 //     }
 // }
-impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
-    fn new(gel: GElement<Message, RenderContext>, layout_end: &StateAnchor<LayoutEndType>) -> Self {
+impl<Message, RenderCtx> NodeBuilderWidget<Message, RenderCtx>
+where
+    RenderCtx: 'static,
+{
+    fn new(gel: GElement<Message, RenderCtx>, edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>) -> Self {
         //TODO check in debug , combine  use  try_new_use
         match &gel {
             // Builder_(_builder) => {
@@ -298,8 +302,24 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
         //     //TODO add type_name
         //TODO setup real id in build
 
-        // let widget_state = WidgetState::new((layout_end.1, layout_end.2), layout_end.0);
-        let widget_state = layout_end.map(|&(trans, w, h)| WidgetState::new((w, h), trans));
+        let widget_state = edge_ctx.then(
+            |EdgeCtx {
+                 styles_end,
+                 layout_end,
+                 ..
+             }| {
+                (styles_end, layout_end)
+                    .map(|styles, &(trans, w, h)| {
+                        let new_widget_state = WidgetState::new((w, h), trans);
+                        styles.values().fold(new_widget_state, |mut ws, x| {
+                            x.refresh_for(&mut ws);
+                            ws
+                        })
+                    })
+                    .into_anchor()
+            },
+        );
+        // let widget_state = layout_end.map(|&(trans, w, h)| WidgetState::new((w, h), trans));
 
         Self {
             id: IdStr::new_inline(""),
@@ -337,12 +357,12 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
     //TODO use try into
     #[allow(clippy::match_same_arms)]
     pub fn try_new_use(
-        gel: GElement<Message, RenderContext>, //TODO use anchor instead
-        layout_end: &StateAnchor<LayoutEndType>,
-    ) -> Result<Self, GElement<Message, RenderContext>> {
+        gel: GElement<Message, RenderCtx>, //TODO use anchor instead
+        edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>,
+    ) -> Result<Self, GElement<Message, RenderCtx>> {
         match gel {
             // Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
-            GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(gel, layout_end)),
+            GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(gel, edge_ctx)),
             GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
             // GElement::Refresher_(_) | GElement::Event_(_) => Err(()),
             GElement::Refresher_(_) => Err(gel),
@@ -424,7 +444,7 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
 
     #[must_use]
     #[allow(clippy::borrowed_box)]
-    pub const fn widget(&self) -> &GElement<Message, RenderContext> {
+    pub const fn widget(&self) -> &GElement<Message, RenderCtx> {
         //TODO use cow/beef
 
         &self.widget
@@ -432,13 +452,13 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
 
     #[must_use]
     #[allow(clippy::borrowed_box)]
-    pub fn get_widget(self) -> Box<GElement<Message, RenderContext>> {
+    pub fn get_widget(self) -> Box<GElement<Message, RenderCtx>> {
         //TODO use cow/beef
 
         self.widget
     }
 
-    pub fn widget_mut(&mut self) -> &mut GElement<Message, RenderContext> {
+    pub fn widget_mut(&mut self) -> &mut GElement<Message, RenderCtx> {
         &mut self.widget
     }
 }
@@ -495,7 +515,7 @@ where
                 &id1
             );
             let mut incoming_ctx_mut = incoming_ctx.clone();
-            incoming_ctx_mut.set_widget_state(*widget_state);
+            incoming_ctx_mut.set_widget_state(widget_state.clone());
             incoming_ctx_mut.save().expect("save ctx failed");
             incoming_ctx_mut.transform(emg_native::Affine::translate((
                 widget_state.translation.x * DPR,

@@ -1,15 +1,18 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-08-29 12:54:29
+ * @LastEditTime: 2022-08-31 13:28:39
  * @LastEditors: Rais
  * @Description:
  */
 
+mod impl_refresh;
 use std::ops::{Deref, DerefMut};
 
+use crate::Color;
 use emg_common::na::Translation3;
 use emg_state::StateAnchor;
+use seed_styles::{bg_color, fill, rgba, CssBackgroundColor};
 use tracing::error;
 
 use crate::Size;
@@ -43,7 +46,18 @@ where
     }
 
     pub fn size(&self) -> Size {
+        //TODO move DPR to const T
         self.widget_state.size() * DPR
+    }
+    pub fn get_fill_color(&self) -> Color {
+        match self.widget_state.fill {
+            seed_styles::CssFill::Rgba(r, g, b, a) => Color::rgba(r, g, b, a),
+            seed_styles::CssFill::Hsl(_, _, _) => todo!(),
+            seed_styles::CssFill::Hsla(_, _, _, _) => todo!(),
+            seed_styles::CssFill::Hex(_) => todo!(),
+            seed_styles::CssFill::StringValue(_) => todo!(),
+            seed_styles::CssFill::Inherit => todo!(),
+        }
     }
 
     pub fn set_widget_state(&mut self, widget_state: WidgetState) {
@@ -84,69 +98,81 @@ impl<RenderContext> DerefMut for PaintCtx<RenderContext> {
     }
 }
 
-#[derive(Copy, Clone, Default, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct WidgetState {
     // pub(crate) id: WidgetId,
     /// The size of the child; this is the value returned by the child's layout
     /// method.
     size: Size,
     pub translation: Translation3<f64>,
-    // /// The origin of the child in the parent's coordinate space; together with
-    // /// `size` these constitute the child's layout rect.
-    // origin: Point,
-    // /// A flag used to track and debug missing calls to set_origin.
-    // is_expecting_set_origin_call: bool,
-    // /// The insets applied to the layout rect to generate the paint rect.
-    // /// In general, these will be zero; the exception is for things like
-    // /// drop shadows or overflowing text.
-    // pub(crate) paint_insets: Insets,
+    // pub background_color: CssBackgroundColor,
+    pub fill: seed_styles::CssFill, //TODO use option
+                                    // /// The origin of the child in the parent's coordinate space; together with
+                                    // /// `size` these constitute the child's layout rect.
+                                    // origin: Point,
+                                    // /// A flag used to track and debug missing calls to set_origin.
+                                    // is_expecting_set_origin_call: bool,
+                                    // /// The insets applied to the layout rect to generate the paint rect.
+                                    // /// In general, these will be zero; the exception is for things like
+                                    // /// drop shadows or overflowing text.
+                                    // pub(crate) paint_insets: Insets,
 
-    // /// The offset of the baseline relative to the bottom of the widget.
-    // ///
-    // /// In general, this will be zero; the bottom of the widget will be considered
-    // /// the baseline. Widgets that contain text or controls that expect to be
-    // /// laid out alongside text can set this as appropriate.
-    // pub(crate) baseline_offset: f64,
+                                    // /// The offset of the baseline relative to the bottom of the widget.
+                                    // ///
+                                    // /// In general, this will be zero; the bottom of the widget will be considered
+                                    // /// the baseline. Widgets that contain text or controls that expect to be
+                                    // /// laid out alongside text can set this as appropriate.
+                                    // pub(crate) baseline_offset: f64,
 
-    // // The region that needs to be repainted, relative to the widget's bounds.
-    // pub(crate) invalid: Region,
+                                    // // The region that needs to be repainted, relative to the widget's bounds.
+                                    // pub(crate) invalid: Region,
 
-    // // The part of this widget that is visible on the screen is offset by this
-    // // much. This will be non-zero for widgets that are children of `Scroll`, or
-    // // similar, and it is used for propagating invalid regions.
-    // pub(crate) viewport_offset: Vec2,
+                                    // // The part of this widget that is visible on the screen is offset by this
+                                    // // much. This will be non-zero for widgets that are children of `Scroll`, or
+                                    // // similar, and it is used for propagating invalid regions.
+                                    // pub(crate) viewport_offset: Vec2,
 
-    // // TODO: consider using bitflags for the booleans.
-    // pub(crate) is_hot: bool,
+                                    // // TODO: consider using bitflags for the booleans.
+                                    // pub(crate) is_hot: bool,
 
-    // pub(crate) is_active: bool,
+                                    // pub(crate) is_active: bool,
 
-    // pub(crate) needs_layout: bool,
+                                    // pub(crate) needs_layout: bool,
 
-    // /// Any descendant is active.
-    // has_active: bool,
+                                    // /// Any descendant is active.
+                                    // has_active: bool,
 
-    // /// In the focused path, starting from window and ending at the focused widget.
-    // /// Descendants of the focused widget are not in the focused path.
-    // pub(crate) has_focus: bool,
+                                    // /// In the focused path, starting from window and ending at the focused widget.
+                                    // /// Descendants of the focused widget are not in the focused path.
+                                    // pub(crate) has_focus: bool,
 
-    // /// Any descendant has requested an animation frame.
-    // pub(crate) request_anim: bool,
+                                    // /// Any descendant has requested an animation frame.
+                                    // pub(crate) request_anim: bool,
 
-    // /// Any descendant has requested update.
-    // pub(crate) request_update: bool,
+                                    // /// Any descendant has requested update.
+                                    // pub(crate) request_update: bool,
 
-    // pub(crate) focus_chain: Vec<WidgetId>,
-    // pub(crate) request_focus: Option<FocusChange>,
-    // pub(crate) children: Bloom<WidgetId>,
-    // pub(crate) children_changed: bool,
-    // /// Associate timers with widgets that requested them.
-    // pub(crate) timers: HashMap<TimerToken, WidgetId>,
-    // /// The cursor that was set using one of the context methods.
-    // pub(crate) cursor_change: CursorChange,
-    // /// The result of merging up children cursors. This gets cleared when merging state up (unlike
-    // /// cursor_change, which is persistent).
-    // pub(crate) cursor: Option<Cursor>,
+                                    // pub(crate) focus_chain: Vec<WidgetId>,
+                                    // pub(crate) request_focus: Option<FocusChange>,
+                                    // pub(crate) children: Bloom<WidgetId>,
+                                    // pub(crate) children_changed: bool,
+                                    // /// Associate timers with widgets that requested them.
+                                    // pub(crate) timers: HashMap<TimerToken, WidgetId>,
+                                    // /// The cursor that was set using one of the context methods.
+                                    // pub(crate) cursor_change: CursorChange,
+                                    // /// The result of merging up children cursors. This gets cleared when merging state up (unlike
+                                    // /// cursor_change, which is persistent).
+                                    // pub(crate) cursor: Option<Cursor>,
+}
+
+impl Default for WidgetState {
+    fn default() -> Self {
+        Self {
+            size: Default::default(),
+            translation: Default::default(),
+            fill: fill(rgba(0, 0, 0, 0)),
+        }
+    }
 }
 impl WidgetState {
     // pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
@@ -156,6 +182,8 @@ impl WidgetState {
             // origin: Point::ORIGIN,
             size: Size::new(size.0, size.1),
             translation: trans,
+            fill: fill(rgba(0, 0, 0, 0)),
+            //-----
             // is_expecting_set_origin_call: true,
             // paint_insets: Insets::ZERO,
             // invalid: Region::EMPTY,

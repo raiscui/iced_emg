@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2022-08-23 13:35:51
+ * @LastEditTime: 2022-08-31 13:06:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,22 +16,22 @@ use std::{cell::Ref, rc::Rc};
 
 type SaBuilderFn<T> = dyn Fn(&StateAnchor<Rc<T>>) -> StateAnchor<Rc<T>>;
 
-pub enum GTreeBuilderElement<Message, RenderContext, Ix = IdStr>
+pub enum GTreeBuilderElement<Message, RenderCtx, Ix = IdStr>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
 {
     Layer(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
-        Vec<GTreeBuilderElement<Message, RenderContext, Ix>>,
+        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix, RenderCtx>>>>, //NOTE Rc for clone
+        Vec<GTreeBuilderElement<Message, RenderCtx, Ix>>,
     ),
     // El(Ix, Element< Message>),
     GElementTree(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
-        GElement<Message, RenderContext>,
-        Vec<GTreeBuilderElement<Message, RenderContext, Ix>>,
+        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix, RenderCtx>>>>,
+        GElement<Message, RenderCtx>,
+        Vec<GTreeBuilderElement<Message, RenderCtx, Ix>>,
     ),
     // SaMapEffectGElementTree(
     //     Ix,
@@ -39,13 +39,13 @@ where
     //     Rc< SaBuilderFn< GElement<Message>>>,
     //     Vec<GTreeBuilderElement<Message, Ix>>,
     // ),
-    RefreshUse(Ix, Rc<dyn EqRefreshFor<GElement<Message, RenderContext>>>),
+    RefreshUse(Ix, Rc<dyn EqRefreshFor<GElement<Message, RenderCtx>>>),
     Cl(Ix, Rc<dyn Fn()>),
     // Event(Ix, EventNode<Message>),
     Dyn(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
-        StateVar<Dict<Ix, GTreeBuilderElement<Message, RenderContext, Ix>>>,
+        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix, RenderCtx>>>>,
+        StateVar<Dict<Ix, GTreeBuilderElement<Message, RenderCtx, Ix>>>,
     ),
     // Fragment(Vec<GTreeBuilderElement< Message, Ix>>),
     // GenericTree(
@@ -89,6 +89,8 @@ where
 impl<Message, RenderContext> std::fmt::Debug for GTreeBuilderElement<Message, RenderContext>
 // where
 //     Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq,
+where
+    RenderContext: 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -148,7 +150,7 @@ impl<Message, RenderContext> std::fmt::Debug for GTreeBuilderElement<Message, Re
     }
 }
 
-pub trait GTreeBuilderFn<Message, RenderContext>
+pub trait GTreeBuilderFn<Message, RenderCtx>
 where
     Self::Ix: Clone + Default + std::hash::Hash + Ord,
 {
@@ -166,7 +168,8 @@ where
         size: (GenericSizeAnchor, GenericSizeAnchor),
         origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
         align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
-    ) -> Result<EmgEdgeItem<Self::Ix>, String>;
+        //TODO right error type
+    ) -> Result<EmgEdgeItem<Self::Ix, RenderCtx>, String>;
 
     /// # Errors
     ///
@@ -174,12 +177,12 @@ where
     fn setup_default_edge_in_topo(
         &self,
         edge_index: EdgeIndex<Self::Ix>,
-    ) -> Result<EmgEdgeItem<Self::Ix>, String>;
+    ) -> Result<EmgEdgeItem<Self::Ix, RenderCtx>, String>;
 
-    fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message, RenderContext>);
+    fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message, RenderCtx>);
     fn handle_children_in_topo(
         &self,
         replace_id: Option<&Self::Ix>,
-        tree_element: &'_ GTreeBuilderElement<Message, RenderContext>,
+        tree_element: &'_ GTreeBuilderElement<Message, RenderCtx>,
     );
 }

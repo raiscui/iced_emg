@@ -14,10 +14,14 @@ crate-type = ["cdylib", "rlib"]
 debug = []
 
 [dependencies]
+seed_styles = { path = "../../styles_hooks/seed_styles" }
+seed_style_macros = { path = "../../styles_hooks/seed_styles/seed_style_macros" }
+#-----
 emg_futures = { path = "../emg_futures", features = ["thread-pool"] }
 emg_common = { path = "../emg_common" }
 emg_renderer = { path = "../emg_renderer" }
 emg_state = { path = "../emg_state" }
-#-----
+emg_refresh = { path = "../emg_refresh" }
+#---------------
 dyn-clone = "1.0.9"
 tracing = "0.1"

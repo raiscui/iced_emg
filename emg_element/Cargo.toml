@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["gpu", "new_node"]
-gpu = ["emg_native", "emg_piet_gpu"]
+gpu = ["emg_native", "emg_piet_gpu", "emg_layout/gpu"]
 old_node = []
 new_node = []
 

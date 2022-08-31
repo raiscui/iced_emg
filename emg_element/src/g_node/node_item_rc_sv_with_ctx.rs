@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2022-08-29 15:36:05
+ * @LastEditTime: 2022-08-31 12:54:03
  * @LastEditors: Rais
  * @Description: 
  */
@@ -34,12 +34,12 @@ use super::{EmgNodeItem, PathDict};
 const POOL_SIZE: usize = 1;
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub type GelType<Message,RenderContext> = Rc<GElement<Message,RenderContext>>;
+pub type GelType<Message,RenderCtx> = Rc<GElement<Message,RenderCtx>>;
 
-pub type NItem<Message,RenderContext> = StateVar<StateAnchor<GelType<Message,RenderContext>>>;
-pub type N<Message,RenderContext, Ix> = EmgNodeItem<NItem<Message,RenderContext>, GelType<Message,RenderContext>, Ix>;
-pub type E<Ix> = EmgEdgeItem<Ix>;
-pub type GraphType<Message,RenderContext, Ix = IdStr> = Graph<N<Message,RenderContext, Ix>, E<Ix>, Ix>;
+pub type NItem<Message,RenderCtx> = StateVar<StateAnchor<GelType<Message,RenderCtx>>>;
+pub type N<Message,RenderCtx, Ix> = EmgNodeItem<NItem<Message,RenderCtx>, GelType<Message,RenderCtx>, Ix>;
+pub type E<Ix,RenderCtx> = EmgEdgeItem<Ix,RenderCtx>;
+pub type GraphType<Message,RenderCtx, Ix = IdStr> = Graph<N<Message,RenderCtx, Ix>, E<Ix,RenderCtx>, Ix>;
 // ────────────────────────────────────────────────────────────────────────────────
 type GElEither<Message,RenderContext> = Either<GelType<Message,RenderContext>, GelType<Message,RenderContext>>;
 
@@ -47,21 +47,23 @@ type CurrentPathChildrenEixGElSA<Message,RenderContext> =
     StateAnchor<(EdgeIndex<IdStr>, GElEither<Message,RenderContext>)>;
 
 
-impl<Message,RenderContext> EmgNodeItem<NItem<Message,RenderContext>, GelType<Message,RenderContext>>
+impl<Message,RenderCtx> EmgNodeItem<NItem<Message,RenderCtx>, GelType<Message,RenderCtx>>
 where
     Message: 'static,
-    RenderContext: crate::RenderContext+'static,
+    RenderCtx: crate::RenderContext+'static,
     // Dict<EPath<Ix>, EmgNodeItem<Message, Ix>>: PartialEq,
 {
     #[allow(clippy::too_many_lines)]
     #[allow(clippy::missing_panics_doc)]
     pub fn new(
         nix: IdStr,
-        gel_sa: NItem<Message,RenderContext>,
+        gel_sa: NItem<Message,RenderCtx>,
         incoming_eix_sa: &StateAnchor<EdgeCollect<IdStr>>,
         outgoing_eix_sa: &StateAnchor<EdgeCollect<IdStr>>,
-        graph_rc: Rc<RefCell<GraphType<Message,RenderContext>>>,
-    ) -> Self {
+        graph_rc: Rc<RefCell<GraphType<Message,RenderCtx>>>,
+    ) -> Self 
+   
+    {
         let graph_rc2 = graph_rc.clone();
         let nix2 = nix.clone();
         let paths_ord_map_pool_0: OrdMapPool<EPath<IdStr>, ()> = OrdMapPool::new(POOL_SIZE);
@@ -145,11 +147,11 @@ where
         let graph_rc3 = graph_rc.clone();
         let nix3 = nix.clone();
 
-        let children_ord_map_pool_0: OrdMapPool<EPath<IdStr>, StateAnchor<GelType<Message, RenderContext>>> =
+        let children_ord_map_pool_0: OrdMapPool<EPath<IdStr>, StateAnchor<GelType<Message, RenderCtx>>> =
             OrdMapPool::new(POOL_SIZE);
 
         let children_view_gel_sv_sa: StateAnchor<
-            Dict<EPath<IdStr>, StateAnchor<GelType<Message, RenderContext>>>,
+            Dict<EPath<IdStr>, StateAnchor<GelType<Message, RenderCtx>>>,
         > = outgoing_eix_sa.then(move |outs| {
             let children_ord_map_pool = children_ord_map_pool_0.clone();
             outs.iter()
@@ -190,7 +192,7 @@ where
                     //         Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::unions(vd.clone())
                     //     }
                     // }
-                    Dict::<EPath<IdStr>, StateAnchor<GelType<Message, RenderContext>>>::unions(vd.clone())
+                    Dict::<EPath<IdStr>, StateAnchor<GelType<Message, RenderCtx>>>::unions(vd.clone())
                 })
         });
         // let children_count = children_view_gel_sa.map(Dict::len).get();
@@ -200,7 +202,7 @@ where
         let graph_rc3 = graph_rc.clone();
         let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
 
-        let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex<IdStr>, GElEither<Message, RenderContext>> =
+        let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex<IdStr>, GElEither<Message, RenderCtx>> =
             OrdMapPool::new(POOL_SIZE);
 
         let paths_view_gel_sa = paths_sa.map_(move |current_path, _| {
@@ -211,7 +213,7 @@ where
 
             let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 
-            let this_path_children_sa: StateAnchor<Dict<EdgeIndex<IdStr>, GElEither<Message, RenderContext>>> =
+            let this_path_children_sa: StateAnchor<Dict<EdgeIndex<IdStr>, GElEither<Message, RenderCtx>>> =
                 //TODO move [children_view_gel_sv_sa] here, directly use [children_view_gel_sv_sa]
                 children_view_gel_sv_sa
                     .filter_map(move |k_child_path, v_child_gel_sv_sa| {
@@ -227,7 +229,7 @@ where
                             //
                             let graph_rc5 = graph_rc4.clone();
                             let v_child_gel_sa_clone = v_child_gel_sv_sa.clone();
-                            let gel_l_r: CurrentPathChildrenEixGElSA<Message, RenderContext> = v_child_gel_sv_sa
+                            let gel_l_r: CurrentPathChildrenEixGElSA<Message, RenderCtx> = v_child_gel_sv_sa
                                 // NOTE handle note_ref
                                 .then(move |gel| {
 
@@ -300,14 +302,13 @@ where
                                 // }
                                 v.clone()
                                     .into_iter()
-                                    .collect::<Dict<EdgeIndex<IdStr>, GElEither<Message, RenderContext>>>()
+                                    .collect::<Dict<EdgeIndex<IdStr>, GElEither<Message, RenderCtx>>>()
                             })
                     });
 
             let path2 = current_path.clone();
-            
-            //TODO use filter_map for not edges change recalculation
-            let edge_layout_end_sa = graph_rc.borrow().edges.watch().then(move |es| {
+
+            let edge_ctx = graph_rc.borrow().edges.watch().then(move |es| {
                 let _span = info_span!("[edge_layout_end_sa] recalculation, ([edges]=>then)",current = %path2).entered();
 
                 let path3 = path2.clone();
@@ -316,7 +317,7 @@ where
                     .unwrap()
                     .item
                     .edge_nodes
-                    .then(move |e_nodes| {
+                    .map(move |e_nodes| {
                         let _span = info_span!("[edge_layout_end_sa] recalculation, ([edge_nodes]=>then)",current = %path3).entered();
 
                         // let all_paths =  e_nodes.keys().cloned().collect::<Vec<_>>().vec_string();
@@ -326,11 +327,11 @@ where
                             .and_then(EdgeItemNode::as_edge_data)
                             // .unwrap_or_else(|| panic!("not find EdgeData for path:{} \n allPaths:\n{}", &path3,&all_paths))
                             .unwrap_or_else(|| panic!("not find EdgeData for path:{}", &path3))
-                            .layout_end
-                            .get_anchor()
-                    })
-                    .get_anchor()
+                            .ctx.clone()
+                    }).into_anchor()
             });
+            
+            //TODO use filter_map for not edges change recalculation
 
             let nix4 = nix.clone();
             let path3 = current_path.clone();
@@ -400,7 +401,7 @@ where
                     //     }
                     // }
                     //TODO build edge info into [NodeBuilderWidget]
-                    match NodeBuilderWidget::<Message, RenderContext>::try_new_use(gel_clone,&edge_layout_end_sa) {
+                    match NodeBuilderWidget::<Message, RenderCtx>::try_new_use(gel_clone,&edge_ctx) {
                         Ok(mut node_builder_widget) => {
                             
                             let _g = trace_span!("-> in NodeBuilderWidget").entered();
@@ -466,21 +467,21 @@ where
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     //TODO make no clone fn
-    pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> StateAnchor<GelType<Message,RenderContext>> {
+    pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> StateAnchor<GelType<Message,RenderCtx>> {
         self.paths_view_gel_sa
             .get_with(|x| x.get(eix).unwrap().clone())
     }
-    pub fn set_gel_sa(&self, gel_sa: StateAnchor<GelType<Message,RenderContext>>) {
+    pub fn set_gel_sa(&self, gel_sa: StateAnchor<GelType<Message,RenderCtx>>) {
         self.gel_sa.set(gel_sa);
     }
 
     #[must_use]
-    pub fn get_gel_rc_sa(&self) -> Rc<StateAnchor<Rc<GElement<Message,RenderContext>>>> {
+    pub fn get_gel_rc_sa(&self) -> Rc<StateAnchor<Rc<GElement<Message,RenderCtx>>>> {
         self.gel_sa.get_rc()
     }
 
-    pub fn build_ctx_sa(&self,eix: &EPath<IdStr>, ctx:StateAnchor< PaintCtx<RenderContext>>) ->StateAnchor<PaintCtx<RenderContext>>
-    where RenderContext:Clone +PartialEq
+    pub fn build_ctx_sa(&self,eix: &EPath<IdStr>, ctx:StateAnchor< PaintCtx<RenderCtx>>) ->StateAnchor<PaintCtx<RenderCtx>>
+    where RenderCtx:Clone +PartialEq
     {       
         //TODO eix use anchor instead
             self.get_view_gelement_sa(eix).then(move |gel|{

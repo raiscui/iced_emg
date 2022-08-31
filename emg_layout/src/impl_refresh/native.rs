@@ -1,0 +1,29 @@
+/*
+ * @Author: Rais
+ * @Date: 2022-08-29 23:19:00
+ * @LastEditTime: 2022-08-30 16:00:45
+ * @LastEditors: Rais
+ * @Description:
+ */
+
+use std::rc::Rc;
+
+use crate::EmgEdgeItem;
+use emg_common::TypeCheck;
+use emg_refresh::{RefreshFor, RefreshWhoNoWarper};
+use emg_state::CloneStateVar;
+use seed_styles::CssFill;
+
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for CssFill
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+    RenderCtx: 'static,
+{
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+        let type_name = Self::TYPE_NAME;
+        who.styles.update(|s| {
+            s.insert(type_name, Rc::new(self.clone()));
+        });
+    }
+}

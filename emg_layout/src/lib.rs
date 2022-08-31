@@ -29,9 +29,9 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
-use emg_common::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector, VectorDisp};
+use emg_common::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector, VectorDisp, TypeName};
 use emg::{Edge, EdgeIndex, NodeIndex, };
-use emg_refresh::RefreshFor;
+use emg_refresh::{RefreshFor, RefreshForWithDebug};
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
 use emg_common::Vector;
 use float_cmp::approx_eq;
@@ -354,7 +354,7 @@ where
         write!(f, "PathVarMap {{\n{}\n}}", indented(&sv))
     }
 }
-#[derive(Display, Debug, Clone, PartialEq)]
+#[derive(Display, Debug, Clone, PartialEq,Eq)]
 #[display(
     fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},translation:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
     // "indented(suggest_size)",
@@ -382,8 +382,31 @@ pub struct LayoutCalculated {
     loc_styles: StateAnchor<Style>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct EdgeData {
+pub struct EdgeCtx<RenderCtx=()> {
+    pub styles_end:StateAnchor<StylesDict>,
+    pub layout_end: StateAnchor<LayoutEndType>,
+    //TODO temp keep here for future use
+    _phantom_data: std::marker::PhantomData<RenderCtx>
+}
+
+impl<RenderCtx> PartialEq for EdgeCtx<RenderCtx> {
+    fn eq(&self, other: &Self) -> bool {
+        self.styles_end == other.styles_end && self.layout_end == other.layout_end
+    }
+}
+
+impl<RenderCtx> Clone for EdgeCtx<RenderCtx> {
+    fn clone(&self) -> Self {
+        Self { styles_end: self.styles_end.clone(), layout_end: self.layout_end.clone(),_phantom_data:std::marker::PhantomData::<RenderCtx> }
+    }
+}
+
+impl<RenderCtx: 'static> std::fmt::Debug for EdgeCtx<RenderCtx> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EdgeCtx").field("styles_end", &self.styles_end).field("layout_end", &self.layout_end as &dyn std::fmt::Debug).finish()
+    }
+}
+pub struct EdgeData<RenderCtx> {
     path_layout: StateAnchor<Layout>,
     calculated: LayoutCalculated,
     cassowary_map:Rc<CassowaryMap>,
@@ -392,14 +415,63 @@ pub struct EdgeData {
     cassowary_calculated_layout:StateAnchor<(Option<f64>,Option<f64>)>,
     pub styles_string: StateAnchor<String>, 
     // pub info_string: StateAnchor<String>, 
-    pub layout_end: StateAnchor<LayoutEndType>,
+    pub ctx :EdgeCtx<RenderCtx>,
+
     opt_p_calculated:Option<LayoutCalculated>,//TODO check need ? use for what?
     // matrix: M4Data,
                                         // transforms_am: Transforms,
                                         // animations:
 }
 
-impl EdgeData {
+impl<RenderCtx> std::fmt::Debug for EdgeData<RenderCtx> where RenderCtx: 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EdgeData")
+        .field("path_layout", &self.path_layout)
+        .field("calculated", &self.calculated)
+        .field("cassowary_map", &self.cassowary_map)
+        .field("children_vars_sa", &self.children_vars_sa)
+        .field("cassowary_calculated_vars", &self.cassowary_calculated_vars)
+        .field("cassowary_calculated_layout", &self.cassowary_calculated_layout)
+        .field("styles_string", &self.styles_string)
+        .field("ctx", &self.ctx )
+        .field("opt_p_calculated", &self.opt_p_calculated).finish()
+    }
+}
+
+impl<RenderCtx> Clone for EdgeData<RenderCtx> {
+    fn clone(&self) -> Self {
+        Self { 
+            path_layout: self.path_layout.clone(),
+             calculated: self.calculated.clone(),
+             cassowary_map: self.cassowary_map.clone(),
+             children_vars_sa: self.children_vars_sa.clone(),
+             cassowary_calculated_vars: self.cassowary_calculated_vars.clone(),
+             cassowary_calculated_layout: self.cassowary_calculated_layout.clone(),
+             styles_string: self.styles_string.clone(),
+             ctx: self.ctx.clone(),
+             opt_p_calculated: self.opt_p_calculated.clone() 
+            }
+    }
+}
+impl<RenderCtx> Eq for EdgeData<RenderCtx> {}
+
+impl<RenderCtx> PartialEq for EdgeData<RenderCtx> {
+    fn eq(&self, other: &Self) -> bool {
+        self.path_layout == other.path_layout 
+        && self.calculated == other.calculated 
+        && self.cassowary_map == other.cassowary_map 
+        && self.children_vars_sa == other.children_vars_sa 
+        && self.cassowary_calculated_vars == other.cassowary_calculated_vars 
+        && self.cassowary_calculated_layout == other.cassowary_calculated_layout 
+        && self.styles_string == other.styles_string 
+        && self.ctx == other.ctx 
+        && self.opt_p_calculated == other.opt_p_calculated
+    }
+}
+
+impl<RenderCtx> EdgeData<RenderCtx> {
+
+   
     #[must_use] pub fn styles_string(&self) -> String {
         self.styles_string.get()
     }
@@ -411,9 +483,9 @@ impl EdgeData {
     }
 }
 
-impl Eq for EdgeData {}
 
-impl std::fmt::Display for EdgeData {
+//TODO re impl because add RenderCtx,layout_end,styles_end
+impl<RenderCtx> std::fmt::Display for EdgeData<RenderCtx> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let x = format!(
             "calculated:{{\n{};\nstyles_string:{{\n{};\n}}\n}}",
@@ -537,38 +609,79 @@ where
     }
 }
 
-pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
+pub type GraphEdgesDict<Ix,RenderContext=()> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix,RenderContext>, Ix>>;
 // use ahash::AHasher as CustomHasher;
 // use rustc_hash::FxHasher as CustomHasher;
 
 // type PathVarMap<Ix,T> = Dict<EPath<Ix>,T>;
 // type PathVarMap<Ix,T> = indexmap::IndexMap <EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
 type PathVarMap<Ix,T> = HashMap<EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
-#[derive(Clone, Debug)]
-pub struct EmgEdgeItem<Ix>
+pub type StylesDict = Dict<TypeName, Rc<dyn RefreshForWithDebug<emg_native::WidgetState>>>;
+
+pub struct EmgEdgeItem<Ix,RenderCtx=()>
 where
     // Ix: Clone + Hash + Eq + Ord + 'static + Default,
     Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {
     //TODO save g_store
     pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,// dyn by Edge(source_nix , target_nix)
-    pub paths:DictPathEiNodeSA<Ix>, // with parent self  // current not has current node
+    pub paths:DictPathEiNodeSA<Ix,RenderCtx>, // with parent self  // current not has current node
     pub layout: Layout,
+    pub styles:StateVar<StylesDict>,
     path_styles: StateVar<PathVarMap<Ix, Style>>, //TODO check use
     path_layouts:StateVar<PathVarMap<Ix, Layout>>,// layout only for one path 
 
     pub other_css_styles: StateVar<Style>,
     // no self  first try
-    pub edge_nodes:DictPathEiNodeSA<Ix>, //TODO with self?  not with self?  (current with self)
+    pub edge_nodes:DictPathEiNodeSA<Ix,RenderCtx>, //TODO with self?  not with self?  (current with self)
     store:Rc<RefCell<GStateStore>>
 }
-impl<Ix> Eq for EmgEdgeItem<Ix>
+
+impl<Ix, RenderCtx> Clone for EmgEdgeItem<Ix, RenderCtx>
+where
+    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
+    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
+{
+    fn clone(&self) -> Self {
+        Self { id: self.id, 
+            paths: self.paths.clone(), 
+            layout: self.layout, 
+            styles: self.styles, 
+            path_styles: self.path_styles, 
+            path_layouts: self.path_layouts, 
+            other_css_styles: self.other_css_styles,
+             edge_nodes: self.edge_nodes.clone(), 
+             store: self.store.clone() }
+    }
+}
+
+impl<Ix, RenderCtx> std::fmt::Debug for EmgEdgeItem<Ix, RenderCtx>
+where
+    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
+    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static+std::fmt::Debug,
+    RenderCtx:'static
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EmgEdgeItem")
+        
+        .field("id", &self.id)
+        .field("paths", &self.paths)
+        .field("layout", &self.layout)
+        .field("styles", &self.styles)
+        .field("path_styles", &self.path_styles)
+        .field("path_layouts", &self.path_layouts)
+        .field("other_css_styles", &self.other_css_styles)
+        .field("edge_nodes", &self.edge_nodes)
+        .finish()
+    }
+}
+impl<Ix,RenderCtx> Eq for EmgEdgeItem<Ix,RenderCtx>
 where 
 Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {}
 
 
-impl<Ix> PartialEq for EmgEdgeItem<Ix> 
+impl<Ix,RenderCtx> PartialEq for EmgEdgeItem<Ix,RenderCtx> 
 where 
 Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 
@@ -578,18 +691,9 @@ Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
         && self.other_css_styles == other.other_css_styles && self.edge_nodes == other.edge_nodes
     }
 }
-impl<
-        Ix: 'static
-            + Clone
-            + Hash
-            + Eq
-            + PartialEq
-            + PartialOrd
-            + Ord
-            + std::default::Default
-            + std::fmt::Display,
-    > std::fmt::Display for EmgEdgeItem<Ix>
-{
+impl< Ix,RenderCtx > std::fmt::Display for EmgEdgeItem<Ix,RenderCtx>
+where Ix: 'static + Clone + Hash + Eq + PartialEq + PartialOrd + Ord + std::default::Default + std::fmt::Display, 
+RenderCtx: 'static {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let x = format!(
             "id:{{\n{};\n}}\npaths:{{\n{};\n}}\nlayout:{{\n{};\n}}\npath_styles:{{\n{};\n}}\nother_styles:{{\n{};\n}}\nnode:{{\n{};\n}}",
@@ -603,12 +707,12 @@ impl<
         write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
     }
 }
-pub type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>; //NOTE: EdgeData or something
+pub type DictPathEiNodeSA<Ix,RenderCtx> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode<RenderCtx>>>; //NOTE: EdgeData or something
 
 
-impl<Ix> EmgEdgeItem<Ix>
+impl<Ix,RenderCtx> EmgEdgeItem<Ix,RenderCtx>
 where
-    Ix: Clone + Hash + Ord + Default + std::fmt::Debug 
+    Ix: Clone + Hash + Ord + Default + std::fmt::Debug, RenderCtx: 'static 
 {
     #[cfg(test)]
     fn set_size(&self,
@@ -625,7 +729,7 @@ where
     
     #[cfg(test)]
     #[must_use]
-    fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
+    fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData<RenderCtx>> {
       
         //TODO not get(), use ref
         self.edge_nodes
@@ -641,7 +745,7 @@ where
     //         .and_then(EdgeItemNode::as_edge_data).cloned()
             
     // }
-    pub fn store_edge_data_with<F: FnOnce(Option<&EdgeData>)->R,R>(&self,store:&GStateStore, key: &EPath<Ix>,func:F) -> R {
+    pub fn store_edge_data_with<F: FnOnce(Option<&EdgeData<RenderCtx>>)->R,R>(&self,store:&GStateStore, key: &EPath<Ix>,func:F) -> R {
         #[cfg(debug_assertions)]
         {
             let oo = self.edge_nodes.store_get_with(store,|o|{
@@ -659,7 +763,7 @@ where
        
             
     }
-    pub fn engine_edge_data_with<F: FnOnce(Option<&EdgeData>)->R,R>(&self,engine:&mut Engine, key: &EPath<Ix>,func:F) -> R {
+    pub fn engine_edge_data_with<F: FnOnce(Option<&EdgeData<RenderCtx>>)->R,R>(&self,engine:&mut Engine, key: &EPath<Ix>,func:F) -> R {
         self.edge_nodes.engine_get_with(engine,|o|{
            func(o
             .get(key)
@@ -672,9 +776,10 @@ where
 }
 
 
-impl<Ix> EmgEdgeItem<Ix>
+impl<Ix,RenderCtx> EmgEdgeItem<Ix,RenderCtx>
 where
-    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
+    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>, 
+    RenderCtx: 'static
 {
 
     pub fn build_path_layout(&self,func:impl FnOnce(Layout)->(EPath<Ix>, Layout)){
@@ -692,7 +797,7 @@ where
     pub fn default_in_topo(
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
+        edges: StateAnchor<GraphEdgesDict<Ix,RenderCtx>>,
 
          ) -> Self  where Ix:std::fmt::Debug{
 
@@ -708,7 +813,7 @@ where
     pub fn default_with_wh_in_topo<T: Into<f64> + std::fmt::Debug>(
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
+        edges: StateAnchor<GraphEdgesDict<Ix,RenderCtx>>,
          w: T, h: T) -> Self  where Ix:std::fmt::Debug{
 
         Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    
@@ -725,7 +830,7 @@ where
 
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
+        edges: StateAnchor<GraphEdgesDict<Ix,RenderCtx>>,
         size:  (GenericSizeAnchor,GenericSizeAnchor),
         origin: (GenericSizeAnchor,GenericSizeAnchor, GenericSizeAnchor),
         align:  (GenericSizeAnchor,GenericSizeAnchor,GenericSizeAnchor),
@@ -767,6 +872,7 @@ where
       
 
         let other_css_styles_sv = use_state(s());
+        let styles_sv = use_state(Dict::new());
 
         let opt_self_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
             let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
@@ -791,14 +897,14 @@ where
       
 
 
-        let parent_paths: DictPathEiNodeSA<Ix> = 
+        let parent_paths: DictPathEiNodeSA<Ix,RenderCtx> = 
             opt_self_source_node_nix_sa_re_get.then(move|opt_self_source_nix:&Option<NodeIndex<Ix>>| {
 
                 let _g = span!(Level::TRACE, "[ source_node_incoming_edge_dict_sa recalculation ]:source_node_nix_sa_re_get change ").entered();
 
                 if opt_self_source_nix.is_none(){
                     //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
-                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
+                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode<RenderCtx>>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
                     //TODO check why use unit? answer:need for `EdgeItemNode::Empty => path_ein_empty_node_builder`
                     // Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::new())
                 }else{
@@ -816,7 +922,7 @@ where
                         
                     })
                     .anchor()
-                    .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
+                    .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix,RenderCtx>>|{
                         x.values().map(emg_state::StateAnchor::anchor)
                         .collect::<Anchor<Vector<_>>>()
                         .map(|v:&Vector<_>|{
@@ -835,7 +941,7 @@ where
         let children_nodes = opt_self_target_node_nix_sa_re_get.then(move|opt_self_target_nix|{
             if opt_self_target_nix.is_none() {
                 //NOTE 尾
-                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default())
+                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode<RenderCtx>>::default())
             }else{
 
                 // TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
@@ -849,7 +955,7 @@ where
                         None
                     }
                 }).anchor()
-                .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
+                .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix,RenderCtx>>|{
                     x.values().map(emg_state::StateAnchor::anchor)
                     .collect::<Anchor<Vector<_>>>()
                     .map(|v:&Vector<_>|{
@@ -863,7 +969,7 @@ where
 
         //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
         let paths_clone = parent_paths.clone();
-        let nodes:DictPathEiNodeSA<Ix> = id_sv.watch().then(move|id_sa|{
+        let nodes:DictPathEiNodeSA<Ix,RenderCtx> = id_sv.watch().then(move|id_sa|{
             
             let paths_clone2 = paths_clone.clone();
             let children_nodes2 = children_nodes.clone();
@@ -874,7 +980,7 @@ where
 
                 let eid_clone = eid.clone();
                 
-                paths_clone2.map(move |p_node_as_paths:&Dict<EPath<Ix>, EdgeItemNode>|{
+                paths_clone2.map(move |p_node_as_paths:&Dict<EPath<Ix>, EdgeItemNode<RenderCtx>>|{
                     
                     p_node_as_paths.iter()
                         .map(|(parent_e_path, p_ei_node_v)| {
@@ -885,9 +991,9 @@ where
                             p_ep_add_self.0.push_back(eid_clone.clone());
                             (p_ep_add_self, p_ei_node_v.clone())
                         })
-                        .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
+                        .collect::<Dict<EPath<Ix>, EdgeItemNode<RenderCtx>>>()
 
-                }) .map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode| {
+                }) .map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode<RenderCtx>| {
 
 //@=====    each    path    edge    prosess     ============================================================================================================================================
 //
@@ -1411,6 +1517,8 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                         }
 
                     });
+
+
                     
 
                     // • • • • •
@@ -1421,7 +1529,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
 
 
-                    EdgeItemNode::EdgeData(Box::new(EdgeData {
+                    EdgeItemNode::<RenderCtx>::EdgeData(Box::new(EdgeData::<RenderCtx> {
                         path_layout,
                         calculated: layout_calculated,
                         cassowary_map: current_cassowary_map,
@@ -1429,7 +1537,11 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                         cassowary_calculated_vars,
                         cassowary_calculated_layout,
                         styles_string,
-                        layout_end,
+                        ctx:EdgeCtx{
+                            styles_end:styles_sv.watch(),//TODO make real path_styles_sv
+                            layout_end,
+                            _phantom_data:std::marker::PhantomData::<RenderCtx>
+                        },
                         opt_p_calculated,
                         
                     }))
@@ -1443,10 +1555,10 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
             id: id_sv,
             paths:parent_paths,
             layout,
-            
             path_styles,
             path_layouts,
             other_css_styles: other_css_styles_sv,
+            styles:styles_sv,
             edge_nodes: nodes,
             store:state_store()
         }
@@ -1459,9 +1571,9 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
 
 
-fn path_with_ed_node_builder<Ix>(
+fn path_with_ed_node_builder<Ix,RenderCtx>(
     id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>, 
-    ped: &EdgeData,
+    ped: &EdgeData<RenderCtx>,
     current_cassowary_map:&Rc<CassowaryMap>,
     path_layout: &StateAnchor<Layout>,
     path: &EPath<Ix>, 
@@ -1649,16 +1761,50 @@ fn path_ein_empty_node_builder<Ix:'static>(
 
 
 
-#[derive(Display, From, Clone, Debug, PartialEq, Eq)]
-pub enum EdgeItemNode {
-    EdgeData(Box<EdgeData>),
+#[derive(Display, From)]
+pub enum EdgeItemNode<RenderCtx> {
+    EdgeData(Box<EdgeData<RenderCtx>>),
     String(String), //TODO make can write, in DictPathEiNodeSA it clone need RC?
     Empty,
 }
 
-impl EdgeItemNode {
+impl<RenderCtx> Eq for EdgeItemNode<RenderCtx> {
+    
+}
+
+impl<RenderCtx> PartialEq for EdgeItemNode<RenderCtx> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::EdgeData(l0), Self::EdgeData(r0)) => l0 == r0,
+            (Self::String(l0), Self::String(r0)) => l0 == r0,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
+}
+
+impl<RenderCtx> std::fmt::Debug for EdgeItemNode<RenderCtx> where RenderCtx: 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EdgeData(arg0) => f.debug_tuple("EdgeData").field(arg0).finish(),
+            Self::String(arg0) => f.debug_tuple("String").field(arg0).finish(),
+            Self::Empty => write!(f, "Empty"),
+        }
+    }
+}
+
+impl<RenderCtx> Clone for EdgeItemNode<RenderCtx> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::EdgeData(arg0) => Self::EdgeData(arg0.clone()),
+            Self::String(arg0) => Self::String(arg0.clone()),
+            Self::Empty => Self::Empty,
+        }
+    }
+}
+
+impl<RenderCtx> EdgeItemNode<RenderCtx> {
     #[must_use]
-    pub const fn as_edge_data(&self) -> Option<&EdgeData> {
+    pub const fn as_edge_data(&self) -> Option<&EdgeData<RenderCtx>> {
         if let Self::EdgeData(v) = self {
             Some(v)
         } else {
@@ -1686,7 +1832,7 @@ impl EdgeItemNode {
 
 
 
-impl Default for EdgeItemNode {
+impl<RenderCtx> Default for EdgeItemNode<RenderCtx> {
     fn default() -> Self {
         Self::Empty
     }

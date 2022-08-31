@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-22 16:28:40
- * @LastEditTime: 2022-08-22 17:13:39
+ * @LastEditTime: 2022-08-31 13:05:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,12 +22,14 @@ use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Message, RenderContext> RefreshWhoNoWarper for GElement<Message, RenderContext> {}
-impl<Message, RenderContext> RefreshUseNoWarper for GElement<Message, RenderContext> {}
+impl<Message, RenderCtx> RefreshWhoNoWarper for GElement<Message, RenderCtx> {}
+impl<Message, RenderCtx> RefreshUseNoWarper for GElement<Message, RenderCtx> {}
 // impl<Message, RenderContext: PartialEq + Clone + 'static> EqRefreshFor<Self> for GElement<Message, RenderContext> {}
-impl<Message, RenderContext> RefreshFor<Self> for GElement<Message, RenderContext>
+impl<Message, RenderCtx> RefreshFor<Self> for GElement<Message, RenderCtx>
 // where
 //     Message: Clone,
+where
+    RenderCtx: 'static,
 {
     fn refresh_for(&self, el: &mut Self) {
         use GElement::{Builder_, Generic_, Layer_, Refresher_};

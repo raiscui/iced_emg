@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-08-29 17:50:56
+ * @LastEditTime: 2022-08-31 09:49:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -643,12 +643,17 @@ fn start_set_var_and_run_before_after<T: Clone + 'static>(
 // ────────────────────────────────────────────────────────────────────────────────
 
 // https://docs.rs/graph_safe_compare/latest/graph_safe_compare/
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(PartialEq, Eq)]
-// #[eq_opt(where_add = "T: PartialEq+'static,")]
 pub struct StateVar<T> {
     id: TopoKey,
     _phantom_data: PhantomData<T>,
+}
+
+impl<T> Eq for StateVar<T> {}
+
+impl<T> PartialEq for StateVar<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
     default fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1117,9 +1122,21 @@ where
     }
 }
 
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, Eq)]
 pub struct StateAnchor<T>(pub(crate) Anchor<T>);
+
+impl<T> Clone for StateAnchor<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T> Eq for StateAnchor<T> {}
+
+impl<T> PartialEq for StateAnchor<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateAnchor<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

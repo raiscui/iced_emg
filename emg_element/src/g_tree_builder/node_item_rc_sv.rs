@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2022-08-28 23:12:19
+ * @LastEditTime: 2022-08-31 12:39:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -94,17 +94,17 @@ RenderContext:crate::RenderContext +'static,
 
 
 
-impl<Message,RenderContext> GTreeBuilderFn<Message,RenderContext> for Rc<RefCell<GraphType<Message,RenderContext>>>
+impl<Message,RenderCtx> GTreeBuilderFn<Message,RenderCtx> for Rc<RefCell<GraphType<Message,RenderCtx>>>
 // where
 //     Message: std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug,
 where 
-RenderContext:  crate::RenderContext +'static 
+RenderCtx:  crate::RenderContext +'static 
 {
     type Ix = IdStr;
-    type GraphType= GraphType<Message,RenderContext>;
+    type GraphType= GraphType<Message,RenderCtx>;
     
 
-    fn graph(& self)->Ref< GraphType<Message,RenderContext>>{
+    fn graph(& self)->Ref< GraphType<Message,RenderCtx>>{
         self.borrow()
     }
 
@@ -119,7 +119,8 @@ RenderContext:  crate::RenderContext +'static
         size: (GenericSizeAnchor, GenericSizeAnchor),
         origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
         align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
-    ) -> Result<EmgEdgeItem<Self::Ix>, String> {
+    ) -> Result<EmgEdgeItem<Self::Ix,RenderCtx>, String>
+    {
         let mut g = self.borrow_mut();
         g.nodes_connect_eix(&edge_index)
             .ok_or("node insert eix fails")?;
@@ -143,7 +144,7 @@ RenderContext:  crate::RenderContext +'static
     fn setup_default_edge_in_topo(
         &self,
         edge_index: EdgeIndex<Self::Ix>,
-    ) -> Result<EmgEdgeItem<Self::Ix>, String> {
+    ) -> Result<EmgEdgeItem<Self::Ix,RenderCtx>, String> {
         let mut g = self.borrow_mut();
         g.nodes_connect_eix(&edge_index)
             .ok_or("node insert eix fails")?;
@@ -166,7 +167,7 @@ RenderContext:  crate::RenderContext +'static
     }
 
     #[topo::nested]
-    fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message, RenderContext>) {
+    fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message, RenderCtx>) {
         match tree_element {
             GTreeBuilderElement::Layer(root_id, edge_refreshers, children_list) => {
                 let _span = trace_span!("=> handle_root [layer] ",%root_id).entered();
@@ -181,7 +182,7 @@ RenderContext:  crate::RenderContext +'static
                 let edge_index = edge_index_no_source(root_id.clone());
                 GraphNodeBuilder::new(self.clone())
                 .and_key(root_id.clone())
-                .and_gel_state(use_state(StateAnchor::constant(Rc::new(Layer::<Message, RenderContext>::new(root_id.clone()).into()))))
+                .and_gel_state(use_state(StateAnchor::constant(Rc::new(Layer::<Message, RenderCtx>::new(root_id.clone()).into()))))
                 .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     5,
@@ -246,7 +247,7 @@ RenderContext:  crate::RenderContext +'static
     fn handle_children_in_topo(
         &self,
         replace_id: Option<&Self::Ix>,
-        tree_element: &'_ GTreeBuilderElement<Message,RenderContext>,
+        tree_element: &'_ GTreeBuilderElement<Message,RenderCtx>,
     ) {
         debug!("handle_children");
         let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
@@ -282,7 +283,7 @@ RenderContext:  crate::RenderContext +'static
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
                 GraphNodeBuilder::new(self.clone())
                 .and_key(id.clone())
-                .and_gel_state(use_state(StateAnchor::constant(Rc::new(Layer::<Message,RenderContext>::new(id.clone()).into()))))
+                .and_gel_state(use_state(StateAnchor::constant(Rc::new(Layer::<Message,RenderCtx>::new(id.clone()).into()))))
                 .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
                 .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
                     2,

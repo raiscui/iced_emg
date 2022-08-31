@@ -1,10 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2022-08-25 14:58:31
+ * @LastEditTime: 2022-08-30 17:04:42
  * @LastEditors: Rais
  * @Description:
  */
+mod native;
 
 use emg_refresh::{RefreshFor, RefreshForUse, RefreshUseNoWarper, RefreshWhoNoWarper};
 use std::{any::Any, panic::Location, rc::Rc};
@@ -23,7 +24,7 @@ use crate::{
 // ────────────────────────────────────────────────────────────────────────────────
 
 //TODO lifetime
-impl<Ix> RefreshWhoNoWarper for EmgEdgeItem<Ix> where
+impl<Ix, RenderCtx> RefreshWhoNoWarper for EmgEdgeItem<Ix, RenderCtx> where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default
 {
 }
@@ -31,13 +32,14 @@ impl<Ix> RefreshWhoNoWarper for EmgEdgeItem<Ix> where
 //TODO this is warper , try not write this way
 impl<T> RefreshUseNoWarper for Css<T> where T: CssValueTrait + Clone + 'static {}
 
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Box<dyn RefreshFor<EmgEdgeItem<Ix>>>
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>>
+    for Box<dyn RefreshFor<EmgEdgeItem<Ix, RenderCtx>>>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
     EmgEdgeItem<Ix>: RefreshWhoNoWarper,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let _g = trace_span!(
             "!!!!!!!!!!!!!!-> RefreshFor<EdgeItem> for Box<(dyn RefreshFor<EdgeItem> + 'static)>"
         )
@@ -47,13 +49,14 @@ where
     }
 }
 
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>>
+    for Rc<dyn RefreshFor<EmgEdgeItem<Ix, RenderCtx>>>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let _g = trace_span!(
             "!!!!!!!!!!!!!!-> RefreshFor<EdgeItem> for Box<(dyn RefreshFor<EdgeItem> + 'static)>"
         )
@@ -63,13 +66,13 @@ where
     }
 }
 
-impl<Ix, Use> RefreshFor<EmgEdgeItem<Ix>> for StateVar<Use>
+impl<Ix, RenderCtx, Use> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateVar<Use>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
-    Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
+    EmgEdgeItem<Ix,RenderCtx>: RefreshWhoNoWarper,
+    Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix, RenderCtx>> + Clone + 'static,
 {
-    default fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    default fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let rc_v = self.get_var_with(emg_state::Var::get);
         warn!("Edge  Refresh use StateVar current value");
         who.refresh_for_use(&*rc_v);
@@ -77,12 +80,12 @@ where
 }
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateVar<CssWidth>
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateVar<CssWidth>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
 {
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         warn!("Edge  Refresh use StateVar<CssWidth>");
 
         who.layout.w.set(self.watch().into());
@@ -90,13 +93,13 @@ where
         // who.refresh_use(&*rc_var);
     }
 }
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateAnchor<CssWidth>
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<CssWidth>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
     // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
 {
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         warn!("Edge  Refresh use StateAnchor<CssWidth>");
 
         who.layout.w.set(self.clone().into());
@@ -104,13 +107,13 @@ where
         // who.refresh_use(&*rc_var);
     }
 }
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateVar<CssHeight>
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateVar<CssHeight>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
     // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
 {
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         warn!("Edge  Refresh use StateVar<CssHeight>");
 
         who.layout.h.set(self.watch().into());
@@ -118,13 +121,13 @@ where
         // who.refresh_use(&*rc_var);
     }
 }
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for StateAnchor<CssHeight>
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<CssHeight>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
     // Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix>> + Clone + 'static,
 {
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         warn!("Edge  Refresh use StateAnchor<CssHeight>");
 
         who.layout.h.set(self.clone().into());
@@ -164,7 +167,7 @@ where
 // }
 //TODO 做 不是refresh 版本的
 #[track_caller]
-fn css_refresh_edgedata<Use, Ix>(css: &Css<Use>, ed: &mut EmgEdgeItem<Ix>)
+fn css_refresh_edgedata<Use, Ix>(css: &Css<Use>, ei: &mut EmgEdgeItem<Ix>)
 where
     Use: CssValueTrait + std::clone::Clone,
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
@@ -174,20 +177,20 @@ where
     let any = &css.0 as &dyn Any;
     if let Some(css_width) = any.downcast_ref::<CssWidth>() {
         debug!("dyn match CssWidth {}", &css_width);
-        ed.refresh_for_use(css_width);
+        ei.refresh_for_use(css_width);
         return;
     }
 
     if let Some(css_height) = any.downcast_ref::<CssHeight>() {
         debug!("dyn match CssHeight {}", &css_height);
-        ed.refresh_for_use(css_height);
+        ei.refresh_for_use(css_height);
         return;
     }
 
     {
         // @ 不唯一, 多次会重复 ─────────────────────────────────────────────────────────────────
 
-        ed.other_css_styles.set_with(|s| {
+        ei.other_css_styles.set_with(|s| {
             let mut tmp_s = s.clone();
             let t = css.0.clone();
 
@@ -217,69 +220,69 @@ where
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for CssWidth
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for CssWidth
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for CssWidth").entered();
 
         who.layout.w.set(self.clone().into());
     }
 }
 
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for CssHeight
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for CssHeight
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for CssHeight").entered();
 
         who.layout.h.set(self.clone().into());
     }
 }
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for OriginX
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for OriginX
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for OriginX").entered();
 
         who.layout.origin_x.set(self.clone().into());
     }
 }
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for OriginY
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for OriginY
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for OriginY").entered();
 
         who.layout.origin_y.set(self.clone().into());
     }
 }
 
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for AlignX
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for AlignX
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for AlignX").entered();
 
         who.layout.align_x.set(self.clone().into());
     }
 }
-impl<Ix> RefreshFor<EmgEdgeItem<Ix>> for AlignY
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for AlignY
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let _g = trace_span!("-> RefreshFor<EmgEdgeItem> for AlignY").entered();
 
         who.layout.align_y.set(self.clone().into());
@@ -354,7 +357,7 @@ where
 //     }
 // }
 /// using at tree building
-impl<Ix, Message> RefreshFor<EmgEdgeItem<Ix>> for AnimationE<Message>
+impl<Ix, RenderCtx, Message> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
     Ix: std::borrow::Borrow<str>
@@ -366,8 +369,9 @@ where
         + Default
         + std::fmt::Debug
         + std::fmt::Display,
+    RenderCtx: 'static,
 {
-    fn refresh_for(&self, edge: &mut EmgEdgeItem<Ix>) {
+    fn refresh_for(&self, edge: &mut EmgEdgeItem<Ix, RenderCtx>) {
         //NOTE 当 tree 宏 中 在 edge中使用 am类型
         trace!(
             "AnimationE  RefreshFor EmgEdgeItem snapshot: \n{:#?}",

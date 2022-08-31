@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2022-07-20 09:47:47
+ * @LastEditTime: 2022-08-30 16:44:32
  * @LastEditors: Rais
  * @Description:
  */
 use emg_common::dyn_partial_eq::DynPartialEq;
 use emg_state::StateAnchor;
 use std::{any::Any, rc::Rc};
-use tracing::warn;
+use tracing::{error, warn};
 
 use crate::{RefreshForUse, RefreshUse};
 
@@ -123,15 +123,28 @@ pub trait TryRefreshUse {
 pub trait RefreshFor<Who> {
     fn refresh_for(&self, who: &mut Who);
 }
-impl<Who: Sized, Use: Sized> RefreshFor<Who> for Use {
+impl<Who, Use> RefreshFor<Who> for Use {
     default fn refresh_for(&self, _el: &mut Who) {
-        warn!(
+        error!(
             "this is un implemented yet use {} refresh_for {}",
             std::any::type_name::<Use>(),
             std::any::type_name::<Who>()
         );
     }
 }
+
+// impl<Who> std::fmt::Debug for &dyn RefreshFor<Who>
+// where
+//     Self: std::fmt::Debug,
+// {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         self.fmt(f)
+//     }
+// }
+
+pub trait RefreshForWithDebug<Who>: RefreshFor<Who> + core::fmt::Debug {}
+impl<Who, Use> RefreshForWithDebug<Who> for Use where Use: RefreshFor<Who> + core::fmt::Debug {}
+
 pub trait EqRefreshFor<Who>: RefreshFor<Who> + DynPartialEq {}
 
 impl<Who> core::cmp::Eq for dyn EqRefreshFor<Who> {}

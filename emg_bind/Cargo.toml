@@ -19,7 +19,13 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["gpu"]
-gpu = ["emg_winit", "emg_piet_gpu", "emg_element/gpu", "emg_graphics_backend"]
+gpu = [
+    "emg_winit",
+    "emg_piet_gpu",
+    "emg_element/gpu",
+    "emg_layout/gpu",
+    "emg_graphics_backend",
+]
 pool = []
 
 

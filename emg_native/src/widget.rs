@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2022-08-29 15:24:50
+ * @LastEditTime: 2022-08-31 12:59:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,9 +28,9 @@ use emg_state::StateAnchor;
 
 use crate::Bus;
 
-pub trait Widget<Message, RenderContext>: DynClone + DynPartialEq
+pub trait Widget<Message, RenderCtx>: DynClone + DynPartialEq
 where
-    RenderContext: crate::RenderContext,
+    RenderCtx: crate::RenderContext,
 {
     // fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
@@ -39,23 +39,23 @@ where
     // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
     fn paint_sa(
         &self,
-        ctx: StateAnchor<crate::PaintCtx<RenderContext>>,
-    ) -> StateAnchor<crate::PaintCtx<RenderContext>>;
+        ctx: StateAnchor<crate::PaintCtx<RenderCtx>>,
+    ) -> StateAnchor<crate::PaintCtx<RenderCtx>>;
 }
 
-impl<Message, RenderContext> core::cmp::Eq for dyn Widget<Message, RenderContext> + '_ {}
+impl<Message, RenderCtx> core::cmp::Eq for dyn Widget<Message, RenderCtx> + '_ {}
 
-impl<Message, RenderContext> core::cmp::PartialEq for dyn Widget<Message, RenderContext> + '_ {
+impl<Message, RenderCtx> core::cmp::PartialEq for dyn Widget<Message, RenderCtx> + '_ {
     fn eq(&self, other: &Self) -> bool {
         self.box_eq(other.as_any())
     }
 }
-impl<Message: 'static, RenderContext: 'static> PartialEq<dyn Widget<Message, RenderContext>>
-    for Box<dyn Widget<Message, RenderContext>>
+impl<Message: 'static, RenderCtx: 'static> PartialEq<dyn Widget<Message, RenderCtx>>
+    for Box<dyn Widget<Message, RenderCtx>>
 {
-    fn eq(&self, other: &dyn Widget<Message, RenderContext>) -> bool {
+    fn eq(&self, other: &dyn Widget<Message, RenderCtx>) -> bool {
         self.box_eq(other.as_any())
     }
 }
 
-dyn_clone::clone_trait_object!(<Message,RenderContext> Widget<Message,RenderContext>);
+dyn_clone::clone_trait_object!(<Message,RenderCtx> Widget<Message,RenderCtx>);

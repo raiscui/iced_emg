@@ -8,6 +8,7 @@ use emg_bind::{
     state::{CloneStateAnchor, StateAnchor},
     Sandbox, Settings, runtime, renderer,
 };
+
 use tracing::instrument;
 fn tracing_init() {
     use tracing_subscriber::prelude::*;
@@ -103,6 +104,7 @@ impl Sandbox for Counter {
                     @=a2 @E=[
                         origin_x(pc(-10)),align_x(pc(100)),
                         w(px(100)),h(px(100)),
+                        fill(rgba(1, 1, 0, 1))
                     ]
                     Layer []
                 ]

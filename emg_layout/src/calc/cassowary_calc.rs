@@ -1,3 +1,11 @@
+/*
+ * @Author: Rais
+ * @Date: 2022-07-15 14:46:40
+ * @LastEditTime: 2022-08-29 22:43:39
+ * @LastEditors: Rais
+ * @Description:
+ */
+
 use std::rc::Rc;
 
 use cassowary::Expression;
@@ -6,14 +14,6 @@ use seed_styles as styles;
 use seed_styles::LogicLength;
 
 use crate::ccsa::CassowaryMap;
-
-/*
- * @Author: Rais
- * @Date: 2022-07-15 14:46:40
- * @LastEditTime: 2022-07-21 17:34:28
- * @LastEditors: Rais
- * @Description:
- */
 
 pub fn cassowary_calculation_logiclength(
     prop: &str,

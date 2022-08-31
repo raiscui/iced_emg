@@ -11,7 +11,7 @@ use super::{Motion, Property};
 /*
  * @Author: Rais
  * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2022-07-21 17:07:25
+ * @LastEditTime: 2022-08-30 12:14:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -85,7 +85,7 @@ impl From<(TypeName, GenericSize)> for Property {
 #[allow(clippy::fallible_impl_from)]
 impl From<CssWidth> for PropertyOG {
     fn from(v: CssWidth) -> Self {
-        let type_name = v.type_name();
+        let type_name = CssWidth::TYPE_NAME;
         match v {
             CssWidth::Gs(gs) => (type_name, gs).into(),
             CssWidth::Length(l) => Self::Prop(type_name, l.into()),
@@ -99,7 +99,7 @@ impl From<CssWidth> for PropertyOG {
 #[allow(clippy::fallible_impl_from)]
 impl From<CssHeight> for PropertyOG {
     fn from(v: CssHeight) -> Self {
-        let type_name = v.type_name();
+        let type_name = CssHeight::TYPE_NAME;
         match v {
             CssHeight::Gs(gs) => (type_name, gs).into(),
             CssHeight::Length(l) => Self::Prop(type_name, l.into()),
@@ -115,7 +115,7 @@ impl From<CssHeight> for PropertyOG {
 #[allow(clippy::fallible_impl_from)]
 impl From<CssWidth> for Property {
     fn from(v: CssWidth) -> Self {
-        let type_name = v.type_name();
+        let type_name = CssWidth::TYPE_NAME;
         match v {
             CssWidth::Gs(gs) => (type_name, gs).into(),
             CssWidth::Length(l) => Self::Prop(type_name, l.into()),
@@ -128,7 +128,7 @@ impl From<CssWidth> for Property {
 #[allow(clippy::fallible_impl_from)]
 impl From<CssHeight> for Property {
     fn from(v: CssHeight) -> Self {
-        let type_name = v.type_name();
+        let type_name = CssHeight::TYPE_NAME;
         match v {
             CssHeight::Gs(gs) => (type_name, gs).into(),
             CssHeight::Length(l) => Self::Prop(type_name, l.into()),
@@ -151,7 +151,7 @@ impl From<Property> for CssWidth {
         match v {
             //TODO need implement
             Property::Prop(name, m) => {
-                if name.as_str() == Self::static_type_name().as_str()
+                if name.as_str() == Self::TYPE_NAME.as_str()
                     && matches!(
                         m.unit,
                         Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::Empty
@@ -177,8 +177,7 @@ impl From<Property> for GenericSize {
         match v {
             //TODO need implement
             Property::Prop(p_name, m) => {
-                if (p_name == CssWidth::static_type_name()
-                    || p_name == CssHeight::static_type_name())
+                if (p_name == CssWidth::TYPE_NAME || p_name == CssHeight::TYPE_NAME)
                     && matches!(
                         m.unit,
                         Unit::Px
@@ -213,7 +212,7 @@ impl From<PropertyOG> for CssWidth {
         match v {
             //TODO need implement
             PropertyOG::Prop(name, m) => {
-                if name.as_str() == Self::static_type_name().as_str()
+                if name.as_str() == Self::TYPE_NAME.as_str()
                     && matches!(
                         m.unit,
                         Unit::Px | Unit::Rem | Unit::Em | Unit::Cm | Unit::Empty
@@ -239,8 +238,7 @@ impl From<PropertyOG> for GenericSize {
         match v {
             //TODO need implement
             PropertyOG::Prop(p_name, m) => {
-                if (p_name == CssWidth::static_type_name()
-                    || p_name == CssHeight::static_type_name())
+                if (p_name == CssWidth::TYPE_NAME || p_name == CssHeight::TYPE_NAME)
                     && matches!(
                         m.unit,
                         Unit::Px

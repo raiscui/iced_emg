@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["gpu"]
-gpu = ["emg_element/gpu"]
+gpu = ["emg_element/gpu", "emg_layout/gpu"]
 debug = ["emg_native/debug"]
 system = ["sysinfo"]
 

@@ -22,7 +22,10 @@ pub struct Layer<Message, RenderContext> {
     children: LayerChildren<Message, RenderContext>,
 }
 
-impl<Message, RenderContext> std::fmt::Debug for Layer<Message, RenderContext> {
+impl<Message, RenderContext> std::fmt::Debug for Layer<Message, RenderContext>
+where
+    RenderContext: 'static,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Layer")
             .field("id", &self.id)
@@ -132,7 +135,10 @@ where
             if id == "debug_layer" {
                 new_ctx.fill(rect, &emg_native::Color::rgb8(70, 0, 0));
             } else {
-                new_ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
+                let fill = new_ctx.get_fill_color(); //TODO try use option
+                info!("fill color: {:?}", &fill);
+                new_ctx.fill(rect, &fill);
+                // new_ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
             }
             new_ctx
         });

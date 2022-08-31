@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2022-08-28 15:52:42
+ * @LastEditTime: 2022-08-30 16:54:59
  * @LastEditors: Rais
  * @Description:
  */
@@ -237,8 +237,11 @@ where
     ///
     /// Will return `Err` if `self.edge` is None
     /// permission to read it.
-    pub fn effecting_edge_path<Ix>(&self, edge: &EmgEdgeItem<Ix>, for_path: EPath<Ix>)
-    where
+    pub fn effecting_edge_path<Ix, RenderCtx>(
+        &self,
+        edge: &EmgEdgeItem<Ix, RenderCtx>,
+        for_path: EPath<Ix>,
+    ) where
         Ix: std::borrow::Borrow<str>
             + Clone
             + std::hash::Hash
@@ -247,6 +250,7 @@ where
             + Ord
             + std::fmt::Display
             + 'static,
+        RenderCtx: 'static,
     {
         edge.build_path_layout(|mut l| {
             // • • • • •

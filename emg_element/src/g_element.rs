@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2022-08-29 17:02:48
+ * @LastEditTime: 2022-08-31 13:05:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -27,13 +27,13 @@ use tracing::{info, instrument, warn};
 
 #[allow(clippy::module_name_repetitions)]
 // #[clonable]
-pub trait DynGElement<Message,RenderContext>:
+pub trait DynGElement<Message,RenderCtx>:
     // AsRefreshFor<GElement< Message>>
     for<'a> Tid<'a>
-     +RefreshFor<GElement< Message,RenderContext>>
-     +RefreshUse<GElement<Message,RenderContext>>
+     +RefreshFor<GElement< Message,RenderCtx>>
+     +RefreshUse<GElement<Message,RenderCtx>>
     // + GenerateElement<Message>
-    + Widget<Message,RenderContext>
+    + Widget<Message,RenderCtx>
     + TypeCheckObjectSafe
     + DynPartialEq
     + DynClone
@@ -41,7 +41,7 @@ pub trait DynGElement<Message,RenderContext>:
     + TryRefreshUse
     + RefreshUse<i32>
     where
-    RenderContext: crate::RenderContext ,
+    RenderCtx: crate::RenderContext ,
 {
 }
 dyn_clone::clone_trait_object!(<Message,RenderContext> DynGElement<Message,RenderContext>);
@@ -95,20 +95,20 @@ mod tests {
 
 #[derive(Display, From)]
 // #[eq_opt(no_self_where, where_add = "Message: PartialEq+'static,")]
-pub enum GElement<Message, RenderContext> {
+pub enum GElement<Message, RenderCtx> {
     // TODO cow
     //NOTE can render element
-    Builder_(NodeBuilderWidget<Message, RenderContext>),
-    Layer_(Layer<Message, RenderContext>),
+    Builder_(NodeBuilderWidget<Message, RenderCtx>),
+    Layer_(Layer<Message, RenderCtx>),
     // Text_(Text),
     // Button_(Button<Message>),
     Refresher_(Rc<dyn EqRefreshFor<Self>>),
     //NOTE temp comment
     // Event_(EventNode<Message>),
     //NOTE internal
-    Generic_(Box<dyn DynGElement<Message, RenderContext>>), //范型 //TODO check batter when use rc?
+    Generic_(Box<dyn DynGElement<Message, RenderCtx>>), //范型 //TODO check batter when use rc?
     #[from(ignore)]
-    NodeRef_(IdStr),                    // IntoE(Rc<dyn Into<Element< Message>>>),
+    NodeRef_(IdStr),                // IntoE(Rc<dyn Into<Element< Message>>>),
     // #[from(ignore)]
     // InsideDirectUseSa_(StateAnchor<Rc<Self>>),//NOTE generate by tree builder use into()
     #[from(ignore)]
@@ -422,7 +422,7 @@ impl<Message, RenderContext> GElement<Message, RenderContext>
 }
 
 impl<Message, RenderContext> std::fmt::Debug for GElement<Message, RenderContext>
-where
+where RenderContext: 'static
 // Message: std::fmt::Debug,
 // RenderContext: std::fmt::Debug,
 {

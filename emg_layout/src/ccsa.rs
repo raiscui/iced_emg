@@ -1,3 +1,11 @@
+/*
+ * @Author: Rais
+ * @Date: 2022-06-23 22:52:57
+ * @LastEditTime: 2022-08-29 22:44:48
+ * @LastEditors: Rais
+ * @Description:
+ */
+
 use std::{hash::BuildHasherDefault, rc::Rc};
 
 use cassowary::{
@@ -16,14 +24,6 @@ use parse_display::{Display, FromStr};
 mod impl_refresh;
 mod ops;
 pub mod svv_process;
-
-/*
- * @Author: Rais
- * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2022-07-21 15:03:34
- * @LastEditors: Rais
- * @Description:
- */
 
 #[derive(Debug, Clone, Display, PartialEq, Eq)]
 pub enum NameChars<Ix = IdStr> {

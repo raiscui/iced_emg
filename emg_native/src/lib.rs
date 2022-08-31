@@ -1,4 +1,6 @@
 #![feature(fn_traits)]
+#![feature(specialization)]
+
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod bus;
 pub mod clipboard;
