@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-30 12:18:05
- * @LastEditTime: 2022-08-30 14:30:18
+ * @LastEditTime: 2022-08-31 15:17:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,6 +15,6 @@ where
     WidgetState: RefreshWhoNoWarper,
 {
     fn refresh_for(&self, who: &mut WidgetState) {
-        who.fill = self.clone()
+        who.fill = Some(self.clone())
     }
 }

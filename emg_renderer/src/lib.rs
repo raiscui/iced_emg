@@ -4,7 +4,7 @@ pub use piet::kurbo::Rect;
 pub use piet::kurbo::Size;
 pub use piet::kurbo::Vec2;
 
-pub use piet::{Color, RenderContext};
+pub use piet::{Color, Error, RenderContext};
 
 #[cfg(test)]
 mod tests {

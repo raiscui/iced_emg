@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-08-31 12:54:40
+ * @LastEditTime: 2022-08-31 15:19:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -515,8 +515,8 @@ where
                 &id1
             );
             let mut incoming_ctx_mut = incoming_ctx.clone();
+            incoming_ctx_mut.save();
             incoming_ctx_mut.set_widget_state(widget_state.clone());
-            incoming_ctx_mut.save().expect("save ctx failed");
             incoming_ctx_mut.transform(emg_native::Affine::translate((
                 widget_state.translation.x * DPR,
                 widget_state.translation.y * DPR,
@@ -532,7 +532,7 @@ where
                     " widget.paint end -> recalculating restore [{}]", &id2
                 );
                 let mut out_ctx_mut = out_ctx.clone();
-                out_ctx_mut.restore().expect("restore ctx failed");
+                out_ctx_mut.restore();
                 out_ctx_mut
             })
     }

@@ -133,12 +133,12 @@ where
             let mut new_ctx = incoming_ctx.clone();
             let rect = new_ctx.size().to_rect();
             if id == "debug_layer" {
-                new_ctx.fill(rect, &emg_native::Color::rgb8(70, 0, 0));
+                new_ctx.fill(rect, &emg_native::Color::rgb8(60, 0, 0));
             } else {
-                let fill = new_ctx.get_fill_color(); //TODO try use option
-                info!("fill color: {:?}", &fill);
-                new_ctx.fill(rect, &fill);
-                // new_ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
+                if let Some(fill) = new_ctx.get_fill_color() {
+                    info!(parent: &*span,"fill color: {:?}", &fill);
+                    new_ctx.fill(rect, &fill);
+                }
             }
             new_ctx
         });

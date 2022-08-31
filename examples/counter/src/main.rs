@@ -99,6 +99,8 @@ impl Sandbox for Counter {
                 @=a1 @E=[
                         origin_x(pc(50)),align_x(pc(50)),
                         w(pc(50)),h(pc(50)),
+                        fill(rgba(1, 0, 0, 1))
+
                     ]
                 Layer [
                     @=a2 @E=[
