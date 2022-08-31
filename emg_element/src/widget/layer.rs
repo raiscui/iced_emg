@@ -2,7 +2,7 @@ use std::{clone::Clone, cmp::PartialEq};
 
 use emg_common::IdStr;
 use emg_native::Rect;
-use tracing::{info, instrument, trace, Span};
+use tracing::{info, info_span, instrument, trace, Span};
 
 use crate::GElement;
 
@@ -129,15 +129,23 @@ where
         let span = illicit::expect::<Span>();
 
         let mut out_ctx = ctx.map(move |incoming_ctx| {
-            info!(parent: &*span, "Layer[{}]::paint -> ctx.map -> recalculating ", &id);
+            // let _span = info_span!(parent:&*span,"layer repaint...").entered();
+            info!(parent: &*span,"Layer[{}]::paint -> ctx.map -> recalculating ", &id);
             let mut new_ctx = incoming_ctx.clone();
             let rect = new_ctx.size().to_rect();
             if id == "debug_layer" {
-                new_ctx.fill(rect, &emg_native::Color::rgb8(60, 0, 0));
-            } else {
-                if let Some(fill) = new_ctx.get_fill_color() {
-                    info!(parent: &*span,"fill color: {:?}", &fill);
-                    new_ctx.fill(rect, &fill);
+                // new_ctx.fill(rect, &emg_native::Color::rgb8(255, 255, 255));
+                new_ctx.fill(rect, &emg_native::Color::BLACK);
+            } else if let Some(fill) = new_ctx.get_fill_color() {
+                info!(parent: &*span,"fill color: {:?}", &fill);
+                new_ctx.fill(rect, &fill);
+            }
+            if let Some(bw) = new_ctx.get_border_width() {
+                if let Some(bc) = new_ctx.get_border_color() {
+                    info!(parent: &*span,"border width: {:?} color: {:?}", &bw, &bc);
+                    new_ctx.stroke(rect, &bc, bw);
+                } else {
+                    new_ctx.stroke(rect.inset(-bw / 2. - 0.), &emg_native::Color::BLACK, bw);
                 }
             }
             new_ctx

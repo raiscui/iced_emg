@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-08-31 15:17:47
+ * @LastEditTime: 2022-08-31 17:52:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,8 +12,10 @@ use std::ops::{Deref, DerefMut};
 use crate::Color;
 use emg_common::{na::Translation3, SmallVec, Vector};
 use emg_state::StateAnchor;
-use seed_styles::{bg_color, fill, rgba, CssBackgroundColor};
-use tracing::error;
+use seed_styles::{
+    bg_color, fill, rgba, CssBackgroundColor, CssBorderColor, CssBorderWidth, CssFill,
+};
+use tracing::{error, instrument};
 
 use crate::Size;
 
@@ -54,18 +56,43 @@ where
     }
     pub fn get_fill_color(&self) -> Option<Color> {
         self.widget_state.fill.as_ref().map(|fill| match *fill {
-            seed_styles::CssFill::Rgba(r, g, b, a) => Color::rgba(r, g, b, a),
-            seed_styles::CssFill::Hsl(_, _, _) => todo!(),
-            seed_styles::CssFill::Hsla(_, _, _, _) => todo!(),
-            seed_styles::CssFill::Hex(_) => todo!(),
-            seed_styles::CssFill::StringValue(_) => todo!(),
-            seed_styles::CssFill::Inherit => todo!("get stack latest"),
+            CssFill::Rgba(r, g, b, a) => Color::rgba(r, g, b, a),
+            CssFill::Hsl(_, _, _) => todo!(),
+            CssFill::Hsla(_, _, _, _) => todo!(),
+            CssFill::Hex(_) => todo!(),
+            CssFill::StringValue(_) => todo!(),
+            CssFill::Inherit => todo!("get stack latest"),
+        })
+    }
+    // #[instrument(skip(self), ret)]
+    pub fn get_border_width(&self) -> Option<f64> {
+        self.widget_state.border_width.as_ref().map(|bw| match bw {
+            CssBorderWidth::Medium => todo!(),
+            CssBorderWidth::Thin => todo!(),
+            CssBorderWidth::Thick => todo!(),
+            CssBorderWidth::Length(l) => l
+                .try_get_number()
+                .expect("[Unit] currently only px /empty can get"),
+            CssBorderWidth::Initial => todo!(),
+            CssBorderWidth::Inherit => todo!(),
+            CssBorderWidth::StringValue(_) => todo!(),
+        })
+    }
+    // #[instrument(skip(self), ret)]
+    pub fn get_border_color(&self) -> Option<Color> {
+        self.widget_state.border_color.as_ref().map(|bc| match *bc {
+            CssBorderColor::Rgba(r, g, b, a) => Color::rgba(r, g, b, a),
+            CssBorderColor::Hsl(_, _, _) => todo!(),
+            CssBorderColor::Hsla(_, _, _, _) => todo!(),
+            CssBorderColor::Hex(_) => todo!(),
+            CssBorderColor::StringValue(_) => todo!(),
+            CssBorderColor::Inherit => todo!(),
         })
     }
 
-    pub fn set_widget_state(&mut self, widget_state: WidgetState) {
+    pub fn merge_widget_state(&mut self, widget_state: &WidgetState) {
         //TODO make overwrite
-        self.widget_state = widget_state;
+        self.widget_state.merge(widget_state);
     }
 
     pub fn save(&mut self) {
@@ -120,7 +147,7 @@ impl<RenderContext> DerefMut for PaintCtx<RenderContext> {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default)]
 pub struct WidgetState {
     // pub(crate) id: WidgetId,
     /// The size of the child; this is the value returned by the child's layout
@@ -128,7 +155,9 @@ pub struct WidgetState {
     size: Size,
     pub translation: Translation3<f64>,
     // pub background_color: CssBackgroundColor,
-    pub fill: Option<seed_styles::CssFill>,
+    pub fill: Option<CssFill>,
+    pub border_width: Option<CssBorderWidth>,
+    pub border_color: Option<CssBorderColor>,
     // /// The origin of the child in the parent's coordinate space; together with
     // /// `size` these constitute the child's layout rect.
     // origin: Point,
@@ -186,16 +215,18 @@ pub struct WidgetState {
     // /// cursor_change, which is persistent).
     // pub(crate) cursor: Option<Cursor>,
 }
-
-impl Default for WidgetState {
-    fn default() -> Self {
-        Self {
-            size: Default::default(),
-            translation: Default::default(),
-            fill: None,
-        }
-    }
+macro_rules! css_merge {
+    ($self:ident,$other:ident,$css:ident,$v:ident) => {
+        match &$other.$v {
+            Some(val) => match val {
+                $css::Inherit => (),
+                other_val => $self.$v = Some(other_val.clone()),
+            },
+            None => $self.$v = None,
+        };
+    };
 }
+
 impl WidgetState {
     // pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
     pub fn new(size: (f64, f64), trans: Translation3<f64>) -> WidgetState {
@@ -204,28 +235,22 @@ impl WidgetState {
             // origin: Point::ORIGIN,
             size: Size::new(size.0, size.1),
             translation: trans,
-            fill: None,
-            //-----
-            // is_expecting_set_origin_call: true,
-            // paint_insets: Insets::ZERO,
-            // invalid: Region::EMPTY,
-            // viewport_offset: Vec2::ZERO,
-            // baseline_offset: 0.0,
-            // is_hot: false,
-            // needs_layout: false,
-            // is_active: false,
-            // has_active: false,
-            // has_focus: false,
-            // request_anim: false,
-            // request_update: false,
-            // request_focus: None,
-            // focus_chain: Vec::new(),
-            // children: Bloom::new(),
-            // children_changed: false,
-            // timers: HashMap::new(),
-            // cursor_change: CursorChange::Default,
-            // cursor: None,
+            ..Self::default()
         }
+    }
+    pub fn merge(&mut self, other: &Self) {
+        self.size = other.size;
+        self.translation = other.translation;
+        // match &other.fill {
+        //     Some(fill) => match fill {
+        //         CssFill::Inherit => (),
+        //         other_fill => self.fill = Some(other_fill.clone()),
+        //     },
+        //     None => self.fill = None,
+        // };
+        css_merge!(self, other, CssFill, fill);
+        css_merge!(self, other, CssBorderWidth, border_width);
+        css_merge!(self, other, CssBorderColor, border_color);
     }
 
     // pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {

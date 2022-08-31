@@ -49,7 +49,7 @@ fn tracing_init() {
 }
 
 pub fn main() -> emg_bind::Result {
-    #[cfg(debug_assertions)]
+    // #[cfg(debug_assertions)]
     tracing_init();
     
     Counter::run(Settings::default())
@@ -99,14 +99,33 @@ impl Sandbox for Counter {
                 @=a1 @E=[
                         origin_x(pc(50)),align_x(pc(50)),
                         w(pc(50)),h(pc(50)),
-                        fill(rgba(1, 0, 0, 1))
-
+                        // fill(rgba(1, 1, 1, 1)),
+                        b_width(px(5)),
+                        b_color(rgb(1,0,0))
                     ]
                 Layer [
                     @=a2 @E=[
-                        origin_x(pc(-10)),align_x(pc(100)),
+                        origin_x(pc( 10)),align_x(pc(100)),
                         w(px(100)),h(px(100)),
                         fill(rgba(1, 1, 0, 1))
+                    ]
+                    Layer [],
+                    @=a3 @E=[
+                        origin_x(pc( 10)),align_x(pc(100)),
+                        origin_y(px(-50)),
+                        w(px(100)),h(px(100)),
+                        fill(rgba(1, 1, 0, 1)),
+                        b_width(px(1)),
+                        b_color(rgb(1,0,0))
+                    ]
+                    Layer [],
+                    @=a4 @E=[
+                        origin_x(pc( 10)),align_x(pc(100)),
+                        origin_y(px(-60)),
+                        w(px(100)),h(px(100)),
+                        fill(rgba(1, 1, 0, 1)),
+                        b_width(px(7)),
+                        b_color(rgb(1,0,1))
                     ]
                     Layer []
                 ]

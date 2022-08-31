@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2022-08-31 12:54:03
+ * @LastEditTime: 2022-08-31 18:48:13
  * @LastEditors: Rais
  * @Description: 
  */
@@ -206,7 +206,7 @@ where
             OrdMapPool::new(POOL_SIZE);
 
         let paths_view_gel_sa = paths_sa.map_(move |current_path, _| {
-            let _span = info_span!("----[paths_view_gel_sa] recalculation,( in [Dict] paths_sa.map_ => --------------------)",%current_path).entered();
+            let _span = info_span!("----[paths_view_gel_sa] recalculation,( in [Dict] paths_sa.map_ ===========>)",%current_path).entered();
 
             let current_path_clone2 = current_path.clone();
             let graph_rc4 = graph_rc3.clone();

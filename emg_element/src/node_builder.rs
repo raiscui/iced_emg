@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-08-31 15:19:21
+ * @LastEditTime: 2022-08-31 18:42:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,7 +25,7 @@ use emg_layout::{EdgeCtx, LayoutEndType};
 use emg_native::{WidgetState, DPR};
 use emg_refresh::RefreshForUse;
 use emg_state::{StateAnchor, StateMultiAnchor};
-use tracing::{debug, info, info_span, instrument, trace};
+use tracing::{debug, info, info_span, instrument, trace, Span};
 
 use crate::{widget::Widget, GElement};
 use std::{collections::VecDeque, rc::Rc, string::String};
@@ -502,7 +502,12 @@ where
     ) -> StateAnchor<crate::PaintCtx<RenderContext>> {
         let id1 = self.id.clone();
         let id2 = self.id.clone();
-        let span1 = info_span!("NodeBuilderWidget::paint_sa", id = %self.id);
+        let opt_span = illicit::get::<Span>().ok();
+
+        let span1 = opt_span.map_or_else(
+            || info_span!("NodeBuilderWidget::paint_sa", id = %self.id),
+            |s| info_span!(parent:&*s,"NodeBuilderWidget::paint_sa", id = %self.id),
+        );
         let span2 = span1.clone();
         let span3 = span1.clone();
 
@@ -516,7 +521,7 @@ where
             );
             let mut incoming_ctx_mut = incoming_ctx.clone();
             incoming_ctx_mut.save();
-            incoming_ctx_mut.set_widget_state(widget_state.clone());
+            incoming_ctx_mut.merge_widget_state(widget_state);
             incoming_ctx_mut.transform(emg_native::Affine::translate((
                 widget_state.translation.x * DPR,
                 widget_state.translation.y * DPR,
