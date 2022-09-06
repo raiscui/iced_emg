@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-15 21:19:37
- * @LastEditTime: 2022-08-21 00:45:03
+ * @LastEditTime: 2022-09-02 19:15:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@
 ///
 /// [`Renderer`]: crate::Renderer
 pub trait Backend {
-    type ImplRenderContext: emg_native::RenderContext;
+    type ImplRenderContext: emg_native::renderer::RenderContext;
     // /// Trims the measurements cache.
     // ///
     // /// This method is currently necessary to properly trim the text cache in

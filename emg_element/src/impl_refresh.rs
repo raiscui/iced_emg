@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-22 16:28:40
- * @LastEditTime: 2022-08-31 13:05:05
+ * @LastEditTime: 2022-09-06 21:18:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -29,6 +29,7 @@ impl<Message, RenderCtx> RefreshFor<Self> for GElement<Message, RenderCtx>
 // where
 //     Message: Clone,
 where
+    Message: 'static,
     RenderCtx: 'static,
 {
     fn refresh_for(&self, el: &mut Self) {
@@ -132,7 +133,7 @@ where
             GElement::Layer_(_) => todo!(),
             // GElement::Button_(_) => todo!(),
             GElement::Refresher_(_) => todo!(),
-            // GElement::Event_(_) => todo!(),
+            GElement::Event_(_) => todo!(),
             GElement::Generic_(w) => {
                 warn!("i32 try_refresh_for Generic_");
 
@@ -172,16 +173,17 @@ impl<Message, RenderContext> RefreshFor<NodeBuilderWidget<Message, RenderContext
     for GElement<Message, RenderContext>
 where
     Message: 'static,
+    RenderContext: 'static,
 {
     fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<Message, RenderContext>) {
         trace!("node_builder_widget refresh use GElement (event_callback)");
 
         match self {
             // @ Clear type match
-            // Event_(event_callback) => {
-            //     trace!("node_builder_widget.add_event_callback(event_callback.clone()) ");
-            //     node_builder_widget.add_event_callback(event_callback.clone());
-            // }
+            Self::Event_(event_callback) => {
+                trace!("node_builder_widget.add_event_callback(event_callback.clone()) ");
+                node_builder_widget.add_event_callback(event_callback.clone());
+            }
             // ─────────────────────────────────────────────────────────────────
 
             // @ Single explicit match

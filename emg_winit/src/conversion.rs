@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2022-08-12 13:37:12
+ * @LastEditTime: 2022-09-03 15:37:59
  * @LastEditors: Rais
  * @Description:
  */
@@ -242,7 +242,7 @@ pub fn modifiers(modifiers: winit::event::ModifiersState) -> keyboard::Modifiers
 }
 
 /// Converts a physical cursor position to a logical `Point`.
-pub fn cursor_position(position: winit::dpi::PhysicalPosition<f64>, scale_factor: f64) -> Pos {
+pub fn cursor_position(position: &winit::dpi::PhysicalPosition<f64>, scale_factor: f64) -> Pos {
     let logical_position = position.to_logical(scale_factor);
 
     Pos::new(logical_position.x, logical_position.y)

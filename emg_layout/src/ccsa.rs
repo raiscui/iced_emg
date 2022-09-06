@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2022-08-29 22:44:48
+ * @LastEditTime: 2022-09-05 20:54:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -96,15 +96,15 @@ impl std::fmt::Display for ScopeViewVariable {
         let scope = self
             .scope
             .as_ref()
-            .map_or("".to_string(), |x| format!("{}", x));
+            .map_or(String::new(), |x| format!("{}", x));
         let view = self
             .view
             .as_ref()
-            .map_or("".to_string(), |x| format!("{}", x));
+            .map_or(String::new(), |x| format!("{}", x));
         let variable = self
             .variable
             .as_ref()
-            .map_or("".to_string(), |x| format!("{}", x));
+            .map_or(String::new(), |x| format!("{}", x));
 
         write!(f, "{}{}{}", scope, view, variable)
     }
@@ -300,7 +300,7 @@ impl std::fmt::Display for StrengthAndWeight {
 }
 
 fn disp_opt<T: std::fmt::Display>(o: Option<T>) -> String {
-    o.map_or("".to_string(), |x| format!("{}", x))
+    o.map_or(String::new(), |x| format!("{}", x))
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CCSS {

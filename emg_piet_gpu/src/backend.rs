@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2022-08-26 17:48:00
+ * @LastEditTime: 2022-09-05 15:39:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -39,6 +39,7 @@ impl Backend {
 
             let renderer = Renderer::new(
                 &session,
+                //TODO use state.viewport
                 settings.width * 2,
                 settings.height * 2,
                 NUM_FRAMES,
@@ -74,7 +75,7 @@ impl Backend {
         // viewport: &Viewport,
         // overlay_text: &[T],
     ) {
-        debug!("Drawing");
+        debug!(target:"winit event","present-> Drawing");
         let session = &self.session;
 
         let frame_idx = self.current_frame % NUM_FRAMES;

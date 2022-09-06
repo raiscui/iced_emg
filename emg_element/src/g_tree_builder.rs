@@ -1,12 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2022-08-31 13:06:50
+ * @LastEditTime: 2022-09-06 16:15:44
  * @LastEditors: Rais
  * @Description:
  */
 mod node_item_rc_sv;
-use crate::GElement;
+use crate::{EventNode, GElement};
 use emg::EdgeIndex;
 use emg_common::IdStr;
 use emg_layout::{EmgEdgeItem, GenericSizeAnchor};
@@ -41,7 +41,7 @@ where
     // ),
     RefreshUse(Ix, Rc<dyn EqRefreshFor<GElement<Message, RenderCtx>>>),
     Cl(Ix, Rc<dyn Fn()>),
-    // Event(Ix, EventNode<Message>),
+    Event(Ix, EventNode<Message>),
     Dyn(
         Ix,
         Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix, RenderCtx>>>>,
@@ -70,6 +70,7 @@ where
             Self::RefreshUse(arg0, arg1) => Self::RefreshUse(arg0.clone(), arg1.clone()),
             Self::Cl(arg0, arg1) => Self::Cl(arg0.clone(), arg1.clone()),
             Self::Dyn(arg0, arg1, arg2) => Self::Dyn(arg0.clone(), arg1.clone(), arg2.clone()),
+            Self::Event(a, b) => Self::Event(a.clone(), b.clone()),
         }
     }
 }
@@ -126,11 +127,11 @@ where
                 .field(&"Box<dyn RefreshFor<GElement< Message>>>")
                 .finish(),
             Self::Cl(id, _) => f.debug_tuple("GTreeBuilderElement::Cl").field(id).finish(),
-            // Self::Event(id, e) => f
-            //     .debug_tuple("GTreeBuilderElement::Event")
-            //     .field(id)
-            //     .field(&e)
-            //     .finish(),
+            Self::Event(id, e) => f
+                .debug_tuple("GTreeBuilderElement::Event")
+                .field(id)
+                .field(&e)
+                .finish(),
             Self::Dyn(id, _e, _sa_dict_gbe) => f
                 .debug_tuple("GTreeBuilderElement::Dyn")
                 .field(id)

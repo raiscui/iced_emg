@@ -9,7 +9,7 @@ use emg_bind::{
     Sandbox, Settings, runtime, renderer,
 };
 
-use tracing::instrument;
+use tracing::{instrument, info};
 fn tracing_init() {
     use tracing_subscriber::prelude::*;
 
@@ -23,7 +23,7 @@ fn tracing_init() {
                 && !metadata.target().contains("anchors")
                 && !metadata.target().contains("emg_state")
                 && !metadata.target().contains("cassowary")
-                && !metadata.target().contains("winit event")
+                // && !metadata.target().contains("winit event")
                 // && !metadata.fields().field("event").map(|x|x.to_string())
                 // && !metadata.target().contains("winit event: DeviceEvent")
 
@@ -63,6 +63,7 @@ struct Counter {
 #[emg_msg]
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum Message {
+    Empty,
     IncrementPressed,
     DecrementPressed,
 }
@@ -86,6 +87,9 @@ impl Sandbox for Counter {
             Message::DecrementPressed => {
                 self.value -= 1;
             }
+            Message::Empty => {
+                info!("update ---- got Message::Empty");
+            },
         }
     }
 
@@ -96,6 +100,9 @@ impl Sandbox for Counter {
         gtree! {
             @=debug_layer
             Layer [
+                On:click  ||{
+                    info!(" on [debug_layer]----click cb ----");
+                },
                 @=a1 @E=[
                         origin_x(pc(50)),align_x(pc(50)),
                         w(pc(50)),h(pc(50)),
@@ -109,7 +116,11 @@ impl Sandbox for Counter {
                         w(px(100)),h(px(100)),
                         fill(rgba(1, 1, 0, 1))
                     ]
-                    Layer [],
+                    Layer [
+                        On:click  ||{
+                            info!(" on [a2] ----click cb ----");
+                        },
+                    ],
                     @=a3 @E=[
                         origin_x(pc( 10)),align_x(pc(100)),
                         origin_y(px(-50)),
@@ -131,19 +142,27 @@ impl Sandbox for Counter {
                 ]
             ]
         }
+
+
+
+
     }
 
-    #[instrument(skip(self, g))]
-    fn ctx(
-            &self,
-            g: &GraphType<Self::Message>,
-        ) -> StateAnchor<runtime::PaintCtx<renderer::RenderCtx> > {
-            let ctx =StateAnchor::constant( runtime::PaintCtx::<renderer::RenderCtx>::default());
-            g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
-            .unwrap()
-            .build_ctx_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]),ctx)
-            
+    fn root_id(&self)->&str {
+        "debug_layer"
     }
+
+    // #[instrument(skip(self, g))]
+    // fn ctx(
+    //         &self,
+    //         g: &GraphType<Self::Message>,
+    //     ) -> StateAnchor<runtime::PaintCtx<renderer::RenderCtx> > {
+    //         let ctx =StateAnchor::constant( runtime::PaintCtx::<renderer::RenderCtx>::default());
+    //         g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
+    //         .unwrap()
+    //         .build_ctx_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]),&ctx)
+            
+    // }
 
 
     // #[instrument(skip(self, g), ret)]

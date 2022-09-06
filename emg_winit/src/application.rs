@@ -1,27 +1,39 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2022-08-29 15:43:38
+ * @LastEditTime: 2022-09-07 00:01:53
  * @LastEditors: Rais
  * @Description:
  */
 //! Create interactive, native cross-platform applications.
+mod state;
+
+use emg_common::{IdStr, Pos, Vector};
+pub use state::State;
+
 use crate::clipboard::{self, Clipboard};
 use crate::conversion;
 use crate::mouse;
-use crate::renderer;
 use crate::{Command, Debug, Error, Executor, FutureRuntime, Mode, Proxy, Settings};
-use emg_state::use_state_impl::CloneStateVar;
-use std::ops::Deref;
+use emg_state::{use_state, use_state_impl::CloneStateVar, StateVar};
 
-use emg_element::{GTreeBuilderElement, GTreeBuilderFn, GraphProgram, GraphType, Widget};
+use emg_element::{GTreeBuilderFn, GraphProgram};
 use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
 use emg_graphics_backend::window::{compositor, Compositor};
-use emg_native::{program::Program, Event, Renderer};
+use emg_native::{program::Program, renderer::Renderer, Event};
 use emg_state::CloneStateAnchor;
-use tracing::{info, instrument};
+use tracing::{info, info_span, instrument};
+
+use static_init::dynamic;
+
 // use emg_native::user_interface::{self, UserInterface};
+// ────────────────────────────────────────────────────────────────────────────────
+
+#[dynamic]
+static G_POS: emg_state::StateVar<Option<winit::dpi::PhysicalPosition<f64>>> = use_state(None);
+
+// ────────────────────────────────────────────────────────────────────────────────
 
 /// An interactive, native cross-platform application.
 ///
@@ -108,13 +120,18 @@ pub trait Application: GraphProgram {
     }
 }
 
+// #[must_use]
+// pub fn global_cursor() -> StateVar<Pos<f64>> {
+//     G_CURSOR.with(|sv| *sv)
+// }
+
 /// Runs an [`Application`] with an executor, compositor, and the provided
 /// settings.
-#[instrument(skip_all, name = "winit->run")]
+// #[instrument(skip_all, name = "winit->run")]
 pub fn run<A, E, C>(
     settings: Settings<A::Flags>,
     compositor_settings: C::Settings,
-) -> Result<(), Error>
+) -> Result<(), crate::Error>
 where
     A: Application + 'static,
     E: Executor + 'static,
@@ -132,7 +149,7 @@ where
 
     let mut future_runtime = {
         let proxy = Proxy::new(event_loop.create_proxy());
-        let executor = E::new().map_err(Error::ExecutorCreationFailed)?;
+        let executor = E::new().map_err(crate::Error::ExecutorCreationFailed)?;
 
         FutureRuntime::new(executor, proxy)
     };
@@ -154,7 +171,7 @@ where
 
     let window = builder
         .build(&event_loop)
-        .map_err(Error::WindowCreationFailed)?;
+        .map_err(crate::Error::WindowCreationFailed)?;
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -171,12 +188,13 @@ where
             .expect("Append canvas to HTML body");
     }
     // ────────────────────────────────────────────────────────────────────────────────
+    let mut state = State::new(&application, &window);
 
-    let dpr = window.scale_factor();
-    let size: (f64, f64) = window.inner_size().to_logical::<f64>(dpr).into();
-    info!("Window size: {:?} {:?}", size, dpr);
-    emg_layout::global_width().set(size.0);
-    emg_layout::global_height().set(size.1);
+    // let dpr = window.scale_factor();
+    // let size: (f64, f64) = window.inner_size().to_logical::<f64>(dpr).into();
+    // info!("Window size: {:?} {:?}", size, dpr);
+    // emg_layout::global_width().set(size.0);
+    // emg_layout::global_height().set(size.1);
     // ────────────────────────────────────────────────────────────────────────────────
 
     let mut clipboard = Clipboard::connect(&window);
@@ -213,6 +231,7 @@ where
         window,
         settings.exit_on_close_request,
         emg_graph_rc_refcell.clone(),
+        state,
     ));
 
     let mut context = task::Context::from_waker(task::noop_waker_ref());
@@ -262,6 +281,7 @@ async fn run_instance<A, E, C>(
     window: winit::window::Window,
     exit_on_close_request: bool,
     g: A::GTreeBuilder,
+    mut state: State<A>,
 ) where
     A: Application + 'static,
     E: Executor + 'static,
@@ -286,7 +306,10 @@ async fn run_instance<A, E, C>(
 
     // let ctx = renderer.new_paint_ctx();
     //view
-    let ctx_sa = application.ctx(&g.graph());
+    let root_id = application.root_id();
+
+    let native_events: StateVar<Vector<Event>> = use_state(Vector::new());
+    let (events_sa, ctx_sa) = application.ctx(&g.graph(), &native_events.watch());
     let mut ctx = ctx_sa.get();
     // let mut element = application.view(&g.graph());
 
@@ -295,21 +318,32 @@ async fn run_instance<A, E, C>(
     //base node  = renderer.layout
 
     let mouse_interaction = mouse::Interaction::default();
-    let native_events: Vec<Event> = Vec::new();
+    // let mut native_events: Vec<Event> = Vec::new();
+    let native_events_is_empty = native_events.watch().map(|v| v.is_empty());
     let mut messages = Vec::new();
 
     debug.startup_finished();
 
     while let Some(winit_event) = receiver.next().await {
-        info!(target:"winit event", ?winit_event);
+        // info!(target:"winit event", ?winit_event);
+
         match winit_event {
             event::Event::MainEventsCleared => {
-                if native_events.is_empty() && messages.is_empty() {
+                let _span = info_span!(target:"winit event","MainEventsCleared").entered();
+                if native_events_is_empty.get() && messages.is_empty() {
                     continue;
                 }
                 //NOTE  has events or messages now -------------------
 
                 debug.event_processing_started();
+                info!(target:"winit event","native_events:{:?}", native_events);
+
+                let event_matchs = events_sa.get();
+                for ev in event_matchs.values().flatten() {
+                    ev.call();
+                }
+
+                native_events.set(Vector::new());
 
                 // let (interface_state, statuses) = user_interface.update(
                 //     &events,
@@ -374,7 +408,7 @@ async fn run_instance<A, E, C>(
                 //     },
                 //     state.cursor_position(),
                 // );
-                info!("element painting");
+                info!(target:"winit event","element painting");
                 // element.paint(&mut ctx);
                 ctx = ctx_sa.get();
 
@@ -397,10 +431,15 @@ async fn run_instance<A, E, C>(
             //     ));
             // }
             event::Event::UserEvent(message) => {
+                // let _span = info_span!(target:"winit event","UserEvent").entered();
+                info!(target:"winit event","UserEvent:{:?}",message);
+
                 messages.push(message);
             }
             event::Event::RedrawRequested(_) => {
-                info!("redraw request");
+                // let _span = info_span!(target:"winit event","RedrawRequested").entered();
+                info!(target:"winit event","RedrawRequested");
+
                 // let physical_size = state.physical_size();
 
                 // if physical_size.width == 0 || physical_size.height == 0 {
@@ -476,6 +515,8 @@ async fn run_instance<A, E, C>(
                 }
             }
             event::Event::LoopDestroyed => {
+                let _span = info_span!(target:"winit event","LoopDestroyed").entered();
+
                 renderer.on_loop_destroyed();
             }
 
@@ -483,18 +524,21 @@ async fn run_instance<A, E, C>(
                 event: window_event,
                 ..
             } => {
-                // if requests_exit(&window_event, state.modifiers()) && exit_on_close_request {
-                //     break;
-                // }
+                // let _span = info_span!(target:"winit event","WindowEvent").entered();
+                info!(target:"winit event","WindowEvent:{:?}",window_event);
 
-                // state.update(&window, &window_event, &mut debug);
+                if requests_exit(&window_event, state.modifiers()) && exit_on_close_request {
+                    break;
+                }
 
-                //TODO re impl window_event
-                // if let Some(event) =
-                //     conversion::window_event(&window_event, state.scale_factor(), state.modifiers())
-                // {
-                //     events.push(event);
-                // }
+                state.update(&window, &window_event);
+
+                if let Some(event) =
+                    conversion::window_event(&window_event, state.scale_factor(), state.modifiers())
+                {
+                    // native_events.push(event);
+                    native_events.update(|ev| ev.push_back(event));
+                }
             }
             _ => {}
         }
@@ -648,7 +692,7 @@ mod platform {
     pub fn run<T, F>(
         mut event_loop: winit::event_loop::EventLoop<T>,
         event_handler: F,
-    ) -> Result<(), super::Error>
+    ) -> Result<(), crate::Error>
     where
         F: 'static
             + FnMut(

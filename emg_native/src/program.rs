@@ -1,16 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-12 14:43:52
- * @LastEditTime: 2022-08-29 15:42:35
+ * @LastEditTime: 2022-09-02 17:48:40
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive programs using The Elm Architecture.
-use core::borrow;
-use std::{cell::RefCell, rc::Rc};
 
-use crate::{Command, RenderContext, Widget};
-
+use crate::renderer::RenderContext;
+use crate::Command;
 /// The core of a user interface application following The Elm Architecture.
 pub trait Program: Sized {
     /// The graphics backend to use to draw the [`Program`].

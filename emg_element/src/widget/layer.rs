@@ -1,7 +1,6 @@
 use std::{clone::Clone, cmp::PartialEq};
 
 use emg_common::IdStr;
-use emg_native::Rect;
 use tracing::{info, info_span, instrument, trace, Span};
 
 use crate::GElement;
@@ -25,6 +24,7 @@ pub struct Layer<Message, RenderContext> {
 impl<Message, RenderContext> std::fmt::Debug for Layer<Message, RenderContext>
 where
     RenderContext: 'static,
+    Message: 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Layer")
@@ -96,9 +96,9 @@ impl<Message, RenderContext> Layer<Message, RenderContext> {
 }
 
 #[cfg(all(feature = "gpu"))]
-impl<Message, RenderContext> crate::Widget<Message, RenderContext> for Layer<Message, RenderContext>
+impl<Message, RenderCtx> crate::Widget<Message, RenderCtx> for Layer<Message, RenderCtx>
 where
-    RenderContext: emg_native::RenderContext + Clone + PartialEq + 'static,
+    RenderCtx: crate::RenderContext + Clone + PartialEq + 'static,
     Message: 'static,
     // Message: PartialEq + 'static + std::clone::Clone,
 {
@@ -123,8 +123,8 @@ where
 
     fn paint_sa(
         &self,
-        ctx: emg_state::StateAnchor<emg_native::PaintCtx<RenderContext>>,
-    ) -> emg_state::StateAnchor<emg_native::PaintCtx<RenderContext>> {
+        ctx: &emg_state::StateAnchor<emg_native::PaintCtx<RenderCtx>>,
+    ) -> emg_state::StateAnchor<emg_native::PaintCtx<RenderCtx>> {
         let id = self.id.clone();
         let span = illicit::expect::<Span>();
 
@@ -135,7 +135,7 @@ where
             let rect = new_ctx.size().to_rect();
             if id == "debug_layer" {
                 // new_ctx.fill(rect, &emg_native::Color::rgb8(255, 255, 255));
-                new_ctx.fill(rect, &emg_native::Color::BLACK);
+                new_ctx.fill(rect, &emg_native::renderer::Color::BLACK);
             } else if let Some(fill) = new_ctx.get_fill_color() {
                 info!(parent: &*span,"fill color: {:?}", &fill);
                 new_ctx.fill(rect, &fill);
@@ -145,13 +145,17 @@ where
                     info!(parent: &*span,"border width: {:?} color: {:?}", &bw, &bc);
                     new_ctx.stroke(rect, &bc, bw);
                 } else {
-                    new_ctx.stroke(rect.inset(-bw / 2. - 0.), &emg_native::Color::BLACK, bw);
+                    new_ctx.stroke(
+                        rect.inset(-bw / 2. - 0.),
+                        &emg_native::renderer::Color::BLACK,
+                        bw,
+                    );
                 }
             }
             new_ctx
         });
         for child in &self.children {
-            out_ctx = child.paint_sa(out_ctx.clone());
+            out_ctx = child.paint_sa(&out_ctx);
         }
         out_ctx
         // self.children

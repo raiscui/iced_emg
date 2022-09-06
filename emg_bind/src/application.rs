@@ -1,14 +1,17 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2022-08-29 16:17:44
+ * @LastEditTime: 2022-09-06 15:47:48
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive cross-platform applications.
 
-use emg_element::GTreeBuilderFn;
-use emg_state::StateAnchor;
+use emg::edge_index_no_source;
+use emg_common::{vector, IdStr, Vector};
+use emg_element::{EventNode, GTreeBuilderFn};
+use emg_layout::EPath;
+use emg_state::{Dict, StateAnchor};
 use tracing::instrument;
 
 use crate::{element, window, Command, Executor, Settings};
@@ -67,10 +70,12 @@ pub trait Application: Sized {
     // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
     // fn view(&mut self) -> GElement<Self::Message>;
 
-    fn ctx(
-        &self,
-        g: &element::GraphType<Self::Message>,
-    ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>>;
+    fn root_id(&self) -> &str;
+
+    // fn ctx(
+    //     &self,
+    //     g: &element::GraphType<Self::Message>,
+    // ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>>;
 
     // /// Returns the current [`Theme`] of the [`Application`].
     // ///
@@ -207,10 +212,14 @@ where
 
     fn graph_setup(&self, renderer: &Self::Renderer) -> Self::GTreeBuilder {
         let emg_graph = <Self::GraphType>::default();
-        let root = self.0.tree_build();
+        let tree = self.0.tree_build();
         let emg_graph_rc_refcell: Rc<RefCell<Self::GraphType>> = Rc::new(RefCell::new(emg_graph));
-        emg_graph_rc_refcell.handle_root_in_topo(&root);
+        emg_graph_rc_refcell.handle_root_in_topo(&tree);
         emg_graph_rc_refcell
+    }
+
+    fn root_id(&self) -> &str {
+        self.0.root_id()
     }
 
     // #[instrument(skip(self, g))]
@@ -218,12 +227,30 @@ where
     //     self.0.view(g)
     // }
 
-    #[instrument(skip(self, g))]
+    //build_runtime_sas
+
+    #[instrument(skip(self, g, events))]
     fn ctx(
         &self,
         g: &Self::GraphType,
-    ) -> StateAnchor<crate::runtime::PaintCtx<Self::ImplRenderContext>> {
-        self.0.ctx(g)
+        events: &StateAnchor<Vector<crate::runtime::event::Event>>,
+    ) -> (
+        StateAnchor<Dict<IdStr, Vector<EventNode<Self::Message>>>>,
+        StateAnchor<crate::runtime::PaintCtx<Self::ImplRenderContext>>,
+    ) {
+        let ctx =
+            StateAnchor::constant(crate::runtime::PaintCtx::<Self::ImplRenderContext>::default());
+        let root_id = self.root_id();
+
+        g.get_node_item_use_ix(&IdStr::new(root_id))
+            .unwrap()
+            .build_runtime_sas(
+                &EPath::<IdStr>::new(vector![edge_index_no_source(root_id)]),
+                events,
+                &ctx,
+            )
+
+        // self.0.ctx(g)
     }
 }
 

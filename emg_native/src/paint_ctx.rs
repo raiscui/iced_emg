@@ -1,26 +1,48 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-08-31 17:52:19
+ * @LastEditTime: 2022-09-06 10:27:08
  * @LastEditors: Rais
  * @Description:
  */
 
 mod impl_refresh;
-use std::ops::{Deref, DerefMut};
-
-use crate::Color;
-use emg_common::{na::Translation3, SmallVec, Vector};
-use emg_state::StateAnchor;
-use seed_styles::{
-    bg_color, fill, rgba, CssBackgroundColor, CssBorderColor, CssBorderWidth, CssFill,
+use std::{
+    cell::Cell,
+    ops::{Deref, DerefMut},
+    rc::Rc,
 };
-use tracing::{error, instrument};
 
-use crate::Size;
+use crate::renderer::{Color, Size};
+use emg_common::{na::Translation3, Vector};
+use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
+use tracing::info;
 
 //TODO move to global
 pub const DPR: f64 = 2.0;
+
+#[derive(Clone)]
+pub struct CtxIndex(Rc<Cell<usize>>);
+
+impl Default for CtxIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl CtxIndex {
+    pub fn new() -> Self {
+        Self(Rc::new(Cell::new(0)))
+    }
+
+    pub fn set(&self, val: usize) {
+        self.0.set(val)
+    }
+
+    pub fn get(&self) -> usize {
+        self.0.get()
+    }
+}
 
 #[derive(Clone, Default, PartialEq)]
 pub struct PaintCtx<RenderContext> {
@@ -38,11 +60,11 @@ pub struct PaintCtx<RenderContext> {
     // pub(crate) depth: u32,
 }
 
-impl<RenderContext> PaintCtx<RenderContext>
+impl<RenderCtx> PaintCtx<RenderCtx>
 where
-    RenderContext: crate::RenderContext,
+    RenderCtx: crate::renderer::RenderContext,
 {
-    pub fn new(widget_state: WidgetState, render_ctx: RenderContext) -> Self {
+    pub fn new(widget_state: WidgetState, render_ctx: RenderCtx) -> Self {
         Self {
             widget_state,
             render_ctx,
@@ -101,6 +123,26 @@ where
             .save()
             .expect("Failed to save RenderContext");
     }
+
+    pub fn save_assert(&mut self, index: &CtxIndex) {
+        // let s_len = self.widget_state_stack.len();
+        index.set(self.widget_state_stack.len());
+
+        // let index_len = index.get();
+        // info!("[save_assert], s_len: {} index_len: {} ", s_len, index_len);
+
+        self.save();
+    }
+    pub fn restore_assert(&mut self, index: &CtxIndex) {
+        self.restore();
+        let s_len = self.widget_state_stack.len();
+        let index_len = index.get();
+        // info!(
+        //     "[restore_assert], s_len: {} index_len: {}",
+        //     s_len, index_len
+        // );
+        assert!(s_len == index_len);
+    }
     pub fn restore(&mut self) {
         self.render_ctx
             .restore()
@@ -113,7 +155,7 @@ where
         self.widget_state = widget_state;
     }
 
-    pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx<RenderContext>)) {
+    pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx<RenderCtx>)) {
         self.render_ctx
             .save()
             .expect("Failed to save RenderContext");
@@ -313,7 +355,7 @@ impl WidgetState {
     // }
 
     #[inline]
-    pub(crate) fn size(&self) -> Size {
+    pub fn size(&self) -> Size {
         self.size
     }
 

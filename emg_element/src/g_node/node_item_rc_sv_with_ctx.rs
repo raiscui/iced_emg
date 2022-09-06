@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2022-08-31 18:48:13
+ * @LastEditTime: 2022-09-06 22:54:16
  * @LastEditors: Rais
  * @Description: 
  */
@@ -27,7 +27,7 @@ use emg_state::{
 use tracing::{debug, error, trace, trace_span, info_span, info, event, Level, warn};
 // use vec_string::VecString;
 
-use crate::{GElement, NodeBuilderWidget};
+use crate::{GElement, NodeBuilderWidget, node_builder::EventNode};
 
 use super::{EmgNodeItem, PathDict};
 
@@ -262,13 +262,12 @@ where
                                     }
                                 })
                                 .map(move |gel| {
-                                    // if gel.is_event_() {
-                                    //     //Left event
-                                    //     (current_child_ei.clone(), Left(gel.clone()))
-                                    // } else {
-                                    //     (current_child_ei.clone(), Right(gel.clone()))
-                                    // }
+                                    if gel.is_event_() {
+                                        //Left event
+                                        (current_child_ei.clone(), Left(gel.clone()))
+                                    } else {
                                         (current_child_ei.clone(), Right(gel.clone()))
+                                    }
 
                                 });
 
@@ -384,6 +383,8 @@ where
                         if let Some(child_gel) =
                             children.get(eix).and_then(|child| child.as_ref().right())
                         {
+                            //NOTE should all builder
+                            info!("child: {:?}",child_gel);
                             debug_assert!(!child_gel.is_node_ref_());
                             // if child_gel.is_node_ref_() {
                             //     let refs =child_gel.as_node_ref_().unwrap();
@@ -428,6 +429,7 @@ where
                                 if let Some(event_gel) =
                                     children.get(eix).and_then(|child| child.as_ref().left())
                                 {
+                                    info!("will refresh_for node builder : {:?}", event_gel);
                                     node_builder_widget.refresh_for_use(event_gel.as_ref());
                                 }
                             }
@@ -437,6 +439,7 @@ where
                             //         node_builder_widget.refresh_for_use(event_gel);
                             //     }
                             // }
+
 
                             Rc::new(GElement::Builder_(
                                 // node_builder_widget.and_widget(gel_clone),
@@ -480,14 +483,22 @@ where
         self.gel_sa.get_rc()
     }
 
-    pub fn build_ctx_sa(&self,eix: &EPath<IdStr>, ctx:StateAnchor< PaintCtx<RenderCtx>>) ->StateAnchor<PaintCtx<RenderCtx>>
+    pub fn build_runtime_sas(&self,eix: &EPath<IdStr>,events:&StateAnchor<Vector<emg_native::event::Event>>, ctx:&StateAnchor< PaintCtx<RenderCtx>>) ->(StateAnchor<Dict<IdStr, Vector<EventNode<Message>>>>,StateAnchor<PaintCtx<RenderCtx>>)
     where RenderCtx:Clone +PartialEq
     {       
+        let ctx_clone=ctx.clone();
+        let events_clone = events.clone();
+
+        let event_matchs = self.get_view_gelement_sa(eix).then(move |gel|{
+            gel.as_builder().unwrap().event_build(&events_clone).into_anchor()
+        });
+        
         //TODO eix use anchor instead
-            self.get_view_gelement_sa(eix).then(move |gel|{
-                let ctx_clone = ctx.clone();
-                let gel_clone =gel.clone();
-                gel_clone.paint_sa(ctx_clone).get_anchor()
-            })
+        let ctx_sa = self.get_view_gelement_sa(eix).then(move |gel|{
+            gel.paint_sa(&ctx_clone).get_anchor()
+        });
+
+        (event_matchs,ctx_sa)
     }
+
 }

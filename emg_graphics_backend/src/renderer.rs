@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-15 21:17:17
- * @LastEditTime: 2022-08-21 01:01:31
+ * @LastEditTime: 2022-09-02 19:15:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -51,7 +51,7 @@ impl<B: Backend> Renderer<B> {
     // }
 }
 
-impl<B: Backend> emg_native::Renderer for Renderer<B> {
+impl<B: Backend> emg_native::renderer::Renderer for Renderer<B> {
     type ImplRenderContext = <B as Backend>::ImplRenderContext;
 
     fn new_paint_ctx(&self) -> PaintCtx<Self::ImplRenderContext> {

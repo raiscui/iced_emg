@@ -1,6 +1,7 @@
-use crate::PaintCtx;
-use emg_native::{Program, Renderer, Widget};
-use emg_state::StateAnchor;
+use crate::{node_builder::EventNode, PaintCtx};
+use emg_common::{IdStr, Vector};
+use emg_native::{renderer::Renderer, Event, Program, Widget};
+use emg_state::{Dict, StateAnchor};
 use std::ops::Deref;
 
 use crate::GTreeBuilderElement;
@@ -8,7 +9,7 @@ use crate::GTreeBuilderElement;
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2022-08-29 16:18:02
+ * @LastEditTime: 2022-09-06 15:36:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -32,5 +33,13 @@ pub trait GraphProgram: Program {
     fn graph_setup(&self, renderer: &Self::Renderer) -> Self::GTreeBuilder;
 
     // fn view(&self, g: &Self::GraphType) -> Self::RefedGelType;
-    fn ctx(&self, g: &Self::GraphType) -> StateAnchor<PaintCtx<Self::ImplRenderContext>>;
+    fn root_id(&self) -> &str;
+    fn ctx(
+        &self,
+        g: &Self::GraphType,
+        events: &StateAnchor<Vector<Event>>,
+    ) -> (
+        StateAnchor<Dict<IdStr, Vector<EventNode<Self::Message>>>>,
+        StateAnchor<PaintCtx<Self::ImplRenderContext>>,
+    );
 }
