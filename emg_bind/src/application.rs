@@ -1,16 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2022-09-06 15:47:48
+ * @LastEditTime: 2022-09-08 16:02:02
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive cross-platform applications.
 
-use emg::edge_index_no_source;
-use emg_common::{vector, IdStr, Vector};
-use emg_element::{EventNode, GTreeBuilderFn};
-use emg_layout::EPath;
+use emg_common::{IdStr, Vector};
+use emg_element::{EventNode, GTreeBuilderFn, GraphMethods};
 use emg_state::{Dict, StateAnchor};
 use tracing::instrument;
 
@@ -242,15 +240,15 @@ where
             StateAnchor::constant(crate::runtime::PaintCtx::<Self::ImplRenderContext>::default());
         let root_id = self.root_id();
 
-        g.get_node_item_use_ix(&IdStr::new(root_id))
-            .unwrap()
-            .build_runtime_sas(
-                &EPath::<IdStr>::new(vector![edge_index_no_source(root_id)]),
-                events,
-                &ctx,
-            )
+        // g.get_node_item_use_ix(&IdStr::new(root_id))
+        //     .unwrap()
+        //     .build_runtime_sas(
+        //         &EPath::<IdStr>::new(vector![edge_index_no_source(root_id)]),
+        //         events,
+        //         &ctx,
+        //     )
 
-        // self.0.ctx(g)
+        g.runtime_prepare(&IdStr::new(root_id), events, &ctx)
     }
 }
 
@@ -264,7 +262,7 @@ where
     fn new(flags: Self::Flags) -> (Self, Command<A::Message>) {
         let (app, command) = A::new(flags);
 
-        (Instance(app), command)
+        (Self(app), command)
     }
 
     fn title(&self) -> String {

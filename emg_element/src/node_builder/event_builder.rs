@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-05 20:56:05
- * @LastEditTime: 2022-09-05 20:56:08
+ * @LastEditTime: 2022-09-07 12:49:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -46,6 +46,10 @@ impl<Message> EventBuilder<Message> {
             event_callbacks: Dict::new(),
         }
     }
+
+    pub fn event_callbacks(&self) -> &Dict<EventNameString, Vector<EventNode<Message>>> {
+        &self.event_callbacks
+    }
 }
 
 impl<Message> EventBuilder<Message> {
@@ -55,7 +59,7 @@ impl<Message> EventBuilder<Message> {
         event_node: EventNode<Message>,
     ) {
         let entry = self.event_callbacks.entry(event_name);
-        let v = entry.or_insert_with(|| Vector::new());
+        let v = entry.or_insert_with(Vector::new);
         v.push_back(event_node);
     }
     // fn register_event(

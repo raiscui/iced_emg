@@ -15,15 +15,15 @@ type LayerChildren<Message, RenderContext> = Vec<GElement<Message, RenderContext
 //TODO remove all missing_debug_implementations
 #[allow(missing_debug_implementations)]
 #[derive(Eq)]
-pub struct Layer<Message, RenderContext> {
+pub struct Layer<Message, RenderCtx> {
     id: IdStr,
     //TODO vec?
-    children: LayerChildren<Message, RenderContext>,
+    children: LayerChildren<Message, RenderCtx>,
 }
 
-impl<Message, RenderContext> std::fmt::Debug for Layer<Message, RenderContext>
+impl<Message, RenderCtx> std::fmt::Debug for Layer<Message, RenderCtx>
 where
-    RenderContext: 'static,
+    RenderCtx: 'static,
     Message: 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -57,21 +57,21 @@ impl<Message, RenderContext> Default for Layer<Message, RenderContext> {
     }
 }
 
-impl<Message, RenderContext> Layer<Message, RenderContext> {
+impl<Message, RenderCtx> Layer<Message, RenderCtx> {
     /// Creates an empty [`Layer`].
     #[must_use]
     pub fn new(id: IdStr) -> Self {
-        Self::with_children(id, LayerChildren::<Message, RenderContext>::new())
+        Self::with_children(id, LayerChildren::<Message, RenderCtx>::new())
     }
 
     /// Creates a [`Layer`] with the given elements.
     #[must_use]
-    pub fn with_children(id: IdStr, children: LayerChildren<Message, RenderContext>) -> Self {
+    pub fn with_children(id: IdStr, children: LayerChildren<Message, RenderCtx>) -> Self {
         Self { id, children }
     }
 
     #[must_use]
-    pub fn set_children(mut self, children: LayerChildren<Message, RenderContext>) -> Self {
+    pub fn set_children(mut self, children: LayerChildren<Message, RenderCtx>) -> Self {
         self.children = children;
         self
     }
@@ -90,7 +90,7 @@ impl<Message, RenderContext> Layer<Message, RenderContext> {
     //     self
     // }
 
-    pub fn push(&mut self, child: GElement<Message, RenderContext>) {
+    pub fn push(&mut self, child: GElement<Message, RenderCtx>) {
         self.children.push(child);
     }
 }

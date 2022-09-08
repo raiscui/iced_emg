@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-09-07 00:00:11
+ * @LastEditTime: 2022-09-08 15:53:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -523,13 +523,16 @@ where
         self.event_builder
             .register_listener(event_callback.get_name(), event_callback);
     }
-    pub fn event_build(
+    pub fn event_matchs(
         &self,
         events_sa: &StateAnchor<Vector<emg_native::event::Event>>,
     ) -> StateAnchor<Dict<IdStr, Vector<EventNode<Message>>>> {
         let event_callbacks = self.event_builder.event_callbacks.clone();
 
         let cb_matchs_sa = (events_sa, &self.widget_state).map(move |events, state| {
+            if events.is_empty() {
+                return Dict::default();
+            }
             let _size = state.size().to_rect();
 
             let e_str_s = events.iter().map(|e| e.to_str()).collect::<Vec<_>>();
@@ -549,6 +552,10 @@ where
             cb_matchs
         });
         cb_matchs_sa
+    }
+
+    pub fn event_callbacks(&self) -> &Dict<EventNameString, Vector<EventNode<Message>>> {
+        self.event_builder.event_callbacks()
     }
 }
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2022-09-06 22:54:39
+ * @LastEditTime: 2022-09-08 15:56:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -428,6 +428,14 @@ impl<Message, RenderCtx> GElement<Message, RenderCtx>
         } else {
             None
         }
+    }
+
+    /// Returns `true` if the gelement is [`Builder_`].
+    ///
+    /// [`Builder_`]: GElement::Builder_
+    #[must_use]
+    pub fn is_builder(&self) -> bool {
+        matches!(self, Self::Builder_(..))
     }
 }
 

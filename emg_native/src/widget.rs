@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2022-09-06 12:23:08
+ * @LastEditTime: 2022-09-08 15:52:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,10 +28,7 @@ use emg_state::StateAnchor;
 
 use crate::Bus;
 
-pub trait Widget<Message, RenderCtx>: DynClone + DynPartialEq
-where
-    RenderCtx: crate::renderer::RenderContext,
-{
+pub trait Widget<Message, RenderCtx>: DynClone + DynPartialEq {
     // fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
     // fn xx(&self, _bus: &Bus<Message>) {}
