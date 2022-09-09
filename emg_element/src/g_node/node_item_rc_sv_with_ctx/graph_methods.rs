@@ -1,16 +1,17 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2022-09-08 16:36:43
+ * @LastEditTime: 2022-09-09 12:11:12
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg::{edge_index_no_source, NodeIndex, Outgoing};
-use emg_common::{vector, IdStr, Vector};
+use emg_common::{vector, IdStr, Pos, Vector};
 use emg_layout::EPath;
 use emg_native::{Event, PaintCtx, Widget};
 use emg_state::{Anchor, AnchorMultiAnchor, Dict, StateAnchor};
+use tracing::debug;
 
 use crate::EventNode;
 
@@ -19,15 +20,17 @@ pub trait GraphMethods<Message, RenderCtx, Ix = IdStr> {
     fn runtime_prepare(
         &self,
         ix: &IdStr,
-        events_sa: &StateAnchor<Vector<Event>>,
         ctx: &StateAnchor<PaintCtx<RenderCtx>>,
+        events_sa: &StateAnchor<Vector<Event>>,
+        cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (EventMatchsSa<Message>, StateAnchor<PaintCtx<RenderCtx>>);
 
     #[allow(clippy::type_complexity)]
     fn get_out_going_event_callbacks(
         &self,
-        events_sa: &StateAnchor<Vector<Event>>,
         nix: &NodeIndex<IdStr>,
+        events_sa: &StateAnchor<Vector<Event>>,
+        cursor_position: &StateAnchor<Option<Pos>>,
     ) -> Vector<Anchor<Vector<Dict<IdStr, Vector<EventNode<Message>>>>>>;
 }
 impl<Message, RenderCtx> GraphMethods<Message, RenderCtx> for GraphType<Message, RenderCtx>
@@ -68,15 +71,17 @@ where
     //         .filter_map(move |_k, gel| gel.as_builder().map(|nb| nb.event_matchs(&events)));
     // }
 
-    #[tracing::instrument(skip(self, events_sa, ctx))]
+    #[tracing::instrument(skip(self, events_sa, ctx, cursor_position))]
     fn runtime_prepare(
         &self,
         ix: &IdStr,
-        events_sa: &StateAnchor<Vector<Event>>,
         ctx: &StateAnchor<PaintCtx<RenderCtx>>,
+        events_sa: &StateAnchor<Vector<Event>>,
+        cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (EventMatchsSa<Message>, StateAnchor<PaintCtx<RenderCtx>>) {
+        debug!("runtime prepare start");
         let events = events_sa.clone();
-
+        let cursor_position_clone = cursor_position.clone();
         let gel_rc_sa =
             self.get_node_item_use_ix(ix)
                 .unwrap()
@@ -86,53 +91,67 @@ where
         let self_event_nodes = gel_rc_sa.then(move |gel| {
             gel.as_builder()
                 .unwrap()
-                .event_matchs(&events)
+                .event_matchs(&events, &cursor_position_clone)
                 .into_anchor()
         });
 
         let children_event_matchs = self
-            .get_out_going_event_callbacks(events_sa, &NodeIndex::new(ix.clone()))
+            .get_out_going_event_callbacks(&NodeIndex::new(ix.clone()), events_sa, cursor_position)
             .into_iter()
             .collect::<Anchor<Vector<_>>>();
 
         let event_matchs: EventMatchsSa<Message> =
             (self_event_nodes.anchor(), &children_event_matchs)
                 .map(|s, children| {
+                    debug!("child EventMatchsSa start");
+
                     let children_flatten = children.clone().into_iter().flatten();
                     let children_event_nodes_dict =
                         Dict::unions_with(children_flatten, |mut old, new| {
                             old.append(new);
                             old
                         });
-                    s.clone()
+                    let res = s
+                        .clone()
                         .union_with(children_event_nodes_dict, |mut old, new| {
                             old.append(new);
                             old
-                        })
+                        });
+                    debug!("child EventMatchsSa end");
+
+                    res
                 })
                 .into();
 
         let ctx_clone = ctx.clone();
 
         let ctx_sa = gel_rc_sa.then(move |gel| gel.paint_sa(&ctx_clone).into_anchor());
+        debug!("runtime prepare end");
+
         (event_matchs, ctx_sa)
     }
 
     fn get_out_going_event_callbacks(
         &self,
-        events_sa: &StateAnchor<Vector<Event>>,
         nix: &NodeIndex<IdStr>,
+        events_sa: &StateAnchor<Vector<Event>>,
+        cursor_position: &StateAnchor<Option<Pos>>,
     ) -> Vector<Anchor<Vector<Dict<IdStr, Vector<EventNode<Message>>>>>> {
         let out_goings = self.neighbors_consuming_iter(nix, Outgoing);
         out_goings.fold(Vector::default(), |mut vec, node| {
             let events = events_sa.clone();
-            let node_item = self.get_node_item(&node).unwrap();
-            let event_cbs = node_item
+            let cursor_position_clone = cursor_position.clone();
+            let one_node_item = self.get_node_item(&node).unwrap();
+            let event_cbs = one_node_item
                 .paths_view_gel
                 .filter_map(move |_k, gel| {
                     gel.as_builder()
                         // .map(|nb_widget| nb_widget.event_callbacks().clone())
-                        .map(|nb_widget| nb_widget.event_matchs(&events).into_anchor())
+                        .map(|nb_widget| {
+                            nb_widget
+                                .event_matchs(&events, &cursor_position_clone)
+                                .into_anchor()
+                        })
                 })
                 .then(|dict| {
                     dict.values().collect::<Anchor<Vector<_>>>()
@@ -145,7 +164,8 @@ where
                 })
                 .into_anchor();
             vec.push_back(event_cbs);
-            let children_event_nodes = self.get_out_going_event_callbacks(events_sa, &node);
+            let children_event_nodes =
+                self.get_out_going_event_callbacks(&node, events_sa, cursor_position);
             vec.append(children_event_nodes);
             vec
         })

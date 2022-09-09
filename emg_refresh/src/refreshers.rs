@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2022-08-30 16:44:32
+ * @LastEditTime: 2022-09-09 09:45:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -123,15 +123,16 @@ pub trait TryRefreshUse {
 pub trait RefreshFor<Who> {
     fn refresh_for(&self, who: &mut Who);
 }
-impl<Who, Use> RefreshFor<Who> for Use {
-    default fn refresh_for(&self, _el: &mut Who) {
-        error!(
-            "this is un implemented yet use {} refresh_for {}",
-            std::any::type_name::<Use>(),
-            std::any::type_name::<Who>()
-        );
-    }
-}
+//TODO make a cargo future enable this, make can tracing
+// impl<Who, Use> RefreshFor<Who> for Use {
+//     default fn refresh_for(&self, _el: &mut Who) {
+//         error!(
+//             "this is un implemented yet use {} refresh_for {}",
+//             std::any::type_name::<Use>(),
+//             std::any::type_name::<Who>()
+//         );
+//     }
+// }
 
 // impl<Who> std::fmt::Debug for &dyn RefreshFor<Who>
 // where

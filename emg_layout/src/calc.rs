@@ -4,7 +4,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-08-31 09:28:26
+ * @LastEditTime: 2022-09-08 22:37:32
  * @LastEditors: Rais
 * @Description:
 */
@@ -446,6 +446,10 @@ where
                         
             });
 
+            let world = (&p_calculated.world,&calculated_translation).map(|pw,t|{
+                pw*t
+            });
+
             LayoutCalculated {
                 // suggest_size: suggest_calculated_size,
                 size_constraints,
@@ -459,6 +463,7 @@ where
                 matrix,
                 // • • • • •
                 loc_styles,
+                world
             }
     
 }

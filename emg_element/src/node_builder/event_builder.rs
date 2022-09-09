@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-05 20:56:05
- * @LastEditTime: 2022-09-07 12:49:23
+ * @LastEditTime: 2022-09-09 09:51:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,11 +14,11 @@ use super::EventNameString;
 
 use emg_state::Dict;
 
-pub struct EventBuilder<Message> {
+pub struct EventListener<Message> {
     pub(crate) event_callbacks: Dict<EventNameString, Vector<EventNode<Message>>>,
 }
 
-impl<Message> std::fmt::Debug for EventBuilder<Message> {
+impl<Message> std::fmt::Debug for EventListener<Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EventBuilder")
             .field("event_callbacks", &self.event_callbacks)
@@ -26,7 +26,7 @@ impl<Message> std::fmt::Debug for EventBuilder<Message> {
     }
 }
 
-impl<Message> Clone for EventBuilder<Message> {
+impl<Message> Clone for EventListener<Message> {
     fn clone(&self) -> Self {
         Self {
             event_callbacks: self.event_callbacks.clone(),
@@ -34,13 +34,13 @@ impl<Message> Clone for EventBuilder<Message> {
     }
 }
 
-impl<Message> PartialEq for EventBuilder<Message> {
+impl<Message> PartialEq for EventListener<Message> {
     fn eq(&self, other: &Self) -> bool {
         self.event_callbacks == other.event_callbacks
     }
 }
 
-impl<Message> EventBuilder<Message> {
+impl<Message> EventListener<Message> {
     pub fn new() -> Self {
         Self {
             event_callbacks: Dict::new(),
@@ -52,7 +52,7 @@ impl<Message> EventBuilder<Message> {
     }
 }
 
-impl<Message> EventBuilder<Message> {
+impl<Message> EventListener<Message> {
     pub(crate) fn register_listener(
         &mut self,
         event_name: EventNameString,

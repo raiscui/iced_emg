@@ -98,7 +98,9 @@ impl<T> Application for T
 where
     T: Sandbox,
 {
-    type Executor = emg_futures::backend::null::Executor;
+    //TODO use cargo.toml choose emg_futures backend
+    // type Executor = emg_futures::backend::null::Executor;
+    type Executor = emg_futures::backend::default::Executor;
     type Flags = ();
     type Message = T::Message;
 

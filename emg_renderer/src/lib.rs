@@ -1,5 +1,6 @@
 // ────────────────────────────────────────────────────────────────────────────────
 pub use piet::kurbo::Affine;
+pub use piet::kurbo::Point;
 pub use piet::kurbo::Rect;
 pub use piet::kurbo::Size;
 pub use piet::kurbo::Vec2;

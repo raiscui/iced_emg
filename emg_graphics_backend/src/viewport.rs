@@ -1,33 +1,53 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-02 20:24:27
- * @LastEditTime: 2022-09-03 14:09:59
+ * @LastEditTime: 2022-09-09 13:05:59
  * @LastEditors: Rais
  * @Description:
  */
 
+use std::{cell::Cell, rc::Rc};
+
 use emg_common::na;
-use emg_state::CloneStateVar;
+use emg_state::{reset_state, CloneStateVar, StateVar};
 /// A viewing region for displaying computer graphics.
 #[derive(Debug, Clone)]
 pub struct Viewport {
     physical_size: na::Vector2<u32>,
     logical_size: na::Vector2<f32>,
-    scale_factor: f64,
+    scale_factor: Rc<Cell<f64>>,
     // projection: Transformation,
 }
 
 impl Viewport {
     /// Creates a new [`Viewport`] with the given physical dimensions and scale
     /// factor.
-    pub fn with_physical_size(size: na::Vector2<u32>, scale_factor: f64) -> Viewport {
+    pub fn new(size: na::Vector2<u32>, scale_factor: f64) -> Viewport {
         let res = Viewport {
             physical_size: size,
-            logical_size: na::Vector2::<f32>::new(
-                (size.x as f64 / scale_factor) as f32,
-                (size.y as f64 / scale_factor) as f32,
-            ),
-            scale_factor,
+            logical_size: (size.cast::<f64>() / scale_factor).cast(),
+            // logical_size: na::Vector2::<f32>::new(
+            //     (size.x as f64 / scale_factor) as f32,
+            //     (size.y as f64 / scale_factor) as f32,
+            // ),
+            scale_factor: Rc::new(Cell::new(scale_factor)),
+            // projection: Transformation::orthographic(size.width, size.height),
+        };
+        //TODO when multiple window, will have multiple global_size
+        res.setup_global_size();
+        res
+    }
+    pub fn with_physical_size(&self, size: na::Vector2<u32>, scale_factor: f64) -> Viewport {
+        self.scale_factor.set(scale_factor);
+
+        let res = Viewport {
+            physical_size: size,
+            logical_size: (size.cast::<f64>() / scale_factor).cast(),
+            // logical_size: na::Vector2::<f32>::new(
+            //     (size.x as f64 / scale_factor) as f32,
+            //     (size.y as f64 / scale_factor) as f32,
+            // ),
+            scale_factor: self.scale_factor.clone(),
             // projection: Transformation::orthographic(size.width, size.height),
         };
         //TODO when multiple window, will have multiple global_size
@@ -60,13 +80,15 @@ impl Viewport {
         self.logical_size
     }
 
-    /// Returns the scale factor of the [`Viewport`].
-    pub fn scale_factor(&self) -> f64 {
-        self.scale_factor
-    }
-
     // /// Returns the projection transformation of the [`Viewport`].
     // pub fn projection(&self) -> Transformation {
     //     self.projection
     // }
+
+    pub fn scale_factor_rc(&self) -> Rc<Cell<f64>> {
+        self.scale_factor.clone()
+    }
+    pub fn scale_factor(&self) -> f64 {
+        self.scale_factor.get()
+    }
 }

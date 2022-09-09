@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-08-31 09:49:36
+ * @LastEditTime: 2022-09-09 12:33:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -1850,6 +1850,34 @@ where
     } else {
     }
     StateVar::new(id)
+}
+
+#[must_use]
+#[topo::nested]
+pub fn reset_state<T>(data: T) -> StateVar<T>
+where
+    T: 'static + Clone,
+{
+    // info!(
+    //     "use_state::({}) \n data: {:?}",
+    //     &std::any::type_name::<T>(),
+    //     &data
+    // );
+
+    let loc = Location::caller();
+    trace!("use_state::at:\n{}", &loc);
+
+    let id = topo::CallId::current();
+    let id = TopoKey { id };
+
+    if state_exists_for_topo_id::<T>(id) {
+        let old = StateVar::<T>::new(id);
+        old.set(data);
+        old
+    } else {
+        insert_var_with_topo_id::<T>(Var::new(data), id);
+        StateVar::new(id)
+    }
 }
 
 // pub fn add_similar<T>(func:F)

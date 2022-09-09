@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2022-09-07 00:01:53
+ * @LastEditTime: 2022-09-09 13:05:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,13 +25,8 @@ use emg_native::{program::Program, renderer::Renderer, Event};
 use emg_state::CloneStateAnchor;
 use tracing::{info, info_span, instrument};
 
-use static_init::dynamic;
-
 // use emg_native::user_interface::{self, UserInterface};
 // ────────────────────────────────────────────────────────────────────────────────
-
-#[dynamic]
-static G_POS: emg_state::StateVar<Option<winit::dpi::PhysicalPosition<f64>>> = use_state(None);
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -309,7 +304,8 @@ async fn run_instance<A, E, C>(
     let root_id = application.root_id();
 
     let native_events: StateVar<Vector<Event>> = use_state(Vector::new());
-    let (events_sa, ctx_sa) = application.ctx(&g.graph(), &native_events.watch());
+    let (event_matchs_sa, ctx_sa) =
+        application.ctx(&g.graph(), &native_events.watch(), state.cursor_position());
     let mut ctx = ctx_sa.get();
     // let mut element = application.view(&g.graph());
 
@@ -338,11 +334,10 @@ async fn run_instance<A, E, C>(
                 debug.event_processing_started();
                 info!(target:"winit event","native_events:{:?}", native_events);
 
-                let event_matchs = events_sa.get();
+                let event_matchs = event_matchs_sa.get();
                 for ev in event_matchs.values().flatten() {
                     ev.call();
                 }
-
                 native_events.set(Vector::new());
 
                 // let (interface_state, statuses) = user_interface.update(

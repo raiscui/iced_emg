@@ -1,6 +1,6 @@
 #![feature(fn_traits)]
 #![feature(specialization)]
-
+// #![feature(trivial_bounds)] // for emg_state::StateAnchor<emg_common::nalgebra::Translation<f64, 3>>: emg_refresh::RefreshWhoNoWarper;
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod bus;
 pub mod clipboard;
@@ -47,6 +47,11 @@ pub use bus::Bus;
 pub use widget::Widget;
 
 // ────────────────────────────────────────────────────────────────────────────────
+use emg_state::use_state;
+use static_init::dynamic;
+
+#[dynamic]
+pub static G_POS: emg_state::StateVar<Option<Pos<f64>>> = use_state(None);
 
 // ────────────────────────────────────────────────────────────────────────────────
 

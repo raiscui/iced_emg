@@ -411,13 +411,13 @@ where
                     //     }
                     // }
                     //TODO build edge info into [NodeBuilderWidget]
-                    match NodeBuilderWidget::<Message, RenderCtx>::try_new_use(gel_clone,&edge_ctx) {
+                    match NodeBuilderWidget::<Message, RenderCtx>::try_new_use(&nix4,gel_clone,&edge_ctx) {
                         Ok(mut node_builder_widget) => {
                             
                             let _g = trace_span!("-> in NodeBuilderWidget").entered();
                             trace!("[combine view gel] NodeBuilderWidget::<Message>::try_from  OK");
                             // node_builder_widget.set_id(format!("{}", cix));
-                            node_builder_widget.set_id(nix4.clone());
+                            // node_builder_widget.set_id(.clone());
 
                             // // TODO use StateAnchor ? for child edge change
                             // trace!("[combine view gel] edge::path:  {}", path3);

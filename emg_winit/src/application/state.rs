@@ -1,12 +1,11 @@
 use crate::conversion;
 use crate::{Application, Debug, Mode, Viewport};
 use emg_common::{na, Pos};
-use emg_state::{CloneStateVar, StateAnchor};
-use std::marker::PhantomData;
+use emg_native::G_POS;
+use emg_state::{CloneStateVar, StateAnchor, StateMultiAnchor, StateVar};
+use std::{cell::Cell, marker::PhantomData, rc::Rc};
 use winit::event::{Touch, WindowEvent};
 use winit::window::Window;
-
-use super::G_POS;
 
 /// The state of a windowed [`Application`].
 #[allow(missing_debug_implementations)]
@@ -33,17 +32,20 @@ impl<A: Application> State<A> {
         let viewport = {
             let physical_size = window.inner_size();
 
-            Viewport::with_physical_size(
+            Viewport::new(
                 na::Vector2::<u32>::new(physical_size.width, physical_size.height),
                 window.scale_factor() * scale_factor,
             )
         };
+        let cursor_position = {
+            let scale_factor_rc = viewport.scale_factor_rc();
 
-        let cursor_position = G_POS.watch().map(move |opt_pos| {
-            opt_pos
-                .as_ref()
-                .map(|pos| conversion::cursor_position(pos, scale_factor))
-        });
+            G_POS.watch().map(move |opt_pos| {
+                opt_pos
+                    .as_ref()
+                    .map(|pos| conversion::cursor_na_position(pos, scale_factor_rc.get()))
+            })
+        };
 
         Self {
             title,
@@ -84,6 +86,9 @@ impl<A: Application> State<A> {
     pub fn scale_factor(&self) -> f64 {
         self.viewport.scale_factor()
     }
+    pub fn scale_factor_rc(&self) -> Rc<Cell<f64>> {
+        self.viewport.scale_factor_rc()
+    }
 
     // /// Returns the current cursor position of the [`State`].
     // pub fn cursor_position(&self) -> Pos {
@@ -117,8 +122,9 @@ impl<A: Application> State<A> {
             WindowEvent::Resized(new_size) => {
                 let size = na::Vector2::<u32>::new(new_size.width, new_size.height);
 
-                self.viewport =
-                    Viewport::with_physical_size(size, window.scale_factor() * self.scale_factor);
+                self.viewport = self
+                    .viewport
+                    .with_physical_size(size, window.scale_factor() * self.scale_factor);
 
                 self.viewport_version = self.viewport_version.wrapping_add(1);
             }
@@ -128,8 +134,9 @@ impl<A: Application> State<A> {
             } => {
                 let size = na::Vector2::<u32>::new(new_inner_size.width, new_inner_size.height);
 
-                self.viewport =
-                    Viewport::with_physical_size(size, new_scale_factor * self.scale_factor);
+                self.viewport = self
+                    .viewport
+                    .with_physical_size(size, new_scale_factor * self.scale_factor);
 
                 self.viewport_version = self.viewport_version.wrapping_add(1);
             }
@@ -138,7 +145,7 @@ impl<A: Application> State<A> {
                 location: position, ..
             }) => {
                 // self.cursor_position = *position;
-                G_POS.set(Some(*position));
+                G_POS.set(Some(Pos::<f64>::new(position.x, position.y)));
             }
             WindowEvent::CursorLeft { .. } => {
                 // TODO: Encode cursor availability in the type-system
@@ -169,6 +176,7 @@ impl<A: Application> State<A> {
     /// and window after calling [`Application::update`].
     ///
     /// [`Application::update`]: crate::Program::update
+    //TODO use it
     pub fn synchronize(&mut self, application: &A, window: &Window) {
         // Update window title
         let new_title = application.title();
@@ -196,7 +204,7 @@ impl<A: Application> State<A> {
         if self.scale_factor != new_scale_factor {
             let size = window.inner_size();
 
-            self.viewport = Viewport::with_physical_size(
+            self.viewport = self.viewport.with_physical_size(
                 na::Vector2::new(size.width, size.height),
                 window.scale_factor() * new_scale_factor,
             );
@@ -207,5 +215,9 @@ impl<A: Application> State<A> {
         // Update theme and appearance
         // self.theme = application.theme();
         // self.appearance = self.theme.appearance(application.style());
+    }
+
+    pub fn cursor_position(&self) -> &StateAnchor<Option<Pos>> {
+        &self.cursor_position
     }
 }

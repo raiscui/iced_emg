@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2022-09-08 16:02:02
+ * @LastEditTime: 2022-09-09 12:11:25
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive cross-platform applications.
 
-use emg_common::{IdStr, Vector};
+use emg_common::{IdStr, Pos, Vector};
 use emg_element::{EventNode, GTreeBuilderFn, GraphMethods};
 use emg_state::{Dict, StateAnchor};
 use tracing::instrument;
@@ -227,11 +227,12 @@ where
 
     //build_runtime_sas
 
-    #[instrument(skip(self, g, events))]
+    #[instrument(skip(self, g, events, cursor_position))]
     fn ctx(
         &self,
         g: &Self::GraphType,
         events: &StateAnchor<Vector<crate::runtime::event::Event>>,
+        cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (
         StateAnchor<Dict<IdStr, Vector<EventNode<Self::Message>>>>,
         StateAnchor<crate::runtime::PaintCtx<Self::ImplRenderContext>>,
@@ -240,15 +241,7 @@ where
             StateAnchor::constant(crate::runtime::PaintCtx::<Self::ImplRenderContext>::default());
         let root_id = self.root_id();
 
-        // g.get_node_item_use_ix(&IdStr::new(root_id))
-        //     .unwrap()
-        //     .build_runtime_sas(
-        //         &EPath::<IdStr>::new(vector![edge_index_no_source(root_id)]),
-        //         events,
-        //         &ctx,
-        //     )
-
-        g.runtime_prepare(&IdStr::new(root_id), events, &ctx)
+        g.runtime_prepare(&IdStr::new(root_id), &ctx, events, cursor_position)
     }
 }
 

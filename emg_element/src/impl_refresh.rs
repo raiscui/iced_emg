@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-22 16:28:40
- * @LastEditTime: 2022-09-06 21:18:37
+ * @LastEditTime: 2022-09-08 23:41:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -44,9 +44,9 @@ where
                 // who.refresh_use(use_something);
             }
             (Generic_(who), use_something) => {
-                // let dyn_ref = who.as_ref();
+                let dyn_ref = who.as_mut();
                 // use_something.refresh_for(who);
-                who.refresh_use(use_something);
+                dyn_ref.refresh_use(use_something);
             }
 
             // @ Single explicit match

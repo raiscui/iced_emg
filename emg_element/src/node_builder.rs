@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-09-08 15:53:33
+ * @LastEditTime: 2022-09-10 01:16:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,17 +20,17 @@
 mod event_builder;
 use derive_more::From;
 
-use emg_common::{na::Translation3, vector, IdStr, NotNan, Vector};
+use emg_common::{na::Translation3, vector, IdStr, NotNan, Pos, Vector};
 use emg_layout::{EdgeCtx, LayoutEndType};
-use emg_native::{paint_ctx::CtxIndex, WidgetState, DPR};
-use emg_refresh::RefreshForUse;
-use emg_state::{Dict, StateAnchor, StateMultiAnchor};
+use emg_native::{paint_ctx::CtxIndex, renderer::Rect, WidgetState, DPR, G_POS};
+use emg_refresh::{RefreshForUse, RefreshUse};
+use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, info, info_span, instrument, trace, Span};
 
 use crate::{map_fn_callback_return_to_option_ms, widget::Widget, GElement};
 use std::{cell::Cell, collections::VecDeque, rc::Rc, string::String};
 
-use self::event_builder::EventBuilder;
+use self::event_builder::EventListener;
 
 type EventNameString = IdStr;
 
@@ -262,7 +262,7 @@ pub struct NodeBuilderWidget<Message, RenderCtx> {
     widget: Box<GElement<Message, RenderCtx>>,
     //TODO use vec deque
     // event_callbacks: VecDeque<EventNode<Message>>,
-    event_builder: EventBuilder<Message>,
+    event_listener: EventListener<Message>,
     // event_callbacks: Vector<EventNode<Message>>,
     // layout_str: String,
     // layout_end: (Translation3<NotNan<f64>>, NotNan<f64>, NotNan<f64>),
@@ -275,7 +275,7 @@ impl<Message, RenderCtx> PartialEq for NodeBuilderWidget<Message, RenderCtx> {
             && self.widget == other.widget
             // && self.event_callbacks == other.event_callbacks
             && self.widget_state == other.widget_state
-            && self.event_builder == other.event_builder
+            && self.event_listener == other.event_listener
         // && self.layout_str == other.layout_str
     }
 }
@@ -286,7 +286,7 @@ impl<Message, RenderCtx> Clone for NodeBuilderWidget<Message, RenderCtx> {
             id: self.id.clone(),
             widget: self.widget.clone(),
             widget_state: self.widget_state.clone(),
-            event_builder: self.event_builder.clone(),
+            event_listener: self.event_listener.clone(),
         }
     }
 }
@@ -305,7 +305,7 @@ impl<Message, RenderContext> std::fmt::Debug for NodeBuilderWidget<Message, Rend
 
         f.debug_struct("NodeBuilderWidget")
             .field("widget", &widget)
-            .field("event_builder", &self.event_builder)
+            .field("event_listener", &self.event_listener)
             .field("widget_state", &self.widget_state)
             .finish()
     }
@@ -326,7 +326,11 @@ where
     Message: 'static,
     RenderCtx: 'static,
 {
-    fn new(gel: GElement<Message, RenderCtx>, edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>) -> Self {
+    fn new(
+        ix: &IdStr,
+        gel: GElement<Message, RenderCtx>,
+        edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>,
+    ) -> Self {
         //TODO check in debug , combine  use  try_new_use
         match &gel {
             // Builder_(_builder) => {
@@ -365,13 +369,23 @@ where
             |EdgeCtx {
                  styles_end,
                  layout_end,
+                 world,
+                 children_layout_override,
                  ..
              }| {
+                let world_clone = world.clone();
+                let children_layout_override_clone = children_layout_override.clone();
                 (styles_end, layout_end)
-                    .map(|styles, &(trans, w, h)| {
-                        let new_widget_state = WidgetState::new((w, h), trans);
+                    .map(move |styles, &(trans, w, h)| {
+                        let new_widget_state = WidgetState::new(
+                            (w, h),
+                            trans,
+                            world_clone.clone(),
+                            children_layout_override_clone.clone(),
+                        );
                         styles.values().fold(new_widget_state, |mut ws, x| {
                             x.refresh_for(&mut ws);
+                            // ws.refresh_for_use(x);
                             ws
                         })
                     })
@@ -381,10 +395,10 @@ where
         // let widget_state = layout_end.map(|&(trans, w, h)| WidgetState::new((w, h), trans));
 
         Self {
-            id: IdStr::new_inline(""),
+            id: ix.clone(),
             widget: Box::new(gel),
             // event_callbacks: VecDeque::default(),
-            event_builder: EventBuilder::new(),
+            event_listener: EventListener::new(),
             // layout_str: String::default(),
             widget_state,
         }
@@ -417,12 +431,13 @@ where
     //TODO use try into
     #[allow(clippy::match_same_arms)]
     pub fn try_new_use(
+        ix: &IdStr,
         gel: GElement<Message, RenderCtx>, //TODO use anchor instead
         edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>,
     ) -> Result<Self, GElement<Message, RenderCtx>> {
         match gel {
             // Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
-            GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(gel, edge_ctx)),
+            GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(ix, gel, edge_ctx)),
             GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
             GElement::Refresher_(_) | GElement::Event_(_) => Err(gel),
             // GElement::Refresher_(_) => Err(gel),
@@ -437,9 +452,9 @@ where
             GElement::EvolutionaryFactor(_) => todo!(),
         }
     }
-    pub fn set_id(&mut self, id: IdStr) {
-        self.id = id;
-    }
+    // pub fn set_id(&mut self, id: IdStr) {
+    //     self.id = id;
+    // }
 
     // pub fn add_styles_string(&mut self, styles: &str) {
     //     self.layout_str += styles;
@@ -520,24 +535,25 @@ where
 
     pub fn add_event_callback(&mut self, event_callback: EventNode<Message>) {
         // self.event_callbacks.push_back(event_callback);
-        self.event_builder
+        self.event_listener
             .register_listener(event_callback.get_name(), event_callback);
     }
     pub fn event_matchs(
         &self,
         events_sa: &StateAnchor<Vector<emg_native::event::Event>>,
+        cursor_position: &StateAnchor<Option<Pos>>,
     ) -> StateAnchor<Dict<IdStr, Vector<EventNode<Message>>>> {
-        let event_callbacks = self.event_builder.event_callbacks.clone();
-
-        let cb_matchs_sa = (events_sa, &self.widget_state).map(move |events, state| {
+        let event_callbacks = self.event_listener.event_callbacks.clone();
+        let cursor_position_clone = cursor_position.clone();
+        (events_sa, &self.widget_state).then(move |events, state| {
             if events.is_empty() {
-                return Dict::default();
+                return Anchor::constant(Dict::default());
             }
-            let _size = state.size().to_rect();
+            let size = state.size();
 
             let e_str_s = events.iter().map(|e| e.to_str()).collect::<Vec<_>>();
 
-            let cb_matchs = event_callbacks
+            let mut cb_matchs = event_callbacks
                 .iter()
                 .filter_map(|(e_name, cb)| {
                     if e_str_s.contains(e_name) {
@@ -547,15 +563,74 @@ where
                     }
                 })
                 .collect::<Dict<IdStr, Vector<EventNode<Message>>>>();
+            let click_group = cb_matchs.remove_with_key("click");
+            // let cursor_position_clone = cursor_position.clone();
+            let is_click = click_group.map(|(_, click_cb)| {
+                (
+                    &cursor_position_clone,
+                    &state.world,
+                    &state.children_layout_override,
+                )
+                    .map(move |c_pos, w, layout_override| {
+                        let click_cb_clone2 = click_cb.clone();
+                        let rect = Rect::from_origin_size((w.x, w.y), size);
 
-            //
-            cb_matchs
-        });
-        cb_matchs_sa
+                        c_pos.and_then(move |pos| {
+                            debug!(target:"event::click",?pos);
+
+                            let pos64 = pos.cast::<f64>();
+
+                            if rect.contains(emg_native::renderer::Point::new(pos64.x, pos64.y)) {
+                                if let Some(lo) = layout_override {
+                                    if !lo.contains(&pos64) {
+                                        Some(click_cb_clone2)
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    Some(click_cb_clone2)
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                    })
+            });
+            if let Some(clicked_sa) = is_click {
+                (&clicked_sa, &state.world)
+                    .map(move |opt_clicked, _w| {
+                        if let Some(clicked) = opt_clicked {
+                            cb_matchs.update("click".into(), clicked.clone())
+                        } else {
+                            cb_matchs.clone()
+                        }
+                    })
+                    .into_anchor()
+            } else {
+                Anchor::constant(cb_matchs)
+            }
+
+            // if !cb_matchs.is_empty() {
+            //     state
+            //         .world
+            //         .map(move |w| {
+            //             //TODO trans rect,  and if  check? , must mouse pos inside.
+            //             // cb_matchs.clone()
+            //             cb_matchs
+            //                 .into_iter()
+            //                 .filter_map(|(event, cb)| match event.as_str() {
+            //                     "click" => {}
+            //                 })
+            //         })
+            //         .into_anchor()
+            // } else {
+            //     Anchor::constant(cb_matchs)
+            // }
+        })
     }
 
     pub fn event_callbacks(&self) -> &Dict<EventNameString, Vector<EventNode<Message>>> {
-        self.event_builder.event_callbacks()
+        self.event_listener.event_callbacks()
     }
 }
 

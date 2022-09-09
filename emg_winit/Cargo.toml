@@ -26,7 +26,6 @@ emg_state = { path = "../emg_state" }
 emg_element = { path = "../emg_element" }
 
 #------
-static_init = "1.0.3"
 window_clipboard = "0.2"
 tracing = "0.1"
 thiserror = "1.0"

@@ -1,4 +1,5 @@
 mod func;
+mod layout;
 mod macros;
 mod tools;
 // ────────────────────────────────────────────────────────────────────────────────
@@ -17,6 +18,7 @@ pub use compact_str::CompactString as IdStr;
 pub use dyn_partial_eq;
 pub use im::{vector, Vector};
 pub use im_rc as im;
+pub use layout::*;
 pub use measures::*;
 pub use nalgebra as na;
 pub use ordered_float::NotNan;

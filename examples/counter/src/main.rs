@@ -114,7 +114,7 @@ impl Sandbox for Counter {
                     @=a2 @E=[
                         origin_x(pc( 10)),align_x(pc(100)),
                         w(px(100)),h(px(100)),
-                        fill(rgba(1, 1, 0, 1))
+                        fill(rgba(1, 0.5, 0, 1))
                     ]
                     Layer [
                         On:click  ||{

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-09-06 10:27:08
+ * @LastEditTime: 2022-09-10 00:51:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,10 @@ use std::{
 };
 
 use crate::renderer::{Color, Size};
-use emg_common::{na::Translation3, Vector};
+use emg_common::{na::Translation3, LayoutOverride, Vector};
+use emg_refresh::RefreshWhoNoWarper;
+use emg_renderer::Rect;
+use emg_state::StateAnchor;
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
 use tracing::info;
 
@@ -64,13 +67,13 @@ impl<RenderCtx> PaintCtx<RenderCtx>
 where
     RenderCtx: crate::renderer::RenderContext,
 {
-    pub fn new(widget_state: WidgetState, render_ctx: RenderCtx) -> Self {
-        Self {
-            widget_state,
-            render_ctx,
-            widget_state_stack: Default::default(),
-        }
-    }
+    // pub fn new(widget_state: WidgetState, render_ctx: RenderCtx) -> Self {
+    //     Self {
+    //         widget_state,
+    //         render_ctx,
+    //         widget_state_stack: Default::default(),
+    //     }
+    // }
 
     pub fn size(&self) -> Size {
         //TODO move DPR to const T
@@ -189,13 +192,13 @@ impl<RenderContext> DerefMut for PaintCtx<RenderContext> {
     }
 }
 
-#[derive(Clone, PartialEq, Debug, Default)]
+impl RefreshWhoNoWarper for WidgetState {}
+#[derive(Clone, PartialEq, Debug)]
 pub struct WidgetState {
-    // pub(crate) id: WidgetId,
-    /// The size of the child; this is the value returned by the child's layout
-    /// method.
+    pub children_layout_override: StateAnchor<Option<LayoutOverride>>,
     size: Size,
     pub translation: Translation3<f64>,
+    pub world: StateAnchor<Translation3<f64>>,
     // pub background_color: CssBackgroundColor,
     pub fill: Option<CssFill>,
     pub border_width: Option<CssBorderWidth>,
@@ -257,6 +260,20 @@ pub struct WidgetState {
     // /// cursor_change, which is persistent).
     // pub(crate) cursor: Option<Cursor>,
 }
+
+impl Default for WidgetState {
+    fn default() -> Self {
+        Self {
+            children_layout_override: StateAnchor::constant(None),
+            size: Default::default(),
+            translation: Default::default(),
+            world: StateAnchor::constant(Translation3::default()),
+            fill: Default::default(),
+            border_width: Default::default(),
+            border_color: Default::default(),
+        }
+    }
+}
 macro_rules! css_merge {
     ($self:ident,$other:ident,$css:ident,$v:ident) => {
         match &$other.$v {
@@ -271,18 +288,29 @@ macro_rules! css_merge {
 
 impl WidgetState {
     // pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
-    pub fn new(size: (f64, f64), trans: Translation3<f64>) -> WidgetState {
+    pub fn new(
+        size: (f64, f64),
+        trans: Translation3<f64>,
+        world: StateAnchor<Translation3<f64>>,
+        children_layout_override: StateAnchor<Option<LayoutOverride>>,
+    ) -> WidgetState {
         WidgetState {
             // id,
             // origin: Point::ORIGIN,
             size: Size::new(size.0, size.1),
             translation: trans,
-            ..Self::default()
+            world,
+            children_layout_override,
+            fill: None,
+            border_width: None,
+            border_color: None,
         }
     }
-    pub fn merge(&mut self, other: &Self) {
-        self.size = other.size;
-        self.translation = other.translation;
+    pub fn merge(&mut self, new_current: &Self) {
+        self.size = new_current.size;
+        self.translation = new_current.translation;
+        self.world = new_current.world.clone();
+        self.children_layout_override = new_current.children_layout_override.clone();
         // match &other.fill {
         //     Some(fill) => match fill {
         //         CssFill::Inherit => (),
@@ -290,9 +318,11 @@ impl WidgetState {
         //     },
         //     None => self.fill = None,
         // };
-        css_merge!(self, other, CssFill, fill);
-        css_merge!(self, other, CssBorderWidth, border_width);
-        css_merge!(self, other, CssBorderColor, border_color);
+
+        //NOTE because the css Inherit
+        css_merge!(self, new_current, CssFill, fill);
+        css_merge!(self, new_current, CssBorderWidth, border_width);
+        css_merge!(self, new_current, CssBorderColor, border_color);
     }
 
     // pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {

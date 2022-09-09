@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+#TODO remove default: thread-pool
 [features]
+default = ["thread-pool"]
 thread-pool = ["futures/thread-pool"]
 
 [dependencies.futures]
