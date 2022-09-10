@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-09-10 01:16:08
+ * @LastEditTime: 2022-09-10 11:51:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -551,6 +551,7 @@ where
             }
             let size = state.size();
 
+            //TODO don't do this many times
             let e_str_s = events.iter().map(|e| e.to_str()).collect::<Vec<_>>();
 
             let mut cb_matchs = event_callbacks

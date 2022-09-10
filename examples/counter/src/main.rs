@@ -1,12 +1,13 @@
+use std::{rc::Rc, cell::Cell};
+
 use emg_bind::{
     better_any::TidAble,
-    common::{vector, IdStr},
+    common::px,
     element::*,
-    emg::edge_index_no_source,
     emg_msg, gtree,
-    layout::EPath,
-    state::{CloneStateAnchor, StateAnchor},
-    Sandbox, Settings, runtime, renderer,
+    layout::{ styles::{w, fill, hsl}},
+    state::{ use_state},
+    Sandbox, Settings
 };
 
 use tracing::{instrument, info};
@@ -49,7 +50,7 @@ fn tracing_init() {
 }
 
 pub fn main() -> emg_bind::Result {
-    // #[cfg(debug_assertions)]
+    #[cfg(debug_assertions)]
     tracing_init();
     
     Counter::run(Settings::default())
@@ -97,6 +98,9 @@ impl Sandbox for Counter {
         &self,
         // orders: impl Orders<Self::Message> + 'static,
     ) -> GTreeBuilderElement<Self::Message> {
+        let  n = Rc::new(Cell::new(100));
+        let ww = use_state(w(px(100)));
+        let ff  = use_state(fill(hsl(150, 100, 100)) );
         gtree! {
             @=debug_layer
             Layer [
@@ -106,7 +110,7 @@ impl Sandbox for Counter {
                 @=a1 @E=[
                         origin_x(pc(50)),align_x(pc(50)),
                         w(pc(50)),h(pc(50)),
-                        // fill(rgba(1, 1, 1, 1)),
+                        ff,
                         b_width(px(5)),
                         b_color(rgb(1,0,0))
                     ]
@@ -117,8 +121,14 @@ impl Sandbox for Counter {
                         fill(rgba(1, 0.5, 0, 1))
                     ]
                     Layer [
-                        On:click  ||{
+                        On:click  move||{
                             info!(" on [a2] ----click cb ----");
+                            // let nn =n.get()+10;
+                            // n.set(nn);
+                            // ww.set(w(px(nn)));
+                            // ff.set(fill(hsl(nn/100*360%360, 100, 100)));
+
+
                         },
                     ],
                     @=a3 @E=[
@@ -133,7 +143,7 @@ impl Sandbox for Counter {
                     @=a4 @E=[
                         origin_x(pc( 10)),align_x(pc(100)),
                         origin_y(px(-60)),
-                        w(px(100)),h(px(100)),
+                        ww,h(px(100)),
                         fill(rgba(1, 1, 0, 1)),
                         b_width(px(7)),
                         b_color(rgb(1,0,1))

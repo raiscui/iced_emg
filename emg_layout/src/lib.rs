@@ -1104,7 +1104,7 @@ where
 
                     }).split();
 
-                    let children_layout_override_sa = children_layout_override_sa_a.then(|x|x.clone());
+                    let children_layout_override_sa = children_layout_override_sa_a.then(std::clone::Clone::clone);
 
               
                     

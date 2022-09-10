@@ -10,12 +10,17 @@ split-debuginfo = "unpacked"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+
+[features]
+default = []
+no_default_refresh = []
+
+
 [dependencies]
 emg_state = { path = "../emg_state" }
 emg_common = { path = "../emg_common" }
 
 dyn_partial_eq = { path = "../../dyn_partial_eq" }
-
 
 tracing = "0.1"
 

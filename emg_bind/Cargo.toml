@@ -27,6 +27,7 @@ gpu = [
     "emg_graphics_backend",
 ]
 pool = []
+no_default_refresh = ["emg_refresh/no_default_refresh"]
 
 
 [dependencies]

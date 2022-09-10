@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-09-10 00:51:31
+ * @LastEditTime: 2022-09-10 11:07:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -82,7 +82,7 @@ where
     pub fn get_fill_color(&self) -> Option<Color> {
         self.widget_state.fill.as_ref().map(|fill| match *fill {
             CssFill::Rgba(r, g, b, a) => Color::rgba(r, g, b, a),
-            CssFill::Hsl(_, _, _) => todo!(),
+            CssFill::Hsl(h, s, l) => Color::hlc(h, l, s / 100. * 127.),
             CssFill::Hsla(_, _, _, _) => todo!(),
             CssFill::Hex(_) => todo!(),
             CssFill::StringValue(_) => todo!(),

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-09 16:53:34
- * @LastEditTime: 2022-09-10 10:29:41
+ * @LastEditTime: 2022-09-10 11:53:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -83,18 +83,6 @@ impl std::ops::Add<&Self> for LayoutOverride {
     type Output = Self;
 
     fn add(self, rhs: &Self) -> Self::Output {
-        // for rect in &rhs.rect_list {
-        //     // if !self
-        //     //     .rect_list
-        //     //     .iter()
-        //     //     .any(|any_rect| any_rect.is_completely_wrapped(rect))
-        //     // {
-        //     //     self.rect_list.retain(|sr| !rect.is_completely_wrapped(sr));
-        //     //     self.rect_list.push_back(*rect);
-        //     //     self.bbox = self.bbox.union(*rect);
-        //     // }
-        // }
-        // self
         rhs.rect_list
             .clone()
             .into_iter()
