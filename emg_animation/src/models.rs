@@ -991,9 +991,8 @@ pub fn resolve_steps<Message>(
 ) where
     Message: Clone,
 {
-    match steps.pop_front() {
-        None => (),
-        Some(current_step) => match current_step {
+    if let Some(current_step) = steps.pop_front() {
+        match current_step {
             Step::Wait(n) => {
                 if n.is_zero() {
                     resolve_steps(current_style, steps, msgs, dt);
@@ -1090,11 +1089,12 @@ pub fn resolve_steps<Message>(
                     let old_steps = sub_steps.clone();
                     sub_steps.push_back(Step::Repeat(n - 1, old_steps));
                     sub_steps.append(steps);
+                    //NOTE ------------------steps empty now (because append)
                     *steps = sub_steps;
                 }
                 resolve_steps(current_style, steps, msgs, dt);
             }
-        },
+        }
     }
 }
 

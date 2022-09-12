@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-08 16:50:04
- * @LastEditTime: 2022-08-12 16:34:11
+ * @LastEditTime: 2022-09-10 15:30:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -274,7 +274,7 @@ where
 {
     fn eq(&self, other: &Self) -> bool {
         //[] allways check when add GElement number;
-        //CHECK allways check when add GElement number;
+        //CHECK allways check when add(modifier) GElement number;
         match (self, other) {
             (Self::Builder_(l0), Self::Builder_(r0)) => l0 == r0,
             (Self::Layer_(l0), Self::Layer_(r0)) => l0 == r0,

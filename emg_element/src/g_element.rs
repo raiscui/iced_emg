@@ -320,7 +320,7 @@ impl<Message, RenderCtx> PartialEq for GElement<Message, RenderCtx>
 {
     fn eq(&self, other: &Self) -> bool {
         //[] allways check when add GElement number;
-        //CHECK allways check when add GElement number;
+        //CHECK allways check when add(modifier) GElement number;
         match (self, other) {
             (Self::Builder_(l0), Self::Builder_(r0)) => l0 == r0,
             (Self::Layer_(l0), Self::Layer_(r0)) => l0 == r0,
