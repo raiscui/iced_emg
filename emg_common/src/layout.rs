@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-09 16:53:34
- * @LastEditTime: 2022-09-10 11:53:57
+ * @LastEditTime: 2022-09-13 09:55:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@ use nalgebra::{Point2, Translation2, Vector2};
 
 use crate::Pos;
 
-#[derive(Copy, Clone, PartialEq, Debug, Default)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct RectLTRB {
     /// The minimum x coordinate (left edge).
     pub x0: f64,
@@ -53,7 +53,7 @@ impl RectLTRB {
     }
 }
 
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct LayoutOverride {
     rect_list: crate::Vector<RectLTRB>,
     bbox: RectLTRB,

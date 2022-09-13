@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-29 23:19:00
- * @LastEditTime: 2022-09-10 14:38:30
+ * @LastEditTime: 2022-09-13 21:05:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,19 +15,19 @@ use emg_state::CloneStateVar;
 #[allow(clippy::wildcard_imports)]
 use seed_styles::*;
 
-// impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for CssFill
-// where
-//     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-//     EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
-//     RenderCtx: 'static,
-// {
-//     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
-//         let type_name = Self::TYPE_NAME;
-//         who.styles.update(|s| {
-//             s.insert(type_name, Rc::new(self.clone()));
-//         });
-//     }
-// }
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for CssBackgroundAttachment
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+    RenderCtx: 'static,
+{
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+        let type_name = Self::TYPE_NAME;
+        who.styles.update(|s| {
+            s.insert(type_name, Rc::new(self.clone()));
+        });
+    }
+}
 
 macro_rules! impl_css_native_refresh {
     ($css:ident) => {
@@ -66,7 +66,7 @@ macro_rules! impl_css_native_refresh_list {
     };
 }
 
-impl_css_native_refresh!(CssBackgroundAttachment);
+// impl_css_native_refresh!(CssBackgroundAttachment);
 impl_css_native_refresh!(CssColumnSpan);
 impl_css_native_refresh!(CssColumnsFill);
 impl_css_native_refresh!(CssColumnRule);

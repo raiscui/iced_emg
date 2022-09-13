@@ -1,14 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-09-10 11:51:43
- * @LastEditors: Rais
- * @Description:
- */
-/*
- * @Author: Rais
- * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-08-18 10:58:06
+ * @LastEditTime: 2022-09-13 22:06:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,7 +16,7 @@ use derive_more::From;
 use emg_common::{na::Translation3, vector, IdStr, NotNan, Pos, Vector};
 use emg_layout::{EdgeCtx, LayoutEndType};
 use emg_native::{paint_ctx::CtxIndex, renderer::Rect, WidgetState, DPR, G_POS};
-use emg_refresh::{RefreshForUse, RefreshUse};
+use emg_refresh::{RefreshFor, RefreshForUse, RefreshUse};
 use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, info, info_span, instrument, trace, Span};
 
@@ -384,8 +377,9 @@ where
                             children_layout_override_clone.clone(),
                         );
                         styles.values().fold(new_widget_state, |mut ws, x| {
-                            x.refresh_for(&mut ws);
-                            // ws.refresh_for_use(x);
+                            // x.refresh_for(&mut ws);
+                            ws.refresh_for_use(x);
+                            // ws.refresh_use(x);
                             ws
                         })
                     })
@@ -538,7 +532,7 @@ where
         self.event_listener
             .register_listener(event_callback.get_name(), event_callback);
     }
-    pub fn event_matchs(
+    pub fn event_matching(
         &self,
         events_sa: &StateAnchor<Vector<emg_native::event::Event>>,
         cursor_position: &StateAnchor<Option<Pos>>,
@@ -572,7 +566,7 @@ where
                     &state.world,
                     &state.children_layout_override,
                 )
-                    .map(move |c_pos, w, layout_override| {
+                    .map(move |c_pos, w, opt_layout_override| {
                         let click_cb_clone2 = click_cb.clone();
                         let rect = Rect::from_origin_size((w.x, w.y), size);
 
@@ -582,8 +576,8 @@ where
                             let pos64 = pos.cast::<f64>();
 
                             if rect.contains(emg_native::renderer::Point::new(pos64.x, pos64.y)) {
-                                if let Some(lo) = layout_override {
-                                    if !lo.contains(&pos64) {
+                                if let Some(layout_override) = opt_layout_override {
+                                    if !layout_override.contains(&pos64) {
                                         Some(click_cb_clone2)
                                     } else {
                                         None

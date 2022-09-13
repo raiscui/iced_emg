@@ -91,7 +91,7 @@ where
         let self_event_nodes = gel_rc_sa.then(move |gel| {
             gel.as_builder()
                 .unwrap()
-                .event_matchs(&events, &cursor_position_clone)
+                .event_matching(&events, &cursor_position_clone)
                 .into_anchor()
         });
 
@@ -149,7 +149,7 @@ where
                         // .map(|nb_widget| nb_widget.event_callbacks().clone())
                         .map(|nb_widget| {
                             nb_widget
-                                .event_matchs(&events, &cursor_position_clone)
+                                .event_matching(&events, &cursor_position_clone)
                                 .into_anchor()
                         })
                 })

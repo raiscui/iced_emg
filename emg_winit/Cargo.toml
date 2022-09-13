@@ -7,7 +7,7 @@ edition = "2021"
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["dylib", "rlib"]
 
 [features]
 default = ["gpu"]

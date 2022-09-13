@@ -69,12 +69,12 @@ where
 impl<Ix, RenderCtx, Use> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateVar<Use>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix,RenderCtx>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
     Use: RefreshUseNoWarper + RefreshFor<EmgEdgeItem<Ix, RenderCtx>> + Clone + 'static,
 {
     default fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let rc_v = self.get_var_with(emg_state::Var::get);
-        warn!("Edge  Refresh use StateVar current value");
+        warn!("Edge [default!!] Refresh use StateVar current value !!!");
         who.refresh_for_use(&*rc_v);
     }
 }
