@@ -307,7 +307,7 @@ mod updater_test {
     }
     #[wasm_bindgen_test]
 
-    fn test_refresher_for() {
+    fn test_shaper_for() {
         setup_tracing();
 
         let mut f = String::from("ccc");

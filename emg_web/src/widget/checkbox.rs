@@ -251,7 +251,7 @@ where
             Self::Button_(_) => {
                 unimplemented!();
             }
-            Self::Refresher_(_refresher) => {
+            Self::Refresher_(_shaper) => {
                 // NOTE this is shaping GElement , not Checkbox
                 unimplemented!();
             }

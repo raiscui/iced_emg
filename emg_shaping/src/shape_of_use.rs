@@ -49,7 +49,7 @@ mod updater_test1 {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        impl_refresh::ShapingUseNoWarper, test::setup_tracing, Shaper, Shaping, ShapingWhoNoWarper,
+        impl_shaping::ShapingUseNoWarper, test::setup_tracing, Shaper, Shaping, ShapingWhoNoWarper,
     };
 
     use super::*;

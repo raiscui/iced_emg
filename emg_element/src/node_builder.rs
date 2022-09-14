@@ -341,7 +341,7 @@ where
             // Button_(x) => {
             //     self.widget = Some(BuilderWidget::Static(Rc::new(x) as Rc<dyn Widget<Message>>));
             // }
-            GElement::Refresher_(_) => {
+            GElement::Shaper_(_) => {
                 todo!();
             }
             // Generic_(x) => {
@@ -463,7 +463,7 @@ where
             // Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
             GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(ix, gel, edge_ctx)),
             GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
-            GElement::Refresher_(_) | GElement::Event_(_) => Err(gel),
+            GElement::Shaper_(_) | GElement::Event_(_) => Err(gel),
             // GElement::Refresher_(_) => Err(gel),
             GElement::NodeRef_(_) => {
                 unreachable!("crate builder use NodeRef_ is should never happened")

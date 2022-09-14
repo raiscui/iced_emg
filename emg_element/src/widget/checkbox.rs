@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-09-14 16:29:31
+ * @LastEditTime: 2022-09-14 18:12:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -154,7 +154,7 @@ where
             Self::Button_(_) => {
                 unimplemented!();
             }
-            Self::Refresher_(_refresher) => {
+            Self::Refresher_(_shaper) => {
                 // NOTE this is shaping GElement , not Checkbox
                 unimplemented!();
             }

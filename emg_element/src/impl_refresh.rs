@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-22 16:28:40
- * @LastEditTime: 2022-09-08 23:41:30
+ * @LastEditTime: 2022-09-14 18:39:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -32,12 +32,12 @@ where
     Message: 'static,
     RenderCtx: 'static,
 {
-    fn shaping(&self, el: &mut Self) {
-        use GElement::{Builder_, Generic_, Layer_, Refresher_};
+    fn shaping(&self, who_el: &mut Self) {
+        use GElement::{Builder_, Generic_, Layer_, Shaper_};
         //TODO for builder
         //TODO allways check when add GElement number;
 
-        match (el, self) {
+        match (who_el, self) {
             (who, Generic_(use_something)) => {
                 use_something.shaping(who);
                 // let something = use_something.as_refresh_for();
@@ -57,24 +57,24 @@ where
             //     panic!("should never directly use event_callback for GElement");
             // }
 
-            //其他任何 el 刷新, 包括 el=refresher
+            //其他任何 el 刷新, 包括 el=shaper
             //refreshing use any impl Shaping
-            (gel, Refresher_(refresher)) => {
-                trace!("{} refresh use refresher", gel);
-                gel.shape_of_use(refresher.as_ref() as &dyn Shaping<Self>);
+            (gel, Shaper_(shaper)) => {
+                trace!("{} refresh use shaper", gel);
+                gel.shape_of_use(shaper.as_ref() as &dyn Shaping<Self>);
             }
             // TODO: do not many clone event_callback
 
-            // layer 包裹 任何除了refresher的el
-            (Layer_(l), any_not_refresher_event) => {
-                trace!("layer refresh use {} (do push)", any_not_refresher_event);
-                l.push(any_not_refresher_event.clone());
+            // layer 包裹 任何除了shaper的el
+            (Layer_(l), any_not_shaper_event) => {
+                trace!("layer refresh use {} (do push)", any_not_shaper_event);
+                l.push(any_not_shaper_event.clone());
             }
-            // refresher 不与任何不是 refresher 的 el 产生刷新动作
-            (Refresher_(_), any_not_refresher_event) => {
+            // shaper 不与任何不是 shaper 的 el 产生刷新动作
+            (Shaper_(_who), any_not_shaper_event) => {
                 panic!(
                     "refresh for ( Refresher_ ) use ( {} ) is not supported",
-                    any_not_refresher_event
+                    any_not_shaper_event
                 );
             }
             // (Text_(who), Text_(us_it)) => {
@@ -86,10 +86,10 @@ where
 
             // TODO : event_callbacks prosess
             // TODO : NodeBuilderWidget prosess
-            (not_layer_or_refresher, b) => {
+            (not_layer_or_shaper, b) => {
                 panic!(
                     "refresh for ( {} ) use ( {} ) - that is not supported",
-                    not_layer_or_refresher, b
+                    not_layer_or_shaper, b
                 );
             }
         }
@@ -132,7 +132,7 @@ where
             GElement::Builder_(_) => todo!(),
             GElement::Layer_(_) => todo!(),
             // GElement::Button_(_) => todo!(),
-            GElement::Refresher_(_) => todo!(),
+            GElement::Shaper_(_) => todo!(),
             GElement::Event_(_) => todo!(),
             GElement::Generic_(w) => {
                 warn!("i32 try_refresh_for Generic_");
@@ -188,10 +188,10 @@ where
 
             // @ Single explicit match
 
-            //其他任何 el 刷新, 包括 el=refresher
-            // TODO impl refresher for NodeBuilderWidget(most edit event_callbacks list )
-            // (gel, Refresher_(refresher)) => {
-            //     gel.shaping_use(refresher.deref());
+            //其他任何 el 刷新, 包括 el=shaper
+            // TODO impl shaper for NodeBuilderWidget(most edit event_callbacks list )
+            // (gel, Refresher_(shaper)) => {
+            //     gel.shaping_use(shaper.deref());
             // }
 
             // @ any not match ─────────────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let _f = GElement::<Message, RenderCtx>::Refresher_(Rc::new(Shaper::new(|| 1i32)));
+        let _f = GElement::<Message, RenderCtx>::Shaper_(Rc::new(Shaper::new(|| 1i32)));
         // let ff: Rc<dyn EqShaping<GElement<Message>>> = f;
         // Rc<dyn EqShaping<GElement<Message>>>, found Rc<Shaper<u32>>
     }

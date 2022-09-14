@@ -848,7 +848,7 @@ impl Parse for GTreeMacroElement {
             //     parsed.at_setup(at_list);
             //     Ok(Self::GT(Box::new(parsed)))
         } else if input.peek(kw::ShapingUse) {
-            // @refresher
+            // @shaper
             let mut parsed: GRefresher = input.parse()?;
             parsed.at_setup(at_list);
             Ok(Self::RT(Box::new(parsed)))
@@ -1038,7 +1038,7 @@ impl ToTokens for Gtree {
                 },
                 element::*,
                 layout::{add_values::*, css, styles::*, EmgEdgeItem},
-                refresh::{EqShaping, Shaping, ShapingUse, Shaper},
+                shaping::{EqShaping, Shaping, ShapingUse, Shaper},
                 state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
             };
 

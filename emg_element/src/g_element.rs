@@ -82,12 +82,12 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let _f = GElement::<Message, RenderCtx>::Refresher_(
+        let _f = GElement::<Message, RenderCtx>::Shaper_(
             Rc::new(Shaper::new(|| 1i32)) as Rc<dyn EqShaping<GElement<Message, RenderCtx>>>
         );
         let _a = use_state(2i32);
 
-        let _f = GElement::<Message, RenderCtx>::Refresher_(Rc::new(_a.watch()));
+        let _f = GElement::<Message, RenderCtx>::Shaper_(Rc::new(_a.watch()));
 
         // let ff: Rc<dyn EqShaping<GElement<Message>>> = f;
         // Rc<dyn EqShaping<GElement<Message>>>, found Rc<Shaper<u32>>
@@ -103,7 +103,7 @@ pub enum GElement<Message, RenderCtx> {
     Layer_(Layer<Message, RenderCtx>),
     // Text_(Text),
     // Button_(Button<Message>),
-    Refresher_(Rc<dyn EqShaping<Self>>),
+    Shaper_(Rc<dyn EqShaping<Self>>),
     //NOTE temp comment
     Event_(EventNode<Message>),
     //NOTE internal
@@ -123,7 +123,7 @@ impl<Message, RenderCtx> Clone for GElement<Message, RenderCtx> {
         match self {
             Self::Builder_(arg0) => Self::Builder_(arg0.clone()),
             Self::Layer_(arg0) => Self::Layer_(arg0.clone()),
-            Self::Refresher_(arg0) => Self::Refresher_(arg0.clone()),
+            Self::Shaper_(arg0) => Self::Shaper_(arg0.clone()),
             Self::Generic_(arg0) => Self::Generic_(arg0.clone()),
             Self::NodeRef_(arg0) => Self::NodeRef_(arg0.clone()),
             Self::SaNode_(arg0) => Self::SaNode_(arg0.clone()),
@@ -326,7 +326,7 @@ impl<Message, RenderCtx> PartialEq for GElement<Message, RenderCtx>
             (Self::Layer_(l0), Self::Layer_(r0)) => l0 == r0,
             // (Self::Text_(l0), Self::Text_(r0)) => l0 == r0,
             // (Self::Button_(l0), Self::Button_(r0)) => l0 == r0,
-            (Self::Refresher_(l0), Self::Refresher_(r0)) => (**l0) == (**r0),
+            (Self::Shaper_(l0), Self::Shaper_(r0)) => (**l0) == (**r0),
             // (Self::Event_(l0), Self::Event_(r0)) => l0 == r0,
             (Self::Generic_(l0), Self::Generic_(r0)) => l0 == r0,
             (Self::NodeRef_(l0), Self::NodeRef_(r0)) => l0 == r0,
@@ -380,14 +380,14 @@ impl<Message, RenderCtx> GElement<Message, RenderCtx>
     {
         use GElement::{
             Builder_, EmptyNeverUse, Event_, EvolutionaryFactor, Generic_, Layer_, NodeRef_,
-            Refresher_, SaNode_,
+            SaNode_, Shaper_,
         };
         match_any!(self,
 
             // Builder_( x)| Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
             Builder_( x)| Layer_(x) => x as &dyn Widget<Message,RenderCtx>,
             // Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
-            Refresher_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
+            Shaper_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Generic_(x) => {
                 // debug!("Generic_:: from Generic_ to dyn Widget");
                  &**x as &dyn Widget<Message,RenderCtx>
@@ -446,13 +446,13 @@ where
                         // RenderContext: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use GElement::{Builder_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_};
+        use GElement::{Builder_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Shaper_};
         let nbw = "NodeBuilderWidget< Message>(empty Widget)".to_string();
 
         match self {
             Layer_(l) => f.debug_tuple("GElement::Layer").field(l).finish(),
             // Text_(t) => f.debug_tuple("GElement::Text").field(t).finish(),
-            Refresher_(_) => f
+            Shaper_(_) => f
                 .debug_tuple("GElement::GUpdater(Rc<dyn RtUpdateFor<GElement< Message>>>)")
                 .finish(),
             Builder_(builder) => {
@@ -503,14 +503,14 @@ where
 
         use GElement::{
             Builder_, EmptyNeverUse, Event_, EvolutionaryFactor, Generic_, Layer_, NodeRef_,
-            Refresher_, SaNode_,
+            SaNode_, Shaper_,
         };
         match_any!(self,
 
             // Builder_( x)| Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
             Builder_( x)| Layer_(x) => x.paint_sa(ctx),
             // Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
-            Refresher_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
+            Shaper_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Generic_(x) => {
                 warn!("Generic_:: Generic_ paint_sa");
                  x.paint_sa(ctx)

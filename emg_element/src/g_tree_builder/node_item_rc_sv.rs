@@ -169,7 +169,7 @@ RenderCtx:  crate::RenderContext +'static
     #[topo::nested]
     fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message, RenderCtx>) {
         match tree_element {
-            GTreeBuilderElement::Layer(root_id, edge_refreshers, children_list) => {
+            GTreeBuilderElement::Layer(root_id, edge_shapers, children_list) => {
                 let _span = trace_span!("=> handle_root [layer] ",%root_id).entered();
                 trace!("handle_root_in_topo: {:?}==>{:#?}", &root_id, &children_list);
                 info!("handle_root_in_topo: {:?}", &root_id);
@@ -224,7 +224,7 @@ RenderCtx:  crate::RenderContext +'static
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path);
 
-                    root_ei.shape_of_use(edge_refreshers);
+                    root_ei.shape_of_use(edge_shapers);
 
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
                         assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix);
@@ -253,7 +253,7 @@ RenderCtx:  crate::RenderContext +'static
         let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
         match tree_element {
             //
-            GTreeBuilderElement::Layer(org_id, edge_refreshers, children_list) => {
+            GTreeBuilderElement::Layer(org_id, edge_shapers, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
                 let _span =
                     info_span!("-> [layer] ",?org_id, ?id, ?parent_nix).entered();
@@ -306,7 +306,7 @@ RenderCtx:  crate::RenderContext +'static
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                    new_def_ei.shape_of_use(edge_refreshers);
+                    new_def_ei.shape_of_use(edge_shapers);
 
                     // next
                     #[cfg(debug_assertions)]
@@ -339,7 +339,7 @@ RenderCtx:  crate::RenderContext +'static
             //         .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
             //         .unwrap();
             // }
-            GTreeBuilderElement::GElementTree(org_id, edge_refreshers, gel, children_list) => {
+            GTreeBuilderElement::GElementTree(org_id, edge_shapers, gel, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
                 info!("\n handle children [GElementTree]: org_id: {:?},  id : {:?}", org_id, id);
                 // warn!("\n handle children [GElementTree]: org_id: {:?},  id : {:?}", org_id, id);
@@ -382,7 +382,7 @@ RenderCtx:  crate::RenderContext +'static
                     GElement::Layer_(_) |
                     // GElement::Text_(_) |
                     // GElement::Button_(_) |
-                    GElement::Refresher_(_) |
+                    GElement::Shaper_(_) |
                     GElement::Event_(_) |
                     GElement::Generic_(_) |
                     GElement::NodeRef_(_)   =>{
@@ -418,7 +418,7 @@ RenderCtx:  crate::RenderContext +'static
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                    new_def_ei.shape_of_use(edge_refreshers);
+                    new_def_ei.shape_of_use(edge_shapers);
                     debug!("new_def_ei: {}", &new_def_ei);
 
                     //next
@@ -432,7 +432,7 @@ RenderCtx:  crate::RenderContext +'static
                     });
                 });
             }
-            // GTreeBuilderElement::SaMapEffectGElementTree(org_id, _edge_refreshers, builder_fn, _children_list) => {
+            // GTreeBuilderElement::SaMapEffectGElementTree(org_id, _edge_shapers, builder_fn, _children_list) => {
             //     let id = replace_id.unwrap_or(org_id);
             //     // info!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
             //     warn!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
@@ -454,8 +454,8 @@ RenderCtx:  crate::RenderContext +'static
                 
              
             // }
-            //TODO _edge_refresher use for  inject element
-            GTreeBuilderElement::Dyn(org_id,_edge_refresher,sa_dict_gbe) => {
+            //TODO _edge_shaper use for  inject element
+            GTreeBuilderElement::Dyn(org_id,_edge_shaper,sa_dict_gbe) => {
                 let id = replace_id.unwrap_or(org_id);
                 info!("\n handle children [Dyn]: org_id: {:?},  id : {:?}", org_id, id);
 
@@ -635,7 +635,7 @@ RenderCtx:  crate::RenderContext +'static
                     .unwrap();
             } 
             
-            // GTreeBuilderElement::GenericTree(id, edge_refreshers, dyn_gel, refreshers) => {
+            // GTreeBuilderElement::GenericTree(id, edge_shapers, dyn_gel, shapers) => {
               //     panic!("test here");
               //     let _span =
               //         trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
@@ -652,19 +652,19 @@ RenderCtx:  crate::RenderContext +'static
 
               //     illicit::Layer::new().offer(path.clone()).enter(|| {
               //         debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-              //         ei.shaping_use(edge_refreshers);
+              //         ei.shaping_use(edge_shapers);
 
               //         //next
               //         #[cfg(debug_assertions)]
               //         illicit::Layer::new().offer(nix.clone()).enter(|| {
               //             assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
-              //             refreshers
+              //             shapers
               //                 .iter()
               //                 .for_each(|child_layer| self.handle_children_in_topo(child_layer));
               //         });
               //         #[cfg(not(debug_assertions))]
               //         illicit::Layer::new().offer(nix).enter(|| {
-              //             refreshers
+              //             shapers
               //                 .iter()
               //                 .for_each(|child_layer| self.handle_children_in_topo(child_layer));
               //         });

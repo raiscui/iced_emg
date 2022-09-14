@@ -11,22 +11,21 @@
 mod test;
 // ────────────────────────────────────────────────────────────────────────────────
 
-mod impl_refresh;
-mod refreshers;
+mod impl_shaping;
 mod shape_of_use;
+mod shapers;
 mod shaping_use;
-pub use impl_refresh::ShapingUseNoWarper;
-pub use impl_refresh::ShapingWhoNoWarper;
-pub use refreshers::EqShaping;
-pub use refreshers::EqShapingWithDebug;
-pub use refreshers::Shaper;
-pub use refreshers::ShaperFor;
-pub use refreshers::Shaping;
-pub use refreshers::ShapingWithDebug;
+pub use impl_shaping::ShapingUseNoWarper;
+pub use impl_shaping::ShapingWhoNoWarper;
 pub use shape_of_use::ShapeOfUse;
+pub use shapers::EqShaping;
+pub use shapers::EqShapingWithDebug;
+pub use shapers::Shaper;
+pub use shapers::ShaperFor;
+pub use shapers::Shaping;
+pub use shapers::ShapingWithDebug;
+pub use shapers::TryShapingUse;
 pub use shaping_use::ShapingUse;
-// pub use refreshers::TryRefreshFor;
-pub use refreshers::TryShapingUse;
 
 #[cfg(test)]
 mod tests {

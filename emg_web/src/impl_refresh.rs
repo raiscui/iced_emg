@@ -47,24 +47,24 @@ where
                 panic!("should never directly use event_callback for GElement");
             }
 
-            //其他任何 el 刷新, 包括 el=refresher
+            //其他任何 el 刷新, 包括 el=shaper
             //refreshing use any impl Shaping
-            (gel, Refresher_(refresher)) => {
-                trace!("{} refresh use refresher", gel);
-                gel.shape_of_use(refresher.as_ref() as &dyn Shaping<Self>);
+            (gel, Refresher_(shaper)) => {
+                trace!("{} refresh use shaper", gel);
+                gel.shape_of_use(shaper.as_ref() as &dyn Shaping<Self>);
             }
             // TODO: do not many clone event_callback
 
-            // layer 包裹 任何除了refresher的el
-            (Layer_(l), any_not_refresher_event) => {
-                trace!("layer refresh use {} (do push)", any_not_refresher_event);
-                l.push(any_not_refresher_event.clone());
+            // layer 包裹 任何除了shaper的el
+            (Layer_(l), any_not_shaper_event) => {
+                trace!("layer refresh use {} (do push)", any_not_shaper_event);
+                l.push(any_not_shaper_event.clone());
             }
-            // refresher 不与任何不是 refresher 的 el 产生刷新动作
-            (Refresher_(_), any_not_refresher_event) => {
+            // shaper 不与任何不是 shaper 的 el 产生刷新动作
+            (Refresher_(_), any_not_shaper_event) => {
                 panic!(
                     "refresh for ( Refresher_ ) use ( {} ) is not supported",
-                    any_not_refresher_event
+                    any_not_shaper_event
                 );
             }
             (Text_(who), Text_(us_it)) => {
@@ -76,10 +76,10 @@ where
 
             // TODO : event_callbacks prosess
             // TODO : NodeBuilderWidget prosess
-            (not_layer_or_refresher, b) => {
+            (not_layer_or_shaper, b) => {
                 panic!(
                     "refresh for ( {} ) use ( {} ) - that is not supported",
-                    not_layer_or_refresher, b
+                    not_layer_or_shaper, b
                 );
             }
         }
@@ -183,10 +183,10 @@ where
 
             // @ Single explicit match
 
-            //其他任何 el 刷新, 包括 el=refresher
-            // TODO impl refresher for NodeBuilderWidget(most edit event_callbacks list )
-            // (gel, Refresher_(refresher)) => {
-            //     gel.shaping_use(refresher.deref());
+            //其他任何 el 刷新, 包括 el=shaper
+            // TODO impl shaper for NodeBuilderWidget(most edit event_callbacks list )
+            // (gel, Refresher_(shaper)) => {
+            //     gel.shaping_use(shaper.deref());
             // }
 
             // @ any not match ─────────────────────────────────────────────────────────────────
