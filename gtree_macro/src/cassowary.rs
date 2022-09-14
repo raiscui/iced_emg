@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-08-24 11:35:34
+ * @LastEditTime: 2022-09-02 17:51:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -376,7 +376,7 @@ impl ToTokens for PredVariable {
 }
 
 fn disp_opt<T: std::fmt::Display>(o: Option<T>) -> String {
-    o.map_or("".to_string(), |x| format!("{}", x))
+    o.map_or(String::new(), |x| format!("{}", x))
 }
 /// `&name[var]`
 #[derive(Debug, Clone)]
@@ -391,15 +391,15 @@ impl std::fmt::Display for ScopeViewVariable {
         let scope = self
             .scope
             .as_ref()
-            .map_or("".to_string(), |x| format!("{}", x));
+            .map_or(String::new(), |x| format!("{}", x));
         let view = self
             .view
             .as_ref()
-            .map_or("".to_string(), |x| format!("{}", x));
+            .map_or(String::new(), |x| format!("{}", x));
         let variable = self
             .variable
             .as_ref()
-            .map_or("".to_string(), |x| format!("{}", x));
+            .map_or(String::new(), |x| format!("{}", x));
 
         write!(f, "{}{}{}", scope, view, variable)
     }

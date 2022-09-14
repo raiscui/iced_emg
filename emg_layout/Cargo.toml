@@ -17,12 +17,12 @@ split-debuginfo = "unpacked"
 [profile.bench]
 lto = true
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 bench = false
 
 
 [dependencies]
-emg_refresh = { path = "../emg_refresh" }
+emg_shaping = { path = "../emg_shaping" }
 emg_state = { path = "../emg_state" }
 emg = { path = "../../emg" }
 emg_animation = { path = "../emg_animation" }

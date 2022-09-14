@@ -1,24 +1,51 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-08-31 15:17:47
+ * @LastEditTime: 2022-09-14 16:03:31
  * @LastEditors: Rais
  * @Description:
  */
 
 mod impl_refresh;
-use std::ops::{Deref, DerefMut};
+use std::{
+    cell::Cell,
+    ops::{Deref, DerefMut},
+    rc::Rc,
+};
 
-use crate::Color;
-use emg_common::{na::Translation3, SmallVec, Vector};
+use crate::renderer::{Color, Size};
+use emg_common::{na::Translation3, LayoutOverride, Vector};
+use emg_renderer::Rect;
+use emg_shaping::ShapingWhoNoWarper;
 use emg_state::StateAnchor;
-use seed_styles::{bg_color, fill, rgba, CssBackgroundColor};
-use tracing::error;
+use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
+use tracing::{debug, info};
 
-use crate::Size;
-
-//TODO move to global
+//TODO use app state viewport dpr
 pub const DPR: f64 = 2.0;
+
+#[derive(Clone)]
+pub struct CtxIndex(Rc<Cell<usize>>);
+
+impl Default for CtxIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl CtxIndex {
+    pub fn new() -> Self {
+        Self(Rc::new(Cell::new(0)))
+    }
+
+    pub fn set(&self, val: usize) {
+        self.0.set(val)
+    }
+
+    pub fn get(&self) -> usize {
+        self.0.get()
+    }
+}
 
 #[derive(Clone, Default, PartialEq)]
 pub struct PaintCtx<RenderContext> {
@@ -36,17 +63,17 @@ pub struct PaintCtx<RenderContext> {
     // pub(crate) depth: u32,
 }
 
-impl<RenderContext> PaintCtx<RenderContext>
+impl<RenderCtx> PaintCtx<RenderCtx>
 where
-    RenderContext: crate::RenderContext,
+    RenderCtx: crate::renderer::RenderContext,
 {
-    pub fn new(widget_state: WidgetState, render_ctx: RenderContext) -> Self {
-        Self {
-            widget_state,
-            render_ctx,
-            widget_state_stack: Default::default(),
-        }
-    }
+    // pub fn new(widget_state: WidgetState, render_ctx: RenderCtx) -> Self {
+    //     Self {
+    //         widget_state,
+    //         render_ctx,
+    //         widget_state_stack: Default::default(),
+    //     }
+    // }
 
     pub fn size(&self) -> Size {
         //TODO move DPR to const T
@@ -54,18 +81,49 @@ where
     }
     pub fn get_fill_color(&self) -> Option<Color> {
         self.widget_state.fill.as_ref().map(|fill| match *fill {
-            seed_styles::CssFill::Rgba(r, g, b, a) => Color::rgba(r, g, b, a),
-            seed_styles::CssFill::Hsl(_, _, _) => todo!(),
-            seed_styles::CssFill::Hsla(_, _, _, _) => todo!(),
-            seed_styles::CssFill::Hex(_) => todo!(),
-            seed_styles::CssFill::StringValue(_) => todo!(),
-            seed_styles::CssFill::Inherit => todo!("get stack latest"),
+            CssFill::Rgba(r, g, b, a) => {
+                // debug!("CssFill::Rgba( {:?}, {:?}, {:?}, {:?})", r, g, b, a);
+                Color::rgba(r, g, b, a)
+            }
+            CssFill::Hsl(h, s, l) => {
+                // debug!("CssFill::hsl(  {:?}, {:?}, {:?})", h, s, l);
+                Color::hlc(h, l, s / 100. * 127.)
+            }
+            CssFill::Hsla(_, _, _, _) => todo!(),
+            CssFill::Hex(_) => todo!(),
+            CssFill::StringValue(_) => todo!(),
+            CssFill::Inherit => todo!("get stack latest"),
+        })
+    }
+    // #[instrument(skip(self), ret)]
+    pub fn get_border_width(&self) -> Option<f64> {
+        self.widget_state.border_width.as_ref().map(|bw| match bw {
+            CssBorderWidth::Medium => todo!(),
+            CssBorderWidth::Thin => todo!(),
+            CssBorderWidth::Thick => todo!(),
+            CssBorderWidth::Length(l) => l
+                .try_get_number()
+                .expect("[Unit] currently only px /empty can get"),
+            CssBorderWidth::Initial => todo!(),
+            CssBorderWidth::Inherit => todo!(),
+            CssBorderWidth::StringValue(_) => todo!(),
+        })
+    }
+    // #[instrument(skip(self), ret)]
+    pub fn get_border_color(&self) -> Option<Color> {
+        self.widget_state.border_color.as_ref().map(|bc| match *bc {
+            CssBorderColor::Rgba(r, g, b, a) => Color::rgba(r, g, b, a),
+            CssBorderColor::Hsl(_, _, _) => todo!(),
+            CssBorderColor::Hsla(_, _, _, _) => todo!(),
+            CssBorderColor::Hex(_) => todo!(),
+            CssBorderColor::StringValue(_) => todo!(),
+            CssBorderColor::Inherit => todo!(),
         })
     }
 
-    pub fn set_widget_state(&mut self, widget_state: WidgetState) {
+    pub fn merge_widget_state(&mut self, widget_state: &WidgetState) {
         //TODO make overwrite
-        self.widget_state = widget_state;
+        self.widget_state.merge(widget_state);
     }
 
     pub fn save(&mut self) {
@@ -73,6 +131,26 @@ where
         self.render_ctx
             .save()
             .expect("Failed to save RenderContext");
+    }
+
+    pub fn save_assert(&mut self, index: &CtxIndex) {
+        // let s_len = self.widget_state_stack.len();
+        index.set(self.widget_state_stack.len());
+
+        // let index_len = index.get();
+        // info!("[save_assert], s_len: {} index_len: {} ", s_len, index_len);
+
+        self.save();
+    }
+    pub fn restore_assert(&mut self, index: &CtxIndex) {
+        self.restore();
+        let s_len = self.widget_state_stack.len();
+        let index_len = index.get();
+        // info!(
+        //     "[restore_assert], s_len: {} index_len: {}",
+        //     s_len, index_len
+        // );
+        assert!(s_len == index_len);
     }
     pub fn restore(&mut self) {
         self.render_ctx
@@ -86,7 +164,7 @@ where
         self.widget_state = widget_state;
     }
 
-    pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx<RenderContext>)) {
+    pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx<RenderCtx>)) {
         self.render_ctx
             .save()
             .expect("Failed to save RenderContext");
@@ -120,15 +198,17 @@ impl<RenderContext> DerefMut for PaintCtx<RenderContext> {
     }
 }
 
+impl ShapingWhoNoWarper for WidgetState {}
 #[derive(Clone, PartialEq, Debug)]
 pub struct WidgetState {
-    // pub(crate) id: WidgetId,
-    /// The size of the child; this is the value returned by the child's layout
-    /// method.
+    pub children_layout_override: StateAnchor<Option<LayoutOverride>>,
     size: Size,
     pub translation: Translation3<f64>,
+    pub world: StateAnchor<Translation3<f64>>,
     // pub background_color: CssBackgroundColor,
-    pub fill: Option<seed_styles::CssFill>,
+    pub fill: Option<CssFill>,
+    pub border_width: Option<CssBorderWidth>,
+    pub border_color: Option<CssBorderColor>,
     // /// The origin of the child in the parent's coordinate space; together with
     // /// `size` these constitute the child's layout rect.
     // origin: Point,
@@ -190,42 +270,65 @@ pub struct WidgetState {
 impl Default for WidgetState {
     fn default() -> Self {
         Self {
+            children_layout_override: StateAnchor::constant(None),
             size: Default::default(),
             translation: Default::default(),
-            fill: None,
+            world: StateAnchor::constant(Translation3::default()),
+            fill: Default::default(),
+            border_width: Default::default(),
+            border_color: Default::default(),
         }
     }
 }
+macro_rules! css_merge {
+    ($self:ident,$other:ident,$css:ident,$v:ident) => {
+        match &$other.$v {
+            Some(val) => match val {
+                $css::Inherit => (),
+                other_val => $self.$v = Some(other_val.clone()),
+            },
+            None => $self.$v = None,
+        };
+    };
+}
+
 impl WidgetState {
     // pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
-    pub fn new(size: (f64, f64), trans: Translation3<f64>) -> WidgetState {
+    pub fn new(
+        size: (f64, f64),
+        trans: Translation3<f64>,
+        world: StateAnchor<Translation3<f64>>,
+        children_layout_override: StateAnchor<Option<LayoutOverride>>,
+    ) -> WidgetState {
         WidgetState {
             // id,
             // origin: Point::ORIGIN,
             size: Size::new(size.0, size.1),
             translation: trans,
+            world,
+            children_layout_override,
             fill: None,
-            //-----
-            // is_expecting_set_origin_call: true,
-            // paint_insets: Insets::ZERO,
-            // invalid: Region::EMPTY,
-            // viewport_offset: Vec2::ZERO,
-            // baseline_offset: 0.0,
-            // is_hot: false,
-            // needs_layout: false,
-            // is_active: false,
-            // has_active: false,
-            // has_focus: false,
-            // request_anim: false,
-            // request_update: false,
-            // request_focus: None,
-            // focus_chain: Vec::new(),
-            // children: Bloom::new(),
-            // children_changed: false,
-            // timers: HashMap::new(),
-            // cursor_change: CursorChange::Default,
-            // cursor: None,
+            border_width: None,
+            border_color: None,
         }
+    }
+    pub fn merge(&mut self, new_current: &Self) {
+        self.size = new_current.size;
+        self.translation = new_current.translation;
+        self.world = new_current.world.clone();
+        self.children_layout_override = new_current.children_layout_override.clone();
+        // match &other.fill {
+        //     Some(fill) => match fill {
+        //         CssFill::Inherit => (),
+        //         other_fill => self.fill = Some(other_fill.clone()),
+        //     },
+        //     None => self.fill = None,
+        // };
+
+        //NOTE because the css Inherit
+        css_merge!(self, new_current, CssFill, fill);
+        css_merge!(self, new_current, CssBorderWidth, border_width);
+        css_merge!(self, new_current, CssBorderColor, border_color);
     }
 
     // pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
@@ -288,7 +391,7 @@ impl WidgetState {
     // }
 
     #[inline]
-    pub(crate) fn size(&self) -> Size {
+    pub fn size(&self) -> Size {
         self.size
     }
 

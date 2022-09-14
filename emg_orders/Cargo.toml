@@ -9,7 +9,7 @@ resolver = "2"
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 
 [dependencies]

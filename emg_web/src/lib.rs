@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:05:39
- * @LastEditTime: 2022-08-23 15:58:11
+ * @LastEditTime: 2022-09-06 16:26:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -67,11 +67,11 @@ pub use emg_orders::Orders;
 // pub use crate::iced_runtime::Executor;
 
 // ────────────────────────────────────────────────────────────────────────────────
-// @TODO Refactor once `optin_builtin_traits` or `negative_impls`
-// @TODO is stable (https://github.com/seed-rs/seed/issues/391).
+// TODO Refactor once `optin_builtin_traits` or `negative_impls`
+// TODO is stable (https://github.com/seed-rs/seed/issues/391).
 // --
-// @TODO Remove `'static` bound from all `MsU`s once `optin_builtin_traits`, `negative_impls`
-// @TODO or https://github.com/rust-lang/rust/issues/41875 is stable.
+// TODO Remove `'static` bound from all `MsU`s once `optin_builtin_traits`, `negative_impls`
+// TODO or https://github.com/rust-lang/rust/issues/41875 is stable.
 #[macro_export]
 macro_rules! map_callback_return_to_option_ms {
     ($cb_type:ty, $callback:expr, $panic_text:literal, $output_type:tt) => {{

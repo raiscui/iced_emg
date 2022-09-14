@@ -33,7 +33,7 @@ pub mod kw {
     #![warn(clippy::expl_impl_clone_on_copy)]
 
     syn::custom_keyword!(Layer);
-    syn::custom_keyword!(RefreshUse);
+    syn::custom_keyword!(ShapingUse);
     syn::custom_keyword!(On);
     syn::custom_keyword!(Event);
     syn::custom_keyword!(E);
@@ -243,7 +243,7 @@ impl ToTokens for Edge {
         let content_iter = content.iter();
         //NOTE use Rc because dyn
         quote_spanned!(
-            bracket_token.span=> vec![#(Rc::new(#content_iter) as Rc<dyn RefreshFor<EmgEdgeItem<_,_>>>),*]
+            bracket_token.span=> vec![#(Rc::new(#content_iter) as Rc<dyn Shaping<EmgEdgeItem<_,_>>>),*]
         )
         .to_tokens(tokens);
     }
@@ -370,7 +370,7 @@ pub enum RefresherType {
 #[derive(Debug)]
 pub struct GRefresher {
     id: ID,
-    kws: kw::RefreshUse,
+    kws: kw::ShapingUse,
     method: RefresherType,
 }
 impl AtSetup for GRefresher {
@@ -381,10 +381,10 @@ impl AtSetup for GRefresher {
                     self.id = id;
                 }
                 At::Edge(_) => {
-                    panic!("@RefreshUse can't have any edge");
+                    panic!("@ShapingUse can't have any edge");
                 }
                 At::Mod => {
-                    panic!("@RefreshUse can't be Mod");
+                    panic!("@ShapingUse can't be Mod");
                 }
             }
         }
@@ -394,7 +394,7 @@ impl AtSetup for GRefresher {
 impl Parse for GRefresher {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let id = ID::default();
-        let kws = input.parse::<kw::RefreshUse>()?;
+        let kws = input.parse::<kw::ShapingUse>()?;
 
         let fork = input.fork();
 
@@ -426,18 +426,18 @@ impl ToTokens for GRefresher {
                 );
                 let id_token = id.get("Refresh");
 
-                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(Refresher::new(#closure_token)) as Rc<dyn EqRefreshFor<GElement<Message>>>) )
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(Shaper::new(#closure_token)) as Rc<dyn EqShaping<GElement<Message>>>) )
             }
             RefresherType::Expr(expr) => {
                 let expr_token = quote_spanned!(
                     expr.span()=> #expr
                 );
                 let id_token = id.get("Refresh");
-                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(#expr_token) as Rc<dyn EqRefreshFor<GElement<Message>>>) )
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(#expr_token) as Rc<dyn EqShaping<GElement<Message>>>) )
             }
         };
 
-        // let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::RefreshUse(#id_token,Rc::new(#kws::new(#closure_token))) );
+        // let kw_token = quote_spanned! (kws.span()=>GTreeBuilderElement::ShapingUse(#id_token,Rc::new(#kws::new(#closure_token))) );
 
         kw_token.to_tokens(tokens);
     }
@@ -847,7 +847,7 @@ impl Parse for GTreeMacroElement {
             //     let mut parsed: DynObjTree = input.parse()?;
             //     parsed.at_setup(at_list);
             //     Ok(Self::GT(Box::new(parsed)))
-        } else if input.peek(kw::RefreshUse) {
+        } else if input.peek(kw::ShapingUse) {
             // @refresher
             let mut parsed: GRefresher = input.parse()?;
             parsed.at_setup(at_list);
@@ -1038,7 +1038,7 @@ impl ToTokens for Gtree {
                 },
                 element::*,
                 layout::{add_values::*, css, styles::*, EmgEdgeItem},
-                refresh::{EqRefreshFor, RefreshFor, RefreshUse, Refresher},
+                refresh::{EqShaping, Shaping, ShapingUse, Shaper},
                 state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
             };
 
@@ -1305,7 +1305,7 @@ mod tests {
         //                         :: std :: option :: Option :: None)
         //                 )
         //             )
-        //         ]) as Rc < (dyn RefreshFor < EmgEdgeItem < _ >>) > , 
+        //         ]) as Rc < (dyn Shaping < EmgEdgeItem < _ >>) > , 
 
         //         Rc :: new (vec ! [
         //             emg_layout :: ccsa :: CassowaryVar :: Virtual (
@@ -1331,7 +1331,7 @@ mod tests {
         //                     ]
         //                 )
         //             )
-        //         ]) as Rc < (dyn RefreshFor < EmgEdgeItem < _ >>) >] , 
+        //         ]) as Rc < (dyn Shaping < EmgEdgeItem < _ >>) >] , 
         //         vec ! [])]) ;
 
         
@@ -1375,7 +1375,7 @@ mod tests {
         @=aa1 @E=[@h |(button)...| in(#panel) gap(10),h(px(11))]
                 Layer [
                     Text::new(format!("aa1***********8"))=>[
-                        RefreshUse dyn_v
+                        ShapingUse dyn_v
                     ],
                     StateAnchor::constant(1) => |p,gel|p.clone() =>[
 

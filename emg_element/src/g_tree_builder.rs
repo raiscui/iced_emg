@@ -1,16 +1,16 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2022-08-31 13:06:50
+ * @LastEditTime: 2022-09-07 14:39:33
  * @LastEditors: Rais
  * @Description:
  */
 mod node_item_rc_sv;
-use crate::GElement;
+use crate::{EventNode, GElement};
 use emg::EdgeIndex;
 use emg_common::IdStr;
 use emg_layout::{EmgEdgeItem, GenericSizeAnchor};
-use emg_refresh::{EqRefreshFor, RefreshFor};
+use emg_shaping::{EqShaping, Shaping};
 use emg_state::{Dict, StateAnchor, StateVar};
 use std::{cell::Ref, rc::Rc};
 
@@ -23,34 +23,34 @@ where
 {
     Layer(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix, RenderCtx>>>>, //NOTE Rc for clone
+        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix, RenderCtx>>>>, //NOTE Rc for clone
         Vec<GTreeBuilderElement<Message, RenderCtx, Ix>>,
     ),
     // El(Ix, Element< Message>),
     GElementTree(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix, RenderCtx>>>>,
+        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix, RenderCtx>>>>,
         GElement<Message, RenderCtx>,
         Vec<GTreeBuilderElement<Message, RenderCtx, Ix>>,
     ),
     // SaMapEffectGElementTree(
     //     Ix,
-    //     Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+    //     Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
     //     Rc< SaBuilderFn< GElement<Message>>>,
     //     Vec<GTreeBuilderElement<Message, Ix>>,
     // ),
-    RefreshUse(Ix, Rc<dyn EqRefreshFor<GElement<Message, RenderCtx>>>),
+    ShapingUse(Ix, Rc<dyn EqShaping<GElement<Message, RenderCtx>>>),
     Cl(Ix, Rc<dyn Fn()>),
-    // Event(Ix, EventNode<Message>),
+    Event(Ix, EventNode<Message>),
     Dyn(
         Ix,
-        Vec<Rc<dyn RefreshFor<EmgEdgeItem<Ix, RenderCtx>>>>,
+        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix, RenderCtx>>>>,
         StateVar<Dict<Ix, GTreeBuilderElement<Message, RenderCtx, Ix>>>,
     ),
     // Fragment(Vec<GTreeBuilderElement< Message, Ix>>),
     // GenericTree(
     //     Ix,
-    //     Vec<Box<dyn RefreshFor<EmgEdgeItem<Ix>>>>,
+    //     Vec<Box<dyn Shaping<EmgEdgeItem<Ix>>>>,
     //     Box<dyn DynGElement< Message> + 'static>,
     //     Vec<GTreeBuilderElement< Message, Ix>>,
     // )
@@ -67,9 +67,10 @@ where
             Self::GElementTree(arg0, arg1, arg2, arg3) => {
                 Self::GElementTree(arg0.clone(), arg1.clone(), arg2.clone(), arg3.clone())
             }
-            Self::RefreshUse(arg0, arg1) => Self::RefreshUse(arg0.clone(), arg1.clone()),
+            Self::ShapingUse(arg0, arg1) => Self::ShapingUse(arg0.clone(), arg1.clone()),
             Self::Cl(arg0, arg1) => Self::Cl(arg0.clone(), arg1.clone()),
             Self::Dyn(arg0, arg1, arg2) => Self::Dyn(arg0.clone(), arg1.clone(), arg2.clone()),
+            Self::Event(a, b) => Self::Event(a.clone(), b.clone()),
         }
     }
 }
@@ -120,17 +121,17 @@ where
             //         .field(updaters)
             //         .finish()
             // }
-            Self::RefreshUse(id, _) => f
+            Self::ShapingUse(id, _) => f
                 .debug_tuple("GTreeBuilderElement::Updater")
                 .field(id)
-                .field(&"Box<dyn RefreshFor<GElement< Message>>>")
+                .field(&"Box<dyn Shaping<GElement< Message>>>")
                 .finish(),
             Self::Cl(id, _) => f.debug_tuple("GTreeBuilderElement::Cl").field(id).finish(),
-            // Self::Event(id, e) => f
-            //     .debug_tuple("GTreeBuilderElement::Event")
-            //     .field(id)
-            //     .field(&e)
-            //     .finish(),
+            Self::Event(id, e) => f
+                .debug_tuple("GTreeBuilderElement::Event")
+                .field(id)
+                .field(&e)
+                .finish(),
             Self::Dyn(id, _e, _sa_dict_gbe) => f
                 .debug_tuple("GTreeBuilderElement::Dyn")
                 .field(id)

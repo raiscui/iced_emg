@@ -1,20 +1,18 @@
-use emg_common::{
-    measures::ExactLengthSimplex, GenericSize, TypeCheck, TypeCheckObjectSafe, TypeName,
-};
+/*
+ * @Author: Rais
+ * @Date: 2021-08-20 12:06:12
+ * @LastEditTime: 2022-09-12 12:56:02
+ * @LastEditors: Rais
+ * @Description:
+ */
+
+use emg_common::{measures::ExactLengthSimplex, GenericSize, TypeCheck, TypeName};
 use seed_styles::{CssHeight, CssWidth, LogicLength, Unit};
 
 use crate::init_motion;
 
 use super::PropertyOG;
 use super::{Motion, Property};
-
-/*
- * @Author: Rais
- * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2022-08-30 12:14:56
- * @LastEditors: Rais
- * @Description:
- */
 
 #[allow(clippy::fallible_impl_from)]
 impl From<LogicLength> for Motion {

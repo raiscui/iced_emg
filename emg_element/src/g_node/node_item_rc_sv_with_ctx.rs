@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2022-08-31 12:54:03
+ * @LastEditTime: 2022-09-08 16:03:43
  * @LastEditors: Rais
  * @Description: 
  */
@@ -12,22 +12,25 @@
  * @LastEditors: Rais
  * @Description:
  */
+
+mod graph_methods;
+pub use graph_methods::GraphMethods;
 use std::{cell::RefCell, rc::Rc};
 
 // use cfg_if::cfg_if;
 use either::Either::{self, Left, Right};
-use emg::{EdgeCollect, EdgeIndex, Graph};
+use emg::{EdgeCollect, EdgeIndex, Graph, edge_index_no_source};
 use emg_common::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
-use emg_native::{PaintCtx, Widget};
-use emg_refresh::{RefreshForUse, RefreshUse};
+use emg_native::{PaintCtx, Widget, Event};
+use emg_shaping::{ShapeOfUse, ShapingUse};
 use emg_state::{
     Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar,
 };
 use tracing::{debug, error, trace, trace_span, info_span, info, event, Level, warn};
 // use vec_string::VecString;
 
-use crate::{GElement, NodeBuilderWidget};
+use crate::{GElement, NodeBuilderWidget, node_builder::EventNode};
 
 use super::{EmgNodeItem, PathDict};
 
@@ -46,6 +49,8 @@ type GElEither<Message,RenderContext> = Either<GelType<Message,RenderContext>, G
 type CurrentPathChildrenEixGElSA<Message,RenderContext> =
     StateAnchor<(EdgeIndex<IdStr>, GElEither<Message,RenderContext>)>;
 
+
+pub type EventMatchsSa<Message> = StateAnchor<Dict<IdStr, Vector<EventNode<Message>>>>;
 
 impl<Message,RenderCtx> EmgNodeItem<NItem<Message,RenderCtx>, GelType<Message,RenderCtx>>
 where
@@ -202,11 +207,10 @@ where
         let graph_rc3 = graph_rc.clone();
         let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
 
-        let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex<IdStr>, GElEither<Message, RenderCtx>> =
-            OrdMapPool::new(POOL_SIZE);
+        let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex<IdStr>, GElEither<Message, RenderCtx>> = OrdMapPool::new(POOL_SIZE);
 
         let paths_view_gel_sa = paths_sa.map_(move |current_path, _| {
-            let _span = info_span!("----[paths_view_gel_sa] recalculation,( in [Dict] paths_sa.map_ => --------------------)",%current_path).entered();
+            let _span = info_span!("----[paths_view_gel_sa] recalculation,( in [Dict] paths_sa.map_ ===========>)",%current_path).entered();
 
             let current_path_clone2 = current_path.clone();
             let graph_rc4 = graph_rc3.clone();
@@ -262,13 +266,12 @@ where
                                     }
                                 })
                                 .map(move |gel| {
-                                    // if gel.is_event_() {
-                                    //     //Left event
-                                    //     (current_child_ei.clone(), Left(gel.clone()))
-                                    // } else {
-                                    //     (current_child_ei.clone(), Right(gel.clone()))
-                                    // }
+                                    if gel.is_event_() {
+                                        //NOTE : Left is  event
+                                        (current_child_ei.clone(), Left(gel.clone()))
+                                    } else {
                                         (current_child_ei.clone(), Right(gel.clone()))
+                                    }
 
                                 });
 
@@ -384,30 +387,37 @@ where
                         if let Some(child_gel) =
                             children.get(eix).and_then(|child| child.as_ref().right())
                         {
-                            debug_assert!(!child_gel.is_node_ref_());
+                            //TODO 更改gel的 和 just child 类型分开, 不应该 有 layer el类型, 
+                            //TODO layer这种只有 child 的 不需要包含 children属性, 直接用edge ,应该叫 group/location ,or plan/canvas(含有draw bg)
+                            //TODO ,某些 真正需要 children 的 如 button这种 属于child = 修改内部的类型,才需要 use refresh edit gel.
+                            //TODO 静态 动态 children分开, 让静态不需要 refresh
+                            //TODO 用children dict 去 修改 mut gel, 而不是 重新 for循环 重建整个 gel
+                            //NOTE should all builder
+                            info!("child: {:?}",child_gel);
+                            debug_assert!(child_gel.is_builder());
                             // if child_gel.is_node_ref_() {
                             //     let refs =child_gel.as_node_ref_().unwrap();
                             //     error!("child_gel is node ref:{} ",refs);
                             // }
 
-                            gel_clone.refresh_use(child_gel.as_ref());//TODO use rc
+                            gel_clone.shaping_use(child_gel.as_ref());//TODO use rc
                         }
                     }
 
                     debug!("gel_clone: {}", &gel_clone);
                     // for child in children {
                     //     if let Some(child_gel) = child.as_ref().right() {
-                    //         gel_clone.refresh_for_use(child_gel);
+                    //         gel_clone.shape_of_use(child_gel);
                     //     }
                     // }
                     //TODO build edge info into [NodeBuilderWidget]
-                    match NodeBuilderWidget::<Message, RenderCtx>::try_new_use(gel_clone,&edge_ctx) {
+                    match NodeBuilderWidget::<Message, RenderCtx>::try_new_use(&nix4,gel_clone,&edge_ctx) {
                         Ok(mut node_builder_widget) => {
                             
                             let _g = trace_span!("-> in NodeBuilderWidget").entered();
                             trace!("[combine view gel] NodeBuilderWidget::<Message>::try_from  OK");
                             // node_builder_widget.set_id(format!("{}", cix));
-                            node_builder_widget.set_id(nix4.clone());
+                            // node_builder_widget.set_id(.clone());
 
                             // // TODO use StateAnchor ? for child edge change
                             // trace!("[combine view gel] edge::path:  {}", path3);
@@ -420,7 +430,7 @@ where
                             // if !event_callbacks.is_empty() {
                             //     for callback in event_callbacks {
                             //         //TODO maybe just directly push event
-                            //         node_builder_widget.refresh_for_use(callback);
+                            //         node_builder_widget.shape_of_use(callback);
                             //     }
                             // }
 
@@ -428,15 +438,10 @@ where
                                 if let Some(event_gel) =
                                     children.get(eix).and_then(|child| child.as_ref().left())
                                 {
-                                    node_builder_widget.refresh_for_use(event_gel.as_ref());
+                                    info!("will shaping node builder : {:?}", event_gel);
+                                    node_builder_widget.shaping_use(event_gel.as_ref());
                                 }
                             }
-
-                            // for child in children {
-                            //     if let Some(event_gel) = child.as_ref().left() {
-                            //         node_builder_widget.refresh_for_use(event_gel);
-                            //     }
-                            // }
 
                             Rc::new(GElement::Builder_(
                                 // node_builder_widget.and_widget(gel_clone),
@@ -446,8 +451,8 @@ where
                         },
                         Err(other_gel) => {
                             warn!(
-                                "[combine view gel] NodeBuilderWidget::<Message>::try_from  error use:",
-                                // current_node_clone.borrow()
+                                "[combine view gel] NodeBuilderWidget::try_new_use->  Err({:?})",
+                                &other_gel
                             );
                             Rc::new(other_gel)
                         },
@@ -461,9 +466,30 @@ where
             paths_sa,
             // incoming_eix_sa,
             // outgoing_eix_sa,
+            paths_view_gel:Self::gen_paths_view_gel(&paths_view_gel_sa),
             paths_view_gel_sa,
         }
     }
+    
+    fn gen_paths_view_gel(paths_view_gel_sa: &StateAnchor<Dict<EPath<IdStr>, StateAnchor<GelType<Message,RenderCtx>>>>)->StateAnchor<Dict<EPath<IdStr>, GelType<Message,RenderCtx>>>{
+        paths_view_gel_sa
+                .then(|dict| {
+                    dict.iter()
+                        .map(|(k, v)| {
+                            let k_c = k.clone();
+                            v.map(move |vv| (k_c.clone(), vv.clone())).into_anchor()
+                        })
+                        .collect::<Anchor<Vector<(EPath<IdStr>, Rc<GElement<Message, RenderCtx>>)>>>()
+                        .map(
+                            |x| -> Dict<EPath<IdStr>, Rc<GElement<Message, RenderCtx>>> {
+                                x.clone().into_iter().collect()
+                            },
+                        )
+                })
+    
+    }
+
+
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     //TODO make no clone fn
@@ -480,14 +506,8 @@ where
         self.gel_sa.get_rc()
     }
 
-    pub fn build_ctx_sa(&self,eix: &EPath<IdStr>, ctx:StateAnchor< PaintCtx<RenderCtx>>) ->StateAnchor<PaintCtx<RenderCtx>>
-    where RenderCtx:Clone +PartialEq
-    {       
-        //TODO eix use anchor instead
-            self.get_view_gelement_sa(eix).then(move |gel|{
-                let ctx_clone = ctx.clone();
-                let gel_clone =gel.clone();
-                gel_clone.paint_sa(ctx_clone).get_anchor()
-            })
-    }
+   
+
 }
+
+

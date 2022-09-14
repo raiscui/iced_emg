@@ -6,7 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+emg_common = { path = "../emg_common" }
 emg_native = { path = "../emg_native" }
+emg_layout = { path = "../emg_layout" }
+emg_state = { path = "../emg_state" }
 #--------
 raw-window-handle = "0.4"
 thiserror = "1.0"

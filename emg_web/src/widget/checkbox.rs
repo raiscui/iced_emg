@@ -13,7 +13,7 @@ use emg_common::{
     better_any::{Tid, TidAble, TidExt},
     IdStr, LogicLength, TypeCheckObjectSafe, TypeName,
 };
-use emg_refresh::{RefreshFor, RefreshUse, TryRefreshUse};
+use emg_shaping::{Shaping, ShapingUse, TryShapingUse};
 use seed_styles::GlobalStyleSV;
 use tracing::{error, trace, warn};
 
@@ -211,11 +211,11 @@ where
     }
 }
 
-impl<'a, Message> RefreshFor<Self> for Checkbox<Message>
+impl<'a, Message> Shaping<Self> for Checkbox<Message>
 where
     Message: 'static + Clone + MessageTid<'a>,
 {
-    fn refresh_for(&self, who: &mut Self) {
+    fn shaping(&self, who: &mut Self) {
         trace!(
             "Generic: use Checkbox refresh for checkbox self:{}-who:{}",
             &who.label,
@@ -225,25 +225,25 @@ where
         *who = self.clone();
     }
 }
-// impl<'a, Message, T: RefreshFor<Checkbox<Message>>> AsRefreshFor<Checkbox<Message>> for T {
-//     fn as_refresh_for(&self) -> &dyn RefreshFor<Checkbox<Message>> {
+// impl<'a, Message, T: Shaping<Checkbox<Message>>> AsRefreshFor<Checkbox<Message>> for T {
+//     fn as_refresh_for(&self) -> &dyn Shaping<Checkbox<Message>> {
 //         self
 //     }
 // }
 
 // @ 被GElement更新自己 ------------------------------------
-impl<Message> RefreshFor<Checkbox<Message>> for GElement<Message>
+impl<Message> Shaping<Checkbox<Message>> for GElement<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
     #[allow(clippy::match_same_arms)]
-    fn refresh_for(&self, who_checkbox: &mut Checkbox<Message>) {
+    fn shaping(&self, who_checkbox: &mut Checkbox<Message>) {
         match self {
             Self::Layer_(_l) => {
                 unimplemented!();
             }
             Self::Builder_(builder) => {
-                builder.widget().unwrap().deref().refresh_for(who_checkbox);
+                builder.widget().unwrap().deref().shaping(who_checkbox);
             }
             Self::Text_(t) => {
                 who_checkbox.label = t.get_content(); //TODO text.get_content directly return IdStr
@@ -252,14 +252,14 @@ where
                 unimplemented!();
             }
             Self::Refresher_(_refresher) => {
-                // NOTE this is refresh_for GElement , not Checkbox
+                // NOTE this is shaping GElement , not Checkbox
                 unimplemented!();
             }
             Self::Event_(_) => {
                 todo!();
             }
             Self::Generic_(g_self) => {
-                error!("use Generic refresh_for Checkbox :{}", g_self.type_name());
+                error!("use Generic shaping Checkbox :{}", g_self.type_name());
 
                 //TODO 反射?
                 // todo!("reflection? ",);
@@ -274,21 +274,21 @@ where
 }
 
 // @ 用于更新who -GElement ------------------------------------
-impl<Message> RefreshFor<GElement<Message>> for Checkbox<Message>
+impl<Message> Shaping<GElement<Message>> for Checkbox<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
     #[allow(clippy::match_same_arms)]
-    fn refresh_for(&self, who: &mut GElement<Message>) {
+    fn shaping(&self, who: &mut GElement<Message>) {
         match who {
             GElement::Layer_(l) => {
                 l.push(self.clone().into());
             }
             GElement::Builder_(builder) => {
                 if let Some(box gel) = builder.widget_mut() {
-                    self.refresh_for(gel);
+                    self.shaping(gel);
                 } else {
-                    panic!("builder not has widget, in [RefreshFor<GElement<Message>> for Checkbox<Message>] ")
+                    panic!("builder not has widget, in [Shaping<GElement<Message>> for Checkbox<Message>] ")
                 }
             }
             GElement::Text_(_)
@@ -298,11 +298,11 @@ where
                 unimplemented!();
             }
             GElement::Generic_(g_who) => {
-                trace!("use Checkbox refresh_for Generic");
+                trace!("use Checkbox shaping Generic");
                 let dyn_who = g_who.as_mut();
 
                 if let Some(checkbox) = dyn_who.downcast_mut::<Self>() {
-                    self.refresh_for(checkbox);
+                    self.shaping(checkbox);
                 }
             }
             GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
@@ -334,17 +334,17 @@ where
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
-// impl<Message> RefreshUse<i32> for Checkbox<Message> {
-//     fn refresh_use(&mut self, use_something: &i32) {
+// impl<Message> ShapingUse<i32> for Checkbox<Message> {
+//     fn shaping_use(&mut self, use_something: &i32) {
 //         self.label = format!("checkbox i32: {}", use_something).into()
 //     }
 // }
 
-impl<'a, Message> RefreshFor<Checkbox<Message>> for i32
+impl<'a, Message> Shaping<Checkbox<Message>> for i32
 where
     Message: 'static + Clone + MessageTid<'a>,
 {
-    fn refresh_for(&self, who: &mut Checkbox<Message>) {
+    fn shaping(&self, who: &mut Checkbox<Message>) {
         warn!(
             "[checkbox] use i32 refresh for checkbox self:{:?}-who:{}",
             &who, &self
@@ -358,34 +358,34 @@ where
 // {
 //     fn try_refresh_for(&self, who: &mut Checkbox<Message>) {
 //         warn!(
-//             "[try_refresh_for] self:{} try downcast to Rc<dyn RefreshFor<{}>>",
+//             "[try_refresh_for] self:{} try downcast to Rc<dyn Shaping<{}>>",
 //             std::any::type_name::<Self>(),
 //             std::any::type_name::<Checkbox<Message>>()
 //         );
 //         let u = self.clone();
 //         let any: &dyn Any = &u;
-//         if let Some(u_s_e) = any.downcast_ref::<Rc<dyn RefreshFor<Checkbox<Message>>>>() {
-//             who.refresh_for_use(&**u_s_e);
+//         if let Some(u_s_e) = any.downcast_ref::<Rc<dyn Shaping<Checkbox<Message>>>>() {
+//             who.shape_of_use(&**u_s_e);
 //         } else {
 //             warn!("try_refresh failed: use {:?} for who:{:?}", &self, &who);
 //         }
 //     }
 // }
 
-impl<'a, Message> TryRefreshUse for Checkbox<Message>
+impl<'a, Message> TryShapingUse for Checkbox<Message>
 where
     Message: 'static + Clone + MessageTid<'a>,
 {
-    fn try_refresh_use(&mut self, any: Box<dyn Any>) {
+    fn try_shaping_use(&mut self, any: Box<dyn Any>) {
         warn!(
-            "[try_refresh_use]  try downcast to Rc<dyn RefreshFor<{}>>",
+            "[try_shaping_use]  try downcast to Rc<dyn Shaping<{}>>",
             std::any::type_name::<Self>()
         );
-        if let Some(x) = any.downcast_ref::<Box<dyn RefreshFor<Self>>>() {
-            self.refresh_use(x);
+        if let Some(x) = any.downcast_ref::<Box<dyn Shaping<Self>>>() {
+            self.shaping_use(x);
         }
-        // if let Some(u_s_e_rf) = any.downcast_ref::<Rc<dyn RefreshFor<Self>>>() {
-        //     self.refresh_for_use(&**u_s_e_rf);
+        // if let Some(u_s_e_rf) = any.downcast_ref::<Rc<dyn Shaping<Self>>>() {
+        //     self.shape_of_use(&**u_s_e_rf);
         // } else {
         //     warn!("try_refresh failed: use {:?} for who:{:?}", &self, &any);
         // }
@@ -396,7 +396,7 @@ where
 // mod testcb {
 //     use std::rc::Rc;
 
-//     use emg_refresh::{RefreshFor, RefreshUse};
+//     use emg_shaping::{Shaping, ShapingUse};
 
 //     trait UseI32 {
 //         const VALUE: bool = false;
@@ -405,7 +405,7 @@ where
 
 //     struct RfUseI32<T>(T);
 
-//     impl<T: RefreshUse<i32>> RfUseI32<T> {
+//     impl<T: ShapingUse<i32>> RfUseI32<T> {
 //         const VALUE: bool = true;
 //     }
 //     trait XX: UseI32 {}

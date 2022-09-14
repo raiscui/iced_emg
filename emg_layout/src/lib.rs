@@ -10,6 +10,7 @@
 #![feature(auto_traits)]
 #![feature(negative_impls)]
 #![feature(iter_intersperse)]
+#![feature(let_chains)]
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(test)]
 // ────────────────────────────────────────────────────────────────────────────────
@@ -29,9 +30,9 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
-use emg_common::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector, VectorDisp, TypeName};
+use emg_common::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector, VectorDisp, TypeName, LayoutOverride, RectLTRB};
 use emg::{Edge, EdgeIndex, NodeIndex, };
-use emg_refresh::{RefreshFor, RefreshForWithDebug};
+use emg_shaping::{Shaping, ShapingWithDebug, EqShapingWithDebug};
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
 use emg_common::Vector;
 use float_cmp::approx_eq;
@@ -68,6 +69,8 @@ pub mod ccsa;
 
 static CURRENT_PROP_WEIGHT :f64 = cassowary::strength::MEDIUM * 1.5;
 static CHILD_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 0.9;
+
+
 
 pub type LayoutEndType = (Translation3<f64>, f64, f64);
 
@@ -356,7 +359,7 @@ where
 }
 #[derive(Display, Debug, Clone, PartialEq,Eq)]
 #[display(
-    fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},translation:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
+    fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},translation:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\nworld:\n{},\n}}",
     // "indented(suggest_size)",
     "indented(cass_or_calc_size)",
     "indented(origin)",
@@ -365,7 +368,8 @@ where
     "indented(coordinates_trans)",
     "indented(cass_trans)",
     "indented(matrix)",
-    "indented(loc_styles)"
+    "indented(loc_styles)",
+    "indented(world)",
 )]
 pub struct LayoutCalculated {
     
@@ -380,13 +384,26 @@ pub struct LayoutCalculated {
     cass_trans: StateAnchor<Translation3<f64>>,
     matrix: StateAnchor<Mat4>,
     loc_styles: StateAnchor<Style>,
+    world:StateAnchor<Translation3<f64>>,
 }
+
 
 pub struct EdgeCtx<RenderCtx=()> {
     pub styles_end:StateAnchor<StylesDict>,
     pub layout_end: StateAnchor<LayoutEndType>,
+    pub world:StateAnchor<Translation3<f64>>,
+    pub children_layout_override:StateAnchor<Option<LayoutOverride>>,
     //TODO temp keep here for future use
     _phantom_data: std::marker::PhantomData<RenderCtx>
+}
+
+impl<RenderCtx> EdgeCtx<RenderCtx> {
+    #[must_use] pub fn to_layout_override(&self)->StateAnchor<LayoutOverride>{
+        (&self.world,&self.layout_end,&self.children_layout_override).map(|world,(_,w,h),children_layout_override|{
+            let rect = RectLTRB::from_origin_size(world.vector.xy().into(),*w,*h);
+            children_layout_override.as_ref().cloned().map_or_else(||LayoutOverride::new(rect), |lo|lo.underlay(rect))
+        })
+    }
 }
 
 impl<RenderCtx> PartialEq for EdgeCtx<RenderCtx> {
@@ -397,13 +414,22 @@ impl<RenderCtx> PartialEq for EdgeCtx<RenderCtx> {
 
 impl<RenderCtx> Clone for EdgeCtx<RenderCtx> {
     fn clone(&self) -> Self {
-        Self { styles_end: self.styles_end.clone(), layout_end: self.layout_end.clone(),_phantom_data:std::marker::PhantomData::<RenderCtx> }
+        Self { styles_end: self.styles_end.clone(), layout_end: self.layout_end.clone(),
+            world:self.world.clone(),
+            children_layout_override:self.children_layout_override.clone(),
+            _phantom_data:std::marker::PhantomData::<RenderCtx> }
     }
 }
 
 impl<RenderCtx: 'static> std::fmt::Debug for EdgeCtx<RenderCtx> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("EdgeCtx").field("styles_end", &self.styles_end).field("layout_end", &self.layout_end as &dyn std::fmt::Debug).finish()
+        f.debug_struct("EdgeCtx")
+        .field("styles_end", &self.styles_end)
+        .field("layout_end", &self.layout_end as &dyn std::fmt::Debug)
+        .field("world", &self.world as &dyn std::fmt::Debug)
+        .field("children_layout", &self.children_layout_override as &dyn std::fmt::Debug)
+
+        .finish()
     }
 }
 pub struct EdgeData<RenderCtx> {
@@ -616,7 +642,7 @@ pub type GraphEdgesDict<Ix,RenderContext=()> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeI
 // type PathVarMap<Ix,T> = Dict<EPath<Ix>,T>;
 // type PathVarMap<Ix,T> = indexmap::IndexMap <EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
 type PathVarMap<Ix,T> = HashMap<EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
-pub type StylesDict = Dict<TypeName, Rc<dyn RefreshForWithDebug<emg_native::WidgetState>>>;
+pub type StylesDict = Dict<TypeName, StateAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
 
 pub struct EmgEdgeItem<Ix,RenderCtx=()>
 where
@@ -1030,7 +1056,7 @@ where
 
                     //NOTE 约束
                     let ccss_list_sa = path_layout.then(|layout|{
-                    layout.cassowary_constants.watch().then(|x|x.clone().into_anchor()).into_anchor()
+                        layout.cassowary_constants.watch().then(|x|x.clone().into_anchor()).into_anchor()
                     });
 
                   
@@ -1048,12 +1074,13 @@ where
                     };
 
                     //NOTE children cassowary_map
-                    let children_cass_maps_sa = children_nodes3.filter_map(move |child_path,child_node|{
+                    let (children_layout_override_sa_a,children_cass_maps_sa) = children_nodes3.filter_map(move |child_path,child_node|{
                         if child_path.except_tail_match(&self_path3) {
+
                             match (child_path.last_target(),child_node.as_edge_data()){
                                
                                 // (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.path_layout.clone()))),
-                                (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.calculated.size_constraints.clone()))),
+                                (Some(nix), Some(ed)) =>Some( (ed.ctx.to_layout_override().into_anchor(), nix.index().clone(),(ed.cassowary_map.clone(),ed.calculated.size_constraints.clone()))),
                                 _=>None
                             }
                         }else{
@@ -1061,9 +1088,25 @@ where
                         }
                     })
                     .map(|x|{
-                        x.values().cloned()
-                        .collect::<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>>()
-                    });
+                        let (children_as_layout_override_list, children_cass_maps) = x.values().cloned().fold((Vector::new(),Dict::new()),|(mut layout_override_vec,mut cass_dict),(layout_override,ix,cass_map)|{
+                            layout_override_vec.push_back(layout_override);
+                            cass_dict.insert (ix,cass_map);
+                            (layout_override_vec,cass_dict)
+                        });
+                        let children_layout_override = children_as_layout_override_list.into_iter().collect::<Anchor<Vector<_>>>().map(|los|{
+                            los.clone().into_iter().reduce(|acc,lo|{
+                                acc + lo
+                            })
+                        });
+                        (children_layout_override,children_cass_maps)
+
+                        // .collect::<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>>();
+
+                    }).split();
+
+                    let children_layout_override_sa = children_layout_override_sa_a.then(std::clone::Clone::clone);
+
+              
                     
 
 
@@ -1527,7 +1570,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-
+                    let world = layout_calculated.world.clone();
 
                     EdgeItemNode::<RenderCtx>::EdgeData(Box::new(EdgeData::<RenderCtx> {
                         path_layout,
@@ -1540,6 +1583,8 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                         ctx:EdgeCtx{
                             styles_end:styles_sv.watch(),//TODO make real path_styles_sv
                             layout_end,
+                            world,
+                            children_layout_override:children_layout_override_sa,
                             _phantom_data:std::marker::PhantomData::<RenderCtx>
                         },
                         opt_p_calculated,
@@ -1717,6 +1762,8 @@ fn path_ein_empty_node_builder<Ix:'static>(
             // TODO use  key 更新 s(),
             s().w(px(size.x)).h(px(size.y)).transform(*mat4)
         });
+
+        let world = calculated_translation.clone();
     let layout_calculated = LayoutCalculated {
            
             size_constraints,
@@ -1730,6 +1777,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
             matrix,
             // • • • • •
             loc_styles,
+            world
         };
     let styles_string = (
             &path_styles.watch(),
@@ -1865,7 +1913,7 @@ Ix: Clone + Hash + Eq + Ord + 'static + Default,
     Use: CssValueTrait + Clone + 'static,
 >(
     v: Use,
-) -> Box<dyn RefreshFor<EmgEdgeItem<Ix>>> {
+) -> Box<dyn Shaping<EmgEdgeItem<Ix>>> {
     // pub fn css<Use: CssValueTrait + std::clone::Clone + 'static>(v: Use) -> Box<Css<Use>> {
     Box::new(Css(v))
 }
@@ -1879,7 +1927,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_common::{parent, IdStr};
-    use emg_refresh::RefreshForUse;
+    use emg_shaping::ShapeOfUse;
     use emg_state::StateVar;
     use emg_common::vector;
  
@@ -1999,16 +2047,16 @@ mod tests {
             });
 
 
-            // debug!("refresh_use before {}", &ec);
+            // debug!("shaping_use before {}", &ec);
             let _span = span!(Level::TRACE, "debug print e1");
             _span.in_scope(|| {
-                trace!("loc refresh_use before {}", &e1);
+                trace!("loc shaping_use before {}", &e1);
             });
             info!("l2 =========================================================");
             
-            root_e.refresh_for_use(&vec![css(css_width)]);
-            // root_e.refresh_use(&css(css_width.clone()));
-            root_e.refresh_for_use(&Css(css_height));
+            root_e.shape_of_use(&vec![css(css_width)]);
+            // root_e.shaping_use(&css(css_width.clone()));
+            root_e.shape_of_use(&Css(css_height));
             assert_eq!(
                 e1.edge_data(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .unwrap()
@@ -2019,11 +2067,11 @@ mod tests {
             );
             info!("=========================================================");
 
-            e2.refresh_for_use(&Css(CssWidth::from(px(20))));
-            e2.refresh_for_use(&Css(CssHeight::from(px(20))));
-            e2.refresh_for_use(&Css(bg_color(hsl(40,70,30))));
+            e2.shape_of_use(&Css(CssWidth::from(px(20))));
+            e2.shape_of_use(&Css(CssHeight::from(px(20))));
+            e2.shape_of_use(&Css(bg_color(hsl(40,70,30))));
 
-            trace!("refresh_use after {:#?}", &e2);
+            trace!("shaping_use after {:#?}", &e2);
             info!("l3 =========================================================");
             assert_eq!(
                 e2.edge_data(&EPath(vector![
@@ -2122,10 +2170,10 @@ mod tests {
           
 
 
-            // debug!("refresh_use before {}", &ec);
+            // debug!("shaping_use before {}", &ec);
             let _span = span!(Level::TRACE, "debug print e1");
             _span.in_scope(|| {
-                trace!("refresh_use before {}", &e1);
+                trace!("shaping_use before {}", &e1);
             });
             info!("l1 =========================================================");
 
@@ -2145,49 +2193,49 @@ mod tests {
             let xx = vec![css_width];
             // let xx = vec![css(css_width)];
 
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
 
-            // trace!("refresh_use after css_width {}", &root_e);
-            trace!("refresh_use after css_width {}", &e1);
+            // trace!("shaping_use after css_width {}", &root_e);
+            trace!("shaping_use after css_width {}", &e1);
             info!("=========================================================");
 
-            // root_e.refresh_use(&Css(css_height.clone()));
+            // root_e.shaping_use(&Css(css_height.clone()));
             let tempcss= use_state(css_height);
-            root_e.refresh_for_use(&tempcss);
+            root_e.shape_of_use(&tempcss);
             assert_eq!(
                 e1.edge_nodes
                     .get()
@@ -2227,36 +2275,36 @@ mod tests {
 
             info!("=========================================================");
 
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
             assert_eq!(
                 e1.edge_nodes
                     .get()
@@ -2277,12 +2325,12 @@ mod tests {
                 .get() ,
             "width: 12px;\nheight: 10px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,10,0,1);\n"
             );
-            trace!("refresh_use after {}", &e1);
+            trace!("shaping_use after {}", &e1);
             info!("=========================================================");
 
-            trace!("refresh_use after {}", &e2);
+            trace!("shaping_use after {}", &e2);
             info!("l1351 =========================================================");
-            e2.refresh_for_use(&Css(CssHeight::from(px(50))));
+            e2.shape_of_use(&Css(CssHeight::from(px(50))));
             assert_eq!(
                 e2.edge_nodes
                     .get()
@@ -2316,17 +2364,17 @@ mod tests {
             );
             let _span1 = span!(Level::TRACE, "debug print 1");
             _span1.in_scope(|| {
-                trace!("refresh_use after {}", &e2);
+                trace!("shaping_use after {}", &e2);
             });
 
             let _span2 = span!(Level::TRACE, "debug print 2");
             _span2.in_scope(|| {
-                trace!("refresh_use after2 {}", &e2);
+                trace!("shaping_use after2 {}", &e2);
             });
             info!("=========================================================");
-            e2.refresh_for_use(&Css(CssHeight::from(px(150))));
+            e2.shape_of_use(&Css(CssHeight::from(px(150))));
 
-            trace!("refresh_use after {:#?}", &e2);
+            trace!("shaping_use after {:#?}", &e2);
             info!("..=========================================================");
             trace!(
                 "{}",
@@ -2414,10 +2462,10 @@ mod tests {
           
 
 
-            // debug!("refresh_use before {}", &ec);
+            // debug!("shaping_use before {}", &ec);
             let _span = span!(Level::TRACE, "debug print e1");
             _span.in_scope(|| {
-                trace!("refresh_use before {}", &e1);
+                trace!("shaping_use before {}", &e1);
             });
             info!("l1 =========================================================");
             warn!("calculated 1 =========================================================");
@@ -2449,7 +2497,7 @@ mod tests {
             let xx = vec![css_width];
             // let xx = vec![css(css_width)];
 
-            root_e.refresh_for_use(&xx);
+            root_e.shape_of_use(&xx);
 
             warn!("calculated 3 =========================================================");
             warn!("{}",e1.edge_nodes
@@ -2459,48 +2507,48 @@ mod tests {
             .unwrap()
             .calculated);
 
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
 
-            // trace!("refresh_use after css_width {}", &root_e);
-            trace!("refresh_use after css_width {}", &e1);
+            // trace!("shaping_use after css_width {}", &root_e);
+            trace!("shaping_use after css_width {}", &e1);
             info!("=========================================================");
 
-            // root_e.refresh_use(&Css(css_height.clone()));
+            // root_e.shaping_use(&Css(css_height.clone()));
             let tempcss= use_state(css_height);
-            root_e.refresh_for_use(&tempcss);
+            root_e.shape_of_use(&tempcss);
             
             warn!("calculated 4 root h w 100 =========================================================");
             warn!("{}",e1.edge_nodes
@@ -2556,36 +2604,36 @@ mod tests {
 
             info!("=========================================================");
 
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
             
             assert_eq!(
                 e1.edge_nodes
@@ -2607,12 +2655,12 @@ mod tests {
                 .get() ,
             "width: 12px;\nheight: 200px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,-180,0,1);\n"
             );
-            trace!("refresh_use after {}", &e1);
+            trace!("shaping_use after {}", &e1);
             info!("=========================================================");
 
-            trace!("refresh_use after {}", &e2);
+            trace!("shaping_use after {}", &e2);
             info!("l1351 =========================================================");
-            e2.refresh_for_use(&Css(CssHeight::from(px(50))));
+            e2.shape_of_use(&Css(CssHeight::from(px(50))));
             assert_eq!(
                 e2.edge_nodes
                     .get()
@@ -2646,17 +2694,17 @@ mod tests {
             );
             let _span1 = span!(Level::TRACE, "debug print 1");
             _span1.in_scope(|| {
-                trace!("refresh_use after {}", &e2);
+                trace!("shaping_use after {}", &e2);
             });
 
             let _span2 = span!(Level::TRACE, "debug print 2");
             _span2.in_scope(|| {
-                trace!("refresh_use after2 {}", &e2);
+                trace!("shaping_use after2 {}", &e2);
             });
             info!("=========================================================");
-            e2.refresh_for_use(&Css(CssHeight::from(px(150))));
+            e2.shape_of_use(&Css(CssHeight::from(px(150))));
 
-            trace!("refresh_use after {:#?}", &e2);
+            trace!("shaping_use after {:#?}", &e2);
             info!("..=========================================================");
             trace!(
                 "{}",

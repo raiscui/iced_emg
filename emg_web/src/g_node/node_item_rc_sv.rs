@@ -12,7 +12,7 @@ use either::Either::{self, Left, Right};
 use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_common::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
-use emg_refresh::{RefreshForUse, RefreshUse};
+use emg_shaping::{ShapeOfUse, ShapingUse};
 use emg_state::{
     Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar,
 };
@@ -355,14 +355,14 @@ where
                             //     error!("child_gel is node ref:{} ",refs);
                             // }
 
-                            gel_clone.refresh_use(child_gel.as_ref());
+                            gel_clone.shaping_use(child_gel.as_ref());
                         }
                     }
 
                     debug!("[combine view gel] gel_clone: {}", gel_clone);
                     // for child in children {
                     //     if let Some(child_gel) = child.as_ref().right() {
-                    //         gel_clone.refresh_for_use(child_gel);
+                    //         gel_clone.shape_of_use(child_gel);
                     //     }
                     // }
 
@@ -386,7 +386,7 @@ where
                             // if !event_callbacks.is_empty() {
                             //     for callback in event_callbacks {
                             //         //TODO maybe just directly push event
-                            //         node_builder_widget.refresh_for_use(callback);
+                            //         node_builder_widget.shape_of_use(callback);
                             //     }
                             // }
 
@@ -394,13 +394,13 @@ where
                                 if let Some(event_gel) =
                                     children.get(eix).and_then(|child| child.as_ref().left())
                                 {
-                                    node_builder_widget.refresh_for_use(event_gel.as_ref());
+                                    node_builder_widget.shape_of_use(event_gel.as_ref());
                                 }
                             }
 
                             // for child in children {
                             //     if let Some(event_gel) = child.as_ref().left() {
-                            //         node_builder_widget.refresh_for_use(event_gel);
+                            //         node_builder_widget.shape_of_use(event_gel);
                             //     }
                             // }
 

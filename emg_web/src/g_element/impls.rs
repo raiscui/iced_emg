@@ -7,7 +7,7 @@
  */
 // impl<T> From<StateVar<T>> for GElement<Message> {}
 
-// pub trait NotStateAnchorEqRefreshFor<Who>: EqRefreshFor<Who> + NotStateAnchor4Refresher {}
+// pub trait NotStateAnchorEqRefreshFor<Who>: EqShaping<Who> + NotStateAnchor4Refresher {}
 
 // impl<Who> core::cmp::PartialEq for dyn NotStateAnchorEqRefreshFor<Who> {
 //     fn eq(&self, other: &Self) -> bool {
@@ -23,7 +23,7 @@
 // }
 
 // impl<Who, Use> NotStateAnchorEqRefreshFor<Who> for Use where
-//     Use: EqRefreshFor<Who> + NotStateAnchor4Refresher
+//     Use: EqShaping<Who> + NotStateAnchor4Refresher
 // {
 // }
 
@@ -33,7 +33,7 @@
 
 use std::rc::Rc;
 
-use emg_refresh::NotStateAnchor4Refresher;
+use emg_shaping::NotStateAnchor4Refresher;
 
 use crate::GElement;
 
@@ -79,18 +79,18 @@ where
 // ────────────────────────────────────────────────────────────────────────────────
 
 // impl<Use, Message> NotStateAnchor4Refresher for GelRefresher<Use, Message> where
-//     Use: NotStateAnchor4Refresher + RefreshFor<GElement<Message>>
+//     Use: NotStateAnchor4Refresher + Shaping<GElement<Message>>
 // {
 // }
-// impl<Use, Message> !RefreshUseNoWarper for GelRefresher<Use, Message> {}
+// impl<Use, Message> !ShapingUseNoWarper for GelRefresher<Use, Message> {}
 
-// impl<Use, Message> RefreshFor<GElement<Message>> for GelRefresher<Use, Message>
+// impl<Use, Message> Shaping<GElement<Message>> for GelRefresher<Use, Message>
 // where
-//     Use: RefreshUseNoWarper + NotStateAnchor4Refresher + RefreshFor<GElement<Message>>,
+//     Use: ShapingUseNoWarper + NotStateAnchor4Refresher + Shaping<GElement<Message>>,
 // {
-//     fn refresh_for(&self, who: &mut GElement<Message>) {
-//         // self.get()().refresh_for(who);
-//         who.refresh_for_use(&self.get());
+//     fn shaping(&self, who: &mut GElement<Message>) {
+//         // self.get()().shaping(who);
+//         who.shape_of_use(&self.get());
 //     }
 // }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ where
 
 // impl<Use, Message> NotStateAnchorEqRefreshFor<GElement<Message>> for GelRefresher<Use, Message>
 // where
-//     Use: NotStateAnchor4Refresher + RefreshFor<GElement<Message>>,
+//     Use: NotStateAnchor4Refresher + Shaping<GElement<Message>>,
 //     Message: NotStateAnchor4Refresher,
 // {
 // }

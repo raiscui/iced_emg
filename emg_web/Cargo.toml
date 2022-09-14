@@ -6,7 +6,7 @@ edition = "2021"
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 
 [features]
@@ -18,7 +18,7 @@ pool = ["emg/pool", "emg_common/pool", "seed_styles/pool"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-emg_refresh = { path = "../emg_refresh" }
+emg_shaping = { path = "../emg_shaping" }
 emg_layout = { path = "../emg_layout" }
 emg_animation = { path = "../emg_animation" }
 emg_orders = { path = "../emg_orders" }

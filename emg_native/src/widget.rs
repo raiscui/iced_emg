@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2022-08-31 12:59:18
+ * @LastEditTime: 2022-09-08 15:52:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,15 +23,12 @@
 // ────────────────────────────────────────────────────────────────────────────────
 
 use dyn_clone::DynClone;
-use emg_common::dyn_partial_eq::DynPartialEq;
+use emg_common::{dyn_partial_eq::DynPartialEq, IdStr};
 use emg_state::StateAnchor;
 
 use crate::Bus;
 
-pub trait Widget<Message, RenderCtx>: DynClone + DynPartialEq
-where
-    RenderCtx: crate::RenderContext,
-{
+pub trait Widget<Message, RenderCtx>: DynClone + DynPartialEq {
     // fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
     // fn xx(&self, _bus: &Bus<Message>) {}
@@ -39,7 +36,7 @@ where
     // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
     fn paint_sa(
         &self,
-        ctx: StateAnchor<crate::PaintCtx<RenderCtx>>,
+        ctx: &StateAnchor<crate::PaintCtx<RenderCtx>>,
     ) -> StateAnchor<crate::PaintCtx<RenderCtx>>;
 }
 

@@ -1,4 +1,5 @@
 mod func;
+mod layout;
 mod macros;
 mod tools;
 // ────────────────────────────────────────────────────────────────────────────────
@@ -8,14 +9,16 @@ pub mod measures;
 pub mod mouse;
 pub mod time;
 // ────────────────────────────────────────────────────────────────────────────────
-pub type Pos = na::Point2<f32>;
+pub type Pos<T = f32> = na::Point2<T>;
 pub use crate::SVec::{smallvec, SmallVec};
 pub use ::smallvec as SVec;
 pub use better_any;
+pub use compact_str as id_str;
 pub use compact_str::CompactString as IdStr;
 pub use dyn_partial_eq;
 pub use im::{vector, Vector};
 pub use im_rc as im;
+pub use layout::*;
 pub use measures::*;
 pub use nalgebra as na;
 pub use ordered_float::NotNan;

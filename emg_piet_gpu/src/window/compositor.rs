@@ -64,6 +64,7 @@ impl Compositor {
 
         let swapchain = unsafe {
             self.instance.swapchain(
+                //TODO use state.viewport
                 self.settings.width,
                 self.settings.height,
                 &device,
