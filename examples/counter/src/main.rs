@@ -1,33 +1,34 @@
-use std::{rc::Rc, cell::Cell};
-
+use color_eyre::{eyre::Report, eyre::WrapErr, Section};
 use emg_bind::{
     better_any::TidAble,
     common::px,
     element::*,
     emg_msg, gtree,
-    layout::{ styles::{w, fill, hsl}},
-    state::{ use_state},
-    Sandbox, Settings
+    layout::styles::{fill, hsl, w},
+    state::use_state,
+    Sandbox, Settings,
 };
-
-use tracing::{instrument, info};
+use std::{cell::Cell, rc::Rc};
+use tracing::{info, instrument};
+// use tracing_error::InstrumentResult;
 fn tracing_init() {
+    use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
 
-    let out_layer = 
-    // tracing_subscriber::fmt::layer()
-    tracing_tree::HierarchicalLayer::new(2) .with_indent_lines(true)
-    // .with_targets(true)
+    let out_layer =
+    //  tracing_subscriber::fmt::layer()
+        tracing_tree::HierarchicalLayer::new(2) .with_indent_lines(true)
+        .with_indent_amount(4)
+        // .with_targets(true)
         .with_filter(tracing_subscriber::filter::filter_fn(|metadata| {
             // println!("metadata: {:?}",&metadata.fields().field("event").map(|x|x.to_string()));
             !metadata.target().contains("emg_layout")
                 && !metadata.target().contains("anchors")
                 && !metadata.target().contains("emg_state")
                 && !metadata.target().contains("cassowary")
-                // && !metadata.target().contains("winit event")
-                // && !metadata.fields().field("event").map(|x|x.to_string())
-                // && !metadata.target().contains("winit event: DeviceEvent")
-
+            // && !metadata.target().contains("winit event")
+            // && !metadata.fields().field("event").map(|x|x.to_string())
+            // && !metadata.target().contains("winit event: DeviceEvent")
         }))
         .with_filter(tracing_subscriber::filter::LevelFilter::DEBUG);
 
@@ -43,17 +44,20 @@ fn tracing_init() {
     //     .finish();
 
     tracing_subscriber::registry()
-        .with( out_layer )
+        .with(out_layer)
+        // .with(ErrorLayer::default())
         .init();
 
     // tracing_subscriber::Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
 }
 
-pub fn main() -> emg_bind::Result {
-    #[cfg(debug_assertions)]
+// pub fn main() -> emg_bind::Result {
+#[instrument]
+pub fn main() -> Result<(), Report> {
+    // #[cfg(debug_assertions)]
     tracing_init();
-    
-    Counter::run(Settings::default())
+    color_eyre::install()?;
+    Counter::run(Settings::default()).wrap_err("run error")
 }
 
 #[derive(Default)]
@@ -90,7 +94,7 @@ impl Sandbox for Counter {
             }
             Message::Empty => {
                 info!("update ---- got Message::Empty");
-            },
+            }
         }
     }
 
@@ -98,9 +102,9 @@ impl Sandbox for Counter {
         &self,
         // orders: impl Orders<Self::Message> + 'static,
     ) -> GTreeBuilderElement<Self::Message> {
-        let  n = Rc::new(Cell::new(100));
+        let n = Rc::new(Cell::new(100));
         let ww = use_state(w(px(100)));
-        let ff  = use_state(fill(hsl(150, 100, 100)) );
+        let ff = use_state(fill(hsl(150, 100, 100)));
         gtree! {
             @=debug_layer
             Layer [
@@ -152,13 +156,9 @@ impl Sandbox for Counter {
                 ]
             ]
         }
-
-
-
-
     }
 
-    fn root_id(&self)->&str {
+    fn root_id(&self) -> &str {
         "debug_layer"
     }
 
@@ -171,9 +171,8 @@ impl Sandbox for Counter {
     //         g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
     //         .unwrap()
     //         .build_ctx_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]),&ctx)
-            
-    // }
 
+    // }
 
     // #[instrument(skip(self, g), ret)]
     // fn view(&self, g: &GraphType<Self::Message>) -> GelType<Self::Message> {

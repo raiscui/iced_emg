@@ -9,6 +9,9 @@ resolver = "2"
 [profile.dev]
 split-debuginfo = "unpacked"
 
+[profile.dev.package.backtrace]
+opt-level = 3
+
 [dependencies.emg_bind]
 path = "../../emg_bind"
 features = [
@@ -24,3 +27,5 @@ tracing-subscriber = { version = "0.3.15", features = [
     "std",
 ] }
 tracing-tree = "0.2.1"
+tracing-error = "0.2.0"
+color-eyre = "0.6.2"

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-09-14 15:32:07
+ * @LastEditTime: 2022-09-14 23:20:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -388,7 +388,7 @@ where
                     .then(move |ws| {
                         styles_sa
                             .increment_reduction(ws.clone(), |out_ws, _k, v| {
-                                println!("increment_reduction ------  {:?}", v);
+                                debug!("increment_reduction ------  {:?}", v);
                                 v.as_ref().shaping(out_ws);
                                 // out_ws.shaping_use(v.as_ref());
                                 // out_ws.shape_of_use(v.as_ref() as &dyn Shaping<WidgetState>);
