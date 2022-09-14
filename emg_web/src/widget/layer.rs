@@ -116,14 +116,14 @@ impl<Message> Layer<Message> {
     // where
     //     T: crate::RtUpdateFor<Self>,
     // {
-    //     updater.refresh_for(&mut self);
+    //     updater.shaping(&mut self);
     //     self
     // }
 }
 
 // impl<'a, Message> crate::UpdateUse for Layer<'a, Message> {
 //     fn update_use(mut self, updater: Rc<dyn crate::RtUpdateFor<Self>>) -> Self {
-//         updater.refresh_for(&mut self);
+//         updater.shaping(&mut self);
 //         self
 //     }
 // }
@@ -218,7 +218,7 @@ where
 //         let nl = self.clone();
 //         let mut ge = GElement::GContainer(nl);
 
-//         updater.refresh_for(&mut ge);
+//         updater.shaping(&mut ge);
 
 //         if let GElement::GContainer(nge) = ge {
 //             *self = nge;

@@ -9,9 +9,14 @@ resolver = "2"
 [profile.dev]
 split-debuginfo = "unpacked"
 
-[dependencies]
-emg_bind = { path = "../../emg_bind", features = ["gpu"] }
+[dependencies.emg_bind]
+path = "../../emg_bind"
+features = [
+    "gpu",
+    #  "no_default_shaping"
+]
 
+[dependencies]
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.15", features = [
     "env-filter",

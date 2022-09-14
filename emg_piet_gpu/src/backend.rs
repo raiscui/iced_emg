@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2022-08-24 11:05:58
+ * @LastEditTime: 2022-09-05 15:39:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -35,10 +35,11 @@ impl Backend {
         unsafe {
             let present_semaphores = (0..NUM_FRAMES)
                 .map(|_| session.create_semaphore())
-                .collect::<Result<Vec<_>, Box<dyn std::error::Error>>>()?;
+                .collect::<Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>>>()?;
 
             let renderer = Renderer::new(
                 &session,
+                //TODO use state.viewport
                 settings.width * 2,
                 settings.height * 2,
                 NUM_FRAMES,
@@ -74,7 +75,7 @@ impl Backend {
         // viewport: &Viewport,
         // overlay_text: &[T],
     ) {
-        debug!("Drawing");
+        debug!(target:"winit event","present-> Drawing");
         let session = &self.session;
 
         let frame_idx = self.current_frame % NUM_FRAMES;

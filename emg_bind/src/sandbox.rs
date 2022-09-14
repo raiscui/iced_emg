@@ -1,3 +1,5 @@
+use emg_state::StateAnchor;
+
 use crate::{element, Application, Command, Error, Settings};
 
 pub trait Sandbox {
@@ -24,7 +26,13 @@ pub trait Sandbox {
     /// Returns the widgets to display in the [`Sandbox`].
     ///
     /// These widgets can produce __messages__ based on user interaction.
-    fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
+    // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
+    fn root_id(&self) -> &str;
+
+    // fn ctx(
+    //     &self,
+    //     g: &element::GraphType<Self::Message>,
+    // ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>>;
 
     // /// Returns the current [`Theme`] of the [`Sandbox`].
     // ///
@@ -90,7 +98,9 @@ impl<T> Application for T
 where
     T: Sandbox,
 {
-    type Executor = emg_futures::backend::null::Executor;
+    //TODO use cargo.toml choose emg_futures backend
+    // type Executor = emg_futures::backend::null::Executor;
+    type Executor = emg_futures::backend::default::Executor;
     type Flags = ();
     type Message = T::Message;
 
@@ -107,9 +117,19 @@ where
 
         Command::none()
     }
-    fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message> {
-        T::view(self, g)
+    // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message> {
+    //     T::view(self, g)
+    // }
+    fn root_id(&self) -> &str {
+        T::root_id(self)
     }
+
+    // fn ctx(
+    //     &self,
+    //     g: &element::GraphType<Self::Message>,
+    // ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>> {
+    //     T::ctx(self, g)
+    // }
 
     // fn theme(&self) -> Self::Theme {
     //     T::theme(self)

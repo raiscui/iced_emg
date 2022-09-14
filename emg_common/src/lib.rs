@@ -1,4 +1,5 @@
 mod func;
+mod layout;
 mod macros;
 mod tools;
 // ────────────────────────────────────────────────────────────────────────────────
@@ -8,14 +9,16 @@ pub mod measures;
 pub mod mouse;
 pub mod time;
 // ────────────────────────────────────────────────────────────────────────────────
-pub type Pos = na::Point2<f32>;
+pub type Pos<T = f32> = na::Point2<T>;
 pub use crate::SVec::{smallvec, SmallVec};
 pub use ::smallvec as SVec;
 pub use better_any;
+pub use compact_str as id_str;
 pub use compact_str::CompactString as IdStr;
 pub use dyn_partial_eq;
 pub use im::{vector, Vector};
 pub use im_rc as im;
+pub use layout::*;
 pub use measures::*;
 pub use nalgebra as na;
 pub use ordered_float::NotNan;
@@ -30,7 +33,8 @@ use derive_more::{Display, From};
 // pub use tinyvec::{tiny_vec, TinyVec};
 // ────────────────────────────────────────────────────────────────────────────────
 pub trait TypeCheck {
-    fn static_type_name() -> TypeName;
+    const TYPE_NAME: TypeName;
+    // fn static_type_name() -> TypeName;
 }
 pub trait TypeCheckObjectSafe {
     fn type_name(&self) -> TypeName;
@@ -66,7 +70,6 @@ where
 }
 
 #[derive(Display, Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
-//TODO use IdStr
 pub struct TypeName(IdStr);
 
 impl TypeName {
@@ -135,7 +138,7 @@ pub fn parent_ty<T>() -> GenericSize
 where
     T: TypeCheck,
 {
-    GenericSize::Parent(T::static_type_name())
+    GenericSize::Parent(T::TYPE_NAME)
 }
 pub fn parent_str(type_name: &str) -> GenericSize {
     GenericSize::Parent(TypeName::from(type_name))

@@ -8,7 +8,7 @@ members = [
     "emg_element",
     "emg_layout",
     "emg_bind",
-    "emg_refresh",
+    "emg_shaping",
     "emg_state",
     "emg_animation",
     "emg_orders",

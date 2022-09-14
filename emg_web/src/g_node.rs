@@ -349,12 +349,12 @@ where
 //                         if let Some(child_gel) =
 //                             children.get(eix).and_then(|child| child.as_ref().right())
 //                         {
-//                             gel_clone.refresh_for_use(child_gel);
+//                             gel_clone.shape_of_use(child_gel);
 //                         }
 //                     }
 //                     // for child in children {
 //                     //     if let Some(child_gel) = child.as_ref().right() {
-//                     //         gel_clone.refresh_for_use(child_gel);
+//                     //         gel_clone.shape_of_use(child_gel);
 //                     //     }
 //                     // }
 
@@ -377,7 +377,7 @@ where
 //                             // if !event_callbacks.is_empty() {
 //                             //     for callback in event_callbacks {
 //                             //         //TODO maybe just directly push event
-//                             //         node_builder_widget.refresh_for_use(callback);
+//                             //         node_builder_widget.shape_of_use(callback);
 //                             //     }
 //                             // }
 
@@ -385,13 +385,13 @@ where
 //                                 if let Some(event_gel) =
 //                                     children.get(eix).and_then(|child| child.as_ref().left())
 //                                 {
-//                                     node_builder_widget.refresh_for_use(event_gel);
+//                                     node_builder_widget.shape_of_use(event_gel);
 //                                 }
 //                             }
 
 //                             // for child in children {
 //                             //     if let Some(event_gel) = child.as_ref().left() {
-//                             //         node_builder_widget.refresh_for_use(event_gel);
+//                             //         node_builder_widget.shape_of_use(event_gel);
 //                             //     }
 //                             // }
 
@@ -499,7 +499,7 @@ where
 //         //                         let mut gel_clone = gel.clone();
 //         //                         //TODO illicit::Layer path
 //         //                         for child in children {
-//         //                             gel_clone.refresh_for_use(child);
+//         //                             gel_clone.shape_of_use(child);
 //         //                         }
 
 //         //                         if let Ok(mut node_builder_widget) =
@@ -521,7 +521,7 @@ where
 //         //                                 if !event_callbacks.is_empty() {
 //         //                                     for callback in event_callbacks {
 //         //                                         //TODO maybe just directly push event
-//         //                                         node_builder_widget.refresh_for_use(callback);
+//         //                                         node_builder_widget.shape_of_use(callback);
 //         //                                     }
 //         //                                 }
 

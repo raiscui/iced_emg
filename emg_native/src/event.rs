@@ -1,11 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:22:19
- * @LastEditTime: 2022-08-12 13:35:52
+ * @LastEditTime: 2022-09-06 23:57:37
  * @LastEditors: Rais
  * @Description:
  */
 //! Handle events of a user interface.
+use emg_common::{id_str::ToCompactString, IdStr};
+
 use crate::keyboard;
 use crate::mouse;
 use crate::touch;
@@ -33,6 +35,22 @@ pub enum Event {
 
     /// A platform specific event
     PlatformSpecific(PlatformSpecific),
+}
+
+impl Event {
+    pub fn to_str(&self) -> IdStr {
+        match self {
+            //TODO flag ?
+            Event::Keyboard(_) => todo!(),
+            Event::Mouse(x) => match x {
+                emg_common::mouse::Event::ButtonReleased(_) => IdStr::new_inline("click"),
+                other => other.to_compact_string(),
+            },
+            Event::Window(_) => IdStr::new_inline("Window"), //TODO  make it right
+            Event::Touch(_) => todo!(),
+            Event::PlatformSpecific(_) => todo!(),
+        }
+    }
 }
 
 /// A platform specific event

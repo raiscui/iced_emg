@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 11:58:58
- * @LastEditTime: 2022-01-30 21:25:51
+ * @LastEditTime: 2022-08-30 16:16:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -63,9 +63,10 @@ mod tests {
 
     struct EE {}
     impl TypeCheck for EE {
-        fn static_type_name() -> crate::TypeName {
-            TypeName::new(IdStr::new_inline("ff"))
-        }
+        const TYPE_NAME: TypeName = TypeName::new(IdStr::new_inline("ff"));
+        // fn static_type_name() -> crate::TypeName {
+        //     TypeName::new(IdStr::new_inline("ff"))
+        // }
     }
     impl TypeCheckObjectSafe for EE {
         fn type_name(&self) -> crate::TypeName {

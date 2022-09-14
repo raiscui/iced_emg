@@ -1,14 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-08-24 01:16:23
- * @LastEditors: Rais
- * @Description:
- */
-/*
- * @Author: Rais
- * @Date: 2021-03-08 18:20:22
- * @LastEditTime: 2022-08-18 10:58:06
+ * @LastEditTime: 2022-09-14 15:32:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,14 +10,20 @@
 #![allow(clippy::ptr_as_ptr)]
 #![allow(clippy::ptr_eq)]
 // ────────────────────────────────────────────────────────────────────────────────
-
+mod event_builder;
 use derive_more::From;
 
-use emg_common::IdStr;
-use tracing::{debug, instrument, trace};
+use emg_common::{na::Translation3, vector, IdStr, NotNan, Pos, TypeName, Vector};
+use emg_layout::{EdgeCtx, LayoutEndType};
+use emg_native::{paint_ctx::CtxIndex, renderer::Rect, WidgetState, DPR, G_POS};
+use emg_shaping::{EqShapingWithDebug, ShapeOfUse, Shaping, ShapingUse};
+use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
+use tracing::{debug, info, info_span, instrument, trace, Span};
 
-use crate::{widget::Widget, GElement};
-use std::{collections::VecDeque, rc::Rc, string::String};
+use crate::{map_fn_callback_return_to_option_ms, widget::Widget, GElement};
+use std::{cell::Cell, collections::VecDeque, rc::Rc, string::String};
+
+use self::event_builder::EventListener;
 
 type EventNameString = IdStr;
 
@@ -87,27 +86,61 @@ impl<Message> Clone for EventMessage<Message> {
     }
 }
 
-impl<Message> EventMessage<Message>
-where
-    Message: 'static,
-{
-    /// # Panics
-    ///
-    /// Will panic if Callback not return  Msg / Option<Msg> or ()
-    #[must_use]
-    pub fn new<MsU: 'static, F: Fn() -> MsU + 'static>(name: EventNameString, cb: F) -> Self {
-        todo!()
-        // let rc_callback = map_fn_callback_return_to_option_ms!(
-        //     dyn Fn() -> Option<Message>,
-        //     (),
-        //     cb,
-        //     "Callback can return only Msg, Option<Msg> or ()!",
-        //     Rc
-        // );
+// ────────────────────────────────────────────────────────────────────────────────
 
-        // Self(name, rc_callback)
+auto trait MsgMarker {}
+impl !MsgMarker for () {}
+impl<Message> !MsgMarker for Option<Message> {}
+
+pub trait IntoOptionMs<Message> {
+    fn into_option(self) -> Option<Message>;
+}
+
+impl<Message: MsgMarker> IntoOptionMs<Message> for Message {
+    fn into_option(self) -> Option<Message> {
+        Some(self)
     }
 }
+
+impl<Message> IntoOptionMs<Message> for () {
+    fn into_option(self) -> Option<Message> {
+        None
+    }
+}
+
+impl<Message> IntoOptionMs<Message> for Option<Message> {
+    fn into_option(self) -> Option<Message> {
+        self
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
+impl<Message: 'static> EventMessage<Message> {
+    pub fn new<T: IntoOptionMs<Message> + 'static>(
+        name: EventNameString,
+        cb: impl Fn() -> T + 'static,
+        // cb: impl FnOnce() -> T + Clone + 'static,
+    ) -> Self {
+        Self(name, Rc::new(move || cb().into_option()))
+    }
+}
+
+// impl<Message> EventMessage<Message>
+// where
+//     Message: 'static,
+// {
+//     #[must_use]
+//     pub fn new<MsU: 'static, F: Fn() -> MsU + 'static>(name: EventNameString, cb: F) -> Self {
+//         let rc_callback = map_fn_callback_return_to_option_ms!(
+//             dyn Fn() -> Option<Message>,
+//             (),
+//             cb,
+//             "Callback can return only Msg, Option<Msg> or ()!",
+//             Rc
+//         );
+//         Self(name, rc_callback)
+//     }
+// }
 
 impl<Message> PartialEq for EventMessage<Message>
 // where
@@ -127,6 +160,26 @@ impl<Message> PartialEq for EventMessage<Message>
 pub enum EventNode<Message> {
     Cb(EventCallback<Message>),
     CbMessage(EventMessage<Message>),
+}
+
+impl<Message> EventNode<Message> {
+    pub fn get_name(&self) -> IdStr {
+        match self {
+            EventNode::Cb(x) => x.0.clone(),
+            EventNode::CbMessage(x) => x.0.clone(),
+        }
+    }
+    pub fn call(&self) {
+        match self {
+            EventNode::Cb(x) => {
+                info!("EventNode::Cb call");
+                (x.1)(&mut 1);
+            }
+            EventNode::CbMessage(x) => {
+                (x.1)();
+            }
+        }
+    }
 }
 
 impl<Message> PartialEq for EventNode<Message> {
@@ -196,33 +249,37 @@ impl<Message> std::fmt::Debug for EventNode<Message>
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Eq)]
-pub struct NodeBuilderWidget<Message, RenderContext> {
+pub struct NodeBuilderWidget<Message, RenderCtx> {
     id: IdStr,
     //TODO : in areas heap
-    widget: Box<GElement<Message, RenderContext>>,
+    widget: Box<GElement<Message, RenderCtx>>,
     //TODO use vec deque
-    event_callbacks: VecDeque<EventNode<Message>>,
+    // event_callbacks: VecDeque<EventNode<Message>>,
+    event_listener: EventListener<Message>,
     // event_callbacks: Vector<EventNode<Message>>,
-    layout_str: String,
+    // layout_str: String,
+    // layout_end: (Translation3<NotNan<f64>>, NotNan<f64>, NotNan<f64>),
+    widget_state: StateAnchor<WidgetState>,
 }
 
-impl<Message, RenderContext> PartialEq for NodeBuilderWidget<Message, RenderContext> {
+impl<Message, RenderCtx> PartialEq for NodeBuilderWidget<Message, RenderCtx> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             && self.widget == other.widget
-            && self.event_callbacks == other.event_callbacks
-            && self.layout_str == other.layout_str
+            // && self.event_callbacks == other.event_callbacks
+            && self.widget_state == other.widget_state
+            && self.event_listener == other.event_listener
+        // && self.layout_str == other.layout_str
     }
 }
 
-impl<Message, RenderContext> Clone for NodeBuilderWidget<Message, RenderContext> {
+impl<Message, RenderCtx> Clone for NodeBuilderWidget<Message, RenderCtx> {
     fn clone(&self) -> Self {
         Self {
             id: self.id.clone(),
             widget: self.widget.clone(),
-            event_callbacks: self.event_callbacks.clone(),
-            layout_str: self.layout_str.clone(),
+            widget_state: self.widget_state.clone(),
+            event_listener: self.event_listener.clone(),
         }
     }
 }
@@ -241,8 +298,8 @@ impl<Message, RenderContext> std::fmt::Debug for NodeBuilderWidget<Message, Rend
 
         f.debug_struct("NodeBuilderWidget")
             .field("widget", &widget)
-            .field("event_callbacks", &self.event_callbacks)
-            .field("layout", &self.layout_str)
+            .field("event_listener", &self.event_listener)
+            .field("widget_state", &self.widget_state)
             .finish()
     }
 }
@@ -257,9 +314,17 @@ impl<Message, RenderContext> std::fmt::Debug for NodeBuilderWidget<Message, Rend
 //         }
 //     }
 // }
-impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
-    fn new(gel: GElement<Message, RenderContext>) -> Self {
-        //TODO check in debug , combine  use  try_new_use
+impl<Message, RenderCtx> NodeBuilderWidget<Message, RenderCtx>
+where
+    Message: 'static,
+    RenderCtx: 'static,
+{
+    fn new(
+        ix: &IdStr,
+        gel: GElement<Message, RenderCtx>,
+        edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>,
+    ) -> Self {
+        #[cfg(debug_assertions)]
         match &gel {
             // Builder_(_builder) => {
             //     // builder.and_widget(*gel_in);
@@ -293,11 +358,73 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
         //     //TODO add type_name
         //TODO setup real id in build
 
+        let widget_state = edge_ctx.then(
+            |EdgeCtx {
+                 styles_end,
+                 layout_end,
+                 world,
+                 children_layout_override,
+                 ..
+             }| {
+                let world_clone = world.clone();
+                let children_layout_override_clone = children_layout_override.clone();
+                let styles_sa = styles_end.map_(|_k, v| v.get_anchor()).then(|x| {
+                    x.clone()
+                        .into_iter()
+                        .collect::<Anchor<Dict<TypeName, Rc<dyn EqShapingWithDebug<WidgetState>>>>>(
+                        )
+                });
+
+                //TODO 不要用 顺序pipe , 这样情况下 size trans改变 会 重新 进行全部 style 计算,使用 mut 保存 ws.
+                layout_end
+                    .map(move |&(trans, w, h)| {
+                        WidgetState::new(
+                            (w, h),
+                            trans,
+                            world_clone.clone(),
+                            children_layout_override_clone.clone(),
+                        )
+                    })
+                    .then(move |ws| {
+                        styles_sa
+                            .increment_reduction(ws.clone(), |out_ws, _k, v| {
+                                println!("increment_reduction ------  {:?}", v);
+                                v.as_ref().shaping(out_ws);
+                                // out_ws.shaping_use(v.as_ref());
+                                // out_ws.shape_of_use(v.as_ref() as &dyn Shaping<WidgetState>);
+                            })
+                            .into_anchor()
+                    })
+                    .into_anchor()
+
+                // (styles_end, layout_end)
+                //     .map(move |styles, &(trans, w, h)| {
+                //         let new_widget_state = WidgetState::new(
+                //             (w, h),
+                //             trans,
+                //             world_clone.clone(),
+                //             children_layout_override_clone.clone(),
+                //         );
+
+                //         styles.values().fold(new_widget_state, |mut ws, x| {
+                //             // x.shaping(&mut ws);
+                //             ws.shape_of_use(x);
+                //             // ws.shaping_use(x);
+                //             ws
+                //         })
+                //     })
+                //     .into_anchor()
+            },
+        );
+        // let widget_state = layout_end.map(|&(trans, w, h)| WidgetState::new((w, h), trans));
+
         Self {
-            id: IdStr::new_inline(""),
+            id: ix.clone(),
             widget: Box::new(gel),
-            event_callbacks: VecDeque::default(),
-            layout_str: String::default(),
+            // event_callbacks: VecDeque::default(),
+            event_listener: EventListener::new(),
+            // layout_str: String::default(),
+            widget_state,
         }
     }
     /// # Errors
@@ -324,17 +451,20 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
     //         GElement::EvolutionaryFactor(_) => todo!(),
     //     }
     // }
+
     //TODO use try into
     #[allow(clippy::match_same_arms)]
     pub fn try_new_use(
-        gel: GElement<Message, RenderContext>,
-    ) -> Result<Self, GElement<Message, RenderContext>> {
+        ix: &IdStr,
+        gel: GElement<Message, RenderCtx>, //TODO use anchor instead
+        edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>,
+    ) -> Result<Self, GElement<Message, RenderCtx>> {
         match gel {
             // Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
-            GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(gel)),
+            GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(ix, gel, edge_ctx)),
             GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
-            // GElement::Refresher_(_) | GElement::Event_(_) => Err(()),
-            GElement::Refresher_(_) => Err(gel),
+            GElement::Refresher_(_) | GElement::Event_(_) => Err(gel),
+            // GElement::Refresher_(_) => Err(gel),
             GElement::NodeRef_(_) => {
                 unreachable!("crate builder use NodeRef_ is should never happened")
             }
@@ -346,22 +476,19 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
             GElement::EvolutionaryFactor(_) => todo!(),
         }
     }
-    pub fn set_id(&mut self, id: IdStr) {
-        self.id = id;
-    }
+    // pub fn set_id(&mut self, id: IdStr) {
+    //     self.id = id;
+    // }
 
-    pub fn add_styles_string(&mut self, styles: &str) {
-        self.layout_str += styles;
-    }
-    pub fn add_event_callback(&mut self, event_callback: EventNode<Message>) {
-        self.event_callbacks.push_back(event_callback);
-    }
+    // pub fn add_styles_string(&mut self, styles: &str) {
+    //     self.layout_str += styles;
+    // }
 
     /// Get a reference to the node builder widgets event callbacks.
-    #[must_use]
-    pub const fn event_callbacks(&self) -> &VecDeque<EventNode<Message>> {
-        &self.event_callbacks
-    }
+    // #[must_use]
+    // pub const fn event_callbacks(&self) -> &VecDeque<EventNode<Message>> {
+    //     &self.event_callbacks
+    // }
 
     /// Set the node builder widget's widget.
     /// # Panics
@@ -413,38 +540,180 @@ impl<Message, RenderContext> NodeBuilderWidget<Message, RenderContext> {
 
     #[must_use]
     #[allow(clippy::borrowed_box)]
-    pub const fn widget(&self) -> &GElement<Message, RenderContext> {
+    pub const fn widget(&self) -> &GElement<Message, RenderCtx> {
         //TODO use cow/beef
 
         &self.widget
     }
 
-    pub fn widget_mut(&mut self) -> &mut GElement<Message, RenderContext> {
+    #[must_use]
+    #[allow(clippy::borrowed_box)]
+    pub fn get_widget(self) -> Box<GElement<Message, RenderCtx>> {
+        //TODO use cow/beef
+        self.widget
+    }
+
+    pub fn widget_mut(&mut self) -> &mut GElement<Message, RenderCtx> {
         &mut self.widget
+    }
+
+    pub fn add_event_callback(&mut self, event_callback: EventNode<Message>) {
+        // self.event_callbacks.push_back(event_callback);
+        self.event_listener
+            .register_listener(event_callback.get_name(), event_callback);
+    }
+    pub fn event_matching(
+        &self,
+        events_sa: &StateAnchor<Vector<emg_native::event::Event>>,
+        cursor_position: &StateAnchor<Option<Pos>>,
+    ) -> StateAnchor<Dict<IdStr, Vector<EventNode<Message>>>> {
+        let event_callbacks = self.event_listener.event_callbacks.clone();
+        let cursor_position_clone = cursor_position.clone();
+        (events_sa, &self.widget_state).then(move |events, state| {
+            if events.is_empty() {
+                return Anchor::constant(Dict::default());
+            }
+            let size = state.size();
+
+            //TODO don't do this many times
+            let e_str_s = events.iter().map(|e| e.to_str()).collect::<Vec<_>>();
+
+            let mut cb_matchs = event_callbacks
+                .iter()
+                .filter_map(|(e_name, cb)| {
+                    if e_str_s.contains(e_name) {
+                        Some((e_name.clone(), cb.clone()))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Dict<IdStr, Vector<EventNode<Message>>>>();
+            let click_group = cb_matchs.remove_with_key("click");
+            // let cursor_position_clone = cursor_position.clone();
+            let is_click = click_group.map(|(_, click_cb)| {
+                (
+                    &cursor_position_clone,
+                    &state.world,
+                    &state.children_layout_override,
+                )
+                    .map(move |c_pos, w, opt_layout_override| {
+                        let click_cb_clone2 = click_cb.clone();
+                        let rect = Rect::from_origin_size((w.x, w.y), size);
+
+                        c_pos.and_then(move |pos| {
+                            debug!(target:"event::click",?pos);
+
+                            let pos64 = pos.cast::<f64>();
+
+                            if rect.contains(emg_native::renderer::Point::new(pos64.x, pos64.y)) {
+                                if let Some(layout_override) = opt_layout_override {
+                                    if !layout_override.contains(&pos64) {
+                                        Some(click_cb_clone2)
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    Some(click_cb_clone2)
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                    })
+            });
+            if let Some(clicked_sa) = is_click {
+                (&clicked_sa, &state.world)
+                    .map(move |opt_clicked, _w| {
+                        if let Some(clicked) = opt_clicked {
+                            cb_matchs.update("click".into(), clicked.clone())
+                        } else {
+                            cb_matchs.clone()
+                        }
+                    })
+                    .into_anchor()
+            } else {
+                Anchor::constant(cb_matchs)
+            }
+
+            // if !cb_matchs.is_empty() {
+            //     state
+            //         .world
+            //         .map(move |w| {
+            //             //TODO trans rect,  and if  check? , must mouse pos inside.
+            //             // cb_matchs.clone()
+            //             cb_matchs
+            //                 .into_iter()
+            //                 .filter_map(|(event, cb)| match event.as_str() {
+            //                     "click" => {}
+            //                 })
+            //         })
+            //         .into_anchor()
+            // } else {
+            //     Anchor::constant(cb_matchs)
+            // }
+        })
+    }
+
+    pub fn event_callbacks(&self) -> &Dict<EventNameString, Vector<EventNode<Message>>> {
+        self.event_listener.event_callbacks()
     }
 }
 
 #[cfg(all(feature = "gpu"))]
-impl<Message, RenderContext> crate::Widget<Message, RenderContext>
-    for NodeBuilderWidget<Message, RenderContext>
+impl<Message, RenderCtx> crate::Widget<Message, RenderCtx> for NodeBuilderWidget<Message, RenderCtx>
 where
-    RenderContext: emg_native::RenderContext + 'static,
+    RenderCtx: crate::RenderContext + Clone + PartialEq + 'static,
     Message: 'static,
     // Message: PartialEq + 'static + std::clone::Clone,
 {
-    #[instrument(skip(ctx), name = "NodeBuilderWidget paint")]
+    #[instrument(skip(self, ctx), name = "NodeBuilderWidget paint")]
+    fn paint_sa(
+        &self,
+        ctx: &StateAnchor<crate::PaintCtx<RenderCtx>>,
+    ) -> StateAnchor<crate::PaintCtx<RenderCtx>> {
+        let id1 = self.id.clone();
+        let id2 = self.id.clone();
+        let opt_span = illicit::get::<Span>().ok();
 
-    fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>) {
-        // let rect = ctx.size().to_rect();
-        // ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
-        // ctx.save().unwrap();
-        // for child in &self.children {
-        //     todo!("impl GElement paint");
-        //     // let w = child.as_dyn_node_widget();
-        //     // w.paint(ctx);
-        // }
-        // todo!()
-        self.widget().paint(ctx);
+        let span1 = opt_span.map_or_else(
+            || info_span!("NodeBuilderWidget::paint_sa", id = %self.id),
+            |span_| info_span!(parent:&*span_,"NodeBuilderWidget::paint_sa", id = %self.id),
+        );
+        let span2 = span1.clone();
+        let span3 = span1.clone();
+
+        let ctx_id = CtxIndex::new();
+        let ctx_id2 = ctx_id.clone();
+
+        let current_ctx = (ctx, &self.widget_state).map(move |incoming_ctx, widget_state| {
+            // let id = id.clone();
+            let _span = span1.clone().entered();
+            info!(
+                parent: &span1,
+                "NodeBuilderWidget::paint-> (&ctx, &self.widget_state).map -> recalculating [{}]",
+                &id1
+            );
+            let mut incoming_ctx_mut = incoming_ctx.clone();
+            incoming_ctx_mut.save_assert(&ctx_id);
+            incoming_ctx_mut.merge_widget_state(widget_state);
+            incoming_ctx_mut.transform(emg_native::renderer::Affine::translate((
+                widget_state.translation.x * DPR,
+                widget_state.translation.y * DPR,
+            )));
+            incoming_ctx_mut
+        });
+        illicit::Layer::new()
+            .offer(span3)
+            .enter(|| self.widget.paint_sa(&current_ctx))
+            .map(move |out_ctx| {
+                info!(
+                    parent: &span2,
+                    " widget.paint end -> recalculating restore [{}]", &id2
+                );
+                let mut out_ctx_mut = out_ctx.clone();
+                out_ctx_mut.restore_assert(&ctx_id2);
+                out_ctx_mut
+            })
     }
 }
 

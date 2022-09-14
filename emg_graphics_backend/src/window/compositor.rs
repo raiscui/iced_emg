@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 16:06:48
- * @LastEditTime: 2022-08-22 12:26:42
+ * @LastEditTime: 2022-09-02 17:45:46
  * @LastEditors: Rais
  * @Description:
  */
 //! A compositor is responsible for initializing a renderer and managing window
 //! surfaces.
 
-use emg_native::Renderer;
+use emg_native::renderer::Renderer;
 use raw_window_handle::HasRawWindowHandle;
 use thiserror::Error as TError;
 
@@ -51,7 +51,7 @@ pub trait Compositor: Sized {
     fn present(
         &mut self,
         renderer: &mut Self::Renderer,
-        render_ctx: &mut <Self::Renderer as emg_native::Renderer>::ImplRenderContext,
+        render_ctx: &mut <Self::Renderer as emg_native::renderer::Renderer>::ImplRenderContext,
         surface: &mut Self::Surface,
         // viewport: &Viewport,
         // background_color: Color,

@@ -1,5 +1,5 @@
 [package]
-name = "emg_refresh"
+name = "emg_shaping"
 version = "0.1.0"
 authors = ["崔路明 <cuiluming@chaoway.net>"]
 edition = "2021"
@@ -8,14 +8,19 @@ resolver = "2"
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
+
+
+[features]
+default = []
+no_default_shaping = []
+
 
 [dependencies]
 emg_state = { path = "../emg_state" }
 emg_common = { path = "../emg_common" }
 
 dyn_partial_eq = { path = "../../dyn_partial_eq" }
-
 
 tracing = "0.1"
 
