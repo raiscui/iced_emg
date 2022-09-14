@@ -1,6 +1,6 @@
 #![feature(fn_traits)]
 #![feature(specialization)]
-// #![feature(trivial_bounds)] // for emg_state::StateAnchor<emg_common::nalgebra::Translation<f64, 3>>: emg_refresh::RefreshWhoNoWarper;
+// #![feature(trivial_bounds)] // for emg_state::StateAnchor<emg_common::nalgebra::Translation<f64, 3>>: emg_shaping::ShapingWhoNoWarper;
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod bus;
 pub mod clipboard;

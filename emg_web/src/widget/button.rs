@@ -36,9 +36,9 @@ pub struct Button<Message> {
     padding: u16,
     // style: Box<dyn StyleSheet>,
 }
-// impl< Message> RefreshWhoNoWarper for Button< Message> {}
-// impl< Message> RefreshFor<Button< Message>> for Gid {
-//     fn refresh_for(&self, el: &mut Button< Message>) {
+// impl< Message> ShapingWhoNoWarper for Button< Message> {}
+// impl< Message> Shaping<Button< Message>> for Gid {
+//     fn shaping(&self, el: &mut Button< Message>) {
 //         el.id = self.id();
 //     }
 // }

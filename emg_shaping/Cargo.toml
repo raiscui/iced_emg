@@ -1,5 +1,5 @@
 [package]
-name = "emg_refresh"
+name = "emg_shaping"
 version = "0.1.0"
 authors = ["崔路明 <cuiluming@chaoway.net>"]
 edition = "2021"
@@ -13,7 +13,7 @@ crate-type = ["rlib"]
 
 [features]
 default = []
-no_default_refresh = []
+no_default_shaping = []
 
 
 [dependencies]

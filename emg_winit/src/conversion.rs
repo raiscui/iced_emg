@@ -6,7 +6,7 @@
  * @Description:
  */
 
-//TODO use refresh_for instead of
+//TODO use shaping instead of
 //! Convert [`winit`] types into [`iced_native`] types, and viceversa.
 //!
 //! [`winit`]: https://github.com/rust-windowing/winit

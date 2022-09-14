@@ -18,7 +18,7 @@ use emg_state::{StateAnchor, StateMultiAnchor};
 use match_any::match_any;
 
 use emg_common::{better_any::Tid, dyn_partial_eq::DynPartialEq, IdStr, TypeCheckObjectSafe};
-use emg_refresh::{EqRefreshFor, RefreshFor, RefreshUse, TryRefreshUse};
+use emg_shaping::{EqShaping, Shaping, ShapingUse, TryShapingUse};
 // extern crate derive_more;
 use derive_more::From;
 // use dyn_clonable::clonable;
@@ -31,16 +31,16 @@ use tracing::{info, instrument, warn};
 pub trait DynGElement<Message,RenderCtx>:
     // AsRefreshFor<GElement< Message>>
     for<'a> Tid<'a>
-     +RefreshFor<GElement< Message,RenderCtx>>
-     +RefreshUse<GElement<Message,RenderCtx>>
+     +Shaping<GElement< Message,RenderCtx>>
+     +ShapingUse<GElement<Message,RenderCtx>>
     // + GenerateElement<Message>
     + Widget<Message,RenderCtx>
     + TypeCheckObjectSafe
     + DynPartialEq
     + DynClone
     + core::fmt::Debug
-    + TryRefreshUse
-    + RefreshUse<i32>
+    + TryShapingUse
+    + ShapingUse<i32>
     where
     RenderCtx: crate::RenderContext ,
 {
@@ -70,7 +70,7 @@ mod tests {
     use std::rc::Rc;
 
     use emg_piet_gpu::RenderCtx;
-    use emg_refresh::{EqRefreshFor, Refresher};
+    use emg_shaping::{EqShaping, Shaper};
     use emg_state::use_state;
 
     use crate::GElement;
@@ -82,15 +82,15 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let _f =
-            GElement::<Message, RenderCtx>::Refresher_(Rc::new(Refresher::new(|| 1i32))
-                as Rc<dyn EqRefreshFor<GElement<Message, RenderCtx>>>);
+        let _f = GElement::<Message, RenderCtx>::Refresher_(
+            Rc::new(Shaper::new(|| 1i32)) as Rc<dyn EqShaping<GElement<Message, RenderCtx>>>
+        );
         let _a = use_state(2i32);
 
         let _f = GElement::<Message, RenderCtx>::Refresher_(Rc::new(_a.watch()));
 
-        // let ff: Rc<dyn EqRefreshFor<GElement<Message>>> = f;
-        // Rc<dyn EqRefreshFor<GElement<Message>>>, found Rc<Refresher<u32>>
+        // let ff: Rc<dyn EqShaping<GElement<Message>>> = f;
+        // Rc<dyn EqShaping<GElement<Message>>>, found Rc<Shaper<u32>>
     }
 }
 
@@ -103,7 +103,7 @@ pub enum GElement<Message, RenderCtx> {
     Layer_(Layer<Message, RenderCtx>),
     // Text_(Text),
     // Button_(Button<Message>),
-    Refresher_(Rc<dyn EqRefreshFor<Self>>),
+    Refresher_(Rc<dyn EqShaping<Self>>),
     //NOTE temp comment
     Event_(EventNode<Message>),
     //NOTE internal
@@ -203,7 +203,7 @@ where
 impl<Use, Message, RenderCtx> Evolution<StateAnchor<Rc<GElement<Message, RenderCtx>>>>
     for StateAnchor<Use>
 where
-    Use: PartialEq + EqRefreshFor<GElement<Message, RenderCtx>> + 'static,
+    Use: PartialEq + EqShaping<GElement<Message, RenderCtx>> + 'static,
     Use: std::fmt::Debug,
     StateAnchor<Use>: std::fmt::Debug,
     RenderCtx: 'static,
@@ -230,7 +230,7 @@ where
             );
 
             let mut new_gel = (**gel).clone();
-            new_gel.refresh_use(u_s_e);
+            new_gel.shaping_use(u_s_e);
             Rc::new(new_gel)
         })
     }

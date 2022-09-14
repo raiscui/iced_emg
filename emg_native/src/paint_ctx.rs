@@ -15,8 +15,8 @@ use std::{
 
 use crate::renderer::{Color, Size};
 use emg_common::{na::Translation3, LayoutOverride, Vector};
-use emg_refresh::RefreshWhoNoWarper;
 use emg_renderer::Rect;
+use emg_shaping::ShapingWhoNoWarper;
 use emg_state::StateAnchor;
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
 use tracing::{debug, info};
@@ -198,7 +198,7 @@ impl<RenderContext> DerefMut for PaintCtx<RenderContext> {
     }
 }
 
-impl RefreshWhoNoWarper for WidgetState {}
+impl ShapingWhoNoWarper for WidgetState {}
 #[derive(Clone, PartialEq, Debug)]
 pub struct WidgetState {
     pub children_layout_override: StateAnchor<Option<LayoutOverride>>,

@@ -7,21 +7,21 @@
  */
 
 use emg_common::Vector;
-use emg_refresh::{RefreshFor, RefreshUseNoWarper, RefreshWhoNoWarper};
+use emg_shaping::{Shaping, ShapingUseNoWarper, ShapingWhoNoWarper};
 use emg_state::CloneStateVar;
 
 use crate::EmgEdgeItem;
 
 use super::{CassowaryVar, GeneralVar, NameChars, ScopeViewVariable, Virtual, CCSS};
 
-impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>>
+impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>>
     for (Vector<CCSS>, Vector<ScopeViewVariable>)
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
 {
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let (added_vec_ccss, added_vec_selector) = self.clone();
         let vec_ccss = who.layout.cassowary_constants.get_inner_anchor();
         let new_vec_ccss = vec_ccss.map(move |old| {
@@ -38,17 +38,17 @@ where
     }
 }
 
-impl RefreshUseNoWarper for GeneralVar {}
+impl ShapingUseNoWarper for GeneralVar {}
 
-impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for GeneralVar
+impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for GeneralVar
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
-    Self: RefreshUseNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
+    Self: ShapingUseNoWarper,
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let Self(
             name,
             ScopeViewVariable {
@@ -82,17 +82,17 @@ where
     }
 }
 
-impl RefreshUseNoWarper for Virtual {}
+impl ShapingUseNoWarper for Virtual {}
 
-impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for Virtual
+impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for Virtual
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
-    Self: RefreshUseNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
+    Self: ShapingUseNoWarper,
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let virtual_name = self.name();
         let (gvs_match_props, (top_constants, constants), not_match) = self.process();
 
@@ -103,7 +103,7 @@ where
             .update(|x| x.insert_constants(virtual_name.clone(), top_constants, constants));
 
         for (_, opt_gv) in not_match {
-            opt_gv.unwrap().refresh_for(who);
+            opt_gv.unwrap().shaping(who);
         }
 
         for (prop, (top_var, var, opt_gv)) in gvs_match_props {
@@ -153,20 +153,20 @@ where
     }
 }
 
-impl RefreshUseNoWarper for CassowaryVar {}
+impl ShapingUseNoWarper for CassowaryVar {}
 
-impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for CassowaryVar
+impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for CassowaryVar
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
-    Self: RefreshUseNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
+    Self: ShapingUseNoWarper,
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         match self {
-            Self::General(gv) => gv.refresh_for(who),
-            Self::Virtual(vv) => vv.refresh_for(who),
+            Self::General(gv) => gv.shaping(who),
+            Self::Virtual(vv) => vv.shaping(who),
         };
     }
 }

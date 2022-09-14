@@ -17,7 +17,7 @@ use emg_common::{vector, IdStr};
 use emg_hasher::CustomHasher;
 // use emg_common::{GenericSize, Vector};
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
-use emg_refresh:: RefreshForUse;
+use emg_shaping:: ShapeOfUse;
 use emg_state::{
     topo::{self, call_in_slot},
     use_state,
@@ -224,7 +224,7 @@ RenderCtx:  crate::RenderContext +'static
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path);
 
-                    root_ei.refresh_for_use(edge_refreshers);
+                    root_ei.shape_of_use(edge_refreshers);
 
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
                         assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix);
@@ -306,7 +306,7 @@ RenderCtx:  crate::RenderContext +'static
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                    new_def_ei.refresh_for_use(edge_refreshers);
+                    new_def_ei.shape_of_use(edge_refreshers);
 
                     // next
                     #[cfg(debug_assertions)]
@@ -418,7 +418,7 @@ RenderCtx:  crate::RenderContext +'static
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                    new_def_ei.refresh_for_use(edge_refreshers);
+                    new_def_ei.shape_of_use(edge_refreshers);
                     debug!("new_def_ei: {}", &new_def_ei);
 
                     //next
@@ -567,12 +567,12 @@ RenderCtx:  crate::RenderContext +'static
                 // });
             }
 
-            GTreeBuilderElement::RefreshUse(org_id, u) => {
+            GTreeBuilderElement::ShapingUse(org_id, u) => {
                 let id = replace_id.unwrap_or(org_id);
-                info!("\n handle children [RefreshUse]: org_id: {:?},  id : {:?}", org_id, id);
+                info!("\n handle children [ShapingUse]: org_id: {:?},  id : {:?}", org_id, id);
 
                 let _span =
-                    trace_span!("-> handle_children_in_topo [RefreshUse] ", ?id, ?parent_nix)
+                    trace_span!("-> handle_children_in_topo [ShapingUse] ", ?id, ?parent_nix)
                         .entered();
 
                 //node index
@@ -652,7 +652,7 @@ RenderCtx:  crate::RenderContext +'static
 
               //     illicit::Layer::new().offer(path.clone()).enter(|| {
               //         debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-              //         ei.refresh_use(edge_refreshers);
+              //         ei.shaping_use(edge_refreshers);
 
               //         //next
               //         #[cfg(debug_assertions)]

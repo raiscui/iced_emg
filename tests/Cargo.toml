@@ -16,7 +16,7 @@ rustc-hash = "1.1.0"
 
 # iced_web = "0.3"
 
-emg_refresh = { path = "../emg_refresh" }
+emg_shaping = { path = "../emg_shaping" }
 emg_state = { path = "../emg_state" }
 emg_layout = { path = "../emg_layout" }
 emg_animation = { path = "../emg_animation" }

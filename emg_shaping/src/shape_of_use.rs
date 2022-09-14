@@ -3,12 +3,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2022-09-14 15:21:39
+ * @LastEditTime: 2022-09-14 16:36:59
  * @LastEditors: Rais
  * @Description:
  */
 
-use crate::RefreshFor;
+use crate::Shaping;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -27,16 +27,16 @@ use crate::RefreshFor;
 
 // ────────────────────────────────────────────────────────────────────────────────
 #[allow(clippy::module_name_repetitions)]
-pub trait RefreshForUse<Who> {
-    fn refresh_for_use(&mut self, updater: &dyn RefreshFor<Who>);
+pub trait ShapeOfUse<Who> {
+    fn shape_of_use(&mut self, updater: &dyn Shaping<Who>);
 }
 // ────────────────────────────────────────────────────────────────────────────────
-// @ impl RefreshUseFor────────────────────────────────────────────────────────────────────────────────
+// @ impl ShapeOfUse ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who> RefreshForUse<Self> for Who {
+impl<Who> ShapeOfUse<Self> for Who {
     // #[inline]
-    default fn refresh_for_use(&mut self, updater: &dyn RefreshFor<Self>) {
-        updater.refresh_for(self);
+    default fn shape_of_use(&mut self, updater: &dyn Shaping<Self>) {
+        updater.shaping(self);
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -49,26 +49,25 @@ mod updater_test1 {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        impl_refresh::RefreshUseNoWarper, test::setup_tracing, RefreshFor, RefreshWhoNoWarper,
-        Refresher,
+        impl_refresh::ShapingUseNoWarper, test::setup_tracing, Shaper, Shaping, ShapingWhoNoWarper,
     };
 
     use super::*;
 
     // impl RtUpdateFor<String> for i32 {
-    //     fn refresh_for(&self, el: &mut String) {
+    //     fn shaping(&self, el: &mut String) {
     //         *el = format!("{},{}", el, self);
     //     }
     // }
-    impl RefreshWhoNoWarper for String {}
-    impl RefreshUseNoWarper for String {}
-    impl RefreshFor<Self> for String {
-        fn refresh_for(&self, el: &mut Self) {
+    impl ShapingWhoNoWarper for String {}
+    impl ShapingUseNoWarper for String {}
+    impl Shaping<Self> for String {
+        fn shaping(&self, el: &mut Self) {
             *el = format!("{},{}", el, self);
         }
     }
-    impl RefreshFor<i32> for String {
-        fn refresh_for(&self, el: &mut i32) {
+    impl Shaping<i32> for String {
+        fn shaping(&self, el: &mut i32) {
             *el = i32::try_from(self.len()).unwrap();
         }
     }
@@ -77,23 +76,23 @@ mod updater_test1 {
     fn realtime_update() {
         setup_tracing();
         let mut f = String::from("xx");
-        let a = Refresher::new(|| 99);
-        let b = Refresher::new(|| String::from("string.."));
-        a.refresh_for(&mut f);
-        a.refresh_for(&mut f);
-        b.refresh_for(&mut f);
+        let a = Shaper::new(|| 99);
+        let b = Shaper::new(|| String::from("string.."));
+        a.shaping(&mut f);
+        a.shaping(&mut f);
+        b.shaping(&mut f);
         let rca = Rc::new(a.clone());
         let rc_b_string = Rc::new(b);
 
-        f.refresh_for_use(&a);
-        f.refresh_for_use(rca.as_ref());
-        f.refresh_for_use(rca.as_ref());
-        f.refresh_for_use(rc_b_string.as_ref());
+        f.shape_of_use(&a);
+        f.shape_of_use(rca.as_ref());
+        f.shape_of_use(rca.as_ref());
+        f.shape_of_use(rc_b_string.as_ref());
 
         let mut n = 0;
 
-        n.refresh_for_use(&f);
-        f.refresh_for_use(&n);
+        n.shape_of_use(&f);
+        f.shape_of_use(&n);
 
         // let xxx: i16 = 2;
 

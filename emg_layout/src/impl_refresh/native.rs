@@ -9,20 +9,20 @@
 use crate::EmgEdgeItem;
 use emg_common::{dyn_partial_eq::DynPartialEq, TypeCheck};
 use emg_native::WidgetState;
-use emg_refresh::{EqRefreshForWithDebug, RefreshFor, RefreshWhoNoWarper};
+use emg_shaping::{EqShapingWithDebug, Shaping, ShapingWhoNoWarper};
 use emg_state::StateTypeCheck;
 use emg_state::{CloneStateVar, StateAnchor, StateVar};
 #[allow(clippy::wildcard_imports)]
 use seed_styles::*;
 use std::rc::Rc;
 
-impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for CssBackgroundAttachment
+impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for CssBackgroundAttachment
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
     RenderCtx: 'static,
 {
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let type_name = Self::TYPE_NAME;
         who.styles.update(|s| {
             s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
@@ -30,33 +30,32 @@ where
     }
 }
 
-impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateVar<CssBackgroundAttachment>
+impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for StateVar<CssBackgroundAttachment>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
     RenderCtx: 'static,
 {
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let type_name = Self::INSIDE_TYPE_NAME;
         who.styles.update(|s| {
             let value = self
                 .watch()
-                .map(|x| Rc::new(x.clone()) as Rc<dyn EqRefreshForWithDebug<WidgetState>>);
+                .map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
             s.insert(type_name, value);
         });
     }
 }
-impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<CssBackgroundAttachment>
+impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<CssBackgroundAttachment>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
     RenderCtx: 'static,
 {
-    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let type_name = Self::INSIDE_TYPE_NAME;
         who.styles.update(|s| {
-            let value =
-                self.map(|x| Rc::new(x.clone()) as Rc<dyn EqRefreshForWithDebug<WidgetState>>);
+            let value = self.map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
             s.insert(type_name, value);
         });
     }
@@ -64,13 +63,13 @@ where
 
 macro_rules! impl_css_native_refresh {
     ($css:ident) => {
-        impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for $css
+        impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for $css
         where
             Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-            EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+            EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
             RenderCtx: 'static,
         {
-            fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+            fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
                 let type_name = Self::TYPE_NAME;
                 who.styles.update(|s| {
                     s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
@@ -78,34 +77,34 @@ macro_rules! impl_css_native_refresh {
             }
         }
 
-        impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateVar<$css>
+        impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for StateVar<$css>
         where
             Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-            EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+            EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
             RenderCtx: 'static,
         {
-            fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+            fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
                 let type_name = Self::INSIDE_TYPE_NAME;
                 who.styles.update(|s| {
                     let value = self
                         .watch()
-                        .map(|x| Rc::new(x.clone()) as Rc<dyn EqRefreshForWithDebug<WidgetState>>);
+                        .map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
                     s.insert(type_name, value);
                 });
             }
         }
 
-        impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<$css>
+        impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<$css>
         where
             Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-            EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+            EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
             RenderCtx: 'static,
         {
-            fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+            fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
                 let type_name = Self::INSIDE_TYPE_NAME;
                 who.styles.update(|s| {
-                    let value = self
-                        .map(|x| Rc::new(x.clone()) as Rc<dyn EqRefreshForWithDebug<WidgetState>>);
+                    let value =
+                        self.map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
                     s.insert(type_name, value);
                 });
             }

@@ -55,7 +55,7 @@ pub use emg_common::any;
 pub use emg_common::better_any;
 pub use emg_layout as layout;
 pub use emg_msg_macro::emg_msg;
-pub use emg_refresh as refresh;
+pub use emg_shaping as refresh;
 pub use emg_state as state;
 pub use emg_state::topo;
 pub use error::Error;
@@ -98,7 +98,7 @@ mod tests {
         },
         element::*,
         layout::{add_values::*, css, styles::*, EmgEdgeItem},
-        refresh::{EqRefreshFor, RefreshFor, RefreshUse, Refresher},
+        refresh::{EqShaping, Shaper, Shaping, ShapingUse},
         state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
     };
 
@@ -122,7 +122,7 @@ mod tests {
             IdStr, TypeCheck,
         },
         layout::{add_values::*, css, styles::*, EmgEdgeItem},
-        refresh::{EqRefreshFor, RefreshFor, RefreshUse, Refresher},
+        refresh::{EqShaping, Shaper, Shaping, ShapingUse},
         runtime::{node_ref, EventCallback, EventMessage, GElement, GTreeBuilderElement},
         state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
     };

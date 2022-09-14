@@ -19,7 +19,7 @@ new_node = []
 [dependencies]
 emg_common = { path = "../emg_common" }
 emg_state = { path = "../emg_state" }
-emg_refresh = { path = "../emg_refresh" }
+emg_shaping = { path = "../emg_shaping" }
 emg_layout = { path = "../emg_layout" }
 emg_hasher = { path = "../emg_hasher" }
 emg = { path = "../../emg" }

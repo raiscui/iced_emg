@@ -16,7 +16,7 @@ use derive_more::From;
 use emg_common::{na::Translation3, vector, IdStr, NotNan, Pos, TypeName, Vector};
 use emg_layout::{EdgeCtx, LayoutEndType};
 use emg_native::{paint_ctx::CtxIndex, renderer::Rect, WidgetState, DPR, G_POS};
-use emg_refresh::{EqRefreshForWithDebug, RefreshFor, RefreshForUse, RefreshUse};
+use emg_shaping::{EqShapingWithDebug, ShapeOfUse, Shaping, ShapingUse};
 use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, info, info_span, instrument, trace, Span};
 
@@ -324,7 +324,7 @@ where
         gel: GElement<Message, RenderCtx>,
         edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>,
     ) -> Self {
-        //TODO check in debug , combine  use  try_new_use
+        #[cfg(debug_assertions)]
         match &gel {
             // Builder_(_builder) => {
             //     // builder.and_widget(*gel_in);
@@ -369,9 +369,10 @@ where
                 let world_clone = world.clone();
                 let children_layout_override_clone = children_layout_override.clone();
                 let styles_sa = styles_end.map_(|_k, v| v.get_anchor()).then(|x| {
-                    x.clone().into_iter().collect::<Anchor<
-                                Dict<TypeName, Rc<dyn EqRefreshForWithDebug<WidgetState>>>,
-                            >>()
+                    x.clone()
+                        .into_iter()
+                        .collect::<Anchor<Dict<TypeName, Rc<dyn EqShapingWithDebug<WidgetState>>>>>(
+                        )
                 });
 
                 //TODO 不要用 顺序pipe , 这样情况下 size trans改变 会 重新 进行全部 style 计算,使用 mut 保存 ws.
@@ -388,9 +389,9 @@ where
                         styles_sa
                             .increment_reduction(ws.clone(), |out_ws, _k, v| {
                                 println!("increment_reduction ------  {:?}", v);
-                                v.as_ref().refresh_for(out_ws);
-                                // out_ws.refresh_use(v.as_ref());
-                                // out_ws.refresh_for_use(v.as_ref() as &dyn RefreshFor<WidgetState>);
+                                v.as_ref().shaping(out_ws);
+                                // out_ws.shaping_use(v.as_ref());
+                                // out_ws.shape_of_use(v.as_ref() as &dyn Shaping<WidgetState>);
                             })
                             .into_anchor()
                     })
@@ -406,9 +407,9 @@ where
                 //         );
 
                 //         styles.values().fold(new_widget_state, |mut ws, x| {
-                //             // x.refresh_for(&mut ws);
-                //             ws.refresh_for_use(x);
-                //             // ws.refresh_use(x);
+                //             // x.shaping(&mut ws);
+                //             ws.shape_of_use(x);
+                //             // ws.shaping_use(x);
                 //             ws
                 //         })
                 //     })

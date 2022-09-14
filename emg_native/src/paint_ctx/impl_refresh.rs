@@ -5,26 +5,26 @@
  * @LastEditors: Rais
  * @Description:
  */
-use emg_refresh::{EqRefreshFor, RefreshFor, RefreshWhoNoWarper};
+use emg_shaping::{EqShaping, Shaping, ShapingWhoNoWarper};
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
 
 use crate::WidgetState;
-impl RefreshFor<WidgetState> for CssFill
+impl Shaping<WidgetState> for CssFill
 where
-    WidgetState: RefreshWhoNoWarper,
+    WidgetState: ShapingWhoNoWarper,
 {
-    fn refresh_for(&self, who: &mut WidgetState) {
+    fn shaping(&self, who: &mut WidgetState) {
         who.fill = Some(self.clone())
     }
 }
 
 macro_rules! impl_css_refresh_widget_state {
     ($css:ident,$ws_v:ident) => {
-        impl RefreshFor<WidgetState> for $css
+        impl Shaping<WidgetState> for $css
         where
-            WidgetState: RefreshWhoNoWarper,
+            WidgetState: ShapingWhoNoWarper,
         {
-            fn refresh_for(&self, who: &mut WidgetState) {
+            fn shaping(&self, who: &mut WidgetState) {
                 who.$ws_v = Some(self.clone());
             }
         }
