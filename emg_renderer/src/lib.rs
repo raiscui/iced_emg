@@ -1,10 +1,11 @@
-mod paint_ctx;
 // ────────────────────────────────────────────────────────────────────────────────
-pub use paint_ctx::*;
+pub use piet::kurbo::Affine;
+pub use piet::kurbo::Point;
 pub use piet::kurbo::Rect;
-use piet::kurbo::Size;
+pub use piet::kurbo::Size;
+pub use piet::kurbo::Vec2;
 
-pub use piet::{Color, RenderContext};
+pub use piet::{Color, Error, RenderContext};
 
 #[cfg(test)]
 mod tests {

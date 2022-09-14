@@ -13,7 +13,7 @@ use emg::{edge_index_no_source, Node, Outgoing};
 use emg_common::vector;
 use emg_common::IdStr;
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
-use emg_refresh::RefreshForUse;
+use emg_shaping::ShapeOfUse;
 use emg_state::{CloneStateAnchor, StateAnchor};
 use std::hash::Hash;
 use tracing::{instrument, trace, trace_span};
@@ -91,7 +91,7 @@ where
 
         //make node_ref real
 
-        //TODO link node use refresh_for_use
+        //TODO link node use shape_of_use
         //NOTE NodeRef_ 处理
         children_s
             .iter_mut()
@@ -110,7 +110,7 @@ where
         //TODO illicit::Layer path
         for child in &children_s {
             //  TODO use COW
-            current_node_item_clone.refresh_for_use(child);
+            current_node_item_clone.shape_of_use(child);
         }
         if let Ok(mut node_builder_widget) =
             NodeBuilderWidget::<Message>::try_new_use(&current_node_item_clone)
@@ -142,7 +142,7 @@ where
                 if !event_callbacks.is_empty() {
                     for event_callback in &event_callbacks {
                         //TODO maybe just directly push event
-                        node_builder_widget.refresh_for_use(event_callback);
+                        node_builder_widget.shape_of_use(event_callback);
                     }
                 }
 

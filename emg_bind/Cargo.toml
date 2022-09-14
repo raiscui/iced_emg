@@ -14,19 +14,26 @@ categories = ["web"]
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 
 [features]
 default = ["gpu"]
-gpu = ["emg_winit", "emg_piet_gpu", "emg_element/gpu", "emg_graphics_backend"]
+gpu = [
+    "emg_winit",
+    "emg_piet_gpu",
+    "emg_element/gpu",
+    "emg_layout/gpu",
+    "emg_graphics_backend",
+]
 pool = []
+no_default_shaping = ["emg_shaping/no_default_shaping"]
 
 
 [dependencies]
 gtree = { path = "../gtree" }
 emg_layout = { path = "../emg_layout" }
-emg_refresh = { path = "../emg_refresh" }
+emg_shaping = { path = "../emg_shaping" }
 emg_state = { path = "../emg_state" }
 emg_common = { path = "../emg_common" }
 emg_futures = { path = "../emg_futures" }

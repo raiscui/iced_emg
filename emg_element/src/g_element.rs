@@ -1,13 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2022-08-23 00:28:45
+ * @LastEditTime: 2022-09-08 15:56:45
  * @LastEditors: Rais
  * @Description:
  */
 
 // pub mod impls;
 use crate::{
+    node_builder::EventNode,
     widget::{Layer, Widget},
     NodeBuilderWidget,
 };
@@ -17,49 +18,49 @@ use emg_state::{StateAnchor, StateMultiAnchor};
 use match_any::match_any;
 
 use emg_common::{better_any::Tid, dyn_partial_eq::DynPartialEq, IdStr, TypeCheckObjectSafe};
-use emg_refresh::{EqRefreshFor, RefreshFor, RefreshUse, TryRefreshUse};
+use emg_shaping::{EqShaping, Shaping, ShapingUse, TryShapingUse};
 // extern crate derive_more;
 use derive_more::From;
 // use dyn_clonable::clonable;
 use std::{any::Any, rc::Rc};
 use strum::Display;
-use tracing::{instrument, warn};
+use tracing::{info, instrument, warn};
 
 #[allow(clippy::module_name_repetitions)]
 // #[clonable]
-pub trait DynGElement<Message,RenderContext>:
+pub trait DynGElement<Message,RenderCtx>:
     // AsRefreshFor<GElement< Message>>
     for<'a> Tid<'a>
-     +RefreshFor<GElement< Message,RenderContext>>
-     +RefreshUse<GElement<Message,RenderContext>>
+     +Shaping<GElement< Message,RenderCtx>>
+     +ShapingUse<GElement<Message,RenderCtx>>
     // + GenerateElement<Message>
-    + Widget<Message,RenderContext>
+    + Widget<Message,RenderCtx>
     + TypeCheckObjectSafe
     + DynPartialEq
     + DynClone
     + core::fmt::Debug
-    + TryRefreshUse
-    + RefreshUse<i32>
+    + TryShapingUse
+    + ShapingUse<i32>
     where
-    RenderContext: crate::RenderContext ,
+    RenderCtx: crate::RenderContext ,
 {
 }
-dyn_clone::clone_trait_object!(<Message,RenderContext> DynGElement<Message,RenderContext>);
+dyn_clone::clone_trait_object!(<Message,RenderCtx> DynGElement<Message,RenderCtx>);
 
-impl<Message, RenderContext> core::cmp::Eq for dyn DynGElement<Message, RenderContext> + '_ {}
+impl<Message, RenderCtx> core::cmp::Eq for dyn DynGElement<Message, RenderCtx> + '_ {}
 
-impl<Message, RenderContext> core::cmp::PartialEq for dyn DynGElement<Message, RenderContext> + '_ {
+impl<Message, RenderCtx> core::cmp::PartialEq for dyn DynGElement<Message, RenderCtx> + '_ {
     fn eq(&self, other: &Self) -> bool {
         self.box_eq(other.as_any())
     }
 }
-impl<Message, RenderContext> core::cmp::PartialEq<dyn DynGElement<Message, RenderContext>>
-    for Box<dyn DynGElement<Message, RenderContext>>
+impl<Message, RenderCtx> core::cmp::PartialEq<dyn DynGElement<Message, RenderCtx>>
+    for Box<dyn DynGElement<Message, RenderCtx>>
 where
     Message: 'static,
-    RenderContext: 'static,
+    RenderCtx: 'static,
 {
-    fn eq(&self, other: &dyn DynGElement<Message, RenderContext>) -> bool {
+    fn eq(&self, other: &dyn DynGElement<Message, RenderCtx>) -> bool {
         self.box_eq(other.as_any())
     }
 }
@@ -69,7 +70,7 @@ mod tests {
     use std::rc::Rc;
 
     use emg_piet_gpu::RenderCtx;
-    use emg_refresh::{EqRefreshFor, Refresher};
+    use emg_shaping::{EqShaping, Shaper};
     use emg_state::use_state;
 
     use crate::GElement;
@@ -81,34 +82,34 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let _f =
-            GElement::<Message, RenderCtx>::Refresher_(Rc::new(Refresher::new(|| 1i32))
-                as Rc<dyn EqRefreshFor<GElement<Message, RenderCtx>>>);
+        let _f = GElement::<Message, RenderCtx>::Refresher_(
+            Rc::new(Shaper::new(|| 1i32)) as Rc<dyn EqShaping<GElement<Message, RenderCtx>>>
+        );
         let _a = use_state(2i32);
 
         let _f = GElement::<Message, RenderCtx>::Refresher_(Rc::new(_a.watch()));
 
-        // let ff: Rc<dyn EqRefreshFor<GElement<Message>>> = f;
-        // Rc<dyn EqRefreshFor<GElement<Message>>>, found Rc<Refresher<u32>>
+        // let ff: Rc<dyn EqShaping<GElement<Message>>> = f;
+        // Rc<dyn EqShaping<GElement<Message>>>, found Rc<Shaper<u32>>
     }
 }
 
 #[derive(Display, From)]
 // #[eq_opt(no_self_where, where_add = "Message: PartialEq+'static,")]
-pub enum GElement<Message, RenderContext> {
+pub enum GElement<Message, RenderCtx> {
     // TODO cow
     //NOTE can render element
-    Builder_(NodeBuilderWidget<Message, RenderContext>),
-    Layer_(Layer<Message, RenderContext>),
+    Builder_(NodeBuilderWidget<Message, RenderCtx>),
+    Layer_(Layer<Message, RenderCtx>),
     // Text_(Text),
     // Button_(Button<Message>),
-    Refresher_(Rc<dyn EqRefreshFor<Self>>),
+    Refresher_(Rc<dyn EqShaping<Self>>),
     //NOTE temp comment
-    // Event_(EventNode<Message>),
+    Event_(EventNode<Message>),
     //NOTE internal
-    Generic_(Box<dyn DynGElement<Message, RenderContext>>), //范型 //TODO check batter when use rc?
+    Generic_(Box<dyn DynGElement<Message, RenderCtx>>), //范型 //TODO check batter when use rc?
     #[from(ignore)]
-    NodeRef_(IdStr),                    // IntoE(Rc<dyn Into<Element< Message>>>),
+    NodeRef_(IdStr),                // IntoE(Rc<dyn Into<Element< Message>>>),
     // #[from(ignore)]
     // InsideDirectUseSa_(StateAnchor<Rc<Self>>),//NOTE generate by tree builder use into()
     #[from(ignore)]
@@ -117,7 +118,7 @@ pub enum GElement<Message, RenderContext> {
     EmptyNeverUse,
 }
 
-impl<Message, RenderContext> Clone for GElement<Message, RenderContext> {
+impl<Message, RenderCtx> Clone for GElement<Message, RenderCtx> {
     fn clone(&self) -> Self {
         match self {
             Self::Builder_(arg0) => Self::Builder_(arg0.clone()),
@@ -127,6 +128,7 @@ impl<Message, RenderContext> Clone for GElement<Message, RenderContext> {
             Self::NodeRef_(arg0) => Self::NodeRef_(arg0.clone()),
             Self::SaNode_(arg0) => Self::SaNode_(arg0.clone()),
             Self::EvolutionaryFactor(arg0) => Self::EvolutionaryFactor(arg0.clone()),
+            Self::Event_(x) => Self::Event_(x.clone()),
             Self::EmptyNeverUse => Self::EmptyNeverUse,
         }
     }
@@ -149,15 +151,15 @@ impl<Who: 'static> core::cmp::PartialEq<dyn Evolution<Who>> for Box<dyn Evolutio
     }
 }
 
-type SaMapAction<Message, RenderContext, Use> =
-    Rc<dyn Fn(&Rc<GElement<Message, RenderContext>>, &Use) -> Rc<GElement<Message, RenderContext>>>;
+type SaMapAction<Message, RenderCtx, Use> =
+    Rc<dyn Fn(&Rc<GElement<Message, RenderCtx>>, &Use) -> Rc<GElement<Message, RenderCtx>>>;
 
-pub struct SaWithMapFn<Use, Message, RenderContext> {
+pub struct SaWithMapFn<Use, Message, RenderCtx> {
     u_s_e: StateAnchor<Use>,
-    map_action: SaMapAction<Message, RenderContext, Use>,
+    map_action: SaMapAction<Message, RenderCtx, Use>,
 }
 
-impl<Use: Clone, Message, RenderContext> Clone for SaWithMapFn<Use, Message, RenderContext> {
+impl<Use: Clone, Message, RenderCtx> Clone for SaWithMapFn<Use, Message, RenderCtx> {
     fn clone(&self) -> Self {
         Self {
             u_s_e: self.u_s_e.clone(),
@@ -166,18 +168,13 @@ impl<Use: Clone, Message, RenderContext> Clone for SaWithMapFn<Use, Message, Ren
     }
 }
 
-impl<Use: Clone, Message, RenderContext> SaWithMapFn<Use, Message, RenderContext> {
-    pub fn new(
-        u_s_e: StateAnchor<Use>,
-        map_action: SaMapAction<Message, RenderContext, Use>,
-    ) -> Self {
+impl<Use: Clone, Message, RenderCtx> SaWithMapFn<Use, Message, RenderCtx> {
+    pub fn new(u_s_e: StateAnchor<Use>, map_action: SaMapAction<Message, RenderCtx, Use>) -> Self {
         Self { u_s_e, map_action }
     }
 }
 
-impl<Use: PartialEq, Message, RenderContext> PartialEq
-    for SaWithMapFn<Use, Message, RenderContext>
-{
+impl<Use: PartialEq, Message, RenderCtx> PartialEq for SaWithMapFn<Use, Message, RenderCtx> {
     fn eq(&self, other: &Self) -> bool {
         self.u_s_e == other.u_s_e
             && std::ptr::eq(
@@ -187,36 +184,36 @@ impl<Use: PartialEq, Message, RenderContext> PartialEq
     }
 }
 
-impl<Use, Message, RenderContext> Evolution<StateAnchor<Rc<GElement<Message, RenderContext>>>>
-    for SaWithMapFn<Use, Message, RenderContext>
+impl<Use, Message, RenderCtx> Evolution<StateAnchor<Rc<GElement<Message, RenderCtx>>>>
+    for SaWithMapFn<Use, Message, RenderCtx>
 where
     Use: PartialEq + 'static,
     Message: 'static,
-    RenderContext: 'static,
+    RenderCtx: 'static,
 {
     fn evolution(
         &self,
-        who: &StateAnchor<Rc<GElement<Message, RenderContext>>>,
-    ) -> StateAnchor<Rc<GElement<Message, RenderContext>>> {
+        who: &StateAnchor<Rc<GElement<Message, RenderCtx>>>,
+    ) -> StateAnchor<Rc<GElement<Message, RenderCtx>>> {
         let func = self.map_action.clone();
         (who, &self.u_s_e).map(move |gel, u_s_e| func(gel, u_s_e))
     }
 }
 
-impl<Use, Message, RenderContext> Evolution<StateAnchor<Rc<GElement<Message, RenderContext>>>>
+impl<Use, Message, RenderCtx> Evolution<StateAnchor<Rc<GElement<Message, RenderCtx>>>>
     for StateAnchor<Use>
 where
-    Use: PartialEq + EqRefreshFor<GElement<Message, RenderContext>> + 'static,
+    Use: PartialEq + EqShaping<GElement<Message, RenderCtx>> + 'static,
     Use: std::fmt::Debug,
     StateAnchor<Use>: std::fmt::Debug,
-    RenderContext: 'static,
+    RenderCtx: 'static,
     Message: 'static,
     // Message: PartialEq + Clone + 'static + std::fmt::Debug,
 {
     fn evolution(
         &self,
-        who: &StateAnchor<Rc<GElement<Message, RenderContext>>>,
-    ) -> StateAnchor<Rc<GElement<Message, RenderContext>>> {
+        who: &StateAnchor<Rc<GElement<Message, RenderCtx>>>,
+    ) -> StateAnchor<Rc<GElement<Message, RenderCtx>>> {
         warn!(
             "[Evolution] Evolution<{:?}> use {:?}:{}",
             &who,
@@ -233,32 +230,32 @@ where
             );
 
             let mut new_gel = (**gel).clone();
-            new_gel.refresh_use(u_s_e);
+            new_gel.shaping_use(u_s_e);
             Rc::new(new_gel)
         })
     }
 }
 
-impl<Use, Message, RenderContext> From<SaWithMapFn<Use, Message, RenderContext>>
-    for GElement<Message, RenderContext>
+impl<Use, Message, RenderCtx> From<SaWithMapFn<Use, Message, RenderCtx>>
+    for GElement<Message, RenderCtx>
 where
     Use: 'static,
-    RenderContext: 'static,
+    RenderCtx: 'static,
     Message: 'static,
     // Message: Clone + PartialEq + 'static,
     //TODO check StateAnchor<Use>: Evolution<StateAnchor<Rc<Self>>>  or "SaWithMapFn<Use, Message>: Evolution<StateAnchor<Rc<Self>>>"
-    SaWithMapFn<Use, Message, RenderContext>: Evolution<StateAnchor<Rc<Self>>>,
+    SaWithMapFn<Use, Message, RenderCtx>: Evolution<StateAnchor<Rc<Self>>>,
     // StateAnchor<Use>: Evolution<StateAnchor<Rc<Self>>>,
 {
-    fn from(sa_with_fn: SaWithMapFn<Use, Message, RenderContext>) -> Self {
+    fn from(sa_with_fn: SaWithMapFn<Use, Message, RenderCtx>) -> Self {
         Self::EvolutionaryFactor(Rc::new(sa_with_fn))
     }
 }
-impl<Use, Message, RenderContext> From<StateAnchor<Use>> for GElement<Message, RenderContext>
+impl<Use, Message, RenderCtx> From<StateAnchor<Use>> for GElement<Message, RenderCtx>
 where
     Use: 'static,
     Message: 'static,
-    RenderContext: 'static,
+    RenderCtx: 'static,
     StateAnchor<Use>: Evolution<StateAnchor<Rc<Self>>>,
 {
     fn from(sa_use: StateAnchor<Use>) -> Self {
@@ -316,14 +313,14 @@ mod evolution_test {
     }
 }
 
-impl<Message, RenderContext> Eq for GElement<Message, RenderContext> {}
-impl<Message, RenderContext> PartialEq for GElement<Message, RenderContext>
+impl<Message, RenderCtx> Eq for GElement<Message, RenderCtx> {}
+impl<Message, RenderCtx> PartialEq for GElement<Message, RenderCtx>
 // where
 //     Message: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         //[] allways check when add GElement number;
-        //CHECK allways check when add GElement number;
+        //CHECK allways check when add(modifier) GElement number;
         match (self, other) {
             (Self::Builder_(l0), Self::Builder_(r0)) => l0 == r0,
             (Self::Layer_(l0), Self::Layer_(r0)) => l0 == r0,
@@ -345,27 +342,29 @@ impl<Message, RenderContext> PartialEq for GElement<Message, RenderContext>
     }
 }
 
-pub fn node_ref<Message, RenderContext>(str: impl Into<IdStr>) -> GElement<Message, RenderContext> {
+pub fn node_ref<Message, RenderCtx>(str: impl Into<IdStr>) -> GElement<Message, RenderCtx> {
     GElement::NodeRef_(str.into())
 }
 
-impl<Message, RenderContext> GElement<Message, RenderContext>
+impl<Message, RenderCtx> GElement<Message, RenderCtx>
 // where
 //     Message: PartialEq,
 {
     /// Returns `true` if the `g_element` is [`EventCallBack_`].
     #[must_use]
-    // pub const fn is_event_(&self) -> bool {
-    //     matches!(self, Self::Event_(..))
-    // }
+    pub const fn is_event_(&self) -> bool {
+        matches!(self, Self::Event_(..))
+    }
 
     /// Returns `true` if the g element is [`NodeIndex_`].
     ///
     /// [`NodeIndex_`]: GElement::NodeIndex_
+    #[must_use]
     pub const fn is_node_ref_(&self) -> bool {
         matches!(self, Self::NodeRef_(..))
     }
 
+    #[must_use]
     pub const fn as_node_ref_(&self) -> Option<&IdStr> {
         if let Self::NodeRef_(v) = self {
             Some(v)
@@ -374,37 +373,39 @@ impl<Message, RenderContext> GElement<Message, RenderContext>
         }
     }
 
-    pub fn as_dyn_node_widget(&self) -> &dyn Widget<Message, RenderContext>
+    pub fn as_dyn_node_widget(&self) -> &dyn Widget<Message, RenderCtx>
     where
         Message: 'static,
-        RenderContext: crate::RenderContext + 'static,
+        RenderCtx: crate::RenderContext + Clone + PartialEq + 'static,
     {
         use GElement::{
-            Builder_, EmptyNeverUse, EvolutionaryFactor, Generic_, Layer_, NodeRef_, Refresher_,
-            SaNode_,
+            Builder_, EmptyNeverUse, Event_, EvolutionaryFactor, Generic_, Layer_, NodeRef_,
+            Refresher_, SaNode_,
         };
         match_any!(self,
 
             // Builder_( x)| Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
-            Builder_( x)| Layer_(x) => x as &dyn Widget<Message,RenderContext>,
+            Builder_( x)| Layer_(x) => x as &dyn Widget<Message,RenderCtx>,
             // Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Refresher_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Generic_(x) => {
                 // debug!("Generic_:: from Generic_ to dyn Widget");
-                 &**x as &dyn Widget<Message,RenderContext>
+                 &**x as &dyn Widget<Message,RenderCtx>
                 // panic!("Generic_ should be Builder here");
                 },
             NodeRef_(_)=> panic!("TryFrom<GElement to dyn Widget: \n     GElement::NodeIndex_() should handle before."),
             SaNode_(_)=>todo!(),
             EmptyNeverUse=> panic!("EmptyNeverUse never here"),
-            EvolutionaryFactor(_)=> todo!()
+            EvolutionaryFactor(_)=> todo!(),
+            Event_(_)=>todo!()
 
 
 
         )
     }
 
-    pub fn as_generic(&self) -> Option<&dyn DynGElement<Message, RenderContext>> {
+    #[must_use]
+    pub fn as_generic(&self) -> Option<&dyn DynGElement<Message, RenderCtx>> {
         if let Self::Generic_(v) = self {
             Some(v.as_ref())
         } else {
@@ -419,15 +420,33 @@ impl<Message, RenderContext> GElement<Message, RenderContext>
     //         None
     //     }
     // }
+
+    #[must_use]
+    pub fn as_builder(&self) -> Option<&NodeBuilderWidget<Message, RenderCtx>> {
+        if let Self::Builder_(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `true` if the gelement is [`Builder_`].
+    ///
+    /// [`Builder_`]: GElement::Builder_
+    #[must_use]
+    pub fn is_builder(&self) -> bool {
+        matches!(self, Self::Builder_(..))
+    }
 }
 
-impl<Message, RenderContext> std::fmt::Debug for GElement<Message, RenderContext>
+impl<Message, RenderCtx> std::fmt::Debug for GElement<Message, RenderCtx>
 where
-// Message: std::fmt::Debug,
-// RenderContext: std::fmt::Debug,
+    Message: 'static,
+    RenderCtx: 'static, // Message: std::fmt::Debug,
+                        // RenderContext: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use GElement::{Builder_, EmptyNeverUse, Generic_, Layer_, NodeRef_, Refresher_};
+        use GElement::{Builder_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_};
         let nbw = "NodeBuilderWidget< Message>(empty Widget)".to_string();
 
         match self {
@@ -446,7 +465,7 @@ where
                     .field(builder.widget())
                     .finish()
             }
-            // Event_(e) => f.debug_tuple("GElement::EventCallBack_").field(e).finish(),
+            Event_(e) => f.debug_tuple("GElement::EventCallBack_").field(e).finish(),
             // Button_(_) => {
             //     write!(f, "GElement::Button_")
             // }
@@ -461,13 +480,50 @@ where
     }
 }
 
-impl<Message, RenderContext> Widget<Message, RenderContext> for GElement<Message, RenderContext>
+impl<Message, RenderCtx> Widget<Message, RenderCtx> for GElement<Message, RenderCtx>
 where
-    RenderContext: emg_native::RenderContext + 'static,
+    RenderCtx: crate::RenderContext + Clone + PartialEq + 'static,
     Message: 'static,
 {
-    #[instrument(skip(ctx), name = "GElement paint")]
-    fn paint(&self, ctx: &mut emg_native::PaintCtx<RenderContext>) {
-        self.as_dyn_node_widget().paint(ctx);
+    // #[instrument(skip(ctx), name = "GElement paint")]
+    // fn paint(&self, ctx: &mut emg_native::PaintCtx<RenderContext>) {
+    //     self.as_dyn_node_widget().paint(ctx)
+    // }
+
+    #[instrument(skip(self, ctx), name = "GElement paint",fields(self = %self))]
+    #[inline]
+    fn paint_sa(
+        &self,
+        ctx: &StateAnchor<emg_native::PaintCtx<RenderCtx>>,
+    ) -> StateAnchor<emg_native::PaintCtx<RenderCtx>> {
+        // match self {
+        //     GElement::Builder_(b) => b.paint_sa(ctx),
+        //     _ => unreachable!("not builder element no paint_sa {:?}", &self),
+        // }
+
+        use GElement::{
+            Builder_, EmptyNeverUse, Event_, EvolutionaryFactor, Generic_, Layer_, NodeRef_,
+            Refresher_, SaNode_,
+        };
+        match_any!(self,
+
+            // Builder_( x)| Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
+            Builder_( x)| Layer_(x) => x.paint_sa(ctx),
+            // Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
+            Refresher_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
+            Generic_(x) => {
+                warn!("Generic_:: Generic_ paint_sa");
+                 x.paint_sa(ctx)
+                // panic!("Generic_ should be Builder here");
+                },
+            NodeRef_(_)=> panic!("TryFrom<GElement to dyn Widget: \n     GElement::NodeIndex_() should handle before."),
+            SaNode_(_)=>todo!(),
+            EmptyNeverUse=> panic!("EmptyNeverUse never here"),
+            EvolutionaryFactor(_)=> todo!(),
+            Event_(_)=> panic!("Event_() should never here")
+
+
+
+        )
     }
 }

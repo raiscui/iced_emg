@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-22 22:42:54
- * @LastEditTime: 2022-08-23 16:27:06
+ * @LastEditTime: 2022-09-08 16:08:56
  * @LastEditors: Rais
  * @Description:
  */
 #![allow(clippy::module_name_repetitions)]
 
-pub use emg_element::node_ref;
+pub use emg_element::{node_ref, EventCallback, EventMessage};
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub type GelType<Message, RenderContext = crate::renderer::RenderCtx> =

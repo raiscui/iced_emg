@@ -8,50 +8,50 @@ use std::{any::Any, rc::Rc};
  * @Description:
  */
 use crate::{GElement, NodeBuilderWidget};
-use emg_refresh::{
-    EqRefreshFor, RefreshFor, RefreshForUse, RefreshUse, RefreshUseNoWarper, RefreshWhoNoWarper,
+use emg_shaping::{
+    EqShaping, ShapeOfUse, Shaping, ShapingUse, ShapingUseNoWarper, ShapingWhoNoWarper,
 };
 use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Message> RefreshWhoNoWarper for GElement<Message> {}
-impl<Message> RefreshUseNoWarper for GElement<Message> {}
-// impl<Message: PartialEq + Clone + 'static> EqRefreshFor<Self> for GElement<Message> {}
-impl<Message> RefreshFor<Self> for GElement<Message>
+impl<Message> ShapingWhoNoWarper for GElement<Message> {}
+impl<Message> ShapingUseNoWarper for GElement<Message> {}
+// impl<Message: PartialEq + Clone + 'static> EqShaping<Self> for GElement<Message> {}
+impl<Message> Shaping<Self> for GElement<Message>
 where
     Message: Clone,
 {
-    fn refresh_for(&self, el: &mut Self) {
+    fn shaping(&self, el: &mut Self) {
         use GElement::{Builder_, Event_, Generic_, Layer_, Refresher_, Text_};
         //TODO for builder
         //TODO allways check when add GElement number;
 
         match (el, self) {
             (who, Generic_(use_something)) => {
-                use_something.refresh_for(who);
+                use_something.shaping(who);
                 // let something = use_something.as_refresh_for();
-                // who.refresh_use(use_something);
+                // who.shaping_use(use_something);
             }
             (Generic_(who), use_something) => {
                 // let dyn_ref = who.as_ref();
-                // use_something.refresh_for(who);
-                who.refresh_use(use_something);
+                // use_something.shaping(who);
+                who.shaping_use(use_something);
             }
 
             // @ Single explicit match
             //TODO event 只和 builder 起作用
             (_gel, _g_event_callback @ Event_(_)) => {
                 // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
-                // .refresh_use(g_event_callback)
+                // .shaping_use(g_event_callback)
                 panic!("should never directly use event_callback for GElement");
             }
 
             //其他任何 el 刷新, 包括 el=refresher
-            //refreshing use any impl RefreshFor
+            //refreshing use any impl Shaping
             (gel, Refresher_(refresher)) => {
                 trace!("{} refresh use refresher", gel);
-                gel.refresh_for_use(refresher.as_ref() as &dyn RefreshFor<Self>);
+                gel.shape_of_use(refresher.as_ref() as &dyn Shaping<Self>);
             }
             // TODO: do not many clone event_callback
 
@@ -71,7 +71,7 @@ where
                 who.set_content(us_it.get_content());
             }
             (who, Builder_(builder)) => {
-                builder.widget().unwrap().refresh_for(who);
+                builder.widget().unwrap().shaping(who);
             }
 
             // TODO : event_callbacks prosess
@@ -87,13 +87,13 @@ where
 }
 
 /// `GElement` refresh use X
-/// for Refresher<GElement> many type
+/// for Shaper<GElement> many type
 // this is `GElement` refresh use `i32`
 // impl DynPartialEq for u32 {}
-// TODO : check no need? because already impl<Who, Use> EqRefreshFor<Who> for Use
-impl<Message> EqRefreshFor<GElement<Message>> for u32 {}
-impl<Message> RefreshFor<GElement<Message>> for u32 {
-    fn refresh_for(&self, el: &mut GElement<Message>) {
+// TODO : check no need? because already impl<Who, Use> EqShaping<Who> for Use
+impl<Message> EqShaping<GElement<Message>> for u32 {}
+impl<Message> Shaping<GElement<Message>> for u32 {
+    fn shaping(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
         match el {
@@ -109,12 +109,12 @@ impl<Message> RefreshFor<GElement<Message>> for u32 {
     }
 }
 
-impl<Message> RefreshFor<GElement<Message>> for i32
+impl<Message> Shaping<GElement<Message>> for i32
 where
     Message: 'static,
 {
     #[allow(clippy::match_same_arms)]
-    fn refresh_for(&self, el: &mut GElement<Message>) {
+    fn shaping(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
         match el {
@@ -131,10 +131,10 @@ where
                 warn!("i32 try_refresh_for Generic_");
 
                 // self.try_refresh_for(x);
-                // w.try_refresh_use(Box::new(*self));
-                (**w).refresh_use(self);
+                // w.try_shaping_use(Box::new(*self));
+                (**w).shaping_use(self);
 
-                // w.refresh_for_use(self);
+                // w.shape_of_use(self);
             }
             GElement::NodeRef_(_) => todo!(),
             GElement::SaNode_(_) => todo!(),
@@ -147,8 +147,8 @@ where
     }
 }
 
-impl<Message> RefreshFor<GElement<Message>> for f64 {
-    fn refresh_for(&self, el: &mut GElement<Message>) {
+impl<Message> Shaping<GElement<Message>> for f64 {
+    fn shaping(&self, el: &mut GElement<Message>) {
         use GElement::Text_;
 
         match el {
@@ -165,11 +165,11 @@ impl<Message> RefreshFor<GElement<Message>> for f64 {
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Message> RefreshFor<NodeBuilderWidget<Message>> for GElement<Message>
+impl<Message> Shaping<NodeBuilderWidget<Message>> for GElement<Message>
 where
     Message: 'static + Clone + PartialEq,
 {
-    fn refresh_for(&self, node_builder_widget: &mut NodeBuilderWidget<Message>) {
+    fn shaping(&self, node_builder_widget: &mut NodeBuilderWidget<Message>) {
         use GElement::Event_;
         trace!("node_builder_widget refresh use GElement (event_callback)");
 
@@ -186,7 +186,7 @@ where
             //其他任何 el 刷新, 包括 el=refresher
             // TODO impl refresher for NodeBuilderWidget(most edit event_callbacks list )
             // (gel, Refresher_(refresher)) => {
-            //     gel.refresh_use(refresher.deref());
+            //     gel.shaping_use(refresher.deref());
             // }
 
             // @ any not match ─────────────────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ where
 mod tests {
     use std::rc::Rc;
 
-    use emg_refresh::Refresher;
+    use emg_shaping::Shaper;
 
     use crate::GElement;
 
@@ -214,8 +214,8 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let _f = GElement::<Message>::Refresher_(Rc::new(Refresher::new(|| 1i32)));
-        // let ff: Rc<dyn EqRefreshFor<GElement<Message>>> = f;
-        // Rc<dyn EqRefreshFor<GElement<Message>>>, found Rc<Refresher<u32>>
+        let _f = GElement::<Message>::Refresher_(Rc::new(Shaper::new(|| 1i32)));
+        // let ff: Rc<dyn EqShaping<GElement<Message>>> = f;
+        // Rc<dyn EqShaping<GElement<Message>>>, found Rc<Shaper<u32>>
     }
 }

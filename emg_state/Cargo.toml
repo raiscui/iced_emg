@@ -8,7 +8,7 @@ resolver = "2"
 
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [profile.dev]
 split-debuginfo = "unpacked"

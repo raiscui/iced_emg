@@ -1,16 +1,18 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2022-08-12 13:37:12
+ * @LastEditTime: 2022-09-09 12:20:57
  * @LastEditors: Rais
  * @Description:
  */
 
-//TODO use refresh_for instead of
+//TODO use shaping instead of
 //! Convert [`winit`] types into [`iced_native`] types, and viceversa.
 //!
 //! [`winit`]: https://github.com/rust-windowing/winit
 //! [`iced_native`]: https://github.com/iced-rs/iced/tree/0.4/native
+use tracing::debug;
+
 use crate::keyboard;
 use crate::mouse;
 use crate::touch;
@@ -242,10 +244,20 @@ pub fn modifiers(modifiers: winit::event::ModifiersState) -> keyboard::Modifiers
 }
 
 /// Converts a physical cursor position to a logical `Point`.
-pub fn cursor_position(position: winit::dpi::PhysicalPosition<f64>, scale_factor: f64) -> Pos {
+pub fn cursor_position(position: &winit::dpi::PhysicalPosition<f64>, scale_factor: f64) -> Pos {
     let logical_position = position.to_logical(scale_factor);
 
     Pos::new(logical_position.x, logical_position.y)
+}
+pub fn cursor_na_position(position: &Pos<f64>, scale_factor: f64) -> Pos {
+    assert!(winit::dpi::validate_scale_factor(scale_factor));
+
+    let logical = (position / scale_factor).cast::<f32>();
+    debug!(
+        "cursor point=====scale_factor:{} physical:{} logical:{} ",
+        &scale_factor, &position, &logical
+    );
+    logical
 }
 
 /// Converts a `Touch` from [`winit`] to an [`iced_native`] touch event.

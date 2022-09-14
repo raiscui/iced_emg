@@ -7,17 +7,19 @@ edition = "2021"
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
-default = ["gpu"]
-gpu = ["emg_native", "emg_piet_gpu"]
+default = ["gpu", "new_node"]
+gpu = ["emg_native", "emg_piet_gpu", "emg_layout/gpu"]
+old_node = []
+new_node = []
 
 
 [dependencies]
 emg_common = { path = "../emg_common" }
 emg_state = { path = "../emg_state" }
-emg_refresh = { path = "../emg_refresh" }
+emg_shaping = { path = "../emg_shaping" }
 emg_layout = { path = "../emg_layout" }
 emg_hasher = { path = "../emg_hasher" }
 emg = { path = "../../emg" }

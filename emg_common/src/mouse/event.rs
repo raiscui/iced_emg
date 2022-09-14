@@ -2,34 +2,40 @@ use crate::Pos;
 
 // use crate::Point;
 use super::Button;
-
+use derive_more::Display;
 /// A mouse event.
 ///
 /// _**Note:** This type is largely incomplete! If you need to track
 /// additional events, feel free to [open an issue] and share your use case!_
 ///
 /// [open an issue]: https://github.com/iced-rs/iced/issues
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Display, PartialEq)]
 pub enum Event {
     /// The mouse cursor entered the window.
+    #[display(fmt = "CursorEntered")]
     CursorEntered,
 
     /// The mouse cursor left the window.
+    #[display(fmt = "CursorLeft")]
     CursorLeft,
 
     /// The mouse cursor was moved
+    #[display(fmt = "CursorMoved")]
     CursorMoved {
         /// The new position of the mouse cursor
         position: Pos,
     },
 
     /// A mouse button was pressed.
+    #[display(fmt = "ButtonPressed")]
     ButtonPressed(Button),
 
     /// A mouse button was released.
+    #[display(fmt = "ButtonReleased")]
     ButtonReleased(Button),
 
     /// The mouse wheel was scrolled.
+    #[display(fmt = "WheelScrolled")]
     WheelScrolled {
         /// The scroll movement.
         delta: ScrollDelta,

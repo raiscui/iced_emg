@@ -7,23 +7,25 @@ edition = "2021"
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 default = ["gpu"]
-gpu = ["emg_element/gpu"]
+gpu = ["emg_element/gpu", "emg_layout/gpu"]
 debug = ["emg_native/debug"]
 system = ["sysinfo"]
 
 [dependencies]
+emg_common = { path = "../emg_common" }
 emg_native = { path = "../emg_native" }
 emg_futures = { path = "../emg_futures" }
 emg_graphics_backend = { path = "../emg_graphics_backend" }
+emg_layout = { path = "../emg_layout" }
+emg_state = { path = "../emg_state" }
 #---
 emg_element = { path = "../emg_element" }
 
 #------
-
 window_clipboard = "0.2"
 tracing = "0.1"
 thiserror = "1.0"

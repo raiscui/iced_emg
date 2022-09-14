@@ -4,7 +4,6 @@
     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
         {
             "type": "lldb",
             "request": "launch",
@@ -65,16 +64,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'emg_refresh'",
+            "name": "Debug unit tests in library 'emg_shaping'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=emg_refresh"
+                    "--package=emg_shaping"
                 ],
                 "filter": {
-                    "name": "emg_refresh",
+                    "name": "emg_shaping",
                     "kind": "lib"
                 }
             },

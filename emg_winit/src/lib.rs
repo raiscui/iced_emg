@@ -17,6 +17,7 @@ pub mod system;
 pub use application::Application;
 pub use clipboard::Clipboard;
 pub use emg_element::GraphProgram;
+pub use emg_graphics_backend::Viewport;
 pub use emg_native::*;
 pub use error::Error;
 pub use mode::Mode;

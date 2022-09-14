@@ -4,7 +4,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2022-07-27 15:05:02
+ * @LastEditTime: 2022-09-08 22:37:32
  * @LastEditors: Rais
 * @Description:
 */
@@ -30,9 +30,9 @@ mod cassowary_calc;
     
 // #[track_caller]
 #[topo::nested]
-pub fn layout_calculating<Ix>(
+pub fn layout_calculating<Ix,RenderCtx>(
     _id:StateVar< StateAnchor<EdgeIndex<Ix>>>,
-    path_edgedata: &EdgeData,//parent
+    path_edgedata: &EdgeData<RenderCtx>,//parent
     current_cassowary_map:&Rc<CassowaryMap>,
     layout: &StateAnchor<Layout>,
 ) -> LayoutCalculated 
@@ -415,8 +415,9 @@ where
                     ff
                 });
 
+            let calculated_translation = (&cass_trans,&coordinates_trans).map(|cass,defined| cass *defined );
             // let matrix = coordinates_trans.map(|x| x.to_homogeneous().into());
-            let matrix = (&cass_trans,&coordinates_trans).map(|cass,defined| (defined* cass).to_homogeneous().into());
+            let matrix = calculated_translation.map(|translation| translation.to_homogeneous().into());
             //TODO suppot use_size blend_origin(0~1) blend_align(0~1) def:0  blend_origin_x ...
             // let matrix = (&cass_trans,&calculated_origin).map(|cass,origin| (origin*cass).to_homogeneous().into());
             // let matrix = (&cass_trans,&coordinates_trans).map(|cass,defined| (cass).to_homogeneous().into());
@@ -445,6 +446,10 @@ where
                         
             });
 
+            let world = (&p_calculated.world,&calculated_translation).map(|pw,t|{
+                pw*t
+            });
+
             LayoutCalculated {
                 // suggest_size: suggest_calculated_size,
                 size_constraints,
@@ -452,11 +457,13 @@ where
                 cass_or_calc_size,
                 origin: calculated_origin,
                 align: calculated_align,
+                translation:calculated_translation,
                 coordinates_trans,
                 cass_trans,
                 matrix,
                 // • • • • •
                 loc_styles,
+                world
             }
     
 }
@@ -858,6 +865,7 @@ pub fn calculation_origin_x(p_calc_size: &Vector2<f64>, p_calc_origin:&Translati
                     Translation3::<f64>::new( v,0.,0.)
                 },
                 ParentCalculated::V2(_) => unimplemented!("unsupported type"),
+                //TODO check is only use t.x
                 ParentCalculated::T3(t) => *t,
             }
         }
@@ -901,6 +909,7 @@ pub fn calculation_origin_y(p_calc_size: &Vector2<f64>, p_calc_origin:&Translati
                     Translation3::<f64>::new( 0.,v,0.)
                 },
                 ParentCalculated::V2(_) => unimplemented!("unsupported type"),
+                //TODO check is only use t.y
                 ParentCalculated::T3(t) => *t,
             }
         }

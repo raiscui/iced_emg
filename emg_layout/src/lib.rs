@@ -10,6 +10,7 @@
 #![feature(auto_traits)]
 #![feature(negative_impls)]
 #![feature(iter_intersperse)]
+#![feature(let_chains)]
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(test)]
 // ────────────────────────────────────────────────────────────────────────────────
@@ -29,9 +30,9 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
-use emg_common::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector, VectorDisp};
+use emg_common::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector, VectorDisp, TypeName, LayoutOverride, RectLTRB};
 use emg::{Edge, EdgeIndex, NodeIndex, };
-use emg_refresh::RefreshFor;
+use emg_shaping::{Shaping, ShapingWithDebug, EqShapingWithDebug};
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
 use emg_common::Vector;
 use float_cmp::approx_eq;
@@ -68,6 +69,10 @@ pub mod ccsa;
 
 static CURRENT_PROP_WEIGHT :f64 = cassowary::strength::MEDIUM * 1.5;
 static CHILD_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 0.9;
+
+
+
+pub type LayoutEndType = (Translation3<f64>, f64, f64);
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -352,17 +357,19 @@ where
         write!(f, "PathVarMap {{\n{}\n}}", indented(&sv))
     }
 }
-#[derive(Display, Debug, Clone, PartialEq)]
+#[derive(Display, Debug, Clone, PartialEq,Eq)]
 #[display(
-    fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\n}}",
+    fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},translation:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\nworld:\n{},\n}}",
     // "indented(suggest_size)",
     "indented(cass_or_calc_size)",
     "indented(origin)",
     "indented(align)",
+    "indented(translation)",
     "indented(coordinates_trans)",
     "indented(cass_trans)",
     "indented(matrix)",
-    "indented(loc_styles)"
+    "indented(loc_styles)",
+    "indented(world)",
 )]
 pub struct LayoutCalculated {
     
@@ -372,14 +379,60 @@ pub struct LayoutCalculated {
     cass_or_calc_size: StateAnchor<Vector2<f64>>,
     origin: StateAnchor<Translation3<f64>>,
     align: StateAnchor<Translation3<f64>>,
+    translation:StateAnchor<Translation3<f64>>,
     coordinates_trans: StateAnchor<Translation3<f64>>,
     cass_trans: StateAnchor<Translation3<f64>>,
     matrix: StateAnchor<Mat4>,
     loc_styles: StateAnchor<Style>,
+    world:StateAnchor<Translation3<f64>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct EdgeData {
+
+pub struct EdgeCtx<RenderCtx=()> {
+    pub styles_end:StateAnchor<StylesDict>,
+    pub layout_end: StateAnchor<LayoutEndType>,
+    pub world:StateAnchor<Translation3<f64>>,
+    pub children_layout_override:StateAnchor<Option<LayoutOverride>>,
+    //TODO temp keep here for future use
+    _phantom_data: std::marker::PhantomData<RenderCtx>
+}
+
+impl<RenderCtx> EdgeCtx<RenderCtx> {
+    #[must_use] pub fn to_layout_override(&self)->StateAnchor<LayoutOverride>{
+        (&self.world,&self.layout_end,&self.children_layout_override).map(|world,(_,w,h),children_layout_override|{
+            let rect = RectLTRB::from_origin_size(world.vector.xy().into(),*w,*h);
+            children_layout_override.as_ref().cloned().map_or_else(||LayoutOverride::new(rect), |lo|lo.underlay(rect))
+        })
+    }
+}
+
+impl<RenderCtx> PartialEq for EdgeCtx<RenderCtx> {
+    fn eq(&self, other: &Self) -> bool {
+        self.styles_end == other.styles_end && self.layout_end == other.layout_end
+    }
+}
+
+impl<RenderCtx> Clone for EdgeCtx<RenderCtx> {
+    fn clone(&self) -> Self {
+        Self { styles_end: self.styles_end.clone(), layout_end: self.layout_end.clone(),
+            world:self.world.clone(),
+            children_layout_override:self.children_layout_override.clone(),
+            _phantom_data:std::marker::PhantomData::<RenderCtx> }
+    }
+}
+
+impl<RenderCtx: 'static> std::fmt::Debug for EdgeCtx<RenderCtx> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EdgeCtx")
+        .field("styles_end", &self.styles_end)
+        .field("layout_end", &self.layout_end as &dyn std::fmt::Debug)
+        .field("world", &self.world as &dyn std::fmt::Debug)
+        .field("children_layout", &self.children_layout_override as &dyn std::fmt::Debug)
+
+        .finish()
+    }
+}
+pub struct EdgeData<RenderCtx> {
     path_layout: StateAnchor<Layout>,
     calculated: LayoutCalculated,
     cassowary_map:Rc<CassowaryMap>,
@@ -388,13 +441,63 @@ pub struct EdgeData {
     cassowary_calculated_layout:StateAnchor<(Option<f64>,Option<f64>)>,
     pub styles_string: StateAnchor<String>, 
     // pub info_string: StateAnchor<String>, 
+    pub ctx :EdgeCtx<RenderCtx>,
+
     opt_p_calculated:Option<LayoutCalculated>,//TODO check need ? use for what?
     // matrix: M4Data,
                                         // transforms_am: Transforms,
                                         // animations:
 }
 
-impl EdgeData {
+impl<RenderCtx> std::fmt::Debug for EdgeData<RenderCtx> where RenderCtx: 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EdgeData")
+        .field("path_layout", &self.path_layout)
+        .field("calculated", &self.calculated)
+        .field("cassowary_map", &self.cassowary_map)
+        .field("children_vars_sa", &self.children_vars_sa)
+        .field("cassowary_calculated_vars", &self.cassowary_calculated_vars)
+        .field("cassowary_calculated_layout", &self.cassowary_calculated_layout)
+        .field("styles_string", &self.styles_string)
+        .field("ctx", &self.ctx )
+        .field("opt_p_calculated", &self.opt_p_calculated).finish()
+    }
+}
+
+impl<RenderCtx> Clone for EdgeData<RenderCtx> {
+    fn clone(&self) -> Self {
+        Self { 
+            path_layout: self.path_layout.clone(),
+             calculated: self.calculated.clone(),
+             cassowary_map: self.cassowary_map.clone(),
+             children_vars_sa: self.children_vars_sa.clone(),
+             cassowary_calculated_vars: self.cassowary_calculated_vars.clone(),
+             cassowary_calculated_layout: self.cassowary_calculated_layout.clone(),
+             styles_string: self.styles_string.clone(),
+             ctx: self.ctx.clone(),
+             opt_p_calculated: self.opt_p_calculated.clone() 
+            }
+    }
+}
+impl<RenderCtx> Eq for EdgeData<RenderCtx> {}
+
+impl<RenderCtx> PartialEq for EdgeData<RenderCtx> {
+    fn eq(&self, other: &Self) -> bool {
+        self.path_layout == other.path_layout 
+        && self.calculated == other.calculated 
+        && self.cassowary_map == other.cassowary_map 
+        && self.children_vars_sa == other.children_vars_sa 
+        && self.cassowary_calculated_vars == other.cassowary_calculated_vars 
+        && self.cassowary_calculated_layout == other.cassowary_calculated_layout 
+        && self.styles_string == other.styles_string 
+        && self.ctx == other.ctx 
+        && self.opt_p_calculated == other.opt_p_calculated
+    }
+}
+
+impl<RenderCtx> EdgeData<RenderCtx> {
+
+   
     #[must_use] pub fn styles_string(&self) -> String {
         self.styles_string.get()
     }
@@ -406,9 +509,9 @@ impl EdgeData {
     }
 }
 
-impl Eq for EdgeData {}
 
-impl std::fmt::Display for EdgeData {
+//TODO re impl because add RenderCtx,layout_end,styles_end
+impl<RenderCtx> std::fmt::Display for EdgeData<RenderCtx> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let x = format!(
             "calculated:{{\n{};\nstyles_string:{{\n{};\n}}\n}}",
@@ -532,59 +635,91 @@ where
     }
 }
 
-pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
+pub type GraphEdgesDict<Ix,RenderContext=()> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix,RenderContext>, Ix>>;
 // use ahash::AHasher as CustomHasher;
 // use rustc_hash::FxHasher as CustomHasher;
 
 // type PathVarMap<Ix,T> = Dict<EPath<Ix>,T>;
 // type PathVarMap<Ix,T> = indexmap::IndexMap <EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
 type PathVarMap<Ix,T> = HashMap<EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
-#[derive(Clone, Debug)]
-pub struct EmgEdgeItem<Ix>
+pub type StylesDict = Dict<TypeName, StateAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
+
+pub struct EmgEdgeItem<Ix,RenderCtx=()>
 where
     // Ix: Clone + Hash + Eq + Ord + 'static + Default,
     Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {
     //TODO save g_store
     pub id:StateVar< StateAnchor<EdgeIndex<Ix>>>,// dyn by Edge(source_nix , target_nix)
-    pub paths:DictPathEiNodeSA<Ix>, // with parent self  // current not has current node
+    pub paths:DictPathEiNodeSA<Ix,RenderCtx>, // with parent self  // current not has current node
     pub layout: Layout,
+    pub styles:StateVar<StylesDict>,
     path_styles: StateVar<PathVarMap<Ix, Style>>, //TODO check use
     path_layouts:StateVar<PathVarMap<Ix, Layout>>,// layout only for one path 
 
-    pub other_styles: StateVar<Style>,
+    pub other_css_styles: StateVar<Style>,
     // no self  first try
-    pub edge_nodes:DictPathEiNodeSA<Ix>, //TODO with self?  not with self?  (current with self)
+    pub edge_nodes:DictPathEiNodeSA<Ix,RenderCtx>, //TODO with self?  not with self?  (current with self)
     store:Rc<RefCell<GStateStore>>
 }
-impl<Ix> Eq for EmgEdgeItem<Ix>
+
+impl<Ix, RenderCtx> Clone for EmgEdgeItem<Ix, RenderCtx>
+where
+    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
+    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
+{
+    fn clone(&self) -> Self {
+        Self { id: self.id, 
+            paths: self.paths.clone(), 
+            layout: self.layout, 
+            styles: self.styles, 
+            path_styles: self.path_styles, 
+            path_layouts: self.path_layouts, 
+            other_css_styles: self.other_css_styles,
+             edge_nodes: self.edge_nodes.clone(), 
+             store: self.store.clone() }
+    }
+}
+
+impl<Ix, RenderCtx> std::fmt::Debug for EmgEdgeItem<Ix, RenderCtx>
+where
+    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
+    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static+std::fmt::Debug,
+    RenderCtx:'static
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EmgEdgeItem")
+        
+        .field("id", &self.id)
+        .field("paths", &self.paths)
+        .field("layout", &self.layout)
+        .field("styles", &self.styles)
+        .field("path_styles", &self.path_styles)
+        .field("path_layouts", &self.path_layouts)
+        .field("other_css_styles", &self.other_css_styles)
+        .field("edge_nodes", &self.edge_nodes)
+        .finish()
+    }
+}
+impl<Ix,RenderCtx> Eq for EmgEdgeItem<Ix,RenderCtx>
 where 
 Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 {}
 
 
-impl<Ix> PartialEq for EmgEdgeItem<Ix> 
+impl<Ix,RenderCtx> PartialEq for EmgEdgeItem<Ix,RenderCtx> 
 where 
 Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
 
 {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id && self.paths == other.paths && self.layout == other.layout && self.path_styles == other.path_styles
-        && self.other_styles == other.other_styles && self.edge_nodes == other.edge_nodes
+        && self.other_css_styles == other.other_css_styles && self.edge_nodes == other.edge_nodes
     }
 }
-impl<
-        Ix: 'static
-            + Clone
-            + Hash
-            + Eq
-            + PartialEq
-            + PartialOrd
-            + Ord
-            + std::default::Default
-            + std::fmt::Display,
-    > std::fmt::Display for EmgEdgeItem<Ix>
-{
+impl< Ix,RenderCtx > std::fmt::Display for EmgEdgeItem<Ix,RenderCtx>
+where Ix: 'static + Clone + Hash + Eq + PartialEq + PartialOrd + Ord + std::default::Default + std::fmt::Display, 
+RenderCtx: 'static {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let x = format!(
             "id:{{\n{};\n}}\npaths:{{\n{};\n}}\nlayout:{{\n{};\n}}\npath_styles:{{\n{};\n}}\nother_styles:{{\n{};\n}}\nnode:{{\n{};\n}}",
@@ -592,18 +727,18 @@ impl<
             indented(DictDisplay(self.paths.get())),
             indented(&self.layout),
             indented(PathVarMapDisplay(self.path_styles.get())),
-            indented(&self.other_styles),
+            indented(&self.other_css_styles),
             indented(DictDisplay(self.edge_nodes.get())),
         );
         write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
     }
 }
-pub type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>; //NOTE: EdgeData or something
+pub type DictPathEiNodeSA<Ix,RenderCtx> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode<RenderCtx>>>; //NOTE: EdgeData or something
 
 
-impl<Ix> EmgEdgeItem<Ix>
+impl<Ix,RenderCtx> EmgEdgeItem<Ix,RenderCtx>
 where
-    Ix: Clone + Hash + Ord + Default + std::fmt::Debug 
+    Ix: Clone + Hash + Ord + Default + std::fmt::Debug, RenderCtx: 'static 
 {
     #[cfg(test)]
     fn set_size(&self,
@@ -620,7 +755,7 @@ where
     
     #[cfg(test)]
     #[must_use]
-    fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
+    fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData<RenderCtx>> {
       
         //TODO not get(), use ref
         self.edge_nodes
@@ -636,7 +771,7 @@ where
     //         .and_then(EdgeItemNode::as_edge_data).cloned()
             
     // }
-    pub fn store_edge_data_with<F: FnOnce(Option<&EdgeData>)->R,R>(&self,store:&GStateStore, key: &EPath<Ix>,func:F) -> R {
+    pub fn store_edge_data_with<F: FnOnce(Option<&EdgeData<RenderCtx>>)->R,R>(&self,store:&GStateStore, key: &EPath<Ix>,func:F) -> R {
         #[cfg(debug_assertions)]
         {
             let oo = self.edge_nodes.store_get_with(store,|o|{
@@ -654,7 +789,7 @@ where
        
             
     }
-    pub fn engine_edge_data_with<F: FnOnce(Option<&EdgeData>)->R,R>(&self,engine:&mut Engine, key: &EPath<Ix>,func:F) -> R {
+    pub fn engine_edge_data_with<F: FnOnce(Option<&EdgeData<RenderCtx>>)->R,R>(&self,engine:&mut Engine, key: &EPath<Ix>,func:F) -> R {
         self.edge_nodes.engine_get_with(engine,|o|{
            func(o
             .get(key)
@@ -666,9 +801,11 @@ where
    
 }
 
-impl<Ix> EmgEdgeItem<Ix>
+
+impl<Ix,RenderCtx> EmgEdgeItem<Ix,RenderCtx>
 where
-    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>,
+    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::fmt::Display + std::borrow::Borrow<str>, 
+    RenderCtx: 'static
 {
 
     pub fn build_path_layout(&self,func:impl FnOnce(Layout)->(EPath<Ix>, Layout)){
@@ -686,7 +823,7 @@ where
     pub fn default_in_topo(
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
+        edges: StateAnchor<GraphEdgesDict<Ix,RenderCtx>>,
 
          ) -> Self  where Ix:std::fmt::Debug{
 
@@ -702,7 +839,7 @@ where
     pub fn default_with_wh_in_topo<T: Into<f64> + std::fmt::Debug>(
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
+        edges: StateAnchor<GraphEdgesDict<Ix,RenderCtx>>,
          w: T, h: T) -> Self  where Ix:std::fmt::Debug{
 
         Self::new_in_topo(source_node_nix_sa, target_node_nix_sa, edges,    
@@ -719,7 +856,7 @@ where
 
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
+        edges: StateAnchor<GraphEdgesDict<Ix,RenderCtx>>,
         size:  (GenericSizeAnchor,GenericSizeAnchor),
         origin: (GenericSizeAnchor,GenericSizeAnchor, GenericSizeAnchor),
         align:  (GenericSizeAnchor,GenericSizeAnchor,GenericSizeAnchor),
@@ -760,7 +897,8 @@ where
         let path_layouts:StateVar<PathVarMap<Ix, Layout>> = use_state(PathVarMap::default());
       
 
-        let other_styles_sv = use_state(s());
+        let other_css_styles_sv = use_state(s());
+        let styles_sv = use_state(Dict::new());
 
         let opt_self_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
             let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
@@ -785,21 +923,21 @@ where
       
 
 
-        let parent_paths: DictPathEiNodeSA<Ix> = 
+        let parent_paths: DictPathEiNodeSA<Ix,RenderCtx> = 
             opt_self_source_node_nix_sa_re_get.then(move|opt_self_source_nix:&Option<NodeIndex<Ix>>| {
 
                 let _g = span!(Level::TRACE, "[ source_node_incoming_edge_dict_sa recalculation ]:source_node_nix_sa_re_get change ").entered();
 
                 if opt_self_source_nix.is_none(){
                     //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
-                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
+                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode<RenderCtx>>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
                     //TODO check why use unit? answer:need for `EdgeItemNode::Empty => path_ein_empty_node_builder`
                     // Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::new())
                 }else{
                     let opt_some_source_nix_clone = opt_self_source_nix.clone();
                     edges.filter_map(move|someone_eix, e| {
                         
-                        println!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_some_source_nix_clone);
+                        debug!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_some_source_nix_clone);
                         if   someone_eix.target_nix() == &opt_some_source_nix_clone {
 
                             Some(e.item.edge_nodes.clone())
@@ -810,7 +948,7 @@ where
                         
                     })
                     .anchor()
-                    .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
+                    .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix,RenderCtx>>|{
                         x.values().map(emg_state::StateAnchor::anchor)
                         .collect::<Anchor<Vector<_>>>()
                         .map(|v:&Vector<_>|{
@@ -829,7 +967,7 @@ where
         let children_nodes = opt_self_target_node_nix_sa_re_get.then(move|opt_self_target_nix|{
             if opt_self_target_nix.is_none() {
                 //NOTE 尾
-                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default())
+                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode<RenderCtx>>::default())
             }else{
 
                 // TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
@@ -843,7 +981,7 @@ where
                         None
                     }
                 }).anchor()
-                .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
+                .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix,RenderCtx>>|{
                     x.values().map(emg_state::StateAnchor::anchor)
                     .collect::<Anchor<Vector<_>>>()
                     .map(|v:&Vector<_>|{
@@ -857,7 +995,7 @@ where
 
         //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
         let paths_clone = parent_paths.clone();
-        let nodes:DictPathEiNodeSA<Ix> = id_sv.watch().then(move|id_sa|{
+        let nodes:DictPathEiNodeSA<Ix,RenderCtx> = id_sv.watch().then(move|id_sa|{
             
             let paths_clone2 = paths_clone.clone();
             let children_nodes2 = children_nodes.clone();
@@ -868,7 +1006,7 @@ where
 
                 let eid_clone = eid.clone();
                 
-                paths_clone2.map(move |p_node_as_paths:&Dict<EPath<Ix>, EdgeItemNode>|{
+                paths_clone2.map(move |p_node_as_paths:&Dict<EPath<Ix>, EdgeItemNode<RenderCtx>>|{
                     
                     p_node_as_paths.iter()
                         .map(|(parent_e_path, p_ei_node_v)| {
@@ -879,9 +1017,9 @@ where
                             p_ep_add_self.0.push_back(eid_clone.clone());
                             (p_ep_add_self, p_ei_node_v.clone())
                         })
-                        .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
+                        .collect::<Dict<EPath<Ix>, EdgeItemNode<RenderCtx>>>()
 
-                }) .map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode| {
+                }) .map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode<RenderCtx>| {
 
 //@=====    each    path    edge    prosess     ============================================================================================================================================
 //
@@ -918,7 +1056,7 @@ where
 
                     //NOTE 约束
                     let ccss_list_sa = path_layout.then(|layout|{
-                    layout.cassowary_constants.watch().then(|x|x.clone().into_anchor()).into_anchor()
+                        layout.cassowary_constants.watch().then(|x|x.clone().into_anchor()).into_anchor()
                     });
 
                   
@@ -927,8 +1065,8 @@ where
                         
                     let (opt_p_calculated,layout_calculated,layout_styles_string) =  match p_path_edge_item_node {
                         //NOTE 上一级节点: empty => 此节点是root
-                        EdgeItemNode::Empty => path_ein_empty_node_builder(&path_layout, self_path,&current_cassowary_map,path_styles, other_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped,&current_cassowary_map, &path_layout, self_path, path_styles, other_styles_sv),
+                        EdgeItemNode::Empty => path_ein_empty_node_builder(&path_layout, self_path,&current_cassowary_map,path_styles, other_css_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped,&current_cassowary_map, &path_layout, self_path, path_styles, other_css_styles_sv),
                         EdgeItemNode::String(_)  => {
                             todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
@@ -936,12 +1074,13 @@ where
                     };
 
                     //NOTE children cassowary_map
-                    let children_cass_maps_sa = children_nodes3.filter_map(move |child_path,child_node|{
+                    let (children_layout_override_sa_a,children_cass_maps_sa) = children_nodes3.filter_map(move |child_path,child_node|{
                         if child_path.except_tail_match(&self_path3) {
+
                             match (child_path.last_target(),child_node.as_edge_data()){
                                
                                 // (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.path_layout.clone()))),
-                                (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.calculated.size_constraints.clone()))),
+                                (Some(nix), Some(ed)) =>Some( (ed.ctx.to_layout_override().into_anchor(), nix.index().clone(),(ed.cassowary_map.clone(),ed.calculated.size_constraints.clone()))),
                                 _=>None
                             }
                         }else{
@@ -949,9 +1088,25 @@ where
                         }
                     })
                     .map(|x|{
-                        x.values().cloned()
-                        .collect::<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>>()
-                    });
+                        let (children_as_layout_override_list, children_cass_maps) = x.values().cloned().fold((Vector::new(),Dict::new()),|(mut layout_override_vec,mut cass_dict),(layout_override,ix,cass_map)|{
+                            layout_override_vec.push_back(layout_override);
+                            cass_dict.insert (ix,cass_map);
+                            (layout_override_vec,cass_dict)
+                        });
+                        let children_layout_override = children_as_layout_override_list.into_iter().collect::<Anchor<Vector<_>>>().map(|los|{
+                            los.clone().into_iter().reduce(|acc,lo|{
+                                acc + lo
+                            })
+                        });
+                        (children_layout_override,children_cass_maps)
+
+                        // .collect::<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>>();
+
+                    }).split();
+
+                    let children_layout_override_sa = children_layout_override_sa_a.then(std::clone::Clone::clone);
+
+              
                     
 
 
@@ -1379,8 +1534,17 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
                     });
 
+                    let layout_end:StateAnchor<LayoutEndType> = (&layout_calculated.translation,&cassowary_calculated_layout).map(|trans,(w,h)|
+                        // (
+                        //     Translation3::new(NotNan::new(trans.x ).unwrap(),NotNan::new(trans.y ).unwrap(),NotNan::new(trans.z ).unwrap() ) ,
+                        //     w.and_then(|w|NotNan::new(w).ok()).unwrap(),
+                        //     h.and_then(|h|NotNan::new(h).ok()).unwrap()
+                        // )
+                        (*trans,w.expect("width must have"),h.expect("height must have"))
+                    );
+
                  
-                    let styles_string:StateAnchor<String> = (&info_string,&layout_styles_string, &cassowary_calculated_layout).map(move |info,layout_styles,(w,h,..)|{
+                    let styles_string:StateAnchor<String> = (&info_string,&layout_styles_string, &cassowary_calculated_layout).map(move |info,layout_styles,(w,h)|{
 
                         warn!("[calculated_vars] [info] total  info:\n{} ",&info);
 
@@ -1396,6 +1560,8 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                         }
 
                     });
+
+
                     
 
                     // • • • • •
@@ -1404,9 +1570,9 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
 // ────────────────────────────────────────────────────────────────────────────────
 
+                    let world = layout_calculated.world.clone();
 
-
-                    EdgeItemNode::EdgeData(Box::new(EdgeData {
+                    EdgeItemNode::<RenderCtx>::EdgeData(Box::new(EdgeData::<RenderCtx> {
                         path_layout,
                         calculated: layout_calculated,
                         cassowary_map: current_cassowary_map,
@@ -1414,7 +1580,15 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
                         cassowary_calculated_vars,
                         cassowary_calculated_layout,
                         styles_string,
+                        ctx:EdgeCtx{
+                            styles_end:styles_sv.watch(),//TODO make real path_styles_sv
+                            layout_end,
+                            world,
+                            children_layout_override:children_layout_override_sa,
+                            _phantom_data:std::marker::PhantomData::<RenderCtx>
+                        },
                         opt_p_calculated,
+                        
                     }))
                 }).into()
 
@@ -1426,10 +1600,10 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
             id: id_sv,
             paths:parent_paths,
             layout,
-            
             path_styles,
             path_layouts,
-            other_styles: other_styles_sv,
+            other_css_styles: other_css_styles_sv,
+            styles:styles_sv,
             edge_nodes: nodes,
             store:state_store()
         }
@@ -1442,9 +1616,9 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
 
 
 
-fn path_with_ed_node_builder<Ix>(
+fn path_with_ed_node_builder<Ix,RenderCtx>(
     id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>, 
-    ped: &EdgeData,
+    ped: &EdgeData<RenderCtx>,
     current_cassowary_map:&Rc<CassowaryMap>,
     path_layout: &StateAnchor<Layout>,
     path: &EPath<Ix>, 
@@ -1574,6 +1748,8 @@ fn path_ein_empty_node_builder<Ix:'static>(
     let calculated_align = StateAnchor::constant(Translation3::<f64>::identity());
     let coordinates_trans = StateAnchor::constant(Translation3::<f64>::identity());
     let cass_trans = StateAnchor::constant(Translation3::<f64>::identity());
+    let calculated_translation = (&cass_trans,&coordinates_trans).map(|cass,defined| cass *defined );
+
     let matrix = cass_trans.map(|x| x.to_homogeneous().into());
     let loc_styles = (&cass_or_calc_size, &matrix).map(move |size: &Vector2<f64>, mat4: &Mat4| {
             let _enter = span!(Level::TRACE,
@@ -1586,6 +1762,8 @@ fn path_ein_empty_node_builder<Ix:'static>(
             // TODO use  key 更新 s(),
             s().w(px(size.x)).h(px(size.y)).transform(*mat4)
         });
+
+        let world = calculated_translation.clone();
     let layout_calculated = LayoutCalculated {
            
             size_constraints,
@@ -1593,11 +1771,13 @@ fn path_ein_empty_node_builder<Ix:'static>(
             cass_or_calc_size,
             origin: calculated_origin,
             align: calculated_align,
+            translation:calculated_translation,
             coordinates_trans,
             cass_trans,
             matrix,
             // • • • • •
             loc_styles,
+            world
         };
     let styles_string = (
             &path_styles.watch(),
@@ -1611,7 +1791,7 @@ fn path_ein_empty_node_builder<Ix:'static>(
                         )
                 .entered();
 
-                //NOTE fold because edge no in , path_styles only one values.
+                //NOTE fold because edge has no in , path_styles only one values. fold max run only once;
                 let ps = path_styles.values().fold(String::default(), |acc,v|{
                     format!("{}{}",acc,v.render())
                 });
@@ -1629,16 +1809,50 @@ fn path_ein_empty_node_builder<Ix:'static>(
 
 
 
-#[derive(Display, From, Clone, Debug, PartialEq, Eq)]
-pub enum EdgeItemNode {
-    EdgeData(Box<EdgeData>),
+#[derive(Display, From)]
+pub enum EdgeItemNode<RenderCtx> {
+    EdgeData(Box<EdgeData<RenderCtx>>),
     String(String), //TODO make can write, in DictPathEiNodeSA it clone need RC?
     Empty,
 }
 
-impl EdgeItemNode {
+impl<RenderCtx> Eq for EdgeItemNode<RenderCtx> {
+    
+}
+
+impl<RenderCtx> PartialEq for EdgeItemNode<RenderCtx> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::EdgeData(l0), Self::EdgeData(r0)) => l0 == r0,
+            (Self::String(l0), Self::String(r0)) => l0 == r0,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
+}
+
+impl<RenderCtx> std::fmt::Debug for EdgeItemNode<RenderCtx> where RenderCtx: 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EdgeData(arg0) => f.debug_tuple("EdgeData").field(arg0).finish(),
+            Self::String(arg0) => f.debug_tuple("String").field(arg0).finish(),
+            Self::Empty => write!(f, "Empty"),
+        }
+    }
+}
+
+impl<RenderCtx> Clone for EdgeItemNode<RenderCtx> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::EdgeData(arg0) => Self::EdgeData(arg0.clone()),
+            Self::String(arg0) => Self::String(arg0.clone()),
+            Self::Empty => Self::Empty,
+        }
+    }
+}
+
+impl<RenderCtx> EdgeItemNode<RenderCtx> {
     #[must_use]
-    pub const fn as_edge_data(&self) -> Option<&EdgeData> {
+    pub const fn as_edge_data(&self) -> Option<&EdgeData<RenderCtx>> {
         if let Self::EdgeData(v) = self {
             Some(v)
         } else {
@@ -1666,7 +1880,7 @@ impl EdgeItemNode {
 
 
 
-impl Default for EdgeItemNode {
+impl<RenderCtx> Default for EdgeItemNode<RenderCtx> {
     fn default() -> Self {
         Self::Empty
     }
@@ -1699,7 +1913,7 @@ Ix: Clone + Hash + Eq + Ord + 'static + Default,
     Use: CssValueTrait + Clone + 'static,
 >(
     v: Use,
-) -> Box<dyn RefreshFor<EmgEdgeItem<Ix>>> {
+) -> Box<dyn Shaping<EmgEdgeItem<Ix>>> {
     // pub fn css<Use: CssValueTrait + std::clone::Clone + 'static>(v: Use) -> Box<Css<Use>> {
     Box::new(Css(v))
 }
@@ -1713,7 +1927,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_common::{parent, IdStr};
-    use emg_refresh::RefreshForUse;
+    use emg_shaping::ShapeOfUse;
     use emg_state::StateVar;
     use emg_common::vector;
  
@@ -1833,16 +2047,16 @@ mod tests {
             });
 
 
-            // debug!("refresh_use before {}", &ec);
+            // debug!("shaping_use before {}", &ec);
             let _span = span!(Level::TRACE, "debug print e1");
             _span.in_scope(|| {
-                trace!("loc refresh_use before {}", &e1);
+                trace!("loc shaping_use before {}", &e1);
             });
             info!("l2 =========================================================");
             
-            root_e.refresh_for_use(&vec![css(css_width)]);
-            // root_e.refresh_use(&css(css_width.clone()));
-            root_e.refresh_for_use(&Css(css_height));
+            root_e.shape_of_use(&vec![css(css_width)]);
+            // root_e.shaping_use(&css(css_width.clone()));
+            root_e.shape_of_use(&Css(css_height));
             assert_eq!(
                 e1.edge_data(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .unwrap()
@@ -1853,11 +2067,11 @@ mod tests {
             );
             info!("=========================================================");
 
-            e2.refresh_for_use(&Css(CssWidth::from(px(20))));
-            e2.refresh_for_use(&Css(CssHeight::from(px(20))));
-            e2.refresh_for_use(&Css(bg_color(hsl(40,70,30))));
+            e2.shape_of_use(&Css(CssWidth::from(px(20))));
+            e2.shape_of_use(&Css(CssHeight::from(px(20))));
+            e2.shape_of_use(&Css(bg_color(hsl(40,70,30))));
 
-            trace!("refresh_use after {:#?}", &e2);
+            trace!("shaping_use after {:#?}", &e2);
             info!("l3 =========================================================");
             assert_eq!(
                 e2.edge_data(&EPath(vector![
@@ -1956,10 +2170,10 @@ mod tests {
           
 
 
-            // debug!("refresh_use before {}", &ec);
+            // debug!("shaping_use before {}", &ec);
             let _span = span!(Level::TRACE, "debug print e1");
             _span.in_scope(|| {
-                trace!("refresh_use before {}", &e1);
+                trace!("shaping_use before {}", &e1);
             });
             info!("l1 =========================================================");
 
@@ -1979,49 +2193,49 @@ mod tests {
             let xx = vec![css_width];
             // let xx = vec![css(css_width)];
 
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
 
-            // trace!("refresh_use after css_width {}", &root_e);
-            trace!("refresh_use after css_width {}", &e1);
+            // trace!("shaping_use after css_width {}", &root_e);
+            trace!("shaping_use after css_width {}", &e1);
             info!("=========================================================");
 
-            // root_e.refresh_use(&Css(css_height.clone()));
+            // root_e.shaping_use(&Css(css_height.clone()));
             let tempcss= use_state(css_height);
-            root_e.refresh_for_use(&tempcss);
+            root_e.shape_of_use(&tempcss);
             assert_eq!(
                 e1.edge_nodes
                     .get()
@@ -2061,36 +2275,36 @@ mod tests {
 
             info!("=========================================================");
 
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
             assert_eq!(
                 e1.edge_nodes
                     .get()
@@ -2111,12 +2325,12 @@ mod tests {
                 .get() ,
             "width: 12px;\nheight: 10px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,10,0,1);\n"
             );
-            trace!("refresh_use after {}", &e1);
+            trace!("shaping_use after {}", &e1);
             info!("=========================================================");
 
-            trace!("refresh_use after {}", &e2);
+            trace!("shaping_use after {}", &e2);
             info!("l1351 =========================================================");
-            e2.refresh_for_use(&Css(CssHeight::from(px(50))));
+            e2.shape_of_use(&Css(CssHeight::from(px(50))));
             assert_eq!(
                 e2.edge_nodes
                     .get()
@@ -2150,17 +2364,17 @@ mod tests {
             );
             let _span1 = span!(Level::TRACE, "debug print 1");
             _span1.in_scope(|| {
-                trace!("refresh_use after {}", &e2);
+                trace!("shaping_use after {}", &e2);
             });
 
             let _span2 = span!(Level::TRACE, "debug print 2");
             _span2.in_scope(|| {
-                trace!("refresh_use after2 {}", &e2);
+                trace!("shaping_use after2 {}", &e2);
             });
             info!("=========================================================");
-            e2.refresh_for_use(&Css(CssHeight::from(px(150))));
+            e2.shape_of_use(&Css(CssHeight::from(px(150))));
 
-            trace!("refresh_use after {:#?}", &e2);
+            trace!("shaping_use after {:#?}", &e2);
             info!("..=========================================================");
             trace!(
                 "{}",
@@ -2248,10 +2462,10 @@ mod tests {
           
 
 
-            // debug!("refresh_use before {}", &ec);
+            // debug!("shaping_use before {}", &ec);
             let _span = span!(Level::TRACE, "debug print e1");
             _span.in_scope(|| {
-                trace!("refresh_use before {}", &e1);
+                trace!("shaping_use before {}", &e1);
             });
             info!("l1 =========================================================");
             warn!("calculated 1 =========================================================");
@@ -2283,7 +2497,7 @@ mod tests {
             let xx = vec![css_width];
             // let xx = vec![css(css_width)];
 
-            root_e.refresh_for_use(&xx);
+            root_e.shape_of_use(&xx);
 
             warn!("calculated 3 =========================================================");
             warn!("{}",e1.edge_nodes
@@ -2293,48 +2507,48 @@ mod tests {
             .unwrap()
             .calculated);
 
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
-            root_e.refresh_for_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
+            root_e.shape_of_use(&xx);
 
-            // trace!("refresh_use after css_width {}", &root_e);
-            trace!("refresh_use after css_width {}", &e1);
+            // trace!("shaping_use after css_width {}", &root_e);
+            trace!("shaping_use after css_width {}", &e1);
             info!("=========================================================");
 
-            // root_e.refresh_use(&Css(css_height.clone()));
+            // root_e.shaping_use(&Css(css_height.clone()));
             let tempcss= use_state(css_height);
-            root_e.refresh_for_use(&tempcss);
+            root_e.shape_of_use(&tempcss);
             
             warn!("calculated 4 root h w 100 =========================================================");
             warn!("{}",e1.edge_nodes
@@ -2390,36 +2604,36 @@ mod tests {
 
             info!("=========================================================");
 
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
-            e1.refresh_for_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shape_of_use(&Css(CssWidth::from(px(12))));
             
             assert_eq!(
                 e1.edge_nodes
@@ -2441,12 +2655,12 @@ mod tests {
                 .get() ,
             "width: 12px;\nheight: 200px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,-180,0,1);\n"
             );
-            trace!("refresh_use after {}", &e1);
+            trace!("shaping_use after {}", &e1);
             info!("=========================================================");
 
-            trace!("refresh_use after {}", &e2);
+            trace!("shaping_use after {}", &e2);
             info!("l1351 =========================================================");
-            e2.refresh_for_use(&Css(CssHeight::from(px(50))));
+            e2.shape_of_use(&Css(CssHeight::from(px(50))));
             assert_eq!(
                 e2.edge_nodes
                     .get()
@@ -2480,17 +2694,17 @@ mod tests {
             );
             let _span1 = span!(Level::TRACE, "debug print 1");
             _span1.in_scope(|| {
-                trace!("refresh_use after {}", &e2);
+                trace!("shaping_use after {}", &e2);
             });
 
             let _span2 = span!(Level::TRACE, "debug print 2");
             _span2.in_scope(|| {
-                trace!("refresh_use after2 {}", &e2);
+                trace!("shaping_use after2 {}", &e2);
             });
             info!("=========================================================");
-            e2.refresh_for_use(&Css(CssHeight::from(px(150))));
+            e2.shape_of_use(&Css(CssHeight::from(px(150))));
 
-            trace!("refresh_use after {:#?}", &e2);
+            trace!("shaping_use after {:#?}", &e2);
             info!("..=========================================================");
             trace!(
                 "{}",

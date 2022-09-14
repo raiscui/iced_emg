@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-15 21:17:17
- * @LastEditTime: 2022-08-21 01:01:31
+ * @LastEditTime: 2022-09-08 21:24:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -51,13 +51,9 @@ impl<B: Backend> Renderer<B> {
     // }
 }
 
-impl<B: Backend> emg_native::Renderer for Renderer<B> {
+impl<B: Backend> emg_native::renderer::Renderer for Renderer<B> {
     type ImplRenderContext = <B as Backend>::ImplRenderContext;
 
-    fn new_paint_ctx(&self) -> PaintCtx<Self::ImplRenderContext> {
-        let new_render_ctx = self.backend.new_render_ctx();
-        PaintCtx::new(WidgetState::new(None), new_render_ctx)
-    }
     fn on_loop_destroyed(&mut self) {
         self.backend.on_loop_destroyed();
     }

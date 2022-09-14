@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2022-08-23 00:30:10
+ * @LastEditTime: 2022-09-08 15:52:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,33 +23,36 @@
 // ────────────────────────────────────────────────────────────────────────────────
 
 use dyn_clone::DynClone;
-use emg_common::dyn_partial_eq::DynPartialEq;
+use emg_common::{dyn_partial_eq::DynPartialEq, IdStr};
+use emg_state::StateAnchor;
 
 use crate::Bus;
 
-pub trait Widget<Message, RenderContext>: DynClone + DynPartialEq
-where
-    RenderContext: crate::RenderContext,
-{
+pub trait Widget<Message, RenderCtx>: DynClone + DynPartialEq {
     // fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
     // fn xx(&self, _bus: &Bus<Message>) {}
-    fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
+    // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
+    // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
+    fn paint_sa(
+        &self,
+        ctx: &StateAnchor<crate::PaintCtx<RenderCtx>>,
+    ) -> StateAnchor<crate::PaintCtx<RenderCtx>>;
 }
 
-impl<Message, RenderContext> core::cmp::Eq for dyn Widget<Message, RenderContext> + '_ {}
+impl<Message, RenderCtx> core::cmp::Eq for dyn Widget<Message, RenderCtx> + '_ {}
 
-impl<Message, RenderContext> core::cmp::PartialEq for dyn Widget<Message, RenderContext> + '_ {
+impl<Message, RenderCtx> core::cmp::PartialEq for dyn Widget<Message, RenderCtx> + '_ {
     fn eq(&self, other: &Self) -> bool {
         self.box_eq(other.as_any())
     }
 }
-impl<Message: 'static, RenderContext: 'static> PartialEq<dyn Widget<Message, RenderContext>>
-    for Box<dyn Widget<Message, RenderContext>>
+impl<Message: 'static, RenderCtx: 'static> PartialEq<dyn Widget<Message, RenderCtx>>
+    for Box<dyn Widget<Message, RenderCtx>>
 {
-    fn eq(&self, other: &dyn Widget<Message, RenderContext>) -> bool {
+    fn eq(&self, other: &dyn Widget<Message, RenderCtx>) -> bool {
         self.box_eq(other.as_any())
     }
 }
 
-dyn_clone::clone_trait_object!(<Message,RenderContext> Widget<Message,RenderContext>);
+dyn_clone::clone_trait_object!(<Message,RenderCtx> Widget<Message,RenderCtx>);

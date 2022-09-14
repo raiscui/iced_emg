@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-07-20 15:28:58
+ * @LastEditTime: 2022-09-14 12:35:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,6 +17,7 @@ use anchors::{
     singlethread::MultiAnchor,
 };
 use anymap::any::Any;
+use emg_common::{IdStr, TypeCheck, TypeName};
 use tracing::{debug, info, warn};
 
 use std::{hash::BuildHasherDefault, panic::Location};
@@ -641,14 +642,34 @@ fn start_set_var_and_run_before_after<T: Clone + 'static>(
     after_fns_run(&skip, &data, after_fns);
 }
 // ────────────────────────────────────────────────────────────────────────────────
+pub trait StateTypeCheck {
+    const INSIDE_TYPE_NAME: TypeName;
+}
+impl<T> StateTypeCheck for StateVar<T>
+where
+    T: TypeCheck,
+{
+    const INSIDE_TYPE_NAME: TypeName = T::TYPE_NAME;
+}
+impl<T> StateTypeCheck for StateAnchor<T>
+where
+    T: TypeCheck,
+{
+    const INSIDE_TYPE_NAME: TypeName = T::TYPE_NAME;
+}
 
-// https://docs.rs/graph_safe_compare/latest/graph_safe_compare/
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(PartialEq, Eq)]
-// #[eq_opt(where_add = "T: PartialEq+'static,")]
+// TODO read https://docs.rs/graph_safe_compare/latest/graph_safe_compare/
 pub struct StateVar<T> {
     id: TopoKey,
     _phantom_data: PhantomData<T>,
+}
+
+impl<T> Eq for StateVar<T> {}
+
+impl<T> PartialEq for StateVar<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
     default fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1117,9 +1138,21 @@ where
     }
 }
 
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, Eq)]
 pub struct StateAnchor<T>(pub(crate) Anchor<T>);
+
+impl<T> Clone for StateAnchor<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T> Eq for StateAnchor<T> {}
+
+impl<T> PartialEq for StateAnchor<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateAnchor<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1208,13 +1241,24 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
         self.0.filter_map(move |k, v| Some(f(k, v))).into()
     }
 
-    /// FOOBAR
     #[track_caller]
     pub fn filter_map<F: FnMut(&K, &V) -> Option<T> + 'static, T: Clone + PartialEq + 'static>(
         &self,
         f: F,
     ) -> StateAnchor<Dict<K, T>> {
         self.0.filter_map(f).into()
+    }
+
+    #[track_caller]
+    pub fn increment_reduction<
+        F: FnMut(&mut T, &K, &V) + 'static,
+        T: Clone + PartialEq + 'static,
+    >(
+        &self,
+        init: T,
+        f: F,
+    ) -> StateAnchor<T> {
+        self.0.increment_reduction(init, f).into()
     }
 }
 
@@ -1833,6 +1877,34 @@ where
     } else {
     }
     StateVar::new(id)
+}
+
+#[must_use]
+#[topo::nested]
+pub fn reset_state<T>(data: T) -> StateVar<T>
+where
+    T: 'static + Clone,
+{
+    // info!(
+    //     "use_state::({}) \n data: {:?}",
+    //     &std::any::type_name::<T>(),
+    //     &data
+    // );
+
+    let loc = Location::caller();
+    trace!("use_state::at:\n{}", &loc);
+
+    let id = topo::CallId::current();
+    let id = TopoKey { id };
+
+    if state_exists_for_topo_id::<T>(id) {
+        let old = StateVar::<T>::new(id);
+        old.set(data);
+        old
+    } else {
+        insert_var_with_topo_id::<T>(Var::new(data), id);
+        StateVar::new(id)
+    }
 }
 
 // pub fn add_similar<T>(func:F)

@@ -17,5 +17,5 @@ pub enum Error {
     #[error("an error occurred in the context's internal backend")]
     BackendError(String),
     #[error("an error occurred")]
-    Error(#[from] Box<dyn std::error::Error>),
+    Error(#[from] Box<dyn std::error::Error + Send + Sync>),
 }
