@@ -11,7 +11,7 @@ use emg_bind::{
 use std::{cell::Cell, rc::Rc};
 use tracing::{info, instrument};
 // use tracing_error::InstrumentResult;
-fn tracing_init() {
+fn tracing_init() -> Result<(), Report> {
     use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
 
@@ -49,14 +49,14 @@ fn tracing_init() {
         .init();
 
     // tracing_subscriber::Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
+    color_eyre::install()
 }
 
 // pub fn main() -> emg_bind::Result {
 #[instrument]
 pub fn main() -> Result<(), Report> {
     // #[cfg(debug_assertions)]
-    tracing_init();
-    color_eyre::install()?;
+    tracing_init()?;
     Counter::run(Settings::default()).wrap_err("run error")
 }
 
