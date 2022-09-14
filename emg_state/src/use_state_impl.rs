@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-09-10 12:55:10
+ * @LastEditTime: 2022-09-14 12:35:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,6 +17,7 @@ use anchors::{
     singlethread::MultiAnchor,
 };
 use anymap::any::Any;
+use emg_common::{IdStr, TypeCheck, TypeName};
 use tracing::{debug, info, warn};
 
 use std::{hash::BuildHasherDefault, panic::Location};
@@ -641,8 +642,23 @@ fn start_set_var_and_run_before_after<T: Clone + 'static>(
     after_fns_run(&skip, &data, after_fns);
 }
 // ────────────────────────────────────────────────────────────────────────────────
+pub trait StateTypeCheck {
+    const INSIDE_TYPE_NAME: TypeName;
+}
+impl<T> StateTypeCheck for StateVar<T>
+where
+    T: TypeCheck,
+{
+    const INSIDE_TYPE_NAME: TypeName = T::TYPE_NAME;
+}
+impl<T> StateTypeCheck for StateAnchor<T>
+where
+    T: TypeCheck,
+{
+    const INSIDE_TYPE_NAME: TypeName = T::TYPE_NAME;
+}
 
-// https://docs.rs/graph_safe_compare/latest/graph_safe_compare/
+// TODO read https://docs.rs/graph_safe_compare/latest/graph_safe_compare/
 pub struct StateVar<T> {
     id: TopoKey,
     _phantom_data: PhantomData<T>,
@@ -1225,13 +1241,24 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
         self.0.filter_map(move |k, v| Some(f(k, v))).into()
     }
 
-    /// FOOBAR
     #[track_caller]
     pub fn filter_map<F: FnMut(&K, &V) -> Option<T> + 'static, T: Clone + PartialEq + 'static>(
         &self,
         f: F,
     ) -> StateAnchor<Dict<K, T>> {
         self.0.filter_map(f).into()
+    }
+
+    #[track_caller]
+    pub fn increment_reduction<
+        F: FnMut(&mut T, &K, &V) + 'static,
+        T: Clone + PartialEq + 'static,
+    >(
+        &self,
+        init: T,
+        f: F,
+    ) -> StateAnchor<T> {
+        self.0.increment_reduction(init, f).into()
     }
 }
 

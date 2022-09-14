@@ -123,10 +123,10 @@ impl Sandbox for Counter {
                     Layer [
                         On:click  move||{
                             info!(" on [a2] ----click cb ----");
-                            let nn =n.get()+10;
+                            let nn =n.get()+4;
                             n.set(nn);
                             ww.set(w(px(nn)));
-                            // ff.set(fill(hsl(nn/100*360%360, 100, 100)));
+                            ff.set(fill(hsl(nn as f64/100.*360.%360., 50, 50)));
 
 
                         },

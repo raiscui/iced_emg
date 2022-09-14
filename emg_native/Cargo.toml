@@ -7,7 +7,7 @@ edition = "2021"
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
-crate-type = ["dylib", "rlib"]
+crate-type = ["rlib"]
 
 
 [features]

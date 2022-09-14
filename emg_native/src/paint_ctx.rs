@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-09-10 11:07:44
+ * @LastEditTime: 2022-09-14 16:03:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,9 +19,9 @@ use emg_refresh::RefreshWhoNoWarper;
 use emg_renderer::Rect;
 use emg_state::StateAnchor;
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
-use tracing::info;
+use tracing::{debug, info};
 
-//TODO move to global
+//TODO use app state viewport dpr
 pub const DPR: f64 = 2.0;
 
 #[derive(Clone)]
@@ -81,8 +81,14 @@ where
     }
     pub fn get_fill_color(&self) -> Option<Color> {
         self.widget_state.fill.as_ref().map(|fill| match *fill {
-            CssFill::Rgba(r, g, b, a) => Color::rgba(r, g, b, a),
-            CssFill::Hsl(h, s, l) => Color::hlc(h, l, s / 100. * 127.),
+            CssFill::Rgba(r, g, b, a) => {
+                // debug!("CssFill::Rgba( {:?}, {:?}, {:?}, {:?})", r, g, b, a);
+                Color::rgba(r, g, b, a)
+            }
+            CssFill::Hsl(h, s, l) => {
+                // debug!("CssFill::hsl(  {:?}, {:?}, {:?})", h, s, l);
+                Color::hlc(h, l, s / 100. * 127.)
+            }
             CssFill::Hsla(_, _, _, _) => todo!(),
             CssFill::Hex(_) => todo!(),
             CssFill::StringValue(_) => todo!(),

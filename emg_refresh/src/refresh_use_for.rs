@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2022-06-22 17:45:46
+ * @LastEditTime: 2022-09-14 15:21:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -34,7 +34,7 @@ pub trait RefreshForUse<Who> {
 // @ impl RefreshUseFor────────────────────────────────────────────────────────────────────────────────
 
 impl<Who> RefreshForUse<Self> for Who {
-    #[inline]
+    // #[inline]
     default fn refresh_for_use(&mut self, updater: &dyn RefreshFor<Self>) {
         updater.refresh_for(self);
     }

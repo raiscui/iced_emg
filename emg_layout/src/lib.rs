@@ -32,7 +32,7 @@ use derive_more::Into;
 // use derive_more::TryInto;
 use emg_common::{GenericSize, im::{OrdSet, ordmap::{NodeDiffItem, self}, self, HashSet, HashMap}, IdStr, NotNan, vector, VectorDisp, TypeName, LayoutOverride, RectLTRB};
 use emg::{Edge, EdgeIndex, NodeIndex, };
-use emg_refresh::{RefreshFor, RefreshForWithDebug};
+use emg_refresh::{RefreshFor, RefreshForWithDebug, EqRefreshForWithDebug};
 use emg_state::{Anchor, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar, state_store, topo, use_state, use_state_impl::Engine};
 use emg_common::Vector;
 use float_cmp::approx_eq;
@@ -642,7 +642,7 @@ pub type GraphEdgesDict<Ix,RenderContext=()> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeI
 // type PathVarMap<Ix,T> = Dict<EPath<Ix>,T>;
 // type PathVarMap<Ix,T> = indexmap::IndexMap <EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
 type PathVarMap<Ix,T> = HashMap<EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
-pub type StylesDict = Dict<TypeName, Rc<dyn RefreshForWithDebug<emg_native::WidgetState>>>;
+pub type StylesDict = Dict<TypeName, StateAnchor<Rc<dyn EqRefreshForWithDebug<emg_native::WidgetState>>>>;
 
 pub struct EmgEdgeItem<Ix,RenderCtx=()>
 where

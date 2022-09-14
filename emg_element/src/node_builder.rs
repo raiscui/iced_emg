@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-09-13 22:06:40
+ * @LastEditTime: 2022-09-14 15:32:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,10 +13,10 @@
 mod event_builder;
 use derive_more::From;
 
-use emg_common::{na::Translation3, vector, IdStr, NotNan, Pos, Vector};
+use emg_common::{na::Translation3, vector, IdStr, NotNan, Pos, TypeName, Vector};
 use emg_layout::{EdgeCtx, LayoutEndType};
 use emg_native::{paint_ctx::CtxIndex, renderer::Rect, WidgetState, DPR, G_POS};
-use emg_refresh::{RefreshFor, RefreshForUse, RefreshUse};
+use emg_refresh::{EqRefreshForWithDebug, RefreshFor, RefreshForUse, RefreshUse};
 use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, info, info_span, instrument, trace, Span};
 
@@ -368,22 +368,51 @@ where
              }| {
                 let world_clone = world.clone();
                 let children_layout_override_clone = children_layout_override.clone();
-                (styles_end, layout_end)
-                    .map(move |styles, &(trans, w, h)| {
-                        let new_widget_state = WidgetState::new(
+                let styles_sa = styles_end.map_(|_k, v| v.get_anchor()).then(|x| {
+                    x.clone().into_iter().collect::<Anchor<
+                                Dict<TypeName, Rc<dyn EqRefreshForWithDebug<WidgetState>>>,
+                            >>()
+                });
+
+                //TODO 不要用 顺序pipe , 这样情况下 size trans改变 会 重新 进行全部 style 计算,使用 mut 保存 ws.
+                layout_end
+                    .map(move |&(trans, w, h)| {
+                        WidgetState::new(
                             (w, h),
                             trans,
                             world_clone.clone(),
                             children_layout_override_clone.clone(),
-                        );
-                        styles.values().fold(new_widget_state, |mut ws, x| {
-                            // x.refresh_for(&mut ws);
-                            ws.refresh_for_use(x);
-                            // ws.refresh_use(x);
-                            ws
-                        })
+                        )
+                    })
+                    .then(move |ws| {
+                        styles_sa
+                            .increment_reduction(ws.clone(), |out_ws, _k, v| {
+                                println!("increment_reduction ------  {:?}", v);
+                                v.as_ref().refresh_for(out_ws);
+                                // out_ws.refresh_use(v.as_ref());
+                                // out_ws.refresh_for_use(v.as_ref() as &dyn RefreshFor<WidgetState>);
+                            })
+                            .into_anchor()
                     })
                     .into_anchor()
+
+                // (styles_end, layout_end)
+                //     .map(move |styles, &(trans, w, h)| {
+                //         let new_widget_state = WidgetState::new(
+                //             (w, h),
+                //             trans,
+                //             world_clone.clone(),
+                //             children_layout_override_clone.clone(),
+                //         );
+
+                //         styles.values().fold(new_widget_state, |mut ws, x| {
+                //             // x.refresh_for(&mut ws);
+                //             ws.refresh_for_use(x);
+                //             // ws.refresh_use(x);
+                //             ws
+                //         })
+                //     })
+                //     .into_anchor()
             },
         );
         // let widget_state = layout_end.map(|&(trans, w, h)| WidgetState::new((w, h), trans));

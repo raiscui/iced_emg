@@ -14,7 +14,7 @@ categories = ["web"]
 [profile.dev]
 split-debuginfo = "unpacked"
 [lib]
-crate-type = ["dylib", "rlib"]
+crate-type = ["rlib"]
 
 
 [features]

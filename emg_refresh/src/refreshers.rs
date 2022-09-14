@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2022-09-10 11:57:46
+ * @LastEditTime: 2022-09-14 15:12:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@ use emg_state::StateAnchor;
 use std::{any::Any, rc::Rc};
 use tracing::{error, warn};
 
-use crate::{RefreshForUse, RefreshUse};
+use crate::{RefreshForUse, RefreshUse, RefreshWhoNoWarper};
 
 #[derive(Clone)]
 pub struct Refresher<Use>(Rc<dyn Fn() -> Use>);
@@ -128,7 +128,7 @@ pub trait RefreshFor<Who> {
 impl<Who, Use> RefreshFor<Who> for Use {
     default fn refresh_for(&self, _el: &mut Who) {
         error!(
-            "this is un implemented yet use {} refresh_for {}",
+            "this is un implemented yet use ->\n{} \n refresh_for ->\n{}",
             std::any::type_name::<Use>(),
             std::any::type_name::<Who>()
         );
@@ -146,8 +146,20 @@ impl<Who, Use> RefreshFor<Who> for Use {
 
 pub trait RefreshForWithDebug<Who>: RefreshFor<Who> + core::fmt::Debug {}
 impl<Who, Use> RefreshForWithDebug<Who> for Use where Use: RefreshFor<Who> + core::fmt::Debug {}
+// ────────────────────────────────────────────────────────────────────────────────
 
 pub trait EqRefreshFor<Who>: RefreshFor<Who> + DynPartialEq {}
+// ────────────────────────────────────────────────────────────────────────────────
+
+pub trait EqRefreshForWithDebug<Who>: EqRefreshFor<Who> + core::fmt::Debug {}
+// impl<Who, Use> EqRefreshForWithDebug<Who> for Use where Use: EqRefreshFor<Who> + core::fmt::Debug {}
+impl<Who, Use> EqRefreshForWithDebug<Who> for Use
+where
+    Who: RefreshWhoNoWarper,
+    Use: EqRefreshFor<Who> + core::fmt::Debug,
+{
+}
+// ────────────────────────────────────────────────────────────────────────────────
 
 impl<Who> core::cmp::Eq for dyn EqRefreshFor<Who> {}
 
@@ -161,6 +173,23 @@ impl<Who: 'static> core::cmp::PartialEq<dyn EqRefreshFor<Who>> for Box<dyn EqRef
         self.box_eq(other.as_any())
     }
 }
+// ────────────────────────────────────────────────────────────────────────────────
+
+impl<Who> core::cmp::Eq for dyn EqRefreshForWithDebug<Who> {}
+
+impl<Who> core::cmp::PartialEq for dyn EqRefreshForWithDebug<Who> {
+    fn eq(&self, other: &Self) -> bool {
+        self.box_eq(other.as_any())
+    }
+}
+impl<Who: 'static> core::cmp::PartialEq<dyn EqRefreshForWithDebug<Who>>
+    for Box<dyn EqRefreshForWithDebug<Who>>
+{
+    fn eq(&self, other: &dyn EqRefreshForWithDebug<Who>) -> bool {
+        self.box_eq(other.as_any())
+    }
+}
+
 // ────────────────────────────────────────────────────────────────────────────────
 // pub auto trait NotStateAnchor4Refresher {}
 // impl<T> !NotStateAnchor4Refresher for StateAnchor<T> {}

@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-30 12:18:05
- * @LastEditTime: 2022-09-10 15:37:23
+ * @LastEditTime: 2022-09-14 15:09:39
  * @LastEditors: Rais
  * @Description:
  */
-use emg_refresh::{RefreshFor, RefreshWhoNoWarper};
+use emg_refresh::{EqRefreshFor, RefreshFor, RefreshWhoNoWarper};
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
 
 use crate::WidgetState;

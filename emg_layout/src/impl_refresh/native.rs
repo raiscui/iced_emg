@@ -1,19 +1,20 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-29 23:19:00
- * @LastEditTime: 2022-09-13 21:05:23
+ * @LastEditTime: 2022-09-14 15:14:36
  * @LastEditors: Rais
  * @Description:
  */
 
-use std::rc::Rc;
-
 use crate::EmgEdgeItem;
-use emg_common::TypeCheck;
-use emg_refresh::{RefreshFor, RefreshWhoNoWarper};
-use emg_state::CloneStateVar;
+use emg_common::{dyn_partial_eq::DynPartialEq, TypeCheck};
+use emg_native::WidgetState;
+use emg_refresh::{EqRefreshForWithDebug, RefreshFor, RefreshWhoNoWarper};
+use emg_state::StateTypeCheck;
+use emg_state::{CloneStateVar, StateAnchor, StateVar};
 #[allow(clippy::wildcard_imports)]
 use seed_styles::*;
+use std::rc::Rc;
 
 impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for CssBackgroundAttachment
 where
@@ -24,7 +25,39 @@ where
     fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
         let type_name = Self::TYPE_NAME;
         who.styles.update(|s| {
-            s.insert(type_name, Rc::new(self.clone()));
+            s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
+        });
+    }
+}
+
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateVar<CssBackgroundAttachment>
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+    RenderCtx: 'static,
+{
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+        let type_name = Self::INSIDE_TYPE_NAME;
+        who.styles.update(|s| {
+            let value = self
+                .watch()
+                .map(|x| Rc::new(x.clone()) as Rc<dyn EqRefreshForWithDebug<WidgetState>>);
+            s.insert(type_name, value);
+        });
+    }
+}
+impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<CssBackgroundAttachment>
+where
+    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+    EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+    RenderCtx: 'static,
+{
+    fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+        let type_name = Self::INSIDE_TYPE_NAME;
+        who.styles.update(|s| {
+            let value =
+                self.map(|x| Rc::new(x.clone()) as Rc<dyn EqRefreshForWithDebug<WidgetState>>);
+            s.insert(type_name, value);
         });
     }
 }
@@ -40,7 +73,40 @@ macro_rules! impl_css_native_refresh {
             fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
                 let type_name = Self::TYPE_NAME;
                 who.styles.update(|s| {
-                    s.insert(type_name, Rc::new(self.clone()));
+                    s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
+                });
+            }
+        }
+
+        impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateVar<$css>
+        where
+            Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+            EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+            RenderCtx: 'static,
+        {
+            fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+                let type_name = Self::INSIDE_TYPE_NAME;
+                who.styles.update(|s| {
+                    let value = self
+                        .watch()
+                        .map(|x| Rc::new(x.clone()) as Rc<dyn EqRefreshForWithDebug<WidgetState>>);
+                    s.insert(type_name, value);
+                });
+            }
+        }
+
+        impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<$css>
+        where
+            Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+            EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
+            RenderCtx: 'static,
+        {
+            fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+                let type_name = Self::INSIDE_TYPE_NAME;
+                who.styles.update(|s| {
+                    let value = self
+                        .map(|x| Rc::new(x.clone()) as Rc<dyn EqRefreshForWithDebug<WidgetState>>);
+                    s.insert(type_name, value);
                 });
             }
         }
@@ -49,19 +115,9 @@ macro_rules! impl_css_native_refresh {
 macro_rules! impl_css_native_refresh_list {
     ($($css:ident),*) => {
         $(
-            impl<Ix, RenderCtx> RefreshFor<EmgEdgeItem<Ix, RenderCtx>> for $css
-            where
-                Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-                EmgEdgeItem<Ix, RenderCtx>: RefreshWhoNoWarper,
-                RenderCtx: 'static,
-            {
-                fn refresh_for(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
-                    let type_name = Self::TYPE_NAME;
-                    who.styles.update(|s| {
-                        s.insert(type_name, Rc::new(self.clone()));
-                    });
-                }
-            }
+
+            impl_css_native_refresh!($css);
+
         )*
     };
 }
