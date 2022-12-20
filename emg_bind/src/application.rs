@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2022-09-09 12:11:25
+ * @LastEditTime: 2022-09-19 10:47:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -231,10 +231,10 @@ where
     fn ctx(
         &self,
         g: &Self::GraphType,
-        events: &StateAnchor<Vector<crate::runtime::event::Event>>,
+        events: &StateAnchor<Vector<crate::runtime::EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (
-        StateAnchor<Dict<IdStr, Vector<EventNode<Self::Message>>>>,
+        crate::runtime::EventMatchsSa<Self::Message>,
         StateAnchor<crate::runtime::PaintCtx<Self::ImplRenderContext>>,
     ) {
         let ctx =

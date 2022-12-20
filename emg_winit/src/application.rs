@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2022-09-09 13:05:21
+ * @LastEditTime: 2022-12-20 11:52:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,7 +21,12 @@ use emg_element::{GTreeBuilderFn, GraphProgram};
 use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
 use emg_graphics_backend::window::{compositor, Compositor};
-use emg_native::{program::Program, renderer::Renderer, Event};
+use emg_native::{
+    event::{EventFlag, EventWithFlagType},
+    program::Program,
+    renderer::Renderer,
+    Event,
+};
 use emg_state::CloneStateAnchor;
 use tracing::{info, info_span, instrument};
 
@@ -225,7 +230,7 @@ where
         receiver,
         window,
         settings.exit_on_close_request,
-        emg_graph_rc_refcell.clone(),
+        emg_graph_rc_refcell.clone(), //TODO clone? or move
         state,
     ));
 
@@ -303,7 +308,7 @@ async fn run_instance<A, E, C>(
     //view
     let root_id = application.root_id();
 
-    let native_events: StateVar<Vector<Event>> = use_state(Vector::new());
+    let native_events: StateVar<Vector<EventWithFlagType>> = use_state(Vector::new());
     let (event_matchs_sa, ctx_sa) =
         application.ctx(&g.graph(), &native_events.watch(), state.cursor_position());
     let mut ctx = ctx_sa.get();
@@ -335,7 +340,7 @@ async fn run_instance<A, E, C>(
                 info!(target:"winit event","native_events:{:?}", native_events);
 
                 let event_matchs = event_matchs_sa.get();
-                for ev in event_matchs.values().flatten() {
+                for ev in event_matchs.values().flat_map(|x| x.1.clone()) {
                     ev.call();
                 }
                 native_events.set(Vector::new());
@@ -528,11 +533,11 @@ async fn run_instance<A, E, C>(
 
                 state.update(&window, &window_event);
 
-                if let Some(event) =
+                if let Some(event_with_flag) =
                     conversion::window_event(&window_event, state.scale_factor(), state.modifiers())
                 {
                     // native_events.push(event);
-                    native_events.update(|ev| ev.push_back(event));
+                    native_events.update(|ev| ev.push_back(event_with_flag));
                 }
             }
             _ => {}

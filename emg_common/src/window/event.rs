@@ -1,7 +1,23 @@
+use bitflags::bitflags;
 use std::path::PathBuf;
 
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct EventFlag: u32 {
+        const MOVED =               1<<0;
+        const RESIZED =             1<<1;
+        const CLOSE_REQUESTED =     1<<2;
+        const FOCUSED =             1<<3 ;
+        const UNFOCUSED =           1<<4 ;
+        const FILE_HOVERED =        1<<5 ;
+        const FILE_DROPPED =        1<<6 ;
+        const FILES_HOVERED_LEFT =  1<<7 ;
+
+    }
+}
+
 /// A window-related event.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
     /// A window was moved.
     Moved {

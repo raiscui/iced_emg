@@ -9,7 +9,7 @@
 use crate::command::{self, Command};
 use emg_native::window;
 
-pub use window::Event;
+pub use window::*;
 
 /// Resizes the window to the given logical dimensions.
 pub fn resize<Message>(width: u32, height: u32) -> Command<Message> {

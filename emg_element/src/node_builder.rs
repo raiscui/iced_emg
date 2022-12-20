@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-09-14 23:20:28
+ * @LastEditTime: 2022-12-15 18:20:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,9 +13,11 @@
 mod event_builder;
 use derive_more::From;
 
-use emg_common::{na::Translation3, vector, IdStr, NotNan, Pos, TypeName, Vector};
+use emg_common::{mouse, na::Translation3, vector, IdStr, NotNan, Pos, TypeName, Vector};
 use emg_layout::{EdgeCtx, LayoutEndType};
-use emg_native::{paint_ctx::CtxIndex, renderer::Rect, WidgetState, DPR, G_POS};
+use emg_native::{
+    event::EventFlag, paint_ctx::CtxIndex, renderer::Rect, Event, WidgetState, DPR, G_POS,
+};
 use emg_shaping::{EqShapingWithDebug, ShapeOfUse, Shaping, ShapingUse};
 use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, info, info_span, instrument, trace, Span};
@@ -25,12 +27,34 @@ use std::{cell::Cell, collections::VecDeque, rc::Rc, string::String};
 
 use self::event_builder::EventListener;
 
-type EventNameString = IdStr;
+/// EventIdentify(emg_native::event::EventFlag::X,X::EventFlag)
+/// EventIdentify(Level1,Level2)
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct EventIdentify(u32, u32);
+
+impl EventIdentify {
+    #[inline]
+    pub const fn contains(&self, other: Self) -> bool {
+        self.0 == other.0 && (self.1 & other.1) == other.1
+    }
+}
+
+impl From<mouse::EventFlag> for EventIdentify {
+    fn from(x: mouse::EventFlag) -> Self {
+        Self(EventFlag::MOUSE.bits(), x.bits())
+    }
+}
+
+impl From<(EventFlag, u32)> for EventIdentify {
+    fn from(x: (EventFlag, u32)) -> Self {
+        Self(x.0.bits(), x.1)
+    }
+}
 
 // Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>;
 type EventCallbackFn<Message> = Rc<dyn Fn(&mut i32) -> Option<Message>>;
 
-pub struct EventCallback<Message>(EventNameString, EventCallbackFn<Message>);
+pub struct EventCallback<Message>(EventIdentify, EventCallbackFn<Message>);
 
 impl<Message> Clone for EventCallback<Message> {
     fn clone(&self) -> Self {
@@ -73,12 +97,12 @@ impl<Message> PartialEq for EventCallback<Message>
 
 impl<Message> EventCallback<Message> {
     #[must_use]
-    pub fn new(name: EventNameString, cb: EventCallbackFn<Message>) -> Self {
+    pub fn new(name: EventIdentify, cb: EventCallbackFn<Message>) -> Self {
         Self(name, cb)
     }
 }
 
-pub struct EventMessage<Message>(EventNameString, Rc<dyn Fn() -> Option<Message>>);
+pub struct EventMessage<Message>(EventIdentify, Rc<dyn Fn() -> Option<Message>>);
 
 impl<Message> Clone for EventMessage<Message> {
     fn clone(&self) -> Self {
@@ -117,7 +141,7 @@ impl<Message> IntoOptionMs<Message> for Option<Message> {
 
 impl<Message: 'static> EventMessage<Message> {
     pub fn new<T: IntoOptionMs<Message> + 'static>(
-        name: EventNameString,
+        name: EventIdentify,
         cb: impl Fn() -> T + 'static,
         // cb: impl FnOnce() -> T + Clone + 'static,
     ) -> Self {
@@ -163,7 +187,7 @@ pub enum EventNode<Message> {
 }
 
 impl<Message> EventNode<Message> {
-    pub fn get_name(&self) -> IdStr {
+    pub fn get_identify(&self) -> EventIdentify {
         match self {
             EventNode::Cb(x) => x.0.clone(),
             EventNode::CbMessage(x) => x.0.clone(),
@@ -303,6 +327,8 @@ impl<Message, RenderContext> std::fmt::Debug for NodeBuilderWidget<Message, Rend
             .finish()
     }
 }
+
+pub type EventMatchsDict<Message> = Dict<EventIdentify, (Event, Vector<EventNode<Message>>)>;
 
 // impl<Message> Default for NodeBuilderWidget<Message> {
 //     fn default() -> Self {
@@ -560,101 +586,120 @@ where
     pub fn add_event_callback(&mut self, event_callback: EventNode<Message>) {
         // self.event_callbacks.push_back(event_callback);
         self.event_listener
-            .register_listener(event_callback.get_name(), event_callback);
+            .register_listener(event_callback.get_identify(), event_callback);
     }
     pub fn event_matching(
         &self,
-        events_sa: &StateAnchor<Vector<emg_native::event::Event>>,
+        events_sa: &StateAnchor<Vector<emg_native::EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> StateAnchor<Dict<IdStr, Vector<EventNode<Message>>>> {
-        let event_callbacks = self.event_listener.event_callbacks.clone();
+    ) -> StateAnchor<EventMatchsDict<Message>> {
+        let event_callbacks = self.event_listener.event_callbacks().clone();
         let cursor_position_clone = cursor_position.clone();
+
         (events_sa, &self.widget_state).then(move |events, state| {
-            if events.is_empty() {
-                return Anchor::constant(Dict::default());
-            }
+
+            // if events.is_empty() {
+            //     return Anchor::constant(Dict::default());
+            // }
             let size = state.size();
 
             //TODO don't do this many times
-            let e_str_s = events.iter().map(|e| e.to_str()).collect::<Vec<_>>();
-
-            let mut cb_matchs = event_callbacks
+            let  cb_matchs = events
                 .iter()
-                .filter_map(|(e_name, cb)| {
-                    if e_str_s.contains(e_name) {
-                        Some((e_name.clone(), cb.clone()))
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Dict<IdStr, Vector<EventNode<Message>>>>();
-            let click_group = cb_matchs.remove_with_key("click");
-            // let cursor_position_clone = cursor_position.clone();
-            let is_click = click_group.map(|(_, click_cb)| {
-                (
-                    &cursor_position_clone,
-                    &state.world,
-                    &state.children_layout_override,
-                )
-                    .map(move |c_pos, w, opt_layout_override| {
-                        let click_cb_clone2 = click_cb.clone();
-                        let rect = Rect::from_origin_size((w.x, w.y), size);
-
-                        c_pos.and_then(move |pos| {
-                            debug!(target:"event::click",?pos);
-
-                            let pos64 = pos.cast::<f64>();
-
-                            if rect.contains(emg_native::renderer::Point::new(pos64.x, pos64.y)) {
-                                if let Some(layout_override) = opt_layout_override {
-                                    if !layout_override.contains(&pos64) {
-                                        Some(click_cb_clone2)
-                                    } else {
-                                        None
-                                    }
-                                } else {
-                                    Some(click_cb_clone2)
-                                }
-                            } else {
-                                None
-                            }
-                        })
-                    })
-            });
-            if let Some(clicked_sa) = is_click {
-                (&clicked_sa, &state.world)
-                    .map(move |opt_clicked, _w| {
-                        if let Some(clicked) = opt_clicked {
-                            cb_matchs.update("click".into(), clicked.clone())
+                .map(|(ef, event)| (EventIdentify::from(*ef), event))
+                .filter_map(|(ev_id, event)| {
+                    //FIXME use filter_map instead,because filter can match multiple matches cb
+                    event_callbacks.iter().find_map(|(&cb_ev_id, cb)| {
+                        if ev_id.contains(cb_ev_id) {
+                            Some((cb_ev_id, (event.clone(), cb.clone())))
                         } else {
-                            cb_matchs.clone()
+                            None
                         }
                     })
-                    .into_anchor()
-            } else {
-                Anchor::constant(cb_matchs)
-            }
+                })
+                .collect::<EventMatchsDict<Message>>();
 
-            // if !cb_matchs.is_empty() {
-            //     state
-            //         .world
-            //         .map(move |w| {
-            //             //TODO trans rect,  and if  check? , must mouse pos inside.
-            //             // cb_matchs.clone()
-            //             cb_matchs
-            //                 .into_iter()
-            //                 .filter_map(|(event, cb)| match event.as_str() {
-            //                     "click" => {}
-            //                 })
-            //         })
-            //         .into_anchor()
-            // } else {
-            //     Anchor::constant(cb_matchs)
-            // }
+            // let mut cb_matchs = event_callbacks
+            //     .iter()
+            //     .filter_map(|(e_name, cb)| {
+            //         if let Some(x)=  e_str_s.iter().find(|(k,v)|) {
+            //             Some((e_name.clone(), cb.clone()))
+            //         } else {
+            //             None
+            //         }
+            //     })
+            //     .collect::<Dict<IdStr, Vector<EventNode<Message>>>>();
+
+            let (click_group, cb_matchs): (EventMatchsDict<Message>, EventMatchsDict<Message>) =
+                cb_matchs.into_iter().partition(|(ev_id, _x)| {
+                    ev_id.contains(EventIdentify::from(mouse::EventFlag::CLICK))
+                });
+
+            // let click_group = cb_matchs.remove_with_key("click");
+            // let cursor_position_clone = cursor_position.clone();
+            let clicked_a = click_group
+                .into_iter()
+                .map(|(cb_ev_id, (ev_, click_cb_vec))| {
+                    (
+                        &cursor_position_clone,
+                        &state.world,
+                        &state.children_layout_override,
+                    )
+                        .map(move |c_pos, w, opt_layout_override| {
+                            let ev = ev_.clone();
+
+                            let click_cb_clone2 = click_cb_vec.clone();
+                            let rect = Rect::from_origin_size((w.x, w.y), size);
+
+
+                            c_pos.and_then( |pos| {
+                                debug!(target:"event::click",?pos);
+
+                                let pos64 = pos.cast::<f64>();
+
+                                if rect.contains(emg_native::renderer::Point::new(pos64.x, pos64.y))
+                                {
+                                    if let Some(layout_override) = opt_layout_override {
+                                        if !layout_override.contains(&pos64) {
+                                            Some((cb_ev_id, ev, click_cb_clone2))
+                                        } else {
+                                            None
+                                        }
+                                    } else {
+                                        Some((cb_ev_id, ev, click_cb_clone2))
+                                    }
+                                } else {
+                                    None
+                                }
+                            })
+                        }).into_anchor()
+                })
+                .collect::<Anchor<Vector<Option<(EventIdentify, Event, Vector<EventNode<Message>>)>>>>()
+                .map(|clicked| {
+                    clicked.clone()
+                        .into_iter()
+                        .flatten()
+                        .collect::<Vector<_>>()
+                });
+
+                //TODO clicked_a can make dict_sa?
+                clicked_a
+                    .map(move |clicked| {
+
+                        clicked.clone().into_iter().fold(cb_matchs.clone(),|cb_matchs_add_x,(cb_ev_id,ev,cb_vec)|{
+                            cb_matchs_add_x.update_with(cb_ev_id, (ev,cb_vec), |(old_ev,mut old_cb_vec),(new_ev,new_cb_vec)|{
+                                assert_eq!(old_ev, new_ev);
+                                old_cb_vec.extend(new_cb_vec);
+                                (old_ev,old_cb_vec)
+                            })
+                        })
+                    })
+
+
         })
     }
 
-    pub fn event_callbacks(&self) -> &Dict<EventNameString, Vector<EventNode<Message>>> {
+    pub fn event_callbacks(&self) -> &Dict<EventIdentify, Vector<EventNode<Message>>> {
         self.event_listener.event_callbacks()
     }
 }

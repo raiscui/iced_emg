@@ -7,6 +7,7 @@ pub mod any;
 pub mod keyboard;
 pub mod measures;
 pub mod mouse;
+pub mod window;
 pub mod time;
 // ────────────────────────────────────────────────────────────────────────────────
 pub type Pos<T = f32> = na::Point2<T>;

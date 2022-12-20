@@ -96,6 +96,7 @@ mod tests {
 
 #[derive(Display, From)]
 // #[eq_opt(no_self_where, where_add = "Message: PartialEq+'static,")]
+#[non_exhaustive]
 pub enum GElement<Message, RenderCtx> {
     // TODO cow
     //NOTE can render element

@@ -9,6 +9,10 @@ resolver = "2"
 [profile.dev]
 split-debuginfo = "unpacked"
 
+
+[features]
+gpu = ["emg_bind/gpu"]
+
 [dependencies]
 emg_bind = { path = "../../emg_bind" }
 

@@ -13,3 +13,21 @@ pub enum Button {
     /// Some other button.
     Other(u8),
 }
+
+impl Button {
+    /// Returns `true` if the button is [`Left`].
+    ///
+    /// [`Left`]: Button::Left
+    #[must_use]
+    pub fn is_left(&self) -> bool {
+        matches!(self, Self::Left)
+    }
+
+    /// Returns `true` if the button is [`Right`].
+    ///
+    /// [`Right`]: Button::Right
+    #[must_use]
+    pub fn is_right(&self) -> bool {
+        matches!(self, Self::Right)
+    }
+}

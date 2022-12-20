@@ -1,18 +1,19 @@
+/*
+ * @Author: Rais
+ * @Date: 2022-08-23 11:49:02
+ * @LastEditTime: 2022-09-19 10:16:11
+ * @LastEditors: Rais
+ * @Description:
+ */
+
 use crate::{node_builder::EventNode, PaintCtx};
 use emg_common::{IdStr, Pos, Vector};
-use emg_native::{renderer::Renderer, Event, Program, Widget};
+use emg_native::{event::EventWithFlagType, renderer::Renderer, Event, Program, Widget};
 use emg_state::{Dict, StateAnchor};
 use std::ops::Deref;
 
 use crate::GTreeBuilderElement;
 
-/*
- * @Author: Rais
- * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2022-09-09 11:54:11
- * @LastEditors: Rais
- * @Description:
- */
 pub trait GraphProgram: Program {
     type Renderer: Renderer<ImplRenderContext = <Self as Program>::ImplRenderContext>;
 
@@ -37,10 +38,10 @@ pub trait GraphProgram: Program {
     fn ctx(
         &self,
         g: &Self::GraphType,
-        events: &StateAnchor<Vector<Event>>,
+        events: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (
-        StateAnchor<Dict<IdStr, Vector<EventNode<Self::Message>>>>,
+        crate::EventMatchsSa<Self::Message>,
         StateAnchor<PaintCtx<Self::ImplRenderContext>>,
     );
 }

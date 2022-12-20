@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2022-09-08 16:03:43
+ * @LastEditTime: 2022-09-19 09:38:13
  * @LastEditors: Rais
  * @Description: 
  */
@@ -30,7 +30,7 @@ use emg_state::{
 use tracing::{debug, error, trace, trace_span, info_span, info, event, Level, warn};
 // use vec_string::VecString;
 
-use crate::{GElement, NodeBuilderWidget, node_builder::EventNode};
+use crate::{GElement, NodeBuilderWidget, node_builder::{EventNode, EventMatchsDict}};
 
 use super::{EmgNodeItem, PathDict};
 
@@ -50,7 +50,7 @@ type CurrentPathChildrenEixGElSA<Message,RenderContext> =
     StateAnchor<(EdgeIndex<IdStr>, GElEither<Message,RenderContext>)>;
 
 
-pub type EventMatchsSa<Message> = StateAnchor<Dict<IdStr, Vector<EventNode<Message>>>>;
+pub type EventMatchsSa<Message> = StateAnchor<EventMatchsDict<Message>>;
 
 impl<Message,RenderCtx> EmgNodeItem<NItem<Message,RenderCtx>, GelType<Message,RenderCtx>>
 where

@@ -16,6 +16,7 @@ pub mod system;
 // ────────────────────────────────────────────────────────────────────────────────
 pub use application::Application;
 pub use clipboard::Clipboard;
+pub use emg_element::EventMatchsSa;
 pub use emg_element::GraphProgram;
 pub use emg_graphics_backend::Viewport;
 pub use emg_native::*;

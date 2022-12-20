@@ -1,6 +1,7 @@
 use color_eyre::{eyre::Report, eyre::WrapErr, Section};
 use emg_bind::{
     better_any::TidAble,
+    common::mouse::CLICK,
     common::px,
     element::*,
     emg_msg, gtree,
@@ -12,7 +13,7 @@ use std::{cell::Cell, rc::Rc};
 use tracing::{info, instrument};
 // use tracing_error::InstrumentResult;
 fn tracing_init() -> Result<(), Report> {
-    use tracing_error::ErrorLayer;
+    // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
 
     let out_layer =
@@ -108,7 +109,7 @@ impl Sandbox for Counter {
         gtree! {
             @=debug_layer
             Layer [
-                On:click  ||{
+                On:CLICK  ||{
                     info!(" on [debug_layer]----click cb ----");
                 },
                 @=a1 @E=[
@@ -125,7 +126,7 @@ impl Sandbox for Counter {
                         fill(rgba(1, 0.5, 0, 1))
                     ]
                     Layer [
-                        On:click  move||{
+                        On:CLICK  move||{
                             info!(" on [a2] ----click cb ----");
                             let nn =n.get()+4;
                             n.set(nn);

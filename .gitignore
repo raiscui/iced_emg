@@ -8,3 +8,5 @@ emg_layout/tracing/
 .history
 examples/*/dist
 .vscode/metago_bookmarks.json
+.cargo
+.vscode

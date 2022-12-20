@@ -27,3 +27,4 @@ emg_shaping = { path = "../emg_shaping" }
 dyn-clone = "1.0.9"
 tracing = "0.1"
 static_init = "1.0.3"
+bitflags = { path = "../../bitflags_export_const" }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:22:19
- * @LastEditTime: 2022-09-06 23:57:37
+ * @LastEditTime: 2022-12-15 18:41:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,6 +12,22 @@ use crate::keyboard;
 use crate::mouse;
 use crate::touch;
 use crate::window;
+use bitflags::bitflags;
+
+pub type EventWithFlagType = ((EventFlag, u32), Event);
+
+// Event bigflags
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct EventFlag: u32 {
+        const KEYBOARD =            1<<0;
+        const MOUSE =               1<<1;
+        const WINDOW =              1<<2;
+        const TOUCH =               1<<3;
+        const PLATFORM_SPECIFIC =   1<<4;
+
+    }
+}
 
 /// A user interface event.
 ///
@@ -38,19 +54,18 @@ pub enum Event {
 }
 
 impl Event {
-    pub fn to_str(&self) -> IdStr {
-        match self {
-            //TODO flag ?
-            Event::Keyboard(_) => todo!(),
-            Event::Mouse(x) => match x {
-                emg_common::mouse::Event::ButtonReleased(_) => IdStr::new_inline("click"),
-                other => other.to_compact_string(),
-            },
-            Event::Window(_) => IdStr::new_inline("Window"), //TODO  make it right
-            Event::Touch(_) => todo!(),
-            Event::PlatformSpecific(_) => todo!(),
-        }
-    }
+    // pub fn to_str(&self) -> IdStr {
+    //     match self {
+    //         Event::Keyboard(_) => todo!(),
+    //         Event::Mouse(x) => match x {
+    //             emg_common::mouse::Event::ButtonReleased(_) => IdStr::new_inline("click"),
+    //             other => other.to_compact_string(),
+    //         },
+    //         Event::Window(_) => IdStr::new_inline("Window"), //TODO  make it right
+    //         Event::Touch(_) => todo!(),
+    //         Event::PlatformSpecific(_) => todo!(),
+    //     }
+    // }
 }
 
 /// A platform specific event

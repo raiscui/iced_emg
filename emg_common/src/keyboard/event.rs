@@ -1,4 +1,16 @@
 use super::{KeyCode, Modifiers};
+use bitflags::bitflags;
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct EventFlag: u32 {
+        const KEY_PRESSED =           1<<0;
+        const KEY_RELEASED =            1<<1;
+        const CHARACTER_RECEIVED =           1<<2;
+        const MODIFIERS_CHANGED =         1<<3 ;
+
+    }
+}
 
 /// A keyboard event.
 ///

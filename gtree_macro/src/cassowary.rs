@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-09-02 17:51:22
+ * @LastEditTime: 2022-12-15 16:09:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -345,7 +345,7 @@ impl Parse for PredOp {
             // _ => panic!("[PredOp] op not support :{:?}", pred_op),
             _ => Err(syn::Error::new(
                 pred_op.span(),
-                format!("[PredOp] op not support :{:?}", pred_op),
+                format!("[PredOp] op not support :{pred_op:?}"),
             )),
         }
     }
@@ -376,7 +376,7 @@ impl ToTokens for PredVariable {
 }
 
 fn disp_opt<T: std::fmt::Display>(o: Option<T>) -> String {
-    o.map_or(String::new(), |x| format!("{}", x))
+    o.map_or(String::new(), |x| format!("{x}"))
 }
 /// `&name[var]`
 #[derive(Debug, Clone)]
@@ -391,17 +391,14 @@ impl std::fmt::Display for ScopeViewVariable {
         let scope = self
             .scope
             .as_ref()
-            .map_or(String::new(), |x| format!("{}", x));
-        let view = self
-            .view
-            .as_ref()
-            .map_or(String::new(), |x| format!("{}", x));
+            .map_or(String::new(), |x| format!("{x}"));
+        let view = self.view.as_ref().map_or(String::new(), |x| format!("{x}"));
         let variable = self
             .variable
             .as_ref()
-            .map_or(String::new(), |x| format!("{}", x));
+            .map_or(String::new(), |x| format!("{x}"));
 
-        write!(f, "{}{}{}", scope, view, variable)
+        write!(f, "{scope}{view}{variable}")
     }
 }
 
@@ -461,21 +458,21 @@ impl ScopeViewVariable {
     }
     #[must_use]
     fn with_variable(mut self, var: Ident) -> Self {
-        if !self.view.is_some_and(NameChars::is_number) {
+        if !self.view.as_ref().is_some_and(NameChars::is_number) {
             self.variable = Some(PredVariable(var));
         }
         self
     }
     #[must_use]
     fn or_with_variable(mut self, var: Ident) -> Self {
-        if self.variable_is_none() && !self.view.is_some_and(NameChars::is_number) {
+        if self.variable_is_none() && !self.view.as_ref().is_some_and(NameChars::is_number) {
             self.variable = Some(PredVariable(var));
         }
         self
     }
 
     fn set_variable(&mut self, var: Ident) {
-        if !self.view.is_some_and(NameChars::is_number) {
+        if !self.view.as_ref().is_some_and(NameChars::is_number) {
             self.variable = Some(PredVariable(var));
         }
     }
@@ -635,7 +632,7 @@ impl Parse for PredExpression {
                     }
                 }
             } else if !input.is_empty() {
-                panic!("[PredExpression] input not empty {:?}", input)
+                panic!("[PredExpression] input not empty {input:?}")
             } else {
                 break;
             }
@@ -721,21 +718,21 @@ impl std::fmt::Display for StrengthAndWeight {
         match self {
             Self::Weak(x) => {
                 if let Some(i) = x {
-                    write!(f, " !weak({})", i)
+                    write!(f, " !weak({i})")
                 } else {
                     write!(f, " !weak")
                 }
             }
             Self::Medium(x) => {
                 if let Some(i) = x {
-                    write!(f, " !medium({})", i)
+                    write!(f, " !medium({i})")
                 } else {
                     write!(f, " !medium")
                 }
             }
             Self::Strong(x) => {
                 if let Some(i) = x {
-                    write!(f, " !strong({})", i)
+                    write!(f, " !strong({i})")
                 } else {
                     write!(f, " !strong")
                 }
@@ -872,7 +869,7 @@ impl Parse for PredEq {
             BinOp::Le(x) => Ok(Self::Le(x)),
             BinOp::Ge(x) => Ok(Self::Ge(x)),
             BinOp::Gt(x) => Ok(Self::Gt(x)),
-            _ => panic!("[PredEq] op not support :{:?}", pred_eq),
+            _ => panic!("[PredEq] op not support :{pred_eq:?}"),
         }
         // Ok(Self(pred_eq))
     }
@@ -1237,7 +1234,7 @@ impl std::fmt::Display for CCSSSvvOpSvvExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.svv)?;
         for op in &self.op_exprs {
-            write!(f, "{}", op)?;
+            write!(f, "{op}")?;
         }
         Ok(())
     }
@@ -1301,11 +1298,11 @@ impl std::fmt::Display for CCSS {
             opt_sw: sw,
         } = self;
         let sw_str = disp_opt(sw.as_ref());
-        write!(f, "{} ", var_op_vars)?;
+        write!(f, "{var_op_vars} ")?;
         for eqe in eq_exprs {
-            write!(f, "{}", eqe)?;
+            write!(f, "{eqe}")?;
         }
-        write!(f, "{}", sw_str)
+        write!(f, "{sw_str}")
     }
 }
 #[derive(Debug, Clone)]
@@ -1329,7 +1326,7 @@ enum ViewObj {
     ViewSelector(ViewSelector),
     Point(Point),
 
-    /// NOTE  "|"  
+    /// NOTE  "|"
     VLine,
 }
 
@@ -2310,35 +2307,35 @@ mod tests {
     fn base() {
         println!();
         // ─────────────────────────────────────────────────────────────────
-        let input = r#" 
+        let input = r#"
             @horizontal (#b1)(#b2)
         "#;
 
         token_test("base-simple", input);
         // ─────────────────────────────────────────────────────────────────
         // ─────────────────────────────────────────────────────────────────
-        let input = r#" 
+        let input = r#"
                 @h (#b1)(#b2)
             "#;
 
         token_test("base-shorthand", input);
         // ─────────────────────────────────────────────────────────────────
         // ─────────────────────────────────────────────────────────────────
-        let input = r#" 
+        let input = r#"
                 @vertical (#b1)(#b2)
             "#;
 
         token_test("base-vertical", input);
         // ─────────────────────────────────────────────────────────────────
         // ─────────────────────────────────────────────────────────────────
-        let input = r#" 
+        let input = r#"
                 @v (#b1)-(#b2)  -  (#b3)- (#b4) -(#b5)
             "#;
 
         token_test("base-standard-gaps", input);
         // ─────────────────────────────────────────────────────────────────
         // ─────────────────────────────────────────────────────────────────
-        let input = r#" 
+        let input = r#"
                 @v (#b1)-(#b2)  -  (#b3)- (#b4) -(#b5) !weak
             "#;
 
@@ -2347,12 +2344,12 @@ mod tests {
     }
     #[test]
     fn explicit_gap() {
-        let input = r#" 
+        let input = r#"
                     @h (#b1)-100-(#b2)-8-(#b3)
             "#;
 
         token_test("explicit-gaps", input);
-        let input = r#" 
+        let input = r#"
                     @h (#b1) - 100 - (#b2) - 8 - (#b3)
             "#;
 
@@ -2360,7 +2357,7 @@ mod tests {
     }
     #[test]
     fn explicit_var_gap() {
-        let input = r#" 
+        let input = r#"
                 @h (#b1)-[my_gap]-(#b2)-[my_other_gap]-(#b3)
             "#;
 
@@ -2368,7 +2365,7 @@ mod tests {
     }
     #[test]
     fn mix_gap() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)(#b2)-(#b3)-100-(#b4) gap(20)
             "#;
 
@@ -2376,7 +2373,7 @@ mod tests {
     }
     #[test]
     fn variable_standard_gap() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)-100-(#b2)-(#b3)-(#b4) gap([col_width])
             "#;
 
@@ -2384,7 +2381,7 @@ mod tests {
     }
     #[test]
     fn view_variable_standard_gap() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)-100-(#b2)-(#b3)-(#b4) gap(#box1[width])
             "#;
 
@@ -2392,7 +2389,7 @@ mod tests {
     }
     #[test]
     fn virtuals() {
-        let input = r#" 
+        let input = r#"
         @v ("Zone")-("1")-("a")-("q-1")-("_fallout")
             "#;
 
@@ -2401,7 +2398,7 @@ mod tests {
     #[test]
     fn virtuals2() {
         //TODO make it auto
-        let input = r#" 
+        let input = r#"
         @h (#b1)-("vv"(==#b2[left]-#b1[right]-[hgap]))-(#b2)
             "#;
 
@@ -2409,7 +2406,7 @@ mod tests {
     }
     #[test]
     fn virtuals3() {
-        let input = r#" 
+        let input = r#"
         @v ("vv")-(#b1)
             "#;
 
@@ -2417,7 +2414,7 @@ mod tests {
     }
     #[test]
     fn err1() {
-        let input = r#" 
+        let input = r#"
         @h (#b1(#b2)
             "#;
 
@@ -2426,12 +2423,12 @@ mod tests {
 
     #[test]
     fn var_scope() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)-$[md]-(#b2)
             "#;
 
         token_test("var scope", input);
-        let input = r#" 
+        let input = r#"
         @h (#b1)-$md-(#b2)
             "#;
 
@@ -2440,7 +2437,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn var_scope_err() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)-$$md-(#b2)
             "#;
 
@@ -2449,17 +2446,17 @@ mod tests {
 
     #[test]
     fn parent() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)-^[md]-(#b2)
             "#;
 
         token_test("parent", input);
-        let input = r#" 
+        let input = r#"
         @h (#b1)-^md-(#b2)
             "#;
 
         token_test("parent2", input);
-        let input = r#" 
+        let input = r#"
         @h (#b1)-^^md-(#b2)
             "#;
 
@@ -2468,12 +2465,12 @@ mod tests {
 
     #[test]
     fn local() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)-&[md]-(#b2)
             "#;
 
         token_test("local", input);
-        let input = r#" 
+        let input = r#"
         @h (#b1)-&md-(#b2)
             "#;
 
@@ -2483,7 +2480,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn local_err() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)-&&md-(#b2)
             "#;
 
@@ -2492,7 +2489,7 @@ mod tests {
 
     #[test]
     fn element_containment_parent() {
-        let input = r#" 
+        let input = r#"
         @v |(#sub)| in(#parent)
             "#;
 
@@ -2500,7 +2497,7 @@ mod tests {
     }
     #[test]
     fn element_containment_virtuals() {
-        let input = r#" 
+        let input = r#"
         @v |(#sub)| in("parent")
             "#;
 
@@ -2508,7 +2505,7 @@ mod tests {
     }
     #[test]
     fn element_containment_default() {
-        let input = r#" 
+        let input = r#"
         @v |(#sub)|
             "#;
 
@@ -2516,7 +2513,7 @@ mod tests {
     }
     #[test]
     fn element_containment_view_gap() {
-        let input = r#" 
+        let input = r#"
         @h |-(#sub1)-(#sub2)-| in(#parent)
             "#;
 
@@ -2524,7 +2521,7 @@ mod tests {
     }
     #[test]
     fn element_containment_view_explicit_gap() {
-        let input = r#" 
+        let input = r#"
         @h |-1-(#sub)-2-| in(#parent)
             "#;
 
@@ -2532,7 +2529,7 @@ mod tests {
     }
     #[test]
     fn element_containment_outer_gap() {
-        let input = r#" 
+        let input = r#"
         @h |-(#sub1)-(#sub2)-| in(#parent) outer-gap(10)
             "#;
 
@@ -2540,7 +2537,7 @@ mod tests {
     }
     #[test]
     fn element_containment_outer_gap2() {
-        let input = r#" 
+        let input = r#"
         @h |-(#sub1)-(#sub2)-| in(#parent) gap(8) outer-gap([baseline])
             "#;
 
@@ -2549,7 +2546,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn element_containment_err() {
-        let input = r#" 
+        let input = r#"
         @h |-(#box]-
             "#;
 
@@ -2558,7 +2555,7 @@ mod tests {
 
     #[test]
     fn points() {
-        let input = r#" 
+        let input = r#"
         @v <100>(#sub)<300>
             "#;
 
@@ -2569,7 +2566,7 @@ mod tests {
     #[should_panic]
     fn point_containment() {
         //TODO support special node element, then, remove #[should_panic]
-        let input = r#" 
+        let input = r#"
         @h < "col1"[center_x] + 20 > -(#box1)- < ::window[center_x] >
             "#;
 
@@ -2577,7 +2574,7 @@ mod tests {
     }
     #[test]
     fn point_containment3() {
-        let input = r#" 
+        let input = r#"
         @h < [line] >-(#box1)-(#box2)
             "#;
 
@@ -2586,7 +2583,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn point_containment_point_in_alignment() {
-        let input = r#" 
+        let input = r#"
         @h (#btn1)-<::window[center_x]>-(#btn2) gap(8)
             "#;
 
@@ -2594,7 +2591,7 @@ mod tests {
     }
     #[test]
     fn point_containment_point_in_alignment2() {
-        let input = r#" 
+        let input = r#"
         @h (#btn1)-<&window[center_x]>-(#btn2) gap(8)
             "#;
 
@@ -2603,7 +2600,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn point_containment_chains() {
-        let input = r#" 
+        let input = r#"
         @h (#btn1)-<::window[center_x]>-(#btn2) gap(8) chain-top chain-width(==)
             "#;
 
@@ -2611,7 +2608,7 @@ mod tests {
     }
     #[test]
     fn point_containment_chains2() {
-        let input = r#" 
+        let input = r#"
         @h (#btn1)-<&window[center_x]>-(#btn2) gap(8) chain-top chain-width(==)
             "#;
 
@@ -2619,7 +2616,7 @@ mod tests {
     }
     #[test]
     fn point_containment_consecutive_point() {
-        let input = r#" 
+        let input = r#"
         @h (#btn1)- <"col3"[left]>
                     <"col4"[right]>-(#btn2)
                 gap(8)
@@ -2629,7 +2626,7 @@ mod tests {
     }
     #[test]
     fn point_containment_this_scope() {
-        let input = r#" 
+        let input = r#"
         @h (#btn1)-<&[other_place]>
                        < &[center_x] >-(#btn2)
               gap(&[gap])
@@ -2641,7 +2638,7 @@ mod tests {
     #[should_panic]
     fn point_containment_complex_selectors() {
         //TODO support complex selectors
-        let input = r#" 
+        let input = r#"
         @h (#btn1)-< (.box .foo:bar:next .black)[center_x] >
                        < (.box ! .foo:bar:next .black)[left] >-(#btn2)
               gap(&[gap])
@@ -2651,7 +2648,7 @@ mod tests {
     }
     #[test]
     fn point_containment_this_scope2() {
-        let input = r#" 
+        let input = r#"
                         @h | - (#btn1) - <&[right]>
                                         < &[right] > - (#btn2) - |
                         gap(&[gap])
@@ -2663,7 +2660,7 @@ mod tests {
     }
     #[test]
     fn cushion() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)~(#b2)
             "#;
 
@@ -2671,7 +2668,7 @@ mod tests {
     }
     #[test]
     fn cushion_gap() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)~-~(#b2)~100~(#b3)
             "#;
 
@@ -2679,7 +2676,7 @@ mod tests {
     }
     #[test]
     fn cushion_super_view_with_cushions() {
-        let input = r#" 
+        let input = r#"
         @h |~(#sub)~2~| in(#parent)
             "#;
 
@@ -2687,7 +2684,7 @@ mod tests {
     }
     #[test]
     fn predicates() {
-        let input = r#" 
+        let input = r#"
         @v (#sub(==100))
             "#;
 
@@ -2695,7 +2692,7 @@ mod tests {
     }
     #[test]
     fn predicate_multiple_with_sw() {
-        let input = r#" 
+        let input = r#"
         @v (#boox(<=100!required,>=30!strong(100)))
             "#;
 
@@ -2703,7 +2700,7 @@ mod tests {
     }
     #[test]
     fn predicate_connected() {
-        let input = r#" 
+        let input = r#"
         @h |(#b1(<=100))(#b2(==#b1))|
             "#;
 
@@ -2711,7 +2708,7 @@ mod tests {
     }
     #[test]
     fn predicate_virtuals() {
-        let input = r#" 
+        let input = r#"
         @h ("b1"(<=100)) ("b2"(=="b1"))
             "#;
 
@@ -2719,7 +2716,7 @@ mod tests {
     }
     #[test]
     fn predicate_multiple_conneected_sw() {
-        let input = r#" 
+        let input = r#"
         @h (#b1( <=100 , ==#b99 !weak(99) ))(#b2(>= #b1 *2  !weak(10), <=3!required))-100-(.b3(==200)) !medium(200)
             "#;
 
@@ -2727,7 +2724,7 @@ mod tests {
     }
     #[test]
     fn predicate_constraint_variable() {
-        let input = r#" 
+        let input = r#"
         @h (#b1(==[colwidth]))
             "#;
 
@@ -2735,7 +2732,7 @@ mod tests {
     }
     #[test]
     fn predicate_explicit_view_var() {
-        let input = r#" 
+        let input = r#"
         @h (#b1(==#b2[height]))
             "#;
 
@@ -2743,7 +2740,7 @@ mod tests {
     }
     #[test]
     fn chain() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)(#b2) chain-height chain-width(250)
             "#;
 
@@ -2751,7 +2748,7 @@ mod tests {
     }
     #[test]
     fn chain_multiply() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)(#b2)(#b3) chain-width(==[colwidth]!strong,<=500!required)
             "#;
 
@@ -2759,7 +2756,7 @@ mod tests {
     }
     #[test]
     fn chain_explicit_equality_inequality_chains() {
-        let input = r#" 
+        let input = r#"
         @v (#b1)(#b2)(#b3)(#b4) chain-width(==!weak(10)) chain-height(<=150>= !required) !medium
             "#;
 
@@ -2767,7 +2764,7 @@ mod tests {
     }
     #[test]
     fn chain_single_view_with_equality() {
-        let input = r#" 
+        let input = r#"
         @v (#b1(==100!strong))(#b2) chain-centerX chain-width( 50 !weak(10))
             "#;
 
@@ -2776,7 +2773,7 @@ mod tests {
     #[test]
     //TODO need support
     fn chain_single_view_with_equality2() {
-        let input = r#" 
+        let input = r#"
         @v (#b1(==100!strong))(#b2) chain-centerX chain-width( [xx]-50 !weak(10))
             "#;
 
@@ -2784,7 +2781,7 @@ mod tests {
     }
     #[test]
     fn chain_adv_with_super_view_chains() {
-        let input = r#" 
+        let input = r#"
         @v |-8-(#b1(==100!strong))(#b2)-8-| in(#panel) chain-centerX( #panel[centerX] !required) chain-width(>=50<= !weak(10))
             "#;
 
@@ -2792,7 +2789,7 @@ mod tests {
     }
     #[test]
     fn chain_adv_with_virtuals() {
-        let input = r#" 
+        let input = r#"
         @v |-(#b1)-(#b2)-| in("panel") gap("zone"[col_size]) outer-gap("outer-zone"[row_size]) chain-centerX( "panel"[centerX] !required)
             "#;
 
@@ -2800,7 +2797,7 @@ mod tests {
     }
     #[test]
     fn splats() {
-        let input = r#" 
+        let input = r#"
         @h (.box)...
             "#;
 
@@ -2808,7 +2805,7 @@ mod tests {
     }
     #[test]
     fn splats2() {
-        let input = r#" 
+        let input = r#"
         @h (.box)-10-...
             "#;
 
@@ -2816,7 +2813,7 @@ mod tests {
     }
     #[test]
     fn splats3() {
-        let input = r#" 
+        let input = r#"
         @h (.box)-... gap(11)
             "#;
 
@@ -2840,12 +2837,12 @@ mod tests {
     }
     #[test]
     fn gap() {
-        let input = r#" 
+        let input = r#"
                 @v (#b1)-(#b2)-(#b3)-(#b4)-(#b5) gap(20)
             "#;
 
         token_test("explicit-standard-gaps", input);
-        let input = r#" 
+        let input = r#"
                                 @v (#b1)
                                     -
                                 (#b2)
@@ -2863,7 +2860,7 @@ mod tests {
     }
     #[test]
     fn weak() {
-        let input = r#" 
+        let input = r#"
                 @v (#b1(>=100)) !required
             "#;
 
@@ -2890,7 +2887,7 @@ mod tests {
         }
 
         println!();
-        let input = r#" 
+        let input = r#"
         @=root
                 Layer [
                     @=x111x @E=[{@h |(#button)...| }]
@@ -2899,7 +2896,7 @@ mod tests {
                     Layer []
 
                 ]
-                
+
         "#;
 
         token_test(input);

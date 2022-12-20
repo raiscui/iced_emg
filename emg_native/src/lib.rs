@@ -32,6 +32,7 @@ pub use emg_common::time;
 pub use emg_common::Pos;
 pub use emg_futures::{executor, futures};
 pub use event::Event;
+pub use event::EventWithFlagType;
 pub use executor::Executor;
 pub use future_runtime::FutureRuntime;
 // pub use hasher::Hasher;

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:01:09
- * @LastEditTime: 2022-09-08 16:04:44
+ * @LastEditTime: 2022-09-19 10:13:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -18,7 +18,7 @@ mod node_item_rc_sv_with_ctx;
 #[cfg(all(feature = "new_node"))]
 pub use node_item_rc_sv_with_ctx::GraphMethods;
 #[cfg(all(feature = "new_node"))]
-pub use node_item_rc_sv_with_ctx::{GelType, GraphType, NItem, E, N};
+pub use node_item_rc_sv_with_ctx::{EventMatchsSa, GelType, GraphType, NItem, E, N};
 
 use emg_common::IdStr;
 use emg_layout::EPath;

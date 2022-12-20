@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2022-09-09 12:11:12
+ * @LastEditTime: 2022-09-19 09:54:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,11 +9,11 @@
 use emg::{edge_index_no_source, NodeIndex, Outgoing};
 use emg_common::{vector, IdStr, Pos, Vector};
 use emg_layout::EPath;
-use emg_native::{Event, PaintCtx, Widget};
+use emg_native::{Event, EventWithFlagType, PaintCtx, Widget};
 use emg_state::{Anchor, AnchorMultiAnchor, Dict, StateAnchor};
 use tracing::debug;
 
-use crate::EventNode;
+use crate::{node_builder::EventMatchsDict, EventNode};
 
 use super::{EventMatchsSa, GraphType};
 pub trait GraphMethods<Message, RenderCtx, Ix = IdStr> {
@@ -21,7 +21,7 @@ pub trait GraphMethods<Message, RenderCtx, Ix = IdStr> {
         &self,
         ix: &IdStr,
         ctx: &StateAnchor<PaintCtx<RenderCtx>>,
-        events_sa: &StateAnchor<Vector<Event>>,
+        events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (EventMatchsSa<Message>, StateAnchor<PaintCtx<RenderCtx>>);
 
@@ -29,9 +29,9 @@ pub trait GraphMethods<Message, RenderCtx, Ix = IdStr> {
     fn get_out_going_event_callbacks(
         &self,
         nix: &NodeIndex<IdStr>,
-        events_sa: &StateAnchor<Vector<Event>>,
+        events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> Vector<Anchor<Vector<Dict<IdStr, Vector<EventNode<Message>>>>>>;
+    ) -> Vector<Anchor<Vector<EventMatchsDict<Message>>>>;
 }
 impl<Message, RenderCtx> GraphMethods<Message, RenderCtx> for GraphType<Message, RenderCtx>
 where
@@ -76,7 +76,7 @@ where
         &self,
         ix: &IdStr,
         ctx: &StateAnchor<PaintCtx<RenderCtx>>,
-        events_sa: &StateAnchor<Vector<Event>>,
+        events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (EventMatchsSa<Message>, StateAnchor<PaintCtx<RenderCtx>>) {
         debug!("runtime prepare start");
@@ -102,24 +102,24 @@ where
 
         let event_matchs: EventMatchsSa<Message> =
             (self_event_nodes.anchor(), &children_event_matchs)
-                .map(|s, children| {
+                .map(|self_event_nodes_dict, children| {
                     debug!("child EventMatchsSa start");
 
-                    let children_flatten = children.clone().into_iter().flatten();
-                    let children_event_nodes_dict =
-                        Dict::unions_with(children_flatten, |mut old, new| {
-                            old.append(new);
+                    let mut self_add_children = children.clone();
+                    self_add_children.push_front(vector![self_event_nodes_dict.clone()]);
+
+                    let self_and_children_event_nodes_dict = Dict::unions_with(
+                        self_add_children.into_iter().flatten(),
+                        |mut old, new| {
+                            assert_eq!(old.0, new.0);
+                            old.1.append(new.1);
                             old
-                        });
-                    let res = s
-                        .clone()
-                        .union_with(children_event_nodes_dict, |mut old, new| {
-                            old.append(new);
-                            old
-                        });
+                        },
+                    );
+
                     debug!("child EventMatchsSa end");
 
-                    res
+                    self_and_children_event_nodes_dict
                 })
                 .into();
 
@@ -134,9 +134,9 @@ where
     fn get_out_going_event_callbacks(
         &self,
         nix: &NodeIndex<IdStr>,
-        events_sa: &StateAnchor<Vector<Event>>,
+        events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> Vector<Anchor<Vector<Dict<IdStr, Vector<EventNode<Message>>>>>> {
+    ) -> Vector<Anchor<Vector<EventMatchsDict<Message>>>> {
         let out_goings = self.neighbors_consuming_iter(nix, Outgoing);
         out_goings.fold(Vector::default(), |mut vec, node| {
             let events = events_sa.clone();

@@ -2,21 +2,19 @@
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
 // ────────────────────────────────────────────────────────────────────────────────
-
-#![feature(is_some_with)]
+#![feature(is_some_and)]
 // ────────────────────────────────────────────────────────────────────────────────
 
 // use std::collections::HashSet as Set;
 
 // use trace_var::trace_var;
 
-
 use cassowary::Cassowary;
 
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
-use syn::{parse::{Parse, ParseStream, discouraged::Speculative}};
+use syn::parse::{discouraged::Speculative, Parse, ParseStream};
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
 
 use syn::{Ident, Token};
@@ -58,12 +56,10 @@ impl ID {
                 // println!("id:{}", &id);
 
                 // quote!(String::from(#id))
-                if id.len() <= 12usize{
+                if id.len() <= 12usize {
                     quote!(IdStr::new_inline(#id))
-
-                }else{
+                } else {
                     quote!(IdStr::new(#id))
-
                 }
             },
             |id| {
@@ -71,33 +67,28 @@ impl ID {
                 // println!("id:{}", &id_string);
 
                 // quote_spanned!(id.span()=>String::from(#id_string))
-                if id_string.len() <= 12usize{
+                if id_string.len() <= 12usize {
                     quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
-                }else{
+                } else {
                     quote_spanned!(id.span()=>IdStr::new(#id_string))
-
                 }
             },
         )
     }
 }
 
-
 fn make_id(name: &str) -> String {
-    
     // let mut id = nanoid!(8);
     let mut id = name.to_string();
     // let mut id = (*Uuid::new_v4()
     //     .to_simple()
     //     .encode_lower(&mut Uuid::encode_buffer()))
     // .to_string();
-    if let Some(n) = (12usize-1usize).checked_sub(id.len()) {
+    if let Some(n) = (12usize - 1usize).checked_sub(id.len()) {
         id.push('-');
         id.push_str(nanoid!(n).as_str());
-    
     }
- 
-  
+
     id
 }
 
@@ -168,39 +159,32 @@ impl Parse for AtList {
 //@ Edge ──────────────────────────────
 
 #[derive(Debug)]
-enum EdgeObject{
+enum EdgeObject {
     E(Box<syn::Expr>),
     Cassowary(Box<Cassowary>),
 }
 impl ToTokens for EdgeObject {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self{
+        match self {
             Self::E(expr) => quote_spanned!(expr.span()=>#expr).to_tokens(tokens),
-            Self::Cassowary(cassowary) => quote_spanned!(cassowary.span()=>#cassowary).to_tokens(tokens),
+            Self::Cassowary(cassowary) => {
+                quote_spanned!(cassowary.span()=>#cassowary).to_tokens(tokens);
+            }
         };
     }
 }
-impl Parse for EdgeObject{
+impl Parse for EdgeObject {
     #[instrument(name = "EdgeObject")]
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        
-        
-        if input.peek(token::Brace){
-        debug!("====== in EdgeObject peek-> {{}}, will parse cassowary... ");
+        if input.peek(token::Brace) {
+            debug!("====== in EdgeObject peek-> {{}}, will parse cassowary... ");
 
             Ok(Self::Cassowary(input.parse()?))
-        }else{
+        } else {
             Ok(Self::E(input.parse()?))
         }
-      
-
-        
-        
     }
 }
-
-
-
 
 #[derive(Debug)]
 struct Edge {
@@ -215,11 +199,11 @@ impl Parse for Edge {
         let content;
         let bracket_token = bracketed!(content in input);
         debug!("======Edge-> will parse ()");
-        
+
         let content: Punctuated<EdgeObject, Token![,]> =
             content.parse_terminated(EdgeObject::parse)?;
-            // content.parse_terminated(syn::Expr::parse)?;
-        debug!("content: {:?}",&content);
+        // content.parse_terminated(syn::Expr::parse)?;
+        debug!("content: {:?}", &content);
         debug!("");
 
         // Ok(Self {
@@ -227,10 +211,9 @@ impl Parse for Edge {
         //         content
         //     })
 
-
         Ok(Self {
             bracket_token,
-            content
+            content,
         })
     }
 }
@@ -259,20 +242,26 @@ pub struct GTreeClosure {
     closure: syn::ExprClosure,
 }
 impl AtSetup for GTreeClosure {
-    fn at_setup(&mut self, at_list: AtList) {
+    fn at_setup(&mut self, at_list: AtList) -> syn::Result<()> {
         for at in at_list.0 {
             match at {
                 At::Id(id) => {
                     self.id = id;
                 }
                 At::Edge(_) => {
-                    panic!("closure can't have any edge");
+                    return syn::Result::Err(syn::Error::new(
+                        self.span(),
+                        "closure can't have any edge",
+                    ));
+                    // panic!("closure can't have any edge");
                 }
                 At::Mod => {
-                    panic!("closure can't be Mod");
+                    // panic!("closure can't be Mod");
+                    return syn::Result::Err(syn::Error::new(self.span(), "closure can't be Mod"));
                 }
             }
         }
+        syn::Result::Ok(())
     }
 }
 impl Parse for GTreeClosure {
@@ -305,24 +294,30 @@ impl ToTokens for GTreeClosure {
 #[derive(Debug)]
 pub struct GOnEvent {
     id: ID,
-    event_name: String,
+    event_name: Ident,
     closure: syn::ExprClosure,
 }
 impl AtSetup for GOnEvent {
-    fn at_setup(&mut self, at_list: AtList) {
+    fn at_setup(&mut self, at_list: AtList) -> syn::Result<()> {
         for at in at_list.0 {
             match at {
                 At::Id(id) => {
                     self.id = id;
                 }
                 At::Edge(_) => {
-                    panic!("On:Event can't have any edge");
+                    return syn::Result::Err(syn::Error::new(
+                        self.span(),
+                        "On:Event can't have any edge",
+                    ));
+                    // panic!("On:Event can't have any edge");
                 }
                 At::Mod => {
-                    panic!("On:Event can't be Mod");
+                    return syn::Result::Err(syn::Error::new(self.span(), "On:Event can't be Mod"));
+                    // panic!("On:Event can't be Mod");
                 }
             }
         }
+        syn::Result::Ok(())
     }
 }
 impl Parse for GOnEvent {
@@ -332,7 +327,7 @@ impl Parse for GOnEvent {
         input.parse::<kw::On>()?;
         input.parse::<Token![:]>()?;
 
-        let event_name = input.parse::<Ident>()?.to_string();
+        let event_name = input.parse::<Ident>()?;
 
         Ok(Self {
             id,
@@ -348,12 +343,12 @@ impl ToTokens for GOnEvent {
             event_name,
             closure,
         } = self;
-        let id_token = id.get(format!("Ev-{}", event_name).as_str());//just emg graph node id
+        let id_token = id.get(format!("Ev-{event_name}").as_str()); //just emg graph node id
 
         let token = if closure.inputs.is_empty() {
-            quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new(IdStr::new_inline(#event_name), #closure ).into()) )
+            quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new((#event_name).into(), #closure ).into()) )
         } else if closure.inputs.len() == 3 {
-            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new(IdStr::new_inline(#event_name),Rc::new(#closure)).into()) )
+            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new((#event_name).into(),Rc::new(#closure)).into()) )
         } else {
             panic!("event callback argument size is must empty or three")
         };
@@ -374,20 +369,29 @@ pub struct GRefresher {
     method: RefresherType,
 }
 impl AtSetup for GRefresher {
-    fn at_setup(&mut self, at_list: AtList) {
+    fn at_setup(&mut self, at_list: AtList) -> syn::Result<()> {
         for at in at_list.0 {
             match at {
                 At::Id(id) => {
                     self.id = id;
                 }
                 At::Edge(_) => {
-                    panic!("@ShapingUse can't have any edge");
+                    return syn::Result::Err(syn::Error::new(
+                        self.span(),
+                        "@ShapingUse can't have any edge",
+                    ));
+                    // panic!("@ShapingUse can't have any edge");
                 }
                 At::Mod => {
-                    panic!("@ShapingUse can't be Mod");
+                    return syn::Result::Err(syn::Error::new(
+                        self.span(),
+                        "@ShapingUse can't be Mod",
+                    ));
+                    // panic!("@ShapingUse can't be Mod");
                 }
             }
         }
+        syn::Result::Ok(())
     }
 }
 
@@ -445,7 +449,6 @@ impl ToTokens for GRefresher {
 
 // @ GSurface ────────────────────────────────────────────────────────────────────────────────
 
-
 #[derive(Debug, Clone)]
 struct SaGel {
     pub left: Box<syn::Expr>,
@@ -470,13 +473,13 @@ pub struct GTreeSurface {
     id: ID,
     module: bool,
     opt_expr: Option<syn::Expr>,
-    opt_sa_gel:Option<SaGel>,
+    opt_sa_gel: Option<SaGel>,
     children: ChildrenType,
 }
 
 impl AtSetup for GTreeSurface {
     /// setup the @ mark
-    fn at_setup(&mut self, at_list: AtList) {
+    fn at_setup(&mut self, at_list: AtList) -> syn::Result<()> {
         for at in at_list.0 {
             match at {
                 At::Id(id) => {
@@ -490,6 +493,7 @@ impl AtSetup for GTreeSurface {
                 }
             }
         }
+        syn::Result::Ok(())
     }
 }
 
@@ -501,30 +505,27 @@ impl Parse for GTreeSurface {
         let module = false;
 
         let fork2 = input.fork();
-       
 
-        let opt_sa_gel = if let Ok(sa_gel) = fork2.parse::<SaGel>(){
-            input.advance_to(&fork2);
-           Some (sa_gel)
-        }else{
+        let opt_sa_gel = fork2.parse::<SaGel>().ok().map_or_else(
+            || None,
+            |sa_gel| {
+                input.advance_to(&fork2);
+                Some(sa_gel)
+            },
+        );
+
+        let opt_expr = if opt_sa_gel.is_none() {
+            Some(input.parse::<syn::Expr>()?)
+        } else {
             None
         };
 
-       
-        let opt_expr = if opt_sa_gel.is_none(){
-             Some(input.parse::<syn::Expr>()?)
-            }else{
-                None
-            };
-
-        
-        
         if input.peek(token::FatArrow) {
             // println!("has fa");
 
             input.parse::<token::FatArrow>()?; //=>
                                                // []
-            //                                    let fork3 = input.fork().to_string();
+                                               //                                    let fork3 = input.fork().to_string();
 
             // let f = quote!{
             //     #fork3
@@ -587,7 +588,7 @@ impl ToTokens for GTreeSurface {
 
             quote_spanned! (expr.span() =>
                 // let exp_v:GTreeBuilderElement<_,_> = ;
-           
+
                 match #expr{
                     GTreeBuilderElement::Layer( expr_id,mut expr_edge,expr_children) =>{
                         //TODO maybe change Ord to   expr_id, #id_token,
@@ -618,7 +619,7 @@ impl ToTokens for GTreeSurface {
 
                     GTreeBuilderElement::Dyn(
                         _expr_id, //NOTE if use from , allways "" (default)
-                        mut expr_edge, 
+                        mut expr_edge,
                         x
                     ) =>{
                         // let new_id =format!("{}|{}", #id_token, expr_id);
@@ -642,20 +643,20 @@ impl ToTokens for GTreeSurface {
         } else {
             let id_token = id.get("GEl");
 
-            match (opt_sa_gel,opt_expr){
-                (None, None)| (Some(_), Some(_)) => unreachable!(),
+            match (opt_sa_gel, opt_expr) {
+                (None, None) | (Some(_), Some(_)) => unreachable!(),
                 (None, Some(expr)) => {
                     //NOTE Sa 不带后缀 也会转换 为 gel, = InsideUseSa_(StateAnchor<Self>),需要预处理掉
-                    quote_spanned! (expr.span() => 
+                    quote_spanned! (expr.span() =>
                     GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token)
                     )
                     .to_tokens(tokens);
-                },
+                }
                 (Some(sa_gel_func), None) => {
                     let sa_gel = &sa_gel_func.left;
                     let sa_fn = &sa_gel_func.right;
 
-                    quote_spanned! (sa_gel.span() => 
+                    quote_spanned! (sa_gel.span() =>
 
                             GTreeBuilderElement::GElementTree(#id_token,#edge_token,
                                 emg_bind::SaWithMapFn::new(#sa_gel,Rc::new(#sa_fn)).into()
@@ -665,11 +666,8 @@ impl ToTokens for GTreeSurface {
                             ,#children_token)
                     )
                     .to_tokens(tokens);
-
-                },
+                }
             };
-
-            
         }
     }
 }
@@ -838,7 +836,7 @@ impl Parse for GTreeMacroElement {
         if input.peek(kw::Layer) {
             //@layer
             let mut parsed: GTreeLayerStruct = input.parse()?;
-            parsed.at_setup(at_list);
+            parsed.at_setup(at_list)?;
             Ok(Self::GL(parsed))
             // ─────────────────────────────────────────────────────────────────
 
@@ -850,27 +848,31 @@ impl Parse for GTreeMacroElement {
         } else if input.peek(kw::ShapingUse) {
             // @shaper
             let mut parsed: GRefresher = input.parse()?;
-            parsed.at_setup(at_list);
+            parsed.at_setup(at_list)?;
             Ok(Self::RT(Box::new(parsed)))
         } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
             // @closure
             let mut parsed: GTreeClosure = input.parse()?;
-            parsed.at_setup(at_list);
+            parsed.at_setup(at_list)?;
             Ok(Self::GC(parsed))
         } else if input.peek(kw::On) && (input.peek2(Token![:])) {
             //@ On:Event
             let mut parsed: GOnEvent = input.parse()?;
-            parsed.at_setup(at_list);
+            parsed.at_setup(at_list)?;
             Ok(Self::OnEvent(parsed))
         }
         //  must on bottom ─────────────────────────────────────────────────────────────────
         else if input.peek(Ident::peek_any) {
             // @surface  expr, GElement
             let mut parsed: GTreeSurface = input.parse()?;
-            parsed.at_setup(at_list);
+            parsed.at_setup(at_list)?;
             Ok(Self::GS(Box::new(parsed)))
         } else {
-            panic!("can't know what is , input current:{}", input);
+            return syn::Result::Err(syn::Error::new(
+                input.span(),
+                format!("can't know what is , input current:{input}"),
+            ));
+            // panic!("can't know what is , input current:{}", input);
             // Ok(Self::OtherExpr(input.parse()?))
         }
     }
@@ -887,8 +889,8 @@ impl ToTokens for GTreeMacroElement {
         );
     }
 }
-trait AtSetup {
-    fn at_setup(&mut self, at_list: AtList);
+trait AtSetup: Sized {
+    fn at_setup(&mut self, at_list: AtList) -> syn::Result<()>;
 }
 
 // @ GTreeLayerStruct ────────────────────────────────────────────────────────────────────────────────
@@ -903,7 +905,7 @@ pub struct GTreeLayerStruct {
 }
 
 impl AtSetup for GTreeLayerStruct {
-    fn at_setup(&mut self, at_list: AtList) {
+    fn at_setup(&mut self, at_list: AtList) -> syn::Result<()> {
         for at in at_list.0 {
             match at {
                 At::Id(id) => {
@@ -913,10 +915,12 @@ impl AtSetup for GTreeLayerStruct {
                     self.edge = Some(edge);
                 }
                 At::Mod => {
-                    panic!("layer can't be Mod");
+                    return syn::Result::Err(syn::Error::new(self.span(), "layer can't be Mod"));
+                    // panic!("layer can't be Mod");
                 }
             }
         }
+        syn::Result::Ok(())
     }
 }
 
@@ -959,14 +963,7 @@ impl Parse for GTreeLayerStruct {
 }
 
 fn edge2token(edge: &Option<Edge>) -> TokenStream {
-    match edge {
-        Some(e) => {
-            quote!(#e)
-        }
-        None => {
-            quote!(vec![])
-        }
-    }
+    edge.as_ref().map_or_else(|| quote!(vec![]), |e| quote!(#e))
 }
 
 impl ToTokens for GTreeLayerStruct {
@@ -1204,9 +1201,6 @@ mod tests {
 
     use super::*;
 
-
-   
-
     #[test]
     fn test_vfl_1() {
         fn token_test(input: &str) {
@@ -1217,7 +1211,7 @@ mod tests {
         }
 
         println!();
-        let input = r#" 
+        let input = r#"
         @=root
                 Layer [
                     @=x111x @E=[{@h (#b1)(#b2)},h(px(11))]
@@ -1228,9 +1222,7 @@ mod tests {
         token_test(input);
         println!();
     }
-   
 
-    
     #[test]
     fn test_vfl_2() {
         fn token_test(input: &str) {
@@ -1241,7 +1233,7 @@ mod tests {
         }
 
         println!();
-        let input = r#" 
+        let input = r#"
         @=root
                 Layer [
                     @=b @E=[{@h (#b1)-[my_gap]-(#b2)-[my_other_gap]-(#b3)},
@@ -1265,7 +1257,7 @@ mod tests {
         }
 
         println!();
-        let input = r#" 
+        let input = r#"
         @=root
                 Layer [
                     @=x111x @E=[
@@ -1288,57 +1280,51 @@ mod tests {
             C,
         }
 
-        
         // GTreeBuilderElement :: Layer (IdStr :: new_inline ("root") , vec ! [] , vec ! [
         //     GTreeBuilderElement :: Layer (IdStr :: new_inline ("x111x") , vec ! [
         //         Rc :: new (vec ! [
         //             emg_layout :: ccsa :: CassowaryVar :: General (
         //                 emg_layout :: ccsa :: GeneralVar (
-        //                     emg_common :: IdStr :: new ("md") , 
+        //                     emg_common :: IdStr :: new ("md") ,
         //                     emg_layout :: ccsa :: ScopeViewVariable :: new (
-        //                         :: std :: option :: Option :: None , 
+        //                         :: std :: option :: Option :: None ,
         //                         :: std :: option :: Option :: Some (
         //                             emg_layout :: ccsa :: NameChars :: Number (
         //                                 NotNan :: new (120 as f64) . unwrap ()
         //                             )
-        //                         ) , 
+        //                         ) ,
         //                         :: std :: option :: Option :: None)
         //                 )
         //             )
-        //         ]) as Rc < (dyn Shaping < EmgEdgeItem < _ >>) > , 
+        //         ]) as Rc < (dyn Shaping < EmgEdgeItem < _ >>) > ,
 
         //         Rc :: new (vec ! [
         //             emg_layout :: ccsa :: CassowaryVar :: Virtual (
         //                 emg_layout :: ccsa :: Virtual (
-        //                     emg_common :: IdStr :: new ("nn") , 
+        //                     emg_common :: IdStr :: new ("nn") ,
         //                     vec ! [
         //                         emg_layout :: ccsa :: GeneralVar (
-        //                             emg_common :: IdStr :: new ("width") , 
+        //                             emg_common :: IdStr :: new ("width") ,
         //                             emg_layout :: ccsa :: ScopeViewVariable :: new (
-        //                                 :: std :: option :: Option :: None , 
-        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (100 as f64) . unwrap ())) , 
+        //                                 :: std :: option :: Option :: None ,
+        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (100 as f64) . unwrap ())) ,
         //                                 :: std :: option :: Option :: None
         //                             )
-        //                         ) , 
+        //                         ) ,
         //                         emg_layout :: ccsa :: GeneralVar (
-        //                             emg_common :: IdStr :: new ("height") , 
+        //                             emg_common :: IdStr :: new ("height") ,
         //                             emg_layout :: ccsa :: ScopeViewVariable :: new (
-        //                                 :: std :: option :: Option :: None , 
-        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (20 as f64) . unwrap ())) , 
+        //                                 :: std :: option :: Option :: None ,
+        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (20 as f64) . unwrap ())) ,
         //                                 :: std :: option :: Option :: None
         //                             )
         //                         )
         //                     ]
         //                 )
         //             )
-        //         ]) as Rc < (dyn Shaping < EmgEdgeItem < _ >>) >] , 
+        //         ]) as Rc < (dyn Shaping < EmgEdgeItem < _ >>) >] ,
         //         vec ! [])]) ;
-
-        
-            
-        
     }
-
 
     #[test]
     fn test_2() {
@@ -1350,7 +1336,7 @@ mod tests {
         }
 
         println!();
-        let input = r#" 
+        let input = r#"
         @=root
                 Layer [
                     @=x111x @E=[{@h |(button)...| in(#panel) gap(10)},h(px(11))]
@@ -1371,7 +1357,7 @@ mod tests {
         }
 
         println!();
-        let input = r#" 
+        let input = r#"
         @=aa1 @E=[@h |(button)...| in(#panel) gap(10),h(px(11))]
                 Layer [
                     Text::new(format!("aa1***********8"))=>[

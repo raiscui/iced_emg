@@ -53,6 +53,7 @@ pub use emg;
 pub use emg_common as common;
 pub use emg_common::any;
 pub use emg_common::better_any;
+pub use emg_common::mouse;
 pub use emg_layout as layout;
 pub use emg_msg_macro::emg_msg;
 pub use emg_shaping as shaping;
@@ -68,7 +69,11 @@ pub use sandbox::Sandbox;
 pub use settings::Settings;
 
 // ────────────────────────────────────────────────────────────────────────────────
-
+#[test]
+fn xx() -> mouse::EventFlag {
+    let f = mouse::CLICK;
+    return f;
+}
 // ────────────────────────────────────────────────────────────────────────────────
 
 // pub use sandbox::Sandbox;

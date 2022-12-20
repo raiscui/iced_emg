@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-05 20:56:05
- * @LastEditTime: 2022-09-09 09:51:38
+ * @LastEditTime: 2022-09-18 16:49:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,12 +10,12 @@ use super::EventNode;
 
 use emg_common::Vector;
 
-use super::EventNameString;
+use super::EventIdentify;
 
 use emg_state::Dict;
 
 pub struct EventListener<Message> {
-    pub(crate) event_callbacks: Dict<EventNameString, Vector<EventNode<Message>>>,
+    pub(crate) event_callbacks: Dict<EventIdentify, Vector<EventNode<Message>>>,
 }
 
 impl<Message> std::fmt::Debug for EventListener<Message> {
@@ -47,7 +47,7 @@ impl<Message> EventListener<Message> {
         }
     }
 
-    pub fn event_callbacks(&self) -> &Dict<EventNameString, Vector<EventNode<Message>>> {
+    pub fn event_callbacks(&self) -> &Dict<EventIdentify, Vector<EventNode<Message>>> {
         &self.event_callbacks
     }
 }
@@ -55,7 +55,7 @@ impl<Message> EventListener<Message> {
 impl<Message> EventListener<Message> {
     pub(crate) fn register_listener(
         &mut self,
-        event_name: EventNameString,
+        event_name: EventIdentify,
         event_node: EventNode<Message>,
     ) {
         let entry = self.event_callbacks.entry(event_name);
