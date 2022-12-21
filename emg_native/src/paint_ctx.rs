@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-09-14 16:03:31
+ * @LastEditTime: 2022-12-21 11:03:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,6 +24,7 @@ use tracing::{debug, info};
 //TODO use app state viewport dpr
 pub const DPR: f64 = 2.0;
 
+/// used for check restore right
 #[derive(Clone)]
 pub struct CtxIndex(Rc<Cell<usize>>);
 
@@ -326,6 +327,8 @@ impl WidgetState {
         // };
 
         //NOTE because the css Inherit
+        //混合的时候，如果是Inherit，就不要覆盖了
+        //如果是其他值,self 的值就覆盖为 new_current 的值
         css_merge!(self, new_current, CssFill, fill);
         css_merge!(self, new_current, CssBorderWidth, border_width);
         css_merge!(self, new_current, CssBorderColor, border_color);
