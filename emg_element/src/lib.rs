@@ -26,7 +26,9 @@ pub use widget::Widget;
 
 // ────────────────────────────────────────────────────────────────────────────────
 #[cfg(all(feature = "gpu"))]
-use emg_native::{renderer::RenderContext, PaintCtx};
+use emg_native::{renderer, PaintCtx};
+#[cfg(all(feature = "gpu"))]
+use emg_vello::SceneFrag;
 // ────────────────────────────────────────────────────────────────────────────────
 // TODO Refactor once `optin_builtin_traits` or `negative_impls`
 // TODO is stable (https://github.com/seed-rs/seed/issues/391).

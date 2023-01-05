@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-22 16:28:40
- * @LastEditTime: 2022-09-14 22:08:08
+ * @LastEditTime: 2023-01-04 18:51:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,15 +22,14 @@ use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Message, RenderCtx> ShapingWhoNoWarper for GElement<Message, RenderCtx> {}
-impl<Message, RenderCtx> ShapingUseNoWarper for GElement<Message, RenderCtx> {}
-// impl<Message, RenderContext: PartialEq + Clone + 'static> EqShaping<Self> for GElement<Message, RenderContext> {}
-impl<Message, RenderCtx> Shaping<Self> for GElement<Message, RenderCtx>
+impl<Message> ShapingWhoNoWarper for GElement<Message> {}
+impl<Message> ShapingUseNoWarper for GElement<Message> {}
+// impl<Message, RenderContext: PartialEq + Clone + 'static> EqShaping<Self> for GElement<Message> {}
+impl<Message> Shaping<Self> for GElement<Message>
 // where
 //     Message: Clone,
 where
     Message: 'static,
-    RenderCtx: 'static,
 {
     fn shaping(&self, who_el: &mut Self) {
         use GElement::{Builder_, Generic_, Layer_, Shaper_};
@@ -101,9 +100,9 @@ where
 // this is `GElement` refresh use `i32`
 // impl DynPartialEq for u32 {}
 // TODO : check no need? because already impl<Who, Use> EqShaping<Who> for Use
-impl<Message, RenderContext> EqShaping<GElement<Message, RenderContext>> for u32 {}
-impl<Message, RenderContext> Shaping<GElement<Message, RenderContext>> for u32 {
-    fn shaping(&self, el: &mut GElement<Message, RenderContext>) {
+impl<Message> EqShaping<GElement<Message>> for u32 {}
+impl<Message> Shaping<GElement<Message>> for u32 {
+    fn shaping(&self, el: &mut GElement<Message>) {
         // use GElement::Text_;
 
         match el {
@@ -118,12 +117,12 @@ impl<Message, RenderContext> Shaping<GElement<Message, RenderContext>> for u32 {
     }
 }
 
-impl<Message, RenderContext> Shaping<GElement<Message, RenderContext>> for i32
+impl<Message> Shaping<GElement<Message>> for i32
 where
     Message: 'static,
 {
     #[allow(clippy::match_same_arms)]
-    fn shaping(&self, el: &mut GElement<Message, RenderContext>) {
+    fn shaping(&self, el: &mut GElement<Message>) {
         match el {
             // Text_(text) => {
             //     trace!("==========Text update use i32");
@@ -154,8 +153,8 @@ where
     }
 }
 
-impl<Message, RenderContext> Shaping<GElement<Message, RenderContext>> for f64 {
-    fn shaping(&self, el: &mut GElement<Message, RenderContext>) {
+impl<Message> Shaping<GElement<Message>> for f64 {
+    fn shaping(&self, el: &mut GElement<Message>) {
         match el {
             // Text_(text) => {
             //     trace!("==========Text update use f64");
@@ -169,13 +168,11 @@ impl<Message, RenderContext> Shaping<GElement<Message, RenderContext>> for f64 {
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Message, RenderContext> Shaping<NodeBuilderWidget<Message, RenderContext>>
-    for GElement<Message, RenderContext>
+impl<Message> Shaping<NodeBuilderWidget<Message>> for GElement<Message>
 where
     Message: 'static,
-    RenderContext: 'static,
 {
-    fn shaping(&self, node_builder_widget: &mut NodeBuilderWidget<Message, RenderContext>) {
+    fn shaping(&self, node_builder_widget: &mut NodeBuilderWidget<Message>) {
         trace!("node_builder_widget refresh use GElement (event_callback)");
 
         match self {
@@ -209,8 +206,8 @@ where
 mod tests {
     use std::rc::Rc;
 
-    use emg_piet_gpu::RenderCtx;
     use emg_shaping::Shaper;
+    use emg_vello::SceneFrag;
 
     use crate::GElement;
 
@@ -220,7 +217,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let _f = GElement::<Message, RenderCtx>::Shaper_(Rc::new(Shaper::new(|| 1i32)));
+        let _f = GElement::<Message>::Shaper_(Rc::new(Shaper::new(|| 1i32)));
         // let ff: Rc<dyn EqShaping<GElement<Message>>> = f;
         // Rc<dyn EqShaping<GElement<Message>>>, found Rc<Shaper<u32>>
     }

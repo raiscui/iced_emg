@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-15 21:17:17
- * @LastEditTime: 2022-09-08 21:24:54
+ * @LastEditTime: 2023-01-03 18:12:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -52,7 +52,27 @@ impl<B: Backend> Renderer<B> {
 }
 
 impl<B: Backend> emg_native::renderer::Renderer for Renderer<B> {
-    type ImplRenderContext = <B as Backend>::ImplRenderContext;
+    type SceneCtx = <B as Backend>::SceneCtx;
+
+    // fn with_translation(
+    //     &mut self,
+    //     translation: Vector,
+    //     f: impl FnOnce(&mut Self),
+    // ) {
+    //     let current_primitives = std::mem::take(&mut self.primitives);
+
+    //     f(self);
+
+    //     let layer_primitives =
+    //         std::mem::replace(&mut self.primitives, current_primitives);
+
+    //     self.primitives.push(Primitive::Translate {
+    //         translation,
+    //         content: Box::new(Primitive::Group {
+    //             primitives: layer_primitives,
+    //         }),
+    //     });
+    // }
 
     fn on_loop_destroyed(&mut self) {
         self.backend.on_loop_destroyed();

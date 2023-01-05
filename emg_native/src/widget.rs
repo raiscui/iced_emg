@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2022-09-08 15:52:58
+ * @LastEditTime: 2023-01-04 23:26:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,37 +22,35 @@
 
 // ────────────────────────────────────────────────────────────────────────────────
 
+use std::rc::Rc;
+
 use dyn_clone::DynClone;
 use emg_common::{dyn_partial_eq::DynPartialEq, IdStr};
 use emg_state::StateAnchor;
 
-use crate::Bus;
-
-pub trait Widget<Message, RenderCtx>: DynClone + DynPartialEq {
+pub trait Widget: DynClone + DynPartialEq {
+    type SceneCtxType;
     // fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
     // fn xx(&self, _bus: &Bus<Message>) {}
     // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
     // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
-    fn paint_sa(
-        &self,
-        ctx: &StateAnchor<crate::PaintCtx<RenderCtx>>,
-    ) -> StateAnchor<crate::PaintCtx<RenderCtx>>;
+    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>>;
 }
 
-impl<Message, RenderCtx> core::cmp::Eq for dyn Widget<Message, RenderCtx> + '_ {}
+impl<SceneCtx> core::cmp::Eq for dyn Widget<SceneCtxType = SceneCtx> + '_ {}
 
-impl<Message, RenderCtx> core::cmp::PartialEq for dyn Widget<Message, RenderCtx> + '_ {
+impl<SceneCtx> core::cmp::PartialEq for dyn Widget<SceneCtxType = SceneCtx> + '_ {
     fn eq(&self, other: &Self) -> bool {
         self.box_eq(other.as_any())
     }
 }
-impl<Message: 'static, RenderCtx: 'static> PartialEq<dyn Widget<Message, RenderCtx>>
-    for Box<dyn Widget<Message, RenderCtx>>
+impl<SceneCtx: 'static> PartialEq<dyn Widget<SceneCtxType = SceneCtx>>
+    for Box<dyn Widget<SceneCtxType = SceneCtx>>
 {
-    fn eq(&self, other: &dyn Widget<Message, RenderCtx>) -> bool {
+    fn eq(&self, other: &dyn Widget<SceneCtxType = SceneCtx>) -> bool {
         self.box_eq(other.as_any())
     }
 }
 
-dyn_clone::clone_trait_object!(<Message,RenderCtx> Widget<Message,RenderCtx>);
+dyn_clone::clone_trait_object!(<SceneCtx> Widget<SceneCtxType=SceneCtx>);

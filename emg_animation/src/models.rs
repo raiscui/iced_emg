@@ -72,7 +72,7 @@ pub enum Interpolation {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq)]
-#[display(fmt = "Motion:{{pos:{}}}", position)]
+#[display(fmt = "Motion:{{pos:{position}}}")]
 pub struct Motion {
     pub(crate) position: NotNan<Precision>,
     pub(crate) velocity: NotNan<Precision>,
@@ -192,34 +192,34 @@ pub type PropName = TypeName;
 #[derive(Display, Clone, Debug, PartialEq, Eq)]
 #[display(fmt = "{}")]
 pub enum Property {
-    #[display(fmt = "({},motion:{})", _0, _1)]
+    #[display(fmt = "({_0},motion:{_1})")]
     Exact(PropName, String),
 
-    #[display(fmt = "({},motion:{:?})", _0, _1)]
+    #[display(fmt = "({_0},motion:{_1:?})")]
     Color(PropName, Box<[Motion; 4]>),
 
-    #[display(fmt = "({},motion:{})", _0, _1)]
+    #[display(fmt = "({_0},motion:{_1})")]
     Shadow(PropName, bool, Box<ShadowMotion>),
 
-    #[display(fmt = "Prop({},motion:{})", _0, _1)]
+    #[display(fmt = "Prop({_0},motion:{_1})")]
     Prop(PropName, Motion),
 
-    #[display(fmt = "Prop2({},motion:{:?})", _0, _1)]
+    #[display(fmt = "Prop2({_0},motion:{_1:?})")]
     Prop2(PropName, Box<[Motion; 2]>),
 
-    #[display(fmt = "Prop3({},motion:{:?})", _0, _1)]
+    #[display(fmt = "Prop3({_0},motion:{_1:?})")]
     Prop3(PropName, Box<[Motion; 3]>),
 
     #[display(fmt = "Prop4({_0},motion:{_1:?})")]
     Prop4(PropName, Box<[Motion; 4]>),
 
-    #[display(fmt = "Angle({},motion:{})", _0, _1)]
+    #[display(fmt = "Angle({_0},motion:{_1})")]
     Angle(PropName, Motion),
 
-    #[display(fmt = "Points(Points,motion:{:?})", _0)]
+    #[display(fmt = "Points(Points,motion:{_0:?})")]
     Points(Box<SmallVec<[[Motion; DIM2]; 1]>>),
 
-    #[display(fmt = "Path(Path,motion:{:?})", _0)]
+    #[display(fmt = "Path(Path,motion:{_0:?})")]
     Path(Box<SmallVec<[PathCommand; 1]>>),
     // Anchor(Rc<String>, StateAnchor<GenericSize>),
 }
@@ -249,34 +249,34 @@ impl Property {
 #[derive(Display, Clone, Debug, PartialEq, Eq)]
 #[display(fmt = "{}")]
 pub enum PropertyOG {
-    #[display(fmt = "({},motion:{})", _0, _1)]
+    #[display(fmt = "({_0},motion:{_1})")]
     Exact(PropName, String),
 
-    #[display(fmt = "({},motion:{:?})", _0, _1)]
+    #[display(fmt = "({_0},motion:{_1:?})")]
     Color(PropName, Vector<Motion>),
 
-    #[display(fmt = "({},motion:{})", _0, _1)]
+    #[display(fmt = "({_0},motion:{_1})")]
     Shadow(PropName, bool, Box<ShadowMotion>),
 
-    #[display(fmt = "Prop({},motion:{})", _0, _1)]
+    #[display(fmt = "Prop({_0},motion:{_1})")]
     Prop(PropName, Motion),
 
-    #[display(fmt = "Prop2({},motion:{:?})", _0, _1)]
+    #[display(fmt = "Prop2({_0},motion:{_1:?})")]
     Prop2(PropName, Vector<Motion>),
 
-    #[display(fmt = "Prop3({},motion:{:?})", _0, _1)]
+    #[display(fmt = "Prop3({_0},motion:{_1:?})")]
     Prop3(PropName, Vector<Motion>),
 
-    #[display(fmt = "Prop4({},motion:{:?})", _0, _1)]
+    #[display(fmt = "Prop4({_0},motion:{_1:?})")]
     Prop4(PropName, Vector<Motion>),
 
-    #[display(fmt = "Angle({},motion:{})", _0, _1)]
+    #[display(fmt = "Angle({_0},motion:{_1})")]
     Angle(PropName, Motion),
 
-    #[display(fmt = "Points(Points,motion:{:?})", _0)]
+    #[display(fmt = "Points(Points,motion:{_0:?})")]
     Points(Vector<[Motion; DIM2]>),
 
-    #[display(fmt = "Path(Path,motion:{:?})", _0)]
+    #[display(fmt = "Path(Path,motion:{_0:?})")]
     Path(Vector<PathCommandOG>),
     // Anchor(Rc<String>, StateAnchor<GenericSize>),
 }
@@ -341,7 +341,9 @@ where
     ///
     /// Will return `Err` if `self` does not is `Step::Wait(Duration)`
     /// permission to read it.
+    // TODO result_large_err
     #[allow(clippy::missing_const_for_fn)]
+    #[allow(clippy::result_large_err)]
     pub fn try_into_wait(self) -> Result<Duration, Self> {
         if let Self::Wait(v) = self {
             Ok(v)
@@ -2451,7 +2453,7 @@ fn set_target_mut(override_interpolation: bool, current: &mut Property, new_targ
         (Path(box cmds), Path(box targets)) => {
             cmds.iter_mut().zip(targets).for_each(set_path_target_mut);
         }
-        (a, b) => panic!("{:?} \n and {:?} \n not match any set target", a, b),
+        (a, b) => panic!("{a:?} \n and {b:?} \n not match any set target"),
     };
 }
 
@@ -2660,7 +2662,7 @@ fn set_path_target_mut((cmd, target_cmd): (&mut PathCommand, PathCommand)) {
             set_motion_target_in_path((&mut m.end_angle, t.end_angle));
         }
         (Close, Close) => (),
-        (a, b) => panic!("{:?} \n and {:?} \n not match any set path target", a, b),
+        (a, b) => panic!("{a:?} \n and {b:?} \n not match any set path target"),
     }
 }
 

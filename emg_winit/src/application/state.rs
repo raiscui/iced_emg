@@ -1,6 +1,7 @@
 use crate::conversion;
 use crate::{Application, Debug, Mode, Viewport};
 use emg_common::{na, Pos};
+use emg_graphics_backend::window::Compositor;
 use emg_native::G_POS;
 use emg_state::{CloneStateVar, StateAnchor, StateMultiAnchor, StateVar};
 use std::{cell::Cell, marker::PhantomData, rc::Rc};

@@ -1,4 +1,8 @@
-use color_eyre::{eyre::Report, eyre::WrapErr, Section};
+use color_eyre::{
+    eyre::WrapErr,
+    eyre::{eyre, Report},
+    Section,
+};
 use emg_bind::{
     better_any::TidAble,
     common::mouse::CLICK,
@@ -7,7 +11,7 @@ use emg_bind::{
     emg_msg, gtree,
     layout::styles::{fill, hsl, w},
     state::use_state,
-    Sandbox, Settings,
+    Error, Sandbox, Settings,
 };
 use std::{cell::Cell, rc::Rc};
 use tracing::{info, instrument};
@@ -27,11 +31,12 @@ fn tracing_init() -> Result<(), Report> {
                 && !metadata.target().contains("anchors")
                 && !metadata.target().contains("emg_state")
                 && !metadata.target().contains("cassowary")
+                && !metadata.target().contains("wgpu")
             // && !metadata.target().contains("winit event")
             // && !metadata.fields().field("event").map(|x|x.to_string())
             // && !metadata.target().contains("winit event: DeviceEvent")
         }))
-        .with_filter(tracing_subscriber::filter::LevelFilter::DEBUG);
+        .with_filter(tracing_subscriber::filter::LevelFilter::INFO);
 
     // let def_subscriber = tracing_subscriber::fmt()
     //     // .with_test_writer()
@@ -56,9 +61,10 @@ fn tracing_init() -> Result<(), Report> {
 // pub fn main() -> emg_bind::Result {
 #[instrument]
 pub fn main() -> Result<(), Report> {
+    // pub fn main() -> Result<(), Error> {
     // #[cfg(debug_assertions)]
     tracing_init()?;
-    Counter::run(Settings::default()).wrap_err("run error")
+    Counter::run(Settings::default()).wrap_err("saw a downstream error")
 }
 
 #[derive(Default)]
@@ -167,8 +173,8 @@ impl Sandbox for Counter {
     // fn ctx(
     //         &self,
     //         g: &GraphType<Self::Message>,
-    //     ) -> StateAnchor<runtime::PaintCtx<renderer::RenderCtx> > {
-    //         let ctx =StateAnchor::constant( runtime::PaintCtx::<renderer::RenderCtx>::default());
+    //     ) -> StateAnchor<runtime::PaintCtx<renderer::SceneCtx> > {
+    //         let ctx =StateAnchor::constant( runtime::PaintCtx::<renderer::SceneCtx>::default());
     //         g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
     //         .unwrap()
     //         .build_ctx_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]),&ctx)

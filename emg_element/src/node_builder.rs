@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2022-12-15 18:20:10
+ * @LastEditTime: 2023-01-04 23:07:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -273,10 +273,10 @@ impl<Message> std::fmt::Debug for EventNode<Message>
 }
 
 #[allow(clippy::module_name_repetitions)]
-pub struct NodeBuilderWidget<Message, RenderCtx> {
+pub struct NodeBuilderWidget<Message> {
     id: IdStr,
     //TODO : in areas heap
-    widget: Box<GElement<Message, RenderCtx>>,
+    widget: Box<GElement<Message>>,
     //TODO use vec deque
     // event_callbacks: VecDeque<EventNode<Message>>,
     event_listener: EventListener<Message>,
@@ -286,7 +286,7 @@ pub struct NodeBuilderWidget<Message, RenderCtx> {
     widget_state: StateAnchor<WidgetState>,
 }
 
-impl<Message, RenderCtx> PartialEq for NodeBuilderWidget<Message, RenderCtx> {
+impl<Message> PartialEq for NodeBuilderWidget<Message> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             && self.widget == other.widget
@@ -297,7 +297,7 @@ impl<Message, RenderCtx> PartialEq for NodeBuilderWidget<Message, RenderCtx> {
     }
 }
 
-impl<Message, RenderCtx> Clone for NodeBuilderWidget<Message, RenderCtx> {
+impl<Message> Clone for NodeBuilderWidget<Message> {
     fn clone(&self) -> Self {
         Self {
             id: self.id.clone(),
@@ -308,7 +308,7 @@ impl<Message, RenderCtx> Clone for NodeBuilderWidget<Message, RenderCtx> {
     }
 }
 
-impl<Message, RenderContext> std::fmt::Debug for NodeBuilderWidget<Message, RenderContext>
+impl<Message> std::fmt::Debug for NodeBuilderWidget<Message>
 // where
 //     Message: std::fmt::Debug,
 {
@@ -340,16 +340,11 @@ pub type EventMatchsDict<Message> = Dict<EventIdentify, (Event, Vector<EventNode
 //         }
 //     }
 // }
-impl<Message, RenderCtx> NodeBuilderWidget<Message, RenderCtx>
+impl<Message> NodeBuilderWidget<Message>
 where
     Message: 'static,
-    RenderCtx: 'static,
 {
-    fn new(
-        ix: &IdStr,
-        gel: GElement<Message, RenderCtx>,
-        edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>,
-    ) -> Self {
+    fn new(ix: &IdStr, gel: GElement<Message>, edge_ctx: &StateAnchor<EdgeCtx>) -> Self {
         #[cfg(debug_assertions)]
         match &gel {
             // Builder_(_builder) => {
@@ -482,9 +477,9 @@ where
     #[allow(clippy::match_same_arms)]
     pub fn try_new_use(
         ix: &IdStr,
-        gel: GElement<Message, RenderCtx>, //TODO use anchor instead
-        edge_ctx: &StateAnchor<EdgeCtx<RenderCtx>>,
-    ) -> Result<Self, GElement<Message, RenderCtx>> {
+        gel: GElement<Message>, //TODO use anchor instead
+        edge_ctx: &StateAnchor<EdgeCtx>,
+    ) -> Result<Self, GElement<Message>> {
         match gel {
             // Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
             GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(ix, gel, edge_ctx)),
@@ -566,20 +561,13 @@ where
 
     #[must_use]
     #[allow(clippy::borrowed_box)]
-    pub const fn widget(&self) -> &GElement<Message, RenderCtx> {
+    pub const fn widget(&self) -> &GElement<Message> {
         //TODO use cow/beef
 
         &self.widget
     }
 
-    #[must_use]
-    #[allow(clippy::borrowed_box)]
-    pub fn get_widget(self) -> Box<GElement<Message, RenderCtx>> {
-        //TODO use cow/beef
-        self.widget
-    }
-
-    pub fn widget_mut(&mut self) -> &mut GElement<Message, RenderCtx> {
+    pub fn widget_mut(&mut self) -> &mut GElement<Message> {
         &mut self.widget
     }
 
@@ -645,11 +633,11 @@ where
                         &state.world,
                         &state.children_layout_override,
                     )
-                        .map(move |c_pos, w, opt_layout_override| {
+                        .map(move |c_pos, world, opt_layout_override| {
                             let ev = ev_.clone();
 
                             let click_cb_clone2 = click_cb_vec.clone();
-                            let rect = Rect::from_origin_size((w.x, w.y), size);
+                            let rect = Rect::from_origin_size((world.x, world.y), size);
 
 
                             c_pos.and_then( |pos| {
@@ -705,17 +693,14 @@ where
 }
 
 #[cfg(all(feature = "gpu"))]
-impl<Message, RenderCtx> crate::Widget<Message, RenderCtx> for NodeBuilderWidget<Message, RenderCtx>
+impl<Message> crate::Widget for NodeBuilderWidget<Message>
 where
-    RenderCtx: crate::RenderContext + Clone + PartialEq + 'static,
     Message: 'static,
     // Message: PartialEq + 'static + std::clone::Clone,
 {
+    type SceneCtxType = crate::SceneFrag;
     #[instrument(skip(self, ctx), name = "NodeBuilderWidget paint")]
-    fn paint_sa(
-        &self,
-        ctx: &StateAnchor<crate::PaintCtx<RenderCtx>>,
-    ) -> StateAnchor<crate::PaintCtx<RenderCtx>> {
+    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id1 = self.id.clone();
         let id2 = self.id.clone();
         let opt_span = illicit::get::<Span>().ok();
@@ -730,35 +715,38 @@ where
         let ctx_id = CtxIndex::new();
         let ctx_id2 = ctx_id.clone();
 
-        let current_ctx = (ctx, &self.widget_state).map(move |incoming_ctx, widget_state| {
-            // let id = id.clone();
-            let _span = span1.clone().entered();
-            info!(
-                parent: &span1,
-                "NodeBuilderWidget::paint-> (&ctx, &self.widget_state).map -> recalculating [{}]",
-                &id1
-            );
-            let mut incoming_ctx_mut = incoming_ctx.clone();
-            incoming_ctx_mut.save_assert(&ctx_id);
-            incoming_ctx_mut.merge_widget_state(widget_state);
-            incoming_ctx_mut.transform(emg_native::renderer::Affine::translate((
-                widget_state.translation.x * DPR,
-                widget_state.translation.y * DPR,
-            )));
-            incoming_ctx_mut
-        });
+        let current_ctx =
+            (ctx, &self.widget_state).map(move |incoming_ctx, current_widget_state| {
+                // let id = id.clone();
+                let _span = span1.clone().entered();
+                info!(
+                    parent: &span1,
+                    "NodeBuilderWidget::paint-> (&ctx, &self.widget_state).map -> recalculating [{}]",
+                    &id1
+                );
+                let mut incoming_ctx_mut = incoming_ctx.clone();
+                // incoming_ctx_mut.save_assert(&ctx_id);
+                incoming_ctx_mut.merge_widget_state(current_widget_state);
+
+
+                // incoming_ctx_mut.transform(crate::renderer::Affine::translate((
+                //     current_widget_state.translation.x * DPR,
+                //     current_widget_state.translation.y * DPR,
+                // )));
+                incoming_ctx_mut
+            });
         illicit::Layer::new()
             .offer(span3)
             .enter(|| self.widget.paint_sa(&current_ctx))
-            .map(move |out_ctx| {
-                info!(
-                    parent: &span2,
-                    " widget.paint end -> recalculating restore [{}]", &id2
-                );
-                let mut out_ctx_mut = out_ctx.clone();
-                out_ctx_mut.restore_assert(&ctx_id2);
-                out_ctx_mut
-            })
+        // .map(move |out_scene| {
+        //     info!(
+        //         parent: &span2,
+        //         " widget.paint end -> recalculating restore [{}]", &id2
+        //     );
+        //     let mut out_ctx_mut = out_ctx.clone();
+        //     out_ctx_mut.restore_assert(&ctx_id2);
+        //     out_ctx_mut
+        // })
     }
 }
 

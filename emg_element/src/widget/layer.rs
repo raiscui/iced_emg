@@ -1,13 +1,14 @@
-use std::{clone::Clone, cmp::PartialEq};
+use std::{clone::Clone, cmp::PartialEq, rc::Rc};
 
 use emg_common::IdStr;
+use emg_state::{Anchor, StateAnchor, StateMultiAnchor};
 use tracing::{info, info_span, instrument, trace, Span};
 
 use crate::GElement;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-type LayerChildren<Message, RenderContext> = Vec<GElement<Message, RenderContext>>;
+type LayerChildren<Message> = Vec<GElement<Message>>;
 
 /// A container that distributes its contents vertically.
 ///
@@ -15,15 +16,14 @@ type LayerChildren<Message, RenderContext> = Vec<GElement<Message, RenderContext
 //TODO remove all missing_debug_implementations
 #[allow(missing_debug_implementations)]
 #[derive(Eq)]
-pub struct Layer<Message, RenderCtx> {
+pub struct Layer<Message> {
     id: IdStr,
     //TODO vec?
-    children: LayerChildren<Message, RenderCtx>,
+    children: LayerChildren<Message>,
 }
 
-impl<Message, RenderCtx> std::fmt::Debug for Layer<Message, RenderCtx>
+impl<Message> std::fmt::Debug for Layer<Message>
 where
-    RenderCtx: 'static,
     Message: 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -34,7 +34,7 @@ where
     }
 }
 
-impl<Message, RenderContext> Clone for Layer<Message, RenderContext> {
+impl<Message> Clone for Layer<Message> {
     fn clone(&self) -> Self {
         Self {
             id: self.id.clone(),
@@ -42,7 +42,7 @@ impl<Message, RenderContext> Clone for Layer<Message, RenderContext> {
         }
     }
 }
-impl<Message, RenderContext> PartialEq for Layer<Message, RenderContext>
+impl<Message> PartialEq for Layer<Message>
 // where
 //     Message: PartialEq,
 {
@@ -51,27 +51,27 @@ impl<Message, RenderContext> PartialEq for Layer<Message, RenderContext>
     }
 }
 
-impl<Message, RenderContext> Default for Layer<Message, RenderContext> {
+impl<Message> Default for Layer<Message> {
     fn default() -> Self {
         Self::new(IdStr::new_inline(""))
     }
 }
 
-impl<Message, RenderCtx> Layer<Message, RenderCtx> {
+impl<Message> Layer<Message> {
     /// Creates an empty [`Layer`].
     #[must_use]
     pub fn new(id: IdStr) -> Self {
-        Self::with_children(id, LayerChildren::<Message, RenderCtx>::new())
+        Self::with_children(id, LayerChildren::<Message>::new())
     }
 
     /// Creates a [`Layer`] with the given elements.
     #[must_use]
-    pub fn with_children(id: IdStr, children: LayerChildren<Message, RenderCtx>) -> Self {
+    pub fn with_children(id: IdStr, children: LayerChildren<Message>) -> Self {
         Self { id, children }
     }
 
     #[must_use]
-    pub fn set_children(mut self, children: LayerChildren<Message, RenderCtx>) -> Self {
+    pub fn set_children(mut self, children: LayerChildren<Message>) -> Self {
         self.children = children;
         self
     }
@@ -90,77 +90,65 @@ impl<Message, RenderCtx> Layer<Message, RenderCtx> {
     //     self
     // }
 
-    pub fn push(&mut self, child: GElement<Message, RenderCtx>) {
+    pub fn push(&mut self, child: GElement<Message>) {
         self.children.push(child);
     }
 }
 
 #[cfg(all(feature = "gpu"))]
-impl<Message, RenderCtx> crate::Widget<Message, RenderCtx> for Layer<Message, RenderCtx>
+use crate::renderer::*;
+#[cfg(all(feature = "gpu"))]
+impl<Message> crate::Widget for Layer<Message>
 where
-    RenderCtx: crate::RenderContext + Clone + PartialEq + 'static,
     Message: 'static,
-    // Message: PartialEq + 'static + std::clone::Clone,
 {
-    // #[instrument(skip(ctx), name = "Layer paint")]
-    // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>) {
-    //     let rect = ctx.size().to_rect();
-    //     info!("[layer] print... {}", &rect);
-
-    //     //TODO remove this (debug things)
-    //     if self.id == "debug_layer" {
-    //         ctx.fill(rect, &emg_native::Color::rgb8(70, 0, 0));
-    //     } else {
-    //         ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
-    //     }
-    //     // ctx.fill(rect, &emg_native::Color::rgb8(0, 0, 200));
-
-    //     // ctx.save().unwrap();
-    //     for child in &self.children {
-    //         child.paint(ctx);
-    //     }
-    // }
-
-    fn paint_sa(
-        &self,
-        ctx: &emg_state::StateAnchor<emg_native::PaintCtx<RenderCtx>>,
-    ) -> emg_state::StateAnchor<emg_native::PaintCtx<RenderCtx>> {
+    type SceneCtxType = crate::SceneFrag;
+    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id = self.id.clone();
         let span = illicit::expect::<Span>();
 
-        let mut out_ctx = ctx.map(move |incoming_ctx| {
-            // let _span = info_span!(parent:&*span,"layer repaint...").entered();
-            info!(parent: &*span,"Layer[{}]::paint -> ctx.map -> recalculating ", &id);
-            let mut new_ctx = incoming_ctx.clone();
-            let rect = new_ctx.size().to_rect();
+        let children_sc_list_sa: StateAnchor<Vec<Rc<crate::SceneFrag>>> = self
+            .children
+            .iter()
+            .map(|child| child.paint_sa(&ctx).into_anchor())
+            .collect::<Anchor<Vec<_>>>()
+            .into();
+
+        (ctx, &children_sc_list_sa).map(move |incoming_ctx, children_sc_list| {
+            let mut sc = Self::SceneCtxType::new(incoming_ctx.get_translation());
+            let mut builder = sc.gen_builder();
+
+            let rect = incoming_ctx.size().to_rect();
             if id == "debug_layer" {
-                // new_ctx.fill(rect, &emg_native::Color::rgb8(255, 255, 255));
-                new_ctx.fill(rect, &emg_native::renderer::Color::BLACK);
-            } else if let Some(fill) = new_ctx.get_fill_color() {
+                builder.fill(Fill::NonZero, Affine::IDENTITY, Color::BLACK, None, &rect);
+            } else if let Some(fill) = incoming_ctx.get_fill_color() {
                 info!(parent: &*span,"fill color: {:?}", &fill);
-                new_ctx.fill(rect, &fill);
+                builder.fill(Fill::NonZero, Affine::IDENTITY, fill, None, &rect);
             }
-            if let Some(bw) = new_ctx.get_border_width() {
-                if let Some(bc) = new_ctx.get_border_color() {
+            if let Some(bw) = incoming_ctx.get_border_width() {
+                if let Some(bc) = incoming_ctx.get_border_color() {
                     info!(parent: &*span,"border width: {:?} color: {:?}", &bw, &bc);
-                    new_ctx.stroke(rect, &bc, bw);
+
+                    builder.stroke(&Stroke::new(bw as f32), Affine::IDENTITY, bc, None, &rect);
                 } else {
-                    new_ctx.stroke(
-                        rect.inset(-bw / 2. - 0.),
-                        &emg_native::renderer::Color::BLACK,
-                        bw,
+                    builder.stroke(
+                        &Stroke::new(bw as f32),
+                        Affine::IDENTITY,
+                        Color::BLACK,
+                        None,
+                        &rect.inset(-bw / 2. - 0.), //TODO 检查,这是临时设置
                     );
                 }
             }
-            new_ctx
-        });
-        for child in &self.children {
-            out_ctx = child.paint_sa(&out_ctx);
-        }
-        out_ctx
-        // self.children
-        //     .clone()
-        //     .into_iter()
-        //     .fold(out_ctx, |acc_ctx, child| child.paint_sa(&acc_ctx))
+
+            children_sc_list
+                .iter()
+                .for_each(|sc| builder.append(sc, sc.get_transform()));
+
+            // ─────────────────────────────────────────────
+
+            builder.finish();
+            Rc::new(sc)
+        })
     }
 }

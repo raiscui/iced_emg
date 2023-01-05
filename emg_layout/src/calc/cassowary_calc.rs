@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-15 14:46:40
- * @LastEditTime: 2022-08-29 22:43:39
+ * @LastEditTime: 2023-01-04 21:35:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -78,7 +78,7 @@ pub fn cassowary_calculation(
             "CssWidth" => p_cass_map.var("width").unwrap().into(),
             "CssHeight" => p_cass_map.var("height").unwrap().into(),
             other => {
-                panic!("current not implemented for GenericSize::Parent({})", other);
+                panic!("current not implemented for GenericSize::Parent({other})");
             }
         },
     }

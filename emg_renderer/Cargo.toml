@@ -9,5 +9,5 @@ crate-type = ["rlib"]
 
 [dependencies]
 emg_common = { path = "../emg_common" }
-piet = "0.2.0"
+peniko = { git = "https://github.com/linebender/peniko" }
 tracing = "0.1"

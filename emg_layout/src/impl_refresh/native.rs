@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-29 23:19:00
- * @LastEditTime: 2022-09-14 15:14:36
+ * @LastEditTime: 2023-01-04 19:14:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,13 +16,12 @@ use emg_state::{CloneStateVar, StateAnchor, StateVar};
 use seed_styles::*;
 use std::rc::Rc;
 
-impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for CssBackgroundAttachment
+impl<Ix> Shaping<EmgEdgeItem<Ix>> for CssBackgroundAttachment
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
-    RenderCtx: 'static,
+    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
         let type_name = Self::TYPE_NAME;
         who.styles.update(|s| {
             s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
@@ -30,13 +29,12 @@ where
     }
 }
 
-impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for StateVar<CssBackgroundAttachment>
+impl<Ix> Shaping<EmgEdgeItem<Ix>> for StateVar<CssBackgroundAttachment>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
-    RenderCtx: 'static,
+    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
         let type_name = Self::INSIDE_TYPE_NAME;
         who.styles.update(|s| {
             let value = self
@@ -46,13 +44,12 @@ where
         });
     }
 }
-impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<CssBackgroundAttachment>
+impl<Ix> Shaping<EmgEdgeItem<Ix>> for StateAnchor<CssBackgroundAttachment>
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
-    RenderCtx: 'static,
+    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
         let type_name = Self::INSIDE_TYPE_NAME;
         who.styles.update(|s| {
             let value = self.map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
@@ -63,13 +60,12 @@ where
 
 macro_rules! impl_css_native_refresh {
     ($css:ident) => {
-        impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for $css
+        impl<Ix> Shaping<EmgEdgeItem<Ix>> for $css
         where
             Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-            EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
-            RenderCtx: 'static,
+            EmgEdgeItem<Ix>: ShapingWhoNoWarper,
         {
-            fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+            fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
                 let type_name = Self::TYPE_NAME;
                 who.styles.update(|s| {
                     s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
@@ -77,13 +73,12 @@ macro_rules! impl_css_native_refresh {
             }
         }
 
-        impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for StateVar<$css>
+        impl<Ix> Shaping<EmgEdgeItem<Ix>> for StateVar<$css>
         where
             Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-            EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
-            RenderCtx: 'static,
+            EmgEdgeItem<Ix>: ShapingWhoNoWarper,
         {
-            fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+            fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
                 let type_name = Self::INSIDE_TYPE_NAME;
                 who.styles.update(|s| {
                     let value = self
@@ -94,13 +89,12 @@ macro_rules! impl_css_native_refresh {
             }
         }
 
-        impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for StateAnchor<$css>
+        impl<Ix> Shaping<EmgEdgeItem<Ix>> for StateAnchor<$css>
         where
             Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-            EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
-            RenderCtx: 'static,
+            EmgEdgeItem<Ix>: ShapingWhoNoWarper,
         {
-            fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+            fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
                 let type_name = Self::INSIDE_TYPE_NAME;
                 who.styles.update(|s| {
                     let value =

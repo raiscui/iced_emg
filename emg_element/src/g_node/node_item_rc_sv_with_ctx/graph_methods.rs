@@ -1,10 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2022-09-19 09:54:56
+ * @LastEditTime: 2023-01-04 23:08:32
  * @LastEditors: Rais
  * @Description:
  */
+
+use std::rc::Rc;
 
 use emg::{edge_index_no_source, NodeIndex, Outgoing};
 use emg_common::{vector, IdStr, Pos, Vector};
@@ -16,14 +18,15 @@ use tracing::debug;
 use crate::{node_builder::EventMatchsDict, EventNode};
 
 use super::{EventMatchsSa, GraphType};
-pub trait GraphMethods<Message, RenderCtx, Ix = IdStr> {
+pub trait GraphMethods<Message, Ix = IdStr> {
+    type SceneCtx;
     fn runtime_prepare(
         &self,
         ix: &IdStr,
-        ctx: &StateAnchor<PaintCtx<RenderCtx>>,
+        ctx: &StateAnchor<PaintCtx>,
         events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> (EventMatchsSa<Message>, StateAnchor<PaintCtx<RenderCtx>>);
+    ) -> (EventMatchsSa<Message>, StateAnchor<Rc<Self::SceneCtx>>);
 
     #[allow(clippy::type_complexity)]
     fn get_out_going_event_callbacks(
@@ -33,16 +36,18 @@ pub trait GraphMethods<Message, RenderCtx, Ix = IdStr> {
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> Vector<Anchor<Vector<EventMatchsDict<Message>>>>;
 }
-impl<Message, RenderCtx> GraphMethods<Message, RenderCtx> for GraphType<Message, RenderCtx>
+impl<Message> GraphMethods<Message> for GraphType<Message>
 where
     // Ix: std::hash::Hash
     //     + std::clone::Clone
     //     + std::cmp::Ord
     //     + std::default::Default
     //     + std::fmt::Debug,
-    RenderCtx: crate::RenderContext + Clone + PartialEq + 'static,
+    // SceneCtx: crate::renderer::SceneCtx + Clone + PartialEq + 'static,
     Message: 'static,
 {
+    type SceneCtx = crate::SceneFrag;
+
     // fn xx(&self,events_sa: &StateAnchor<Vector<Event>>) {
     //     let events = events_sa.clone();
     //     let fff =
@@ -61,9 +66,9 @@ where
     //                     let k_c = k.clone();
     //                     v.map(move |vv| (k_c.clone(), vv.clone())).into_anchor()
     //                 })
-    //                 .collect::<Anchor<Vector<(EPath<IdStr>, Rc<GElement<Message, RenderCtx>>)>>>()
+    //                 .collect::<Anchor<Vector<(EPath<IdStr>, Rc<GElement<Message>>)>>>()
     //                 .map(
-    //                     |x| -> Dict<EPath<IdStr>, Rc<GElement<Message, RenderCtx>>> {
+    //                     |x| -> Dict<EPath<IdStr>, Rc<GElement<Message>>> {
     //                         x.clone().into_iter().collect()
     //                     },
     //                 )
@@ -75,10 +80,10 @@ where
     fn runtime_prepare(
         &self,
         ix: &IdStr,
-        ctx: &StateAnchor<PaintCtx<RenderCtx>>,
+        ctx: &StateAnchor<PaintCtx>,
         events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> (EventMatchsSa<Message>, StateAnchor<PaintCtx<RenderCtx>>) {
+    ) -> (EventMatchsSa<Message>, StateAnchor<Rc<Self::SceneCtx>>) {
         debug!("runtime prepare start");
         let events = events_sa.clone();
         let cursor_position_clone = cursor_position.clone();

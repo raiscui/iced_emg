@@ -32,7 +32,7 @@ pub trait Sandbox {
     // fn ctx(
     //     &self,
     //     g: &element::GraphType<Self::Message>,
-    // ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>>;
+    // ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::SceneCtx>>;
 
     // /// Returns the current [`Theme`] of the [`Sandbox`].
     // ///
@@ -86,7 +86,7 @@ pub trait Sandbox {
     /// # Errors
     ///
     /// Error: [`crate::Error`]
-    fn run(settings: Settings<()>) -> Result<(), Error>
+    fn run(settings: Settings<()>) -> crate::Result
     where
         Self: 'static + Sized,
     {
@@ -127,7 +127,7 @@ where
     // fn ctx(
     //     &self,
     //     g: &element::GraphType<Self::Message>,
-    // ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>> {
+    // ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::SceneCtx>> {
     //     T::ctx(self, g)
     // }
 

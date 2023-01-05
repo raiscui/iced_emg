@@ -21,7 +21,7 @@ crate-type = ["rlib"]
 default = ["gpu"]
 gpu = [
     "emg_winit",
-    "emg_piet_gpu",
+    "emg_vello",
     "emg_element/gpu",
     "emg_layout/gpu",
     "emg_graphics_backend",
@@ -54,4 +54,5 @@ thiserror = "1.0"
 emg_web = { path = "../emg_web" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
+# emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
+emg_vello = { path = "../emg_vello", optional = true }

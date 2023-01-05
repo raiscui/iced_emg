@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2022-12-20 11:52:40
+ * @LastEditTime: 2023-01-05 18:09:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,6 +10,7 @@ mod state;
 
 use emg_common::{IdStr, Pos, Vector};
 pub use state::State;
+use winit::event_loop::EventLoopBuilder;
 
 use crate::clipboard::{self, Clipboard};
 use crate::conversion;
@@ -144,7 +145,8 @@ where
     let mut debug = Debug::new();
     debug.startup_started();
 
-    let event_loop = EventLoop::with_user_event();
+    // let event_loop = EventLoop::with_user_event();
+    let event_loop = EventLoopBuilder::with_user_event().build();
     let mut proxy = event_loop.create_proxy();
 
     let mut future_runtime = {
@@ -188,7 +190,6 @@ where
             .expect("Append canvas to HTML body");
     }
     // ────────────────────────────────────────────────────────────────────────────────
-    let mut state = State::new(&application, &window);
 
     // let dpr = window.scale_factor();
     // let size: (f64, f64) = window.inner_size().to_logical::<f64>(dpr).into();
@@ -199,7 +200,7 @@ where
 
     let mut clipboard = Clipboard::connect(&window);
 
-    let (compositor, renderer) = C::new(compositor_settings, &window)?;
+    let (compositor, renderer) = C::new(compositor_settings)?;
 
     run_command(
         init_command,
@@ -230,8 +231,7 @@ where
         receiver,
         window,
         settings.exit_on_close_request,
-        emg_graph_rc_refcell.clone(), //TODO clone? or move
-        state,
+        emg_graph_rc_refcell,
     ));
 
     let mut context = task::Context::from_waker(task::noop_waker_ref());
@@ -239,12 +239,12 @@ where
     platform::run(event_loop, move |event, _, control_flow| {
         use winit::event_loop::ControlFlow;
 
-        if let ControlFlow::Exit = control_flow {
+        if let &mut ControlFlow::Exit = control_flow {
             return;
         }
 
         //just make ::ScaleFactorChanged to ::Resized
-        let event = match event {
+        let opt_event = match event {
             winit::event::Event::WindowEvent {
                 event: winit::event::WindowEvent::ScaleFactorChanged { new_inner_size, .. },
                 window_id,
@@ -255,8 +255,8 @@ where
             _ => event.to_static(),
         };
 
-        if let Some(event) = event {
-            sender.start_send(event).expect("Send event");
+        if let Some(event) = opt_event {
+            sender.start_send(event).expect("Send event error");
 
             let poll = instance.as_mut().poll(&mut context);
 
@@ -281,7 +281,6 @@ async fn run_instance<A, E, C>(
     window: winit::window::Window,
     exit_on_close_request: bool,
     g: A::GTreeBuilder,
-    mut state: State<A>,
 ) where
     A: Application + 'static,
     E: Executor + 'static,
@@ -290,7 +289,14 @@ async fn run_instance<A, E, C>(
     use emg_futures::futures::stream::StreamExt;
     use winit::event;
 
+    info!(
+        "======== will create_surface inner_size: {:?} ",
+        window.inner_size()
+    );
+
     let mut surface = compositor.create_surface(&window);
+    let mut state = State::new(&application, &window);
+    let mut viewport_version = state.viewport_version();
 
     // let physical_size = state.physical_size();
 
@@ -440,55 +446,50 @@ async fn run_instance<A, E, C>(
                 // let _span = info_span!(target:"winit event","RedrawRequested").entered();
                 info!(target:"winit event","RedrawRequested");
 
-                // let physical_size = state.physical_size();
-
-                // if physical_size.width == 0 || physical_size.height == 0 {
-                // continue;
+                // if physical_size.x == 0 || physical_size.y == 0 {
+                //     continue;
                 // }
 
                 debug.render_started();
-                // let current_viewport_version = state.viewport_version();
+                let current_viewport_version = state.viewport_version();
 
-                // if viewport_version != current_viewport_version {
-                //     let logical_size = state.logical_size();
+                if viewport_version != current_viewport_version {
+                    let physical_size = state.physical_size();
 
-                //     debug.layout_started();
-                //     user_interface = ManuallyDrop::new(
-                //         ManuallyDrop::into_inner(user_interface)
-                //             .relayout(logical_size, &mut renderer),
-                //     );
-                //     debug.layout_finished();
+                    //     let logical_size = state.logical_size();
 
-                //     debug.draw_started();
-                //     let new_mouse_interaction = user_interface.draw(
-                //         &mut renderer,
-                //         state.theme(),
-                //         &renderer::Style {
-                //             text_color: state.text_color(),
-                //         },
-                //         state.cursor_position(),
-                //     );
+                    //     debug.layout_started();
+                    //     user_interface = ManuallyDrop::new(
+                    //         ManuallyDrop::into_inner(user_interface)
+                    //             .relayout(logical_size, &mut renderer),
+                    //     );
+                    //     debug.layout_finished();
 
-                //     if new_mouse_interaction != mouse_interaction {
-                //         window
-                //             .set_cursor_icon(conversion::mouse_interaction(new_mouse_interaction));
+                    //     debug.draw_started();
+                    //     let new_mouse_interaction = user_interface.draw(
+                    //         &mut renderer,
+                    //         state.theme(),
+                    //         &renderer::Style {
+                    //             text_color: state.text_color(),
+                    //         },
+                    //         state.cursor_position(),
+                    //     );
 
-                //         mouse_interaction = new_mouse_interaction;
-                //     }
-                //     debug.draw_finished();
+                    //     if new_mouse_interaction != mouse_interaction {
+                    //         window
+                    //             .set_cursor_icon(conversion::mouse_interaction(new_mouse_interaction));
 
-                //     compositor.configure_surface(
-                //         &mut surface,
-                //         physical_size.width,
-                //         physical_size.height,
-                //     );
+                    //         mouse_interaction = new_mouse_interaction;
+                    //     }
+                    //     debug.draw_finished();
 
-                //     viewport_version = current_viewport_version;
-                // }
+                    compositor.configure_surface(&mut surface, physical_size.x, physical_size.y);
 
+                    viewport_version = current_viewport_version;
+                }
                 match compositor.present(
                     &mut renderer,
-                    &mut ctx,
+                    &*ctx,
                     &mut surface,
                     // state.viewport(),
                     // state.background_color(),
@@ -503,7 +504,7 @@ async fn run_instance<A, E, C>(
                     Err(error) => match error {
                         // This is an unrecoverable error.
                         compositor::SurfaceError::OutOfMemory => {
-                            panic!("{:?}", error);
+                            panic!("{error:?}");
                         }
                         _ => {
                             debug.render_finished();
@@ -526,6 +527,7 @@ async fn run_instance<A, E, C>(
             } => {
                 // let _span = info_span!(target:"winit event","WindowEvent").entered();
                 info!(target:"winit event","WindowEvent:{:?}",window_event);
+                // info!(target:"winit event","window.scale_factor():{}",window.scale_factor());//2
 
                 if requests_exit(&window_event, state.modifiers()) && exit_on_close_request {
                     break;
@@ -538,6 +540,10 @@ async fn run_instance<A, E, C>(
                 {
                     // native_events.push(event);
                     native_events.update(|ev| ev.push_back(event_with_flag));
+                }
+
+                if viewport_version != state.viewport_version() {
+                    window.request_redraw();
                 }
             }
             _ => {}
@@ -593,6 +599,7 @@ pub fn requests_exit(
 //     user_interface
 // }
 
+//TODO check  where is  using? current not use
 /// Updates an [`Application`] by feeding it the provided messages, spawning any
 /// resulting [`Command`], and tracking its [`Subscription`].
 pub fn update<A: Application, E: Executor>(
@@ -659,6 +666,7 @@ pub fn run_command<Message: 'static + std::fmt::Debug + Send, E: Executor>(
             command::Action::Window(action) => match action {
                 window::Action::Resize { width, height } => {
                     window.set_inner_size(winit::dpi::LogicalSize { width, height });
+                    //TODO make resize
                 }
                 window::Action::Move { x, y } => {
                     window.set_outer_position(winit::dpi::LogicalPosition { x, y });

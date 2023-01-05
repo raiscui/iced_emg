@@ -1,23 +1,24 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2022-09-06 16:17:04
+ * @LastEditTime: 2023-01-04 18:44:28
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::{
-     
-    g_node::{EmgNodeItem, GraphType, NItem, GelType},
-     GElement, g_tree_builder::{GTreeBuilderFn, GTreeBuilderElement}, widget::Layer,
+    g_node::{EmgNodeItem, GelType, GraphType, NItem},
+    g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn},
+    widget::Layer,
+    GElement,
 };
-use emg::{edge_index_no_source, node_index, Edge, EdgeIndex, EdgeCollect, NodeIndex};
+use emg::{edge_index_no_source, node_index, Edge, EdgeCollect, EdgeIndex, NodeIndex};
 use emg_common::GenericSize;
 use emg_common::{vector, IdStr};
 use emg_hasher::CustomHasher;
 // use emg_common::{GenericSize, Vector};
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
-use emg_shaping:: ShapeOfUse;
+use emg_shaping::ShapeOfUse;
 use emg_state::{
     topo::{self, call_in_slot},
     use_state,
@@ -25,90 +26,94 @@ use emg_state::{
     CloneStateVar, StateAnchor,
 };
 use indexmap::IndexSet;
-use std::{cell::{RefCell, Ref}, hash::BuildHasherDefault, rc::Rc, ops::Deref};
-use tracing::{debug, instrument, trace, trace_span, warn, info, info_span};
+use std::{
+    cell::{Ref, RefCell},
+    hash::BuildHasherDefault,
+    ops::Deref,
+    rc::Rc,
+};
+use tracing::{debug, info, info_span, instrument, trace, trace_span, warn};
 
-struct GraphNodeBuilder<Message,RenderContext,Ix=IdStr> 
-where 
-Message:  'static, 
-RenderContext:crate::RenderContext +'static,
-Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default + 'static, 
+struct GraphNodeBuilder<Message, Ix = IdStr>
+where
+    Message: 'static,
+    Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default + 'static,
 {
-    graph_rc: Rc<RefCell<GraphType<Message,RenderContext,Ix>>>,
+    graph_rc: Rc<RefCell<GraphType<Message, Ix>>>,
 
-    key:Option< Ix>,
-    gel_state:Option<NItem<Message,RenderContext>>,
-    incoming_eix_set:Option<EdgeCollect<Ix>>,
-    outgoing_eix_set:Option<EdgeCollect<Ix>>,
-
+    key: Option<Ix>,
+    gel_state: Option<NItem<Message>>,
+    incoming_eix_set: Option<EdgeCollect<Ix>>,
+    outgoing_eix_set: Option<EdgeCollect<Ix>>,
 }
 
-impl<Message,RenderContext> GraphNodeBuilder<Message,RenderContext, IdStr>
-where 
-Message: 'static, 
-RenderContext:crate::RenderContext +'static,
-
+impl<Message> GraphNodeBuilder<Message, IdStr>
+where
+    Message: 'static,
 {
-    fn new(graph_rc: Rc<RefCell<GraphType<Message, RenderContext,IdStr>>>) -> Self { Self { graph_rc,key:None,gel_state: None,incoming_eix_set:None,outgoing_eix_set:None} }
+    fn new(graph_rc: Rc<RefCell<GraphType<Message, IdStr>>>) -> Self {
+        Self {
+            graph_rc,
+            key: None,
+            gel_state: None,
+            incoming_eix_set: None,
+            outgoing_eix_set: None,
+        }
+    }
     #[allow(clippy::missing_const_for_fn)]
-    fn and_key(mut self, k:IdStr) ->Self {
-        self.key= Some(k);
+    fn and_key(mut self, k: IdStr) -> Self {
+        self.key = Some(k);
         self
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    fn and_gel_state(mut self, gel_state: NItem<Message,RenderContext>) -> Self {
-        self.gel_state =Some( gel_state);
+    fn and_gel_state(mut self, gel_state: NItem<Message>) -> Self {
+        self.gel_state = Some(gel_state);
         self
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    fn and_incoming_eix_set(mut self, incoming_eix_set: EdgeCollect<IdStr>)->Self {
+    fn and_incoming_eix_set(mut self, incoming_eix_set: EdgeCollect<IdStr>) -> Self {
         self.incoming_eix_set = Some(incoming_eix_set);
         self
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    fn and_outgoing_eix_set(mut self, outgoing_eix_set: EdgeCollect<IdStr>)->Self {
+    fn and_outgoing_eix_set(mut self, outgoing_eix_set: EdgeCollect<IdStr>) -> Self {
         self.outgoing_eix_set = Some(outgoing_eix_set);
         self
     }
     #[topo::nested]
-    fn build_in_topo(self){
+    fn build_in_topo(self) {
         let incoming_eix_set = use_state(self.incoming_eix_set.unwrap());
         let outgoing_eix_set = use_state(self.outgoing_eix_set.unwrap());
-        let node_item = EmgNodeItem::<NItem<Message,RenderContext>,GelType<Message,RenderContext>,IdStr>::new(
+        let node_item = EmgNodeItem::<NItem<Message>, GelType<Message>, IdStr>::new(
             self.key.clone().unwrap(),
-         self.gel_state.unwrap(),
+            self.gel_state.unwrap(),
             &incoming_eix_set.watch(),
             &outgoing_eix_set.watch(),
             self.graph_rc.clone(),
         );
-                //TODO all use or_insert_node?
-        self.graph_rc.borrow_mut().insert_node_with_edges(self.key.unwrap(), 
-        node_item, incoming_eix_set, outgoing_eix_set);
+        //TODO all use or_insert_node?
+        self.graph_rc.borrow_mut().insert_node_with_edges(
+            self.key.unwrap(),
+            node_item,
+            incoming_eix_set,
+            outgoing_eix_set,
+        );
     }
 }
 
-
-
-
-
-impl<Message,RenderCtx> GTreeBuilderFn<Message,RenderCtx> for Rc<RefCell<GraphType<Message,RenderCtx>>>
+impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
 // where
 //     Message: std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug,
-where 
-RenderCtx:  crate::RenderContext +'static 
 {
     type Ix = IdStr;
-    type GraphType= GraphType<Message,RenderCtx>;
-    
+    type GraphType = GraphType<Message>;
 
-    fn graph(& self)->Ref< GraphType<Message,RenderCtx>>{
+    fn graph(&self) -> Ref<GraphType<Message>> {
         self.borrow()
     }
-
-    
 
     #[topo::nested]
     #[instrument(skip(self, size, origin, align))]
@@ -119,8 +124,7 @@ RenderCtx:  crate::RenderContext +'static
         size: (GenericSizeAnchor, GenericSizeAnchor),
         origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
         align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
-    ) -> Result<EmgEdgeItem<Self::Ix,RenderCtx>, String>
-    {
+    ) -> Result<EmgEdgeItem<Self::Ix>, String> {
         let mut g = self.borrow_mut();
         g.nodes_connect_eix(&edge_index)
             .ok_or("node insert eix fails")?;
@@ -144,7 +148,7 @@ RenderCtx:  crate::RenderContext +'static
     fn setup_default_edge_in_topo(
         &self,
         edge_index: EdgeIndex<Self::Ix>,
-    ) -> Result<EmgEdgeItem<Self::Ix,RenderCtx>, String> {
+    ) -> Result<EmgEdgeItem<Self::Ix>, String> {
         let mut g = self.borrow_mut();
         g.nodes_connect_eix(&edge_index)
             .ok_or("node insert eix fails")?;
@@ -167,28 +171,33 @@ RenderCtx:  crate::RenderContext +'static
     }
 
     #[topo::nested]
-    fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message, RenderCtx>) {
+    fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message>) {
         match tree_element {
             GTreeBuilderElement::Layer(root_id, edge_shapers, children_list) => {
                 let _span = trace_span!("=> handle_root [layer] ",%root_id).entered();
-                trace!("handle_root_in_topo: {:?}==>{:#?}", &root_id, &children_list);
+                trace!(
+                    "handle_root_in_topo: {:?}==>{:#?}",
+                    &root_id,
+                    &children_list
+                );
                 info!("handle_root_in_topo: {:?}", &root_id);
 
                 // ─────────────────────────────────────────────────────────────────
 
-            
                 let nix: NodeIndex<Self::Ix> = node_index(root_id.clone());
 
                 let edge_index = edge_index_no_source(root_id.clone());
                 GraphNodeBuilder::new(self.clone())
-                .and_key(root_id.clone())
-                .and_gel_state(use_state(StateAnchor::constant(Rc::new(Layer::<Message, RenderCtx>::new(root_id.clone()).into()))))
-                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
-                    5,
-                    BuildHasherDefault::<CustomHasher>::default(),
-                ))
-                .build_in_topo();
+                    .and_key(root_id.clone())
+                    .and_gel_state(use_state(StateAnchor::constant(Rc::new(
+                        Layer::<Message>::new(root_id.clone()).into(),
+                    ))))
+                    .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                    .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                        5,
+                        BuildHasherDefault::<CustomHasher>::default(),
+                    ))
+                    .build_in_topo();
 
                 let width = global_width();
                 let height = global_height();
@@ -242,12 +251,12 @@ RenderCtx:  crate::RenderContext +'static
     }
 
     #[allow(clippy::too_many_lines)]
-    #[instrument(skip(self,tree_element))]
+    #[instrument(skip(self, tree_element))]
     #[topo::nested]
     fn handle_children_in_topo(
         &self,
         replace_id: Option<&Self::Ix>,
-        tree_element: &'_ GTreeBuilderElement<Message,RenderCtx>,
+        tree_element: &'_ GTreeBuilderElement<Message>,
     ) {
         debug!("handle_children");
         let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
@@ -255,12 +264,9 @@ RenderCtx:  crate::RenderContext +'static
             //
             GTreeBuilderElement::Layer(org_id, edge_shapers, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
-                let _span =
-                    info_span!("-> [layer] ",?org_id, ?id, ?parent_nix).entered();
-                
+                let _span = info_span!("-> [layer] ", ?org_id, ?id, ?parent_nix).entered();
 
                 trace!("handle_children:\n{:?}==>{:#?}", &id, &children_list);
-
 
                 //NOTE current node 因为dyn 节点 插入新节点时候 没有删除原存在节点,所以会重复走 handle_children_in_topo, 当前这里处理是ID存在就全部跳过
                 //TODO make GTreeBuilderElement all type same like this
@@ -271,36 +277,32 @@ RenderCtx:  crate::RenderContext +'static
                 //         new_dom
                 //     )
                 // });
-                if self.borrow().nodes_contains_key(id){
-                    warn!("children:Layer id:{} already exists , pass",id);
+                if self.borrow().nodes_contains_key(id) {
+                    warn!("children:Layer id:{} already exists , pass", id);
                     return;
                 }
                 // node index
                 //NOTE current node 因为`or_insert_node` 1个ID 只插入一次
-        
 
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
                 GraphNodeBuilder::new(self.clone())
-                .and_key(id.clone())
-                .and_gel_state(use_state(StateAnchor::constant(Rc::new(Layer::<Message,RenderCtx>::new(id.clone()).into()))))
-                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
-                    2,
-                    BuildHasherDefault::<CustomHasher>::default(),
-                ))
-                .build_in_topo();
+                    .and_key(id.clone())
+                    .and_gel_state(use_state(StateAnchor::constant(Rc::new(
+                        Layer::<Message>::new(id.clone()).into(),
+                    ))))
+                    .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                    .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                        2,
+                        BuildHasherDefault::<CustomHasher>::default(),
+                    ))
+                    .build_in_topo();
 
-
-                trace!("\nhandle_children:\n inserted node: {:#?}",&nix);
-
+                trace!("\nhandle_children:\n inserted node: {:#?}", &nix);
 
                 // edge
-                let mut new_def_ei = self
-                    .setup_default_edge_in_topo(edge_index)
-                    .unwrap();
-                trace!("\nhandle_children:\n inserted edge: {:#?}",&nix);
-
+                let mut new_def_ei = self.setup_default_edge_in_topo(edge_index).unwrap();
+                trace!("\nhandle_children:\n inserted edge: {:#?}", &nix);
 
                 let path = (*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
 
@@ -312,15 +314,15 @@ RenderCtx:  crate::RenderContext +'static
                     #[cfg(debug_assertions)]
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
                         debug_assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
-                        children_list
-                            .iter()
-                            .for_each(|child_layer| self.handle_children_in_topo(None,child_layer));
+                        children_list.iter().for_each(|child_layer| {
+                            self.handle_children_in_topo(None, child_layer)
+                        });
                     });
                     #[cfg(not(debug_assertions))]
                     illicit::Layer::new().offer(nix).enter(|| {
-                        children_list
-                            .iter()
-                            .for_each(|child_layer| self.handle_children_in_topo(None,child_layer));
+                        children_list.iter().for_each(|child_layer| {
+                            self.handle_children_in_topo(None, child_layer)
+                        });
                     });
                 });
             }
@@ -341,20 +343,22 @@ RenderCtx:  crate::RenderContext +'static
             // }
             GTreeBuilderElement::GElementTree(org_id, edge_shapers, gel, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
-                info!("\n handle children [GElementTree]: org_id: {:?},  id : {:?}", org_id, id);
+                info!(
+                    "\n handle children [GElementTree]: org_id: {:?},  id : {:?}",
+                    org_id, id
+                );
                 // warn!("\n handle children [GElementTree]: org_id: {:?},  id : {:?}", org_id, id);
-
 
                 let _span =
                     trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
 
                 //node index
-             
+
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix.clone(), nix.clone());
 
                 match gel{
-                    
+
                     GElement::SaNode_(gel_sa) => {
                         GraphNodeBuilder::new(self.clone())
                         .and_key(id.clone())
@@ -400,19 +404,15 @@ RenderCtx:  crate::RenderContext +'static
                     GElement::EmptyNeverUse => unreachable!(),
 
                 };
-                
+
                 // .map_or_else(|| {
-               
+
                 // }, |gel_sa| {
-       
+
                 // });
 
-               
-
                 //edge
-                let mut new_def_ei = self
-                    .setup_default_edge_in_topo(edge_index)
-                    .unwrap();
+                let mut new_def_ei = self.setup_default_edge_in_topo(edge_index).unwrap();
 
                 let path = (*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
 
@@ -427,7 +427,7 @@ RenderCtx:  crate::RenderContext +'static
                         debug_assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
 
                         for child_gtree_builder in children_list.iter() {
-                            self.handle_children_in_topo(None,child_gtree_builder);
+                            self.handle_children_in_topo(None, child_gtree_builder);
                         }
                     });
                 });
@@ -436,7 +436,6 @@ RenderCtx:  crate::RenderContext +'static
             //     let id = replace_id.unwrap_or(org_id);
             //     // info!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
             //     warn!("\n handle children [SaMapEffectGElementTree]: org_id: {:?},  id : {:?}", org_id, id);
-
 
             //     let _span =
             //         trace_span!("-> handle_children [SaMapEffectGElementTree] ", ?id, ?parent_nix).entered();
@@ -451,17 +450,18 @@ RenderCtx:  crate::RenderContext +'static
             //     let gel_sa = (**builder_fn)(&*rc_p);
             //     warn!("---- before run builder , anchor: {}",&rc_p);
             //     parent_item.set_gel_sa( gel_sa);
-                
-             
+
             // }
             //TODO _edge_shaper use for  inject element
-            GTreeBuilderElement::Dyn(org_id,_edge_shaper,sa_dict_gbe) => {
+            GTreeBuilderElement::Dyn(org_id, _edge_shaper, sa_dict_gbe) => {
                 let id = replace_id.unwrap_or(org_id);
-                info!("\n handle children [Dyn]: org_id: {:?},  id : {:?}", org_id, id);
+                info!(
+                    "\n handle children [Dyn]: org_id: {:?},  id : {:?}",
+                    org_id, id
+                );
 
                 let _span = trace_span!("-> handle_children [SA] ", ?parent_nix).entered();
-                debug!("builder:: GTreeBuilderElement::Dyn id:{:?}",id);
-
+                debug!("builder:: GTreeBuilderElement::Dyn id:{:?}", id);
 
                 let this = self.clone();
                 let this2 = self.clone();
@@ -470,7 +470,9 @@ RenderCtx:  crate::RenderContext +'static
 
                 // let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
                 // let update_id = TopoKey::new(topo::CallId::current());
-                let update_id = TopoKey::new(topo::root(||topo::call_in_slot(sa_dict_gbe.id(),topo::CallId::current)));
+                let update_id = TopoKey::new(topo::root(|| {
+                    topo::call_in_slot(sa_dict_gbe.id(), topo::CallId::current)
+                }));
                 //TODO move it , for  use StateAnchor
                 sa_dict_gbe
                     .insert_before_fn(
@@ -479,18 +481,17 @@ RenderCtx:  crate::RenderContext +'static
                             //// TODO use graph find all parent
                             // let parent = parent_nix.clone();
                             debug!("builder::running before_fn");
-                            trace!("builder::before_fn: is current has? {}",&current.is_some());
+                            trace!("builder::before_fn: is current has? {}", &current.is_some());
                             if let Some(old_data) = current {
                                 let old_data_clone = (**old_data).clone();
-                                
-                                let new_v_removed =old_data_clone.relative_complement(new_v.clone());
+
+                                let new_v_removed =
+                                    old_data_clone.relative_complement(new_v.clone());
                                 for k in new_v_removed.keys() {
                                     this.borrow_mut().remove_node(node_index(k.clone()));
                                 }
-                                
-                                //INFO like: https://stackoverflow.com/questions/56261476/why-is-finding-the-intersection-of-integer-sets-faster-with-a-vec-compared-to-bt
 
-                                
+                                //INFO like: https://stackoverflow.com/questions/56261476/why-is-finding-the-intersection-of-integer-sets-faster-with-a-vec-compared-to-bt
                             }
                         },
                         false,
@@ -500,7 +501,6 @@ RenderCtx:  crate::RenderContext +'static
                 // let update_id2 =TopoKey::new(topo::CallId::current());
                 // let update_id2 = TopoKey::new(topo::call(topo::CallId::current));
                 let gtbe_id = id.clone();
-
 
                 sa_dict_gbe
                     .insert_after_fn(
@@ -513,14 +513,14 @@ RenderCtx:  crate::RenderContext +'static
 
                             let cur_path = illicit::get::<EPath<Self::Ix>>()
                                 .map_or(current_path.clone(), |p| (*p).clone());
-                                    
+
                             illicit::Layer::new()
                                 .offer(cur_parent_nix)
                                 .offer(cur_path)
                                 .enter(|| {
                                     value.iter().for_each(|(k, v)| {
                                     info!("builder::after_fn >> illicit env , \n ---- run handle_children_in_topo for key:{}",k);
-                                     trace_span!( 
+                                     trace_span!(
                                         "builder::illicit ",
                                         ).in_scope(||{
                                             //TODO: use dyn key id in root 区分每个dyn, 这样可以使用same key
@@ -532,9 +532,9 @@ RenderCtx:  crate::RenderContext +'static
                                                         }
                                                     );
                                                 });
-                                                
+
                                             });
-                                            
+
                                         });
                                     });
                                 });
@@ -547,15 +547,11 @@ RenderCtx:  crate::RenderContext +'static
                 let rc_sa = sa_dict_gbe.get_rc();
                 for (k, v) in rc_sa.iter() {
                     debug!("builder:: sa_dict_gbe handle_children_in_topo call");
-                    topo::root(||{
-                        call_in_slot(id,||{
-
-                            call_in_slot(k,||
-                                {
-                                    self.handle_children_in_topo(Some(k),v);
-                                }
-                            );
-
+                    topo::root(|| {
+                        call_in_slot(id, || {
+                            call_in_slot(k, || {
+                                self.handle_children_in_topo(Some(k), v);
+                            });
                         });
                     });
                 }
@@ -569,33 +565,37 @@ RenderCtx:  crate::RenderContext +'static
 
             GTreeBuilderElement::ShapingUse(org_id, u) => {
                 let id = replace_id.unwrap_or(org_id);
-                info!("\n handle children [ShapingUse]: org_id: {:?},  id : {:?}", org_id, id);
+                info!(
+                    "\n handle children [ShapingUse]: org_id: {:?},  id : {:?}",
+                    org_id, id
+                );
 
                 let _span =
                     trace_span!("-> handle_children_in_topo [ShapingUse] ", ?id, ?parent_nix)
                         .entered();
 
                 //node index
-              
+
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(self.clone())
-                .and_key(id.clone())
-                .and_gel_state(use_state(StateAnchor::constant(Rc::new(u.clone().into()))))
-                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .and_outgoing_eix_set(IndexSet::with_hasher(
-                    BuildHasherDefault::<CustomHasher>::default(),
-                ))
-                .build_in_topo();
+                    .and_key(id.clone())
+                    .and_gel_state(use_state(StateAnchor::constant(Rc::new(u.clone().into()))))
+                    .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                    .and_outgoing_eix_set(IndexSet::with_hasher(
+                        BuildHasherDefault::<CustomHasher>::default(),
+                    ))
+                    .build_in_topo();
 
-                let _ei = self
-                    .setup_default_edge_in_topo(edge_index)
-                    .unwrap();
+                let _ei = self.setup_default_edge_in_topo(edge_index).unwrap();
             }
 
             GTreeBuilderElement::Cl(org_id, dyn_fn) => {
                 let id = replace_id.unwrap_or(org_id);
-                info!("\n handle children [Cl]: org_id: {:?},  id : {:?}", org_id, id);
+                info!(
+                    "\n handle children [Cl]: org_id: {:?},  id : {:?}",
+                    org_id, id
+                );
 
                 let _span = trace_span!(
                     "-> handle_children_in_topo [Cl] dyn_fn running",
@@ -605,37 +605,38 @@ RenderCtx:  crate::RenderContext +'static
                 .entered();
 
                 dyn_fn();
-            },
+            }
 
             // // TODO make RC remove most clones
             GTreeBuilderElement::Event(org_id, callback) => {
-                debug!("GTreeBuilderElement::Event : {:?} {:?}", org_id,replace_id);
+                debug!("GTreeBuilderElement::Event : {:?} {:?}", org_id, replace_id);
                 let id = replace_id.unwrap_or(org_id);
-                info!("\n handle children [Event]: org_id: {:?},  id : {:?}", org_id, id);
+                info!(
+                    "\n handle children [Event]: org_id: {:?},  id : {:?}",
+                    org_id, id
+                );
 
                 let _span =
                     trace_span!("-> handle_children_in_topo [Event] ", ?id, ?parent_nix).entered();
 
                 // TODO: make all into() style?
                 // node index
-              
+
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(self.clone())
-                .and_key(id.clone())
-                .and_gel_state(use_state(StateAnchor::constant(Rc::new(callback.clone().into()))))
-                .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                .and_outgoing_eix_set(IndexSet::with_hasher(
-                    BuildHasherDefault::<CustomHasher>::default(),
-                ))
-                .build_in_topo();
+                    .and_key(id.clone())
+                    .and_gel_state(use_state(StateAnchor::constant(Rc::new(
+                        callback.clone().into(),
+                    ))))
+                    .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+                    .and_outgoing_eix_set(IndexSet::with_hasher(
+                        BuildHasherDefault::<CustomHasher>::default(),
+                    ))
+                    .build_in_topo();
 
-                let _ei = self
-                    .setup_default_edge_in_topo(edge_index)
-                    .unwrap();
-            } 
-            
-            // GTreeBuilderElement::GenericTree(id, edge_shapers, dyn_gel, shapers) => {
+                let _ei = self.setup_default_edge_in_topo(edge_index).unwrap();
+            } // GTreeBuilderElement::GenericTree(id, edge_shapers, dyn_gel, shapers) => {
               //     panic!("test here");
               //     let _span =
               //         trace_span!("-> handle_children [GElementTree] ", ?id, ?parent_nix).entered();
@@ -676,42 +677,42 @@ RenderCtx:  crate::RenderContext +'static
 
 #[cfg(test)]
 mod tests {
-    use std::{rc::Rc, cell::RefCell, hash::BuildHasherDefault};
+    use std::{cell::RefCell, hash::BuildHasherDefault, rc::Rc};
 
     use emg::edge_index_no_source;
     use emg_common::IdStr;
     use emg_hasher::CustomHasher;
-    use emg_piet_gpu::RenderCtx;
-    use emg_state::{StateAnchor, use_state};
+    use emg_state::{use_state, StateAnchor};
+    use emg_vello::SceneFrag;
     use indexmap::IndexSet;
 
-    use crate::{GraphType, widget::Layer};
+    use crate::{widget::Layer, GraphType};
 
     use super::GraphNodeBuilder;
 
     #[derive(Debug, Clone, PartialEq)]
-    enum Message{
-        
-    }
+    enum Message {}
 
     #[test]
-    fn node_item_build (){
-        let emg_graph = GraphType::<Message,RenderCtx>::default();
+    fn node_item_build() {
+        let emg_graph = GraphType::<Message>::default();
         let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
 
         // ────────────────────────────────────────────────────────────────────────────────
-        let root_id  = IdStr::new_inline("a");
+        let root_id = IdStr::new_inline("a");
         let edge_index = edge_index_no_source(root_id.clone());
-    // ────────────────────────────────────────────────────────────────────────────────
+        // ────────────────────────────────────────────────────────────────────────────────
 
         GraphNodeBuilder::new(emg_graph_rc_refcell)
-                    .and_key(root_id.clone())
-                    .and_gel_state(use_state(StateAnchor::constant(Rc::new(Layer::<Message,RenderCtx>::new(root_id.clone()).into()))))
-                    .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
-                    .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
-                        5,
-                        BuildHasherDefault::<CustomHasher>::default(),
-                    ))
-                    .build_in_topo();
+            .and_key(root_id.clone())
+            .and_gel_state(use_state(StateAnchor::constant(Rc::new(
+                Layer::<Message>::new(root_id.clone()).into(),
+            ))))
+            .and_incoming_eix_set([edge_index.clone()].into_iter().collect())
+            .and_outgoing_eix_set(IndexSet::with_capacity_and_hasher(
+                5,
+                BuildHasherDefault::<CustomHasher>::default(),
+            ))
+            .build_in_topo();
     }
 }

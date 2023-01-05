@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2022-09-19 10:16:11
+ * @LastEditTime: 2023-01-04 23:53:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,26 +10,24 @@ use crate::{node_builder::EventNode, PaintCtx};
 use emg_common::{IdStr, Pos, Vector};
 use emg_native::{event::EventWithFlagType, renderer::Renderer, Event, Program, Widget};
 use emg_state::{Dict, StateAnchor};
-use std::ops::Deref;
+use std::{ops::Deref, rc::Rc};
 
 use crate::GTreeBuilderElement;
 
 pub trait GraphProgram: Program {
-    type Renderer: Renderer<ImplRenderContext = <Self as Program>::ImplRenderContext>;
+    // type Renderer: Renderer<SceneCtx = <Self as Program>::WhoImplSceneCtx>;
+    type Renderer: Renderer;
 
-    type GTreeBuilder: crate::GTreeBuilderFn<
-            <Self as Program>::Message,
-            <Self as Program>::ImplRenderContext,
-            GraphType = Self::GraphType,
-        > + Clone;
+    type GTreeBuilder: crate::GTreeBuilderFn<<Self as Program>::Message, GraphType = Self::GraphType>
+        + Clone;
     type GraphType: Default;
-    type GElementType: Widget<<Self as Program>::Message, <Self as Program>::ImplRenderContext>;
+    type GElementType: Widget;
     type RefedGelType: Deref<Target = Self::GElementType>;
 
     fn tree_build(
         &self,
         // orders: impl Orders<Self::Message> + 'static,
-    ) -> GTreeBuilderElement<Self::Message, Self::ImplRenderContext>;
+    ) -> GTreeBuilderElement<Self::Message>;
 
     fn graph_setup(&self, renderer: &Self::Renderer) -> Self::GTreeBuilder;
 
@@ -42,6 +40,6 @@ pub trait GraphProgram: Program {
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (
         crate::EventMatchsSa<Self::Message>,
-        StateAnchor<PaintCtx<Self::ImplRenderContext>>,
+        StateAnchor<Rc<<Self::Renderer as Renderer>::SceneCtx>>,
     );
 }

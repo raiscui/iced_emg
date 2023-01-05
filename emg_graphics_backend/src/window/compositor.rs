@@ -1,15 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 16:06:48
- * @LastEditTime: 2022-09-02 17:45:46
+ * @LastEditTime: 2023-01-05 17:59:32
  * @LastEditors: Rais
  * @Description:
  */
 //! A compositor is responsible for initializing a renderer and managing window
 //! surfaces.
 
-use emg_native::renderer::Renderer;
-use raw_window_handle::HasRawWindowHandle;
+use emg_native::renderer::{Renderer, SceneCtx};
+use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use thiserror::Error as TError;
 
 use crate::Error;
@@ -26,15 +26,14 @@ pub trait Compositor: Sized {
     type Surface;
 
     /// Creates a new [`Compositor`].
-    fn new<W: HasRawWindowHandle>(
-        settings: Self::Settings,
-        window: &W,
-    ) -> Result<(Self, Self::Renderer), Error>;
+    fn new(settings: Self::Settings) -> Result<(Self, Self::Renderer), Error>;
 
     /// Crates a new [`Surface`] for the given window.
     ///
     /// [`Surface`]: Self::Surface
-    fn create_surface<W: HasRawWindowHandle>(&mut self, window: &W) -> Self::Surface;
+    fn create_surface<W>(&mut self, window: &W) -> Self::Surface
+    where
+        W: HasRawWindowHandle + HasRawDisplayHandle;
 
     /// Configures a new [`Surface`] with the given dimensions.
     ///
@@ -51,7 +50,7 @@ pub trait Compositor: Sized {
     fn present(
         &mut self,
         renderer: &mut Self::Renderer,
-        render_ctx: &mut <Self::Renderer as emg_native::renderer::Renderer>::ImplRenderContext,
+        scene_ctx: &<Self::Renderer as Renderer>::SceneCtx,
         surface: &mut Self::Surface,
         // viewport: &Viewport,
         // background_color: Color,

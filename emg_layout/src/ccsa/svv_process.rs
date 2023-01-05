@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-21 10:50:01
- * @LastEditTime: 2022-07-27 13:42:53
+ * @LastEditTime: 2023-01-04 21:31:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -168,7 +168,7 @@ where
 
             (
                 current_cassowary_inherited_generals.var(prop).map_or_else(
-                    || panic!("inherited generals: {} -> not find", prop),
+                    || panic!("inherited generals: {prop} -> not find"),
                     |v| Some(Left(v)),
                 ),
                 None,
@@ -214,12 +214,7 @@ where
                 let var = current_cassowary_inherited_generals
                     .var(&(v_name.clone() + "." + prop))
                     .map_or_else(
-                        || {
-                            panic!(
-                                "inherited generals: Virtual:{}.{} -> not find",
-                                v_name, prop
-                            )
-                        },
+                        || panic!("inherited generals: Virtual:{v_name}.{prop} -> not find"),
                         |v| Some(Left(v)),
                     );
 
@@ -228,8 +223,7 @@ where
                     .cloned()
                     .or_else(|| {
                         panic!(
-                            "inherited generals: Virtual:{}.{} ->constraint ,   not find",
-                            v_name, prop
+                            "inherited generals: Virtual:{v_name}.{prop} ->constraint ,   not find"
                         )
                     });
                 (var, expr)
@@ -250,7 +244,7 @@ where
                 current_cassowary_inherited_generals
                     .top_var(prop)
                     .map_or_else(
-                        || panic!("top global generals: {} -> not find", prop),
+                        || panic!("top global generals: {prop} -> not find"),
                         |v| Some(Left(v)),
                     ),
                 None,
@@ -322,7 +316,7 @@ fn scope_parent_val(
     warn!("[svv_to_var] [parent] end, {}: {}", lv, n);
 
     opt_p.as_ref().and_then(|p| p.var(prop)).map_or_else(
-        || panic!("parent {}:{} can't get prop:{}", lv, n, prop),
+        || panic!("parent {lv}:{n} can't get prop:{prop}"),
         |v| Some(Left(v)),
     )
 }
