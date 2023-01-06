@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2023-01-05 16:29:26
+ * @LastEditTime: 2023-01-06 13:09:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,7 +16,7 @@ use std::{
 use crate::renderer::{Affine, Color, Size};
 use emg_common::{na::Translation3, LayoutOverride, Vector};
 use emg_shaping::ShapingWhoNoWarper;
-use emg_state::StateAnchor;
+use emg_state::{state_lit::StateVarLit, StateAnchor};
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
 use tracing::{debug, info};
 
@@ -48,7 +48,7 @@ impl CtxIndex {
     }
 }
 
-#[derive(Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct PaintCtx {
     // pub(crate) state: &'a mut ContextState<'b>,
     widget_state: WidgetState,
