@@ -3,7 +3,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2023-01-04 21:25:50
+ * @LastEditTime: 2023-01-06 16:54:22
  * @LastEditors: Rais
 * @Description:
 */
@@ -19,12 +19,12 @@ use cassowary::{
 use derive_more::From;
 use emg::EdgeIndex;
 use emg_common::TypeName;
-use emg_state::{topo, Anchor, StateAnchor, StateMultiAnchor, StateVar};
+use emg_state::{state_lit::StateVarLit, topo, Anchor, StateAnchor, StateMultiAnchor, StateVar};
 use float_cmp::assert_approx_eq;
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
 use styles::{px, s, CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, LogicLength};
-use tracing::{debug_span, trace, trace_span, warn, warn_span};
+use tracing::{debug_span, info, trace, trace_span, warn, warn_span};
 
 use self::cassowary_calc::cassowary_calculation;
 
@@ -162,6 +162,7 @@ where
                 calculation_h(&p_calc_size, h),
             );
             trace!("new size: {}", &new_size);
+            info!("==== new size: {}", &new_size);
             new_size
         },
     );
@@ -174,26 +175,29 @@ where
     // ────────────────────────────────────────────────────────────────────────────────
 
     //NOTE used for suggest in current cassowary , with in [cass_or_calc_size]
-    let cass_or_calc_width = p_cass_calculated_vars.then(move |p_vars| {
-        let _debug_span_ = warn_span!("->[ get self prop calculated value ] ").entered();
-        // warn!("p_vars: {:?},  \n get :{:?}",&p_vars,&width_var);
-        // • • • • •
-        //TODO only width change then do this
-        //NOTE 如果 是 root下面的第一阶层节点,如果没定义cassowary constraint 或者定义少量、不涉及某些 Id element, p_calculated_vars 很可能是无 or 不全面的,
-        p_vars.get(&width_var).map(|(val, _)| **val).map_or_else(
-            || no_cass_downgrade_calculated_width.get_anchor(),
-            Anchor::constant,
-        )
-    });
+    let cass_or_calc_width = (p_cass_calculated_vars, &no_cass_downgrade_calculated_width).map(
+        move |p_vars, no_cass_width| {
+            let _debug_span_ = warn_span!("->[ get self prop calculated value ] ").entered();
+            // warn!("p_vars: {:?},  \n get :{:?}",&p_vars,&width_var);
+            // • • • • •
+            //TODO only width change then do this
+            //NOTE 如果 是 root下面的第一阶层节点,如果没定义cassowary constraint 或者定义少量、不涉及某些 Id element, p_calculated_vars 很可能是无 or 不全面的,
+            p_vars
+                .get(&width_var)
+                .map_or_else(|| *no_cass_width, |(val, _)| **val)
+        },
+    );
 
     //NOTE used for suggest in current cassowary , with in [cass_or_calc_size]
-    let cass_or_calc_height = p_cass_calculated_vars.then(move |p_vars| {
-        //TODO only height change then do this
-        p_vars.get(&height_var).map(|(val, _)| **val).map_or_else(
-            || no_cass_downgrade_calculated_height.get_anchor(),
-            Anchor::constant,
-        )
-    });
+    let cass_or_calc_height = (p_cass_calculated_vars, &no_cass_downgrade_calculated_height).map(
+        move |p_vars, no_cass_height| {
+            //TODO only height change then do this
+            p_vars
+                .get(&height_var)
+                .map_or_else(|| *no_cass_height, |(val, _)| **val)
+        },
+    );
+
     let top = (p_children_vars_sa, p_cass_calculated_vars).map(move |p_children_vars, p_vars| {
         //TODO only xx change then do this
         if p_children_vars.contains(&top_var) {

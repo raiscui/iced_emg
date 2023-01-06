@@ -987,34 +987,42 @@ where
 
                 let _g = span!(Level::TRACE, "[ source_node_incoming_edge_dict_sa recalculation ]:source_node_nix_sa_re_get change ").entered();
 
-                if opt_self_source_nix.is_none(){
-                    //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
-                    Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
-                    //TODO check why use unit? answer:need for `EdgeItemNode::Empty => path_ein_empty_node_builder`
-                    // Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::new())
-                }else{
-                    let opt_some_source_nix_clone = opt_self_source_nix.clone();
-                    edges.filter_map(move|someone_eix, e| {
+                // if opt_self_source_nix.is_none(){
+                //     //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
+                //     Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
+                //     //TODO check why use unit? answer:need for `EdgeItemNode::Empty => path_ein_empty_node_builder`
+                //     // Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::new())
+                // }else{
+                    opt_self_source_nix.clone().map_or_else(
+                        ||Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty)),
+                        |some_source_nix|{
 
-                        debug!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&opt_some_source_nix_clone);
-                        if   someone_eix.target_nix() == &opt_some_source_nix_clone {
 
-                            Some(e.item.edge_nodes.clone())
+                        edges.filter_map(move|someone_eix, e| {
 
-                        }else{
-                            None
-                        }
 
+                            debug!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&some_source_nix);
+                            if   someone_eix.target_nix().as_ref()? == &some_source_nix {
+
+                                Some(e.item.edge_nodes.clone())
+
+                            }else{
+                                None
+                            }
+
+                        })
+                        .anchor()
+                        .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
+
+                            x.values().map(emg_state::StateAnchor::anchor)
+                            .collect::<Anchor<Vector<_>>>()
+                            .map(|v:&Vector<_>|{
+                                let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
+                                Dict::unions(v.clone())})
+                        })
                     })
-                    .anchor()
-                    .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
-                        x.values().map(emg_state::StateAnchor::anchor)
-                        .collect::<Anchor<Vector<_>>>()
-                        .map(|v:&Vector<_>|{
-                            let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
-                            Dict::unions(v.clone())})
-                    })
-                }
+
+                // }
 
 
 
@@ -1022,30 +1030,34 @@ where
 
         // NOTE children cassowary_map
         let children_nodes = opt_self_target_node_nix_sa_re_get.then(move |opt_self_target_nix| {
-            if opt_self_target_nix.is_none() {
-                //NOTE 尾
-                Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default())
-            } else {
-                // TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
-                // TODO ? let e = edges2.map(|e|e.get(Edge::default()));
-                let opt_self_target_nix2 = opt_self_target_nix.clone();
-                edges2
-                    .filter_map(move |child_eix, v| {
-                        //NOTE  edge source is self_target, this is children
-                        if child_eix.source_nix() == &opt_self_target_nix2 {
-                            Some(v.edge_nodes.clone())
-                        } else {
-                            None
-                        }
-                    })
-                    .anchor()
-                    .then(|x: &Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>| {
-                        x.values()
-                            .map(emg_state::StateAnchor::anchor)
-                            .collect::<Anchor<Vector<_>>>()
-                            .map(|v: &Vector<_>| Dict::unions(v.clone()))
-                    })
-            }
+            // if opt_self_target_nix.is_none() {
+            //     //NOTE 尾
+            //     Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default())
+            // } else {
+            // TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
+            // TODO ? let e = edges2.map(|e|e.get(Edge::default()));
+            opt_self_target_nix.clone().map_or_else(
+                || Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default()),
+                |self_target_nix| {
+                    edges2
+                        .filter_map(move |child_eix, v| {
+                            //NOTE  edge source is self_target, this is children
+
+                            if child_eix.source_nix().as_ref()? == &self_target_nix {
+                                Some(v.edge_nodes.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .anchor()
+                        .then(|x: &Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>| {
+                            x.values()
+                                .map(emg_state::StateAnchor::anchor)
+                                .collect::<Anchor<Vector<_>>>()
+                                .map(|v: &Vector<_>| Dict::unions(v.clone()))
+                        })
+                },
+            )
         });
         // ─────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-01-04 22:23:03
+ * @LastEditTime: 2023-01-06 19:10:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,7 +25,7 @@ use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_native::{Event, PaintCtx, Widget};
 use emg_shaping::{ShapeOfUse, ShapingUse};
 use emg_state::{
-    Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar,
+    Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar, Var,
 };
 use tracing::{debug, error, event, info, info_span, trace, trace_span, warn, Level};
 // use vec_string::VecString;
@@ -76,6 +76,11 @@ where
             let ord_map_pool = paths_ord_map_pool_0.clone();
             ins.iter()
                 .map(|in_eix| {
+                    // let left_sa = Var::new(Dict::<EPath<IdStr>, _>::unit(
+                    //     EPath::new(vector![in_eix.clone()]),
+                    //     (),
+                    // ))
+                    // .watch();
                     let res = in_eix.source_nix().as_ref().map_or(
                         Left(in_eix.clone()),
                         |self_source_nix| {
@@ -126,10 +131,21 @@ where
                         //         Anchor::constant(Dict::<EPath<IdStr>, bool>::unit(EPath::new(vector![no_source_self_eix]), false))
                         //     }
                         // }
+                        // ─────────────────────────────
+
                         Anchor::constant(Dict::<EPath<IdStr>, _>::unit(
                             EPath::new(vector![no_source_self_eix]),
                             (),
                         ))
+                        // ─────────────────────────────
+
+                        // Var::new(Dict::<EPath<IdStr>, _>::unit(
+                        //     EPath::new(vector![no_source_self_eix]),
+                        //     (),
+                        // ))
+                        // .watch()
+                        // ─────────────────────────────
+                        // left_sa.clone()
                     })
                 })
                 .collect::<Anchor<Vector<_>>>()
