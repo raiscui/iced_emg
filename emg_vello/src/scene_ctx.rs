@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-12-22 16:18:38
- * @LastEditTime: 2023-01-04 23:24:17
+ * @LastEditTime: 2023-01-09 11:32:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,9 +9,7 @@
 use std::ops::{Deref, DerefMut};
 
 use emg_native::renderer::{Affine, BlendMode, BrushRef, Fill, Shape, Stroke};
-use vello::{
-    Scene, SceneBuilder as VelloSceneBuilder, SceneData, SceneFragment as VelloSceneFragment,
-};
+use vello::{Scene, SceneBuilder as VelloSceneBuilder, SceneFragment as VelloSceneFragment};
 
 // use ouroboros::self_referencing;
 

@@ -11,7 +11,7 @@ edition = "2021"
 emg_native = { path = "../emg_native" }
 emg_graphics_backend = { path = "../emg_graphics_backend" }
 #------
-vello = { path = "../../piet-gpu-new/vello" }
+vello = { path = "../../piet-gpu-new" }
 #------
 tracing = "0.1"
 raw-window-handle = "0.5.0"
