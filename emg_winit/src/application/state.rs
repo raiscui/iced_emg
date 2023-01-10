@@ -118,7 +118,7 @@ impl<A: Application> State<A> {
 
     /// Processes the provided window event and updates the [`State`]
     /// accordingly.
-    pub fn update(&mut self, window: &Window, event: &WindowEvent<'_>) {
+    pub fn update(&mut self, window: &Window, event: &WindowEvent<'_>, _debug: &mut Debug) {
         match event {
             WindowEvent::Resized(new_size) => {
                 let size = na::Vector2::<u32>::new(new_size.width, new_size.height);

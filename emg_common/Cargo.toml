@@ -13,7 +13,7 @@ crate-type = ["rlib"]
 [features]
 default = []
 pool = ["im-rc/pool"]
-
+debug = []
 
 [dependencies]
 # bitflags = "2.0.0-rc.1"

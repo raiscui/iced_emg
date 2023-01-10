@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-09 16:53:34
- * @LastEditTime: 2023-01-03 16:26:35
+ * @LastEditTime: 2023-01-10 15:00:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,6 +11,7 @@ use std::cmp::Ordering;
 use im_rc::{vector, OrdSet, Vector};
 use nalgebra::{Point2, Translation2, Vector2};
 use ordered_float::NotNan;
+use tracing::{debug, debug_span};
 
 use crate::Pos;
 
@@ -96,66 +97,105 @@ pub struct LayoutOverride {
     rect_tree: OrdSet<RectLTRB>,
     bbox: RectLTRB,
 }
+
 impl std::ops::Add for LayoutOverride {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        // for rect in rhs.rect_list {
-        //     // if !self
-        //     //     .rect_list
-        //     //     .iter()
-        //     //     .any(|any_rect| any_rect.is_completely_wrapped(&rect))
-        //     // {
-        //     //     self.rect_list.retain(|sr| !rect.is_completely_wrapped(sr));
-        //     //     self.rect_list.push_back(rect);
-        //     //     self.bbox = self.bbox.union(rect);
-        //     // }
-        // }
-        // self
-        rhs.rect_tree.into_iter().fold(self, |mut old, rect| {
-            old.underlay(rect);
-            old
-        })
-    }
-}
-impl std::ops::Add<&Self> for LayoutOverride {
-    type Output = Self;
+    fn add(mut self, rhs: Self) -> Self::Output {
+        let _span =
+            debug_span!("LayoutOverride", func = "LayoutOverride add", ?self, ?rhs).entered();
 
-    fn add(self, rhs: &Self) -> Self::Output {
-        rhs.rect_tree
-            .clone()
-            .into_iter()
-            .fold(self, |mut old, rect| {
+        if self.bbox.is_completely_disjoint(&rhs.bbox) {
+            self.rect_tree = self.rect_tree.union(rhs.rect_tree);
+            self.bbox = self.bbox.union(rhs.bbox);
+            self
+        } else {
+            rhs.rect_tree.into_iter().fold(self, |mut old, rect| {
+                #[cfg(feature = "debug")]
+                old.underlay::<String>(None, rect);
+                #[cfg(not(feature = "debug"))]
                 old.underlay(rect);
+
+                debug!("{old:?}");
                 old
             })
+        }
     }
 }
+
+// impl std::ops::Add<&Self> for LayoutOverride {
+//     type Output = Self;
+
+//     fn add(self, rhs: &Self) -> Self::Output {
+//         rhs.rect_tree
+//             .clone()
+//             .into_iter()
+//             .fold(self, |mut old, rect| {
+//                 old.underlay(rect);
+//                 old
+//             })
+//     }
+// }
 
 impl LayoutOverride {
     pub fn new(rect: RectLTRB) -> Self {
         Self {
-            rect_tree: OrdSet::new(),
+            rect_tree: OrdSet::unit(rect),
             bbox: rect,
         }
     }
+    #[cfg(feature = "debug")]
+    pub fn contains(&self, point: &Pos<f64>) -> bool {
+        let _span = debug_span!("LayoutOverride").entered();
+
+        if !self.bbox.contains(point) {
+            debug!("bbox contains: false");
+
+            return false;
+        }
+
+        let any = self.rect_tree.iter().any(|rect| {
+            debug!("rect_tree rect: {:?}", rect);
+            rect.contains(point)
+        });
+        debug!("any rect contains: {}", any);
+
+        if !any {
+            return false;
+        }
+
+        true
+    }
+    #[cfg(not(feature = "debug"))]
     pub fn contains(&self, point: &Pos<f64>) -> bool {
         self.bbox.contains(point) && self.rect_tree.iter().any(|rect| rect.contains(point))
     }
 
-    pub fn underlay(&mut self, rect: RectLTRB) {
+    #[cfg(feature = "debug")]
+    pub fn underlay<Ix: std::fmt::Debug>(&mut self, ix: Option<Ix>, rect: RectLTRB) {
+        let _span = debug_span!("LayoutOverride", ?ix, func = "underlay").entered();
+        debug!(target = "underlay", "self:{:#?}", self);
+        debug!(target = "underlay", "rect:{:#?}", rect);
+
         if rect.is_completely_wrapped(&self.bbox) {
             //NOTE rect 完全包裹  bb外框
+
+            debug!(target = "underlay", "rect 完全包裹  bb外框");
 
             self.bbox = rect;
             self.rect_tree.clear();
             self.rect_tree.insert(rect);
         } else if rect.is_completely_disjoint(&self.bbox) {
             //NOTE rect 完全不相交  bb外框
+
+            debug!(target = "underlay", "rect 完全不相交  bb外框");
+
             self.rect_tree.insert(rect);
 
             self.bbox = self.bbox.union(rect);
         } else {
+            //NOTE rect 与 bb外框 有交集
+            debug!(target = "underlay", "rect 与 bb外框 有交集");
             for big in self.rect_tree.range(..=rect) {
                 if big.is_completely_wrapped(&rect) {
                     return;
@@ -175,6 +215,56 @@ impl LayoutOverride {
             self.rect_tree.insert(rect);
             self.bbox = self.bbox.union(rect);
         }
+
+        debug!(target = "underlay end", ?self);
+    }
+
+    #[cfg(not(feature = "debug"))]
+    pub fn underlay(&mut self, rect: RectLTRB) {
+        let _span = debug_span!("LayoutOverride", func = "underlay").entered();
+        debug!(target = "underlay", "self:{:#?}", self);
+        debug!(target = "underlay", "rect:{:#?}", rect);
+
+        if rect.is_completely_wrapped(&self.bbox) {
+            //NOTE rect 完全包裹  bb外框
+
+            debug!(target = "underlay", "rect 完全包裹  bb外框");
+
+            self.bbox = rect;
+            self.rect_tree.clear();
+            self.rect_tree.insert(rect);
+        } else if rect.is_completely_disjoint(&self.bbox) {
+            //NOTE rect 完全不相交  bb外框
+
+            debug!(target = "underlay", "rect 完全不相交  bb外框");
+
+            self.rect_tree.insert(rect);
+
+            self.bbox = self.bbox.union(rect);
+        } else {
+            //NOTE rect 与 bb外框 有交集
+            debug!(target = "underlay", "rect 与 bb外框 有交集");
+            for big in self.rect_tree.range(..=rect) {
+                if big.is_completely_wrapped(&rect) {
+                    return;
+                }
+            }
+
+            let mut remove_list = vec![];
+            for sm in self.rect_tree.range(rect..) {
+                if rect.is_completely_wrapped(sm) {
+                    remove_list.push(*sm);
+                }
+            }
+
+            for rect_to_remove in remove_list {
+                self.rect_tree.remove(&rect_to_remove);
+            }
+            self.rect_tree.insert(rect);
+            self.bbox = self.bbox.union(rect);
+        }
+
+        debug!(target = "underlay end", ?self);
     }
 
     // pub fn underlay(mut self, rect: RectLTRB) -> Self {

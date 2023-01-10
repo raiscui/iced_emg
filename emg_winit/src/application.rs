@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-01-05 18:09:13
+ * @LastEditTime: 2023-01-09 16:42:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -533,7 +533,7 @@ async fn run_instance<A, E, C>(
                     break;
                 }
 
-                state.update(&window, &window_event);
+                state.update(&window, &window_event, &mut debug);
 
                 if let Some(event_with_flag) =
                     conversion::window_event(&window_event, state.scale_factor(), state.modifiers())

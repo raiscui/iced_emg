@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-04 23:07:33
+ * @LastEditTime: 2023-01-10 14:47:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,7 @@ use emg_native::{
 };
 use emg_shaping::{EqShapingWithDebug, ShapeOfUse, Shaping, ShapingUse};
 use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
-use tracing::{debug, info, info_span, instrument, trace, Span};
+use tracing::{debug, debug_span, info, info_span, instrument, trace, Span};
 
 use crate::{map_fn_callback_return_to_option_ms, widget::Widget, GElement};
 use std::{cell::Cell, collections::VecDeque, rc::Rc, string::String};
@@ -583,6 +583,7 @@ where
     ) -> StateAnchor<EventMatchsDict<Message>> {
         let event_callbacks = self.event_listener.event_callbacks().clone();
         let cursor_position_clone = cursor_position.clone();
+        let id = self.id.clone();
 
         (events_sa, &self.widget_state).then(move |events, state| {
 
@@ -592,7 +593,7 @@ where
             let size = state.size();
 
             //TODO don't do this many times
-            let  cb_matchs = events
+            let  event_filtered_matchs = events
                 .iter()
                 .map(|(ef, event)| (EventIdentify::from(*ef), event))
                 .filter_map(|(ev_id, event)| {
@@ -618,45 +619,75 @@ where
             //     })
             //     .collect::<Dict<IdStr, Vector<EventNode<Message>>>>();
 
-            let (click_group, cb_matchs): (EventMatchsDict<Message>, EventMatchsDict<Message>) =
-                cb_matchs.into_iter().partition(|(ev_id, _x)| {
+            // 提取 clicks
+            let (click_group, other_event_cb_matchs): (EventMatchsDict<Message>, EventMatchsDict<Message>) =
+                event_filtered_matchs.into_iter().partition(|(ev_id, _x)| {
                     ev_id.contains(EventIdentify::from(mouse::EventFlag::CLICK))
                 });
 
+                let id2 = id.clone();
+                let cursor_position_clone2 = cursor_position_clone.clone();
             // let click_group = cb_matchs.remove_with_key("click");
             // let cursor_position_clone = cursor_position.clone();
             let clicked_a = click_group
                 .into_iter()
                 .map(|(cb_ev_id, (ev_, click_cb_vec))| {
+
+                    let id3 = id2.clone();
                     (
-                        &cursor_position_clone,
+                        &cursor_position_clone2,
                         &state.world,
                         &state.children_layout_override,
                     )
                         .map(move |c_pos, world, opt_layout_override| {
+
+                            let id = id3.clone();
+
                             let ev = ev_.clone();
 
                             let click_cb_clone2 = click_cb_vec.clone();
                             let rect = Rect::from_origin_size((world.x, world.y), size);
 
 
+
+
                             c_pos.and_then( |pos| {
                                 debug!(target:"event::click",?pos);
+
+                                let _span = debug_span!("LayoutOverride",?id,func="event_matching").entered();
+
+
+                                    debug!(target:"event::click",?world,?size,?rect,?pos);
+
 
                                 let pos64 = pos.cast::<f64>();
 
                                 if rect.contains(emg_native::renderer::Point::new(pos64.x, pos64.y))
                                 {
+                                    debug!("⭕️ rect contains pos");
+
+
                                     if let Some(layout_override) = opt_layout_override {
+                                        debug!("⭕️ rect has layout_override");
+                                        debug!("layout_override --> {:#?}",layout_override);
+
                                         if !layout_override.contains(&pos64) {
+
+                                            debug!("❌ layout_override not contains pos ,not override, 🔔 ");
                                             Some((cb_ev_id, ev, click_cb_clone2))
+
                                         } else {
+
+                                            debug!("⭕️ layout_override contains pos,override, 🔕 ");
                                             None
                                         }
                                     } else {
+                                        debug!("❌ rect no layout_override, 🔔");
                                         Some((cb_ev_id, ev, click_cb_clone2))
                                     }
                                 } else {
+                                    debug!("❌ rect not contains pos, 🔕 ");
+
                                     None
                                 }
                             })
@@ -674,7 +705,7 @@ where
                 clicked_a
                     .map(move |clicked| {
 
-                        clicked.clone().into_iter().fold(cb_matchs.clone(),|cb_matchs_add_x,(cb_ev_id,ev,cb_vec)|{
+                        clicked.clone().into_iter().fold(other_event_cb_matchs.clone(),|cb_matchs_add_x,(cb_ev_id,ev,cb_vec)|{
                             cb_matchs_add_x.update_with(cb_ev_id, (ev,cb_vec), |(old_ev,mut old_cb_vec),(new_ev,new_cb_vec)|{
                                 assert_eq!(old_ev, new_ev);
                                 old_cb_vec.extend(new_cb_vec);

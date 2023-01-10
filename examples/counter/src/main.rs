@@ -14,7 +14,8 @@ use emg_bind::{
     Error, Sandbox, Settings,
 };
 use std::{cell::Cell, rc::Rc};
-use tracing::{info, instrument};
+use tracing::{debug, debug_span, info, instrument};
+use tracing_subscriber::EnvFilter;
 // use tracing_error::InstrumentResult;
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
@@ -22,36 +23,49 @@ fn tracing_init() -> Result<(), Report> {
 
     let out_layer =
     //  tracing_subscriber::fmt::layer()
-        tracing_tree::HierarchicalLayer::new(2) .with_indent_lines(true)
-        .with_indent_amount(4)
-        // .with_targets(true)
-        .with_filter(tracing_subscriber::filter::filter_fn(|metadata| {
-            // println!("metadata: {:?}",&metadata.fields().field("event").map(|x|x.to_string()));
-            !metadata.target().contains("emg_layout")
-                && !metadata.target().contains("anchors")
+    tracing_tree::HierarchicalLayer::new(2) .with_indent_lines(true)
+    .with_indent_amount(4)
+        .with_targets(true)
+        .with_filter(tracing_subscriber::filter::dynamic_filter_fn(|metadata,cx| {
+
+
+
+
+            // if metadata.level() <= &tracing::Level::DEBUG{
+            //     // If this *is* "interesting_span", make sure to enable it.
+            //     if metadata.is_span() && metadata.name() == "LayoutOverride" {
+            //         return true;
+            //     }
+
+            //     // Otherwise, are we in an interesting span?
+            //     if let Some(current_span) = cx.lookup_current()  {
+            //         return current_span.name() == "LayoutOverride";
+            //     }
+            // }
+            // return false;
+
+
+
+                 !metadata.target().contains("anchors")
+                && !metadata.target().contains("emg_layout")
                 && !metadata.target().contains("emg_state")
                 && !metadata.target().contains("cassowary")
                 && !metadata.target().contains("wgpu")
+                && metadata.level() <= &tracing::Level::INFO
             // && !metadata.target().contains("winit event")
             // && !metadata.fields().field("event").map(|x|x.to_string())
             // && !metadata.target().contains("winit event: DeviceEvent")
-        }))
-        .with_filter(tracing_subscriber::filter::LevelFilter::INFO);
+        }));
 
-    // let def_subscriber = tracing_subscriber::fmt()
-    //     // .with_test_writer()
-    //     // .with_max_level(tracing::Level::TRACE)
-    //     // .with_env_filter("emg_layout=error")
-    //     .with_span_events(
-    //         tracing_subscriber::fmt::format::FmtSpan::ACTIVE, //         | tracing_subscriber::fmt::format::FmtSpan::ENTER
-    //                                                           //         | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
-    //     )
-    //     .without_time()
-    //     .finish();
+    // let layout_override_layer = tracing_tree::HierarchicalLayer::new(2)
+    //     .with_indent_lines(true)
+    //     .with_indent_amount(4)
+    //     .with_targets(true)
+    //     .with_filter(EnvFilter::new("[LayoutOverride]=debug"));
 
     tracing_subscriber::registry()
+        // .with(layout_override_layer)
         .with(out_layer)
-        // .with(ErrorLayer::default())
         .init();
 
     // tracing_subscriber::Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
@@ -116,23 +130,30 @@ impl Sandbox for Counter {
             @=debug_layer
             Layer [
                 On:CLICK  ||{
+                    let _span = debug_span!("LayoutOverride", "click cb")
+                            .entered();
+                    debug!(" on [debug_layer]----click cb ----");
                     info!(" on [debug_layer]----click cb ----");
                 },
                 @=a1 @E=[
-                        origin_x(pc(50)),align_x(pc(50)),
-                        w(pc(50)),h(pc(50)),
+                        origin_x(pc(0)),align_x(pc(0)),
+                        w(px(100)),h(px(100)),
                         ff,
                         b_width(px(5)),
                         b_color(rgb(1,0,0))
                     ]
                 Layer [
                     @=a2 @E=[
-                        origin_x(pc( 10)),align_x(pc(100)),
-                        w(px(100)),h(px(100)),
+                        origin_x(px( 0)),align_x(px(200)),
+                        origin_y(px(0)),align_y(px(200)),
+                        w(px(20)),h(px(20)),
                         fill(rgba(1, 0.5, 0, 1))
                     ]
                     Layer [
                         On:CLICK  move||{
+                            let _span = debug_span!("LayoutOverride", "click cb")
+                            .entered();
+                            debug!(" on [a2] ----click cb ----");
                             info!(" on [a2] ----click cb ----");
                             let nn =n.get()+4;
                             n.set(nn);
@@ -143,18 +164,19 @@ impl Sandbox for Counter {
                         },
                     ],
                     @=a3 @E=[
-                        origin_x(pc( 10)),align_x(pc(100)),
-                        origin_y(px(-50)),
-                        w(px(100)),h(px(100)),
+                        origin_x(px( 0)),align_x(px(300)),
+                        origin_y(px(0)),align_y(px(300)),
+                        w(px(30)),h(px(30)),
                         fill(rgba(1, 1, 0, 1)),
                         b_width(px(1)),
                         b_color(rgb(1,0,0))
                     ]
                     Layer [],
                     @=a4 @E=[
-                        origin_x(pc( 10)),align_x(pc(100)),
-                        origin_y(px(-60)),
-                        ww,h(px(100)),
+                        origin_x(px( 0)),align_x(px(400)),
+                        origin_y(px(0)),align_y(px(400)),
+                        // ww,
+                        w(px(40)),h(px(40)),
                         fill(rgba(1, 1, 0, 1)),
                         b_width(px(7)),
                         b_color(rgb(1,0,1))

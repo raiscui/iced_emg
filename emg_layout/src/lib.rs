@@ -404,6 +404,40 @@ pub struct EdgeCtx {
 }
 
 impl EdgeCtx {
+    #[cfg(feature = "debug")]
+    #[must_use]
+    pub fn to_layout_override<Ix: std::fmt::Debug + 'static + std::clone::Clone>(
+        &self,
+        nix: NodeIndex<Ix>,
+    ) -> StateAnchor<LayoutOverride> {
+        (
+            &self.world,
+            &self.layout_end,
+            &self.children_layout_override,
+        )
+            .map(move |world, (_, w, h), children_layout_override| {
+                let rect = RectLTRB::from_origin_size(world.vector.xy().into(), *w, *h);
+
+                let _span =
+                    debug_span!("LayoutOverride", ?nix, func = "to_layout_override").entered();
+
+                children_layout_override.as_ref().cloned().map_or_else(
+                    || {
+                        debug!("rect:{:#?}", &rect);
+                        LayoutOverride::new(rect)
+                    },
+                    |mut lo| {
+                        debug!("lo:{:#?}", &lo);
+                        debug!("rect:{:#?}", &rect);
+
+                        lo.underlay(Some(nix.index().clone()), rect);
+                        lo
+                    },
+                )
+            })
+    }
+
+    #[cfg(not(feature = "debug"))]
     #[must_use]
     pub fn to_layout_override(&self) -> StateAnchor<LayoutOverride> {
         (
@@ -414,8 +448,18 @@ impl EdgeCtx {
             .map(|world, (_, w, h), children_layout_override| {
                 let rect = RectLTRB::from_origin_size(world.vector.xy().into(), *w, *h);
                 children_layout_override.as_ref().cloned().map_or_else(
-                    || LayoutOverride::new(rect),
+                    || {
+                        let _span = debug_span!("LayoutOverride", func = "to_layout_override-def")
+                            .entered();
+                        debug!("rect:{:#?}", &rect);
+                        LayoutOverride::new(rect)
+                    },
                     |mut lo| {
+                        let _span =
+                            debug_span!("LayoutOverride", func = "to_layout_override").entered();
+                        debug!("lo:{:#?}", &lo);
+                        debug!("rect:{:#?}", &rect);
+
                         lo.underlay(rect);
                         lo
                     },
@@ -613,12 +657,13 @@ impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
         self.0.last().and_then(|e| e.target_nix().as_ref())
     }
     #[must_use]
-    pub fn except_tail_match(&self, other_no_tail: &EPath<Ix>) -> bool {
-        if self.0.len() - 1 != other_no_tail.0.len() {
+    ///除了 `other_added_tail` 的最后一个 nix, 其他全部匹配
+    pub fn except_tail_match(&self, other_added_tail: &Self) -> bool {
+        if self.0.len() - 1 != other_added_tail.0.len() {
             return false;
         }
         for i in 0..self.0.len() - 1 {
-            if self.0[i] != other_no_tail.0[i] {
+            if self.0[i] != other_added_tail.0[i] {
                 return false;
             }
         }
@@ -1063,7 +1108,7 @@ where
 
         //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
         let paths_clone = parent_paths.clone();
-        let nodes:DictPathEiNodeSA<Ix,> = id_sv.watch().then(move|id_sa|{
+        let edge_nodes_sa:DictPathEiNodeSA<Ix,> = id_sv.watch().then(move|id_sa|{
 
             let paths_clone2 = paths_clone.clone();
             let children_nodes2 = children_nodes.clone();
@@ -1143,28 +1188,104 @@ where
 
                     //NOTE children cassowary_map
                     let (children_layout_override_sa_a,children_cass_maps_sa) = children_nodes3.filter_map(move |child_path,child_node|{
-                        if child_path.except_tail_match(&self_path3) {
+                        let _span = debug_span!("LayoutOverride",step=0, func = "will except_tail_match")
+                                    .entered();
+                                    // debug!("self_path3:{}",&self_path3);
+                                    debug!("child_path:{}",&child_path);
+                                    // debug!("match?:{}",&child_path.except_tail_match(&self_path3));
 
-                            match (child_path.last_target(),child_node.as_edge_data()){
+                        //NOTE remove this if ,because never not match
+                        // if child_path.except_tail_match(&self_path3) {
 
-                                // (Some(nix), Some(ed)) =>Some( (nix.index().clone(),(ed.cassowary_map.clone(),ed.path_layout.clone()))),
-                                (Some(nix), Some(ed)) =>Some( (ed.ctx.to_layout_override().into_anchor(), nix.index().clone(),(ed.cassowary_map.clone(),ed.calculated.size_constraints.clone()))),
-                                _=>None
+
+                            if let (Some(nix), Some(ed)) = (child_path.last_target(),child_node.as_edge_data()) {
+                                let _span = debug_span!("LayoutOverride",?nix,step=1, func = "will to_layout_override")
+                                .entered();
+
+                                Some( (ed.ctx.to_layout_override(
+                                    #[cfg(feature = "debug")]
+                                    nix.clone()
+                                ).into_anchor(), nix.index().clone(),(ed.cassowary_map.clone(),ed.calculated.size_constraints.clone())))
+
+
+                            } else {
+                                //目前是没有 这种情况,但是如果有的话,看下是什么情况
+                                unreachable!("not match (child_path.last_target(),child_node.as_edge_data())->{:?} ,{:?}",child_path.last_target(),child_node.as_edge_data());
+                                None
                             }
-                        }else{
-                            None
-                        }
+                        // }else{
+                        //     panic!(" not child_path.except_tail_match(&self_path3)");
+                        //     None
+                        // }
                     })
                     .map(|x|{
+                        #[cfg(feature = "debug")]
+                        {
+                             debug_span!("LayoutOverride",step=2,func = "EdgeItem new_in_top",info="to_layout_override之后 ... debug..").in_scope(||{
+                                for (k,_) in x.iter(){
+                                    debug!("child path---------:{}",k,);
+                                }
+                            });
+
+                        }
+
                         let (children_as_layout_override_list, children_cass_maps) = x.values().cloned().fold((Vector::new(),Dict::new()),|(mut layout_override_vec,mut cass_dict),(layout_override,ix,cass_map)|{
-                            layout_override_vec.push_back(layout_override);
+
+                            #[cfg(feature = "debug")]
+                            {
+                                let ix2 =  ix.clone();
+
+                                let layout_override = layout_override.map( move |x|{
+                                    let ix3=  ix2.clone();
+
+                                    (ix3,x.clone())
+                                });
+                                layout_override_vec.push_back(layout_override);
+
+                            }
+                            #[cfg(not(feature = "debug"))]
+                            {
+                                layout_override_vec.push_back(layout_override);
+                            }
+
                             cass_dict.insert (ix,cass_map);
                             (layout_override_vec,cass_dict)
                         });
                         let children_layout_override = children_as_layout_override_list.into_iter().collect::<Anchor<Vector<_>>>().map(|los|{
-                            los.clone().into_iter().reduce(|acc,lo|{
-                                acc + lo
-                            })
+                            let _span = debug_span!("LayoutOverride",step=3,func = "EdgeItem new_in_top",info="to_layout_override之后, children_layout_override end...").entered();
+
+                            #[cfg(feature = "debug")]
+                            {
+                                for x in los.iter(){
+                                    debug!(".... layout_override --- :{:#?}",x);
+                                }
+
+                                los.clone().into_iter().fold(Option::<LayoutOverride>::None,|acc,(ix,lo)|{
+                                    debug!("ix:{:?}   acc:{:#?}",ix,&acc);
+                                    debug!("lo:{:#?}",&lo);
+                                     if let Some(old_lo) = acc {
+                                            debug!("acc is some, will + ");
+                                            let x = Some(old_lo + lo);
+                                            debug!("comb---:{:#?}",&x);
+                                            x
+
+                                     }else{
+                                        Some(lo)
+                                     }
+                                })
+
+                            }
+
+                            //TODO check same as use feature debug
+                            #[cfg(not(feature = "debug"))]
+                            {
+                                los.clone().into_iter().reduce(|acc,lo|{
+                                    // debug!("acc:{:#?}",&acc);
+                                    // debug!("lo:{:#?}",&lo);
+                                     acc + lo
+                                })
+                            }
+
                         });
                         (children_layout_override,children_cass_maps)
 
@@ -1671,7 +1792,7 @@ let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa
             path_layouts,
             other_css_styles: other_css_styles_sv,
             styles: styles_sv,
-            edge_nodes: nodes,
+            edge_nodes: edge_nodes_sa,
             store: state_store(),
         }
     }

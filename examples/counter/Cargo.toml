@@ -15,6 +15,7 @@ opt-level = 3
 
 [features]
 gpu = ["emg_bind/gpu"]
+debug = ["emg_bind/debug"]
 
 
 [dependencies.emg_bind]
@@ -31,6 +32,6 @@ tracing-subscriber = { version = "0.3.16", features = [
     "registry",
     "std",
 ] }
-tracing-tree = "0.2.1"
+tracing-tree = { path = "../../../tracing-tree" }
 tracing-error = "0.2.0"
 color-eyre = "0.6.2"

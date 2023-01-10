@@ -26,6 +26,7 @@ gpu = [
     "emg_layout/gpu",
     "emg_graphics_backend",
 ]
+debug = ["emg_winit/debug", "emg_common/debug", "emg_layout/debug"]
 pool = []
 no_default_shaping = ["emg_shaping/no_default_shaping"]
 
