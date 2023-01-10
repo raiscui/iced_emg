@@ -15,16 +15,18 @@ pub enum Error {
     #[error("the application graphics context could not be created")]
     GraphicsCreationFailed(emg_graphics_backend::Error),
 }
+// unsafe impl Send for Error {}
+// unsafe impl Sync for Error {}
 
 #[cfg(all(feature = "gpu"))]
 impl From<emg_winit::Error> for Error {
-    fn from(error: emg_winit::Error) -> Error {
+    fn from(error: emg_winit::Error) -> Self {
         match error {
-            emg_winit::Error::ExecutorCreationFailed(error) => Error::ExecutorCreationFailed(error),
+            emg_winit::Error::ExecutorCreationFailed(error) => Self::ExecutorCreationFailed(error),
             emg_winit::Error::WindowCreationFailed(error) => {
-                Error::WindowCreationFailed(Box::new(error))
+                Self::WindowCreationFailed(Box::new(error))
             }
-            emg_winit::Error::GraphicsCreationFailed(error) => Error::GraphicsCreationFailed(error),
+            emg_winit::Error::GraphicsCreationFailed(error) => Self::GraphicsCreationFailed(error),
         }
     }
 }

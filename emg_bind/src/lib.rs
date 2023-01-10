@@ -33,7 +33,8 @@ pub mod settings;
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[cfg(all(feature = "gpu"))]
-pub use emg_piet_gpu as renderer;
+// pub use emg_piet_gpu as renderer;
+pub use emg_vello as renderer;
 #[cfg(all(feature = "gpu"))]
 pub use emg_winit as runtime;
 // ────────────────────────────────────────────────────────────────────────────────
@@ -70,9 +71,10 @@ pub use settings::Settings;
 
 // ────────────────────────────────────────────────────────────────────────────────
 #[test]
-fn xx() -> mouse::EventFlag {
+fn xx() {
     let f = mouse::CLICK;
-    return f;
+    println!("{f:?}");
+    return;
 }
 // ────────────────────────────────────────────────────────────────────────────────
 

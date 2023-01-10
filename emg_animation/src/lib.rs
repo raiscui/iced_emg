@@ -31,7 +31,7 @@ use models::{update_animation, PropertyOG};
 use ordered_float::NotNan;
 use props::{warn_for_double_listed_properties, warn_for_double_listed_properties_og};
 use seed_styles::Unit;
-pub const PROP_SIZE: usize = 3;
+pub const PROP_SIZE: usize = 1;
 pub const STEP_SIZE: usize = 3;
 pub const MOTION_SIZE: usize = 3;
 // ────────────────────────────────────────────────────────────────────────────────

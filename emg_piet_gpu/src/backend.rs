@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2022-09-05 15:39:27
+ * @LastEditTime: 2023-01-03 17:56:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -66,7 +66,7 @@ impl Backend {
     /// This is useful for rendering debug information.
     pub fn present(
         &mut self,
-        render_ctx: &mut crate::RenderCtx,
+        scene_ctx: &mut crate::SceneCtx,
         // device: &wgpu::Device,
         // staging_belt: &mut wgpu::util::StagingBelt,
         // encoder: &mut wgpu::CommandEncoder,
@@ -86,7 +86,7 @@ impl Backend {
             // info_string = stats.short_summary();
         }
 
-        if let Err(e) = self.render_driver.upload_render_ctx(session, render_ctx) {
+        if let Err(e) = self.render_driver.upload_scene_ctx(session, scene_ctx) {
             println!("error in uploading: {}", e);
         }
 
@@ -257,14 +257,14 @@ impl Backend {
 }
 
 impl emg_graphics_backend::Backend for Backend {
-    type ImplRenderContext = crate::RenderCtx;
+    type ImplRenderContext = crate::SceneCtx;
 
     fn on_loop_destroyed(&mut self) {
         self.wait_all();
     }
 
-    fn new_render_ctx(&self) -> Self::ImplRenderContext {
-        crate::RenderCtx::new()
+    fn new_scene_ctx(&self) -> Self::ImplRenderContext {
+        crate::SceneCtx::new()
     }
 
     // fn trim_measurements(&mut self) {

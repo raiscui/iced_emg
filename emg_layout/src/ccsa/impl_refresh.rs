@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 18:16:47
- * @LastEditTime: 2022-08-30 17:10:41
+ * @LastEditTime: 2023-01-04 19:19:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,14 +14,13 @@ use crate::EmgEdgeItem;
 
 use super::{CassowaryVar, GeneralVar, NameChars, ScopeViewVariable, Virtual, CCSS};
 
-impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>>
-    for (Vector<CCSS>, Vector<ScopeViewVariable>)
+impl<Ix> Shaping<EmgEdgeItem<Ix>> for (Vector<CCSS>, Vector<ScopeViewVariable>)
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
+    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
 {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
         let (added_vec_ccss, added_vec_selector) = self.clone();
         let vec_ccss = who.layout.cassowary_constants.get_inner_anchor();
         let new_vec_ccss = vec_ccss.map(move |old| {
@@ -40,15 +39,15 @@ where
 
 impl ShapingUseNoWarper for GeneralVar {}
 
-impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for GeneralVar
+impl<Ix> Shaping<EmgEdgeItem<Ix>> for GeneralVar
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
+    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
     Self: ShapingUseNoWarper,
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
         let Self(
             name,
             ScopeViewVariable {
@@ -84,15 +83,15 @@ where
 
 impl ShapingUseNoWarper for Virtual {}
 
-impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for Virtual
+impl<Ix> Shaping<EmgEdgeItem<Ix>> for Virtual
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
+    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
     Self: ShapingUseNoWarper,
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
         let virtual_name = self.name();
         let (gvs_match_props, (top_constants, constants), not_match) = self.process();
 
@@ -155,15 +154,15 @@ where
 
 impl ShapingUseNoWarper for CassowaryVar {}
 
-impl<Ix, RenderCtx> Shaping<EmgEdgeItem<Ix, RenderCtx>> for CassowaryVar
+impl<Ix> Shaping<EmgEdgeItem<Ix>> for CassowaryVar
 where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix, RenderCtx>: ShapingWhoNoWarper,
+    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
     Self: ShapingUseNoWarper,
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix, RenderCtx>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
         match self {
             Self::General(gv) => gv.shaping(who),
             Self::Virtual(vv) => vv.shaping(who),

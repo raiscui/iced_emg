@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2022-09-19 10:47:51
+ * @LastEditTime: 2023-01-04 23:58:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -73,7 +73,7 @@ pub trait Application: Sized {
     // fn ctx(
     //     &self,
     //     g: &element::GraphType<Self::Message>,
-    // ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::RenderCtx>>;
+    // ) -> StateAnchor<crate::runtime::PaintCtx<crate::renderer::SceneCtx>>;
 
     // /// Returns the current [`Theme`] of the [`Application`].
     // ///
@@ -183,7 +183,7 @@ impl<A> crate::runtime::Program for Instance<A>
 where
     A: Application,
 {
-    type ImplRenderContext = crate::renderer::RenderCtx;
+    // type SceneCtx = crate::renderer::SceneCtx;
     type Message = A::Message;
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
@@ -196,6 +196,7 @@ where
     <A as Application>::Message: 'static,
 {
     type Renderer = crate::Renderer;
+
     type GraphType = element::GraphType<A::Message>;
     type GTreeBuilder = Rc<RefCell<Self::GraphType>>;
     type GElementType = element::GElement<A::Message>;
@@ -235,10 +236,10 @@ where
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (
         crate::runtime::EventMatchsSa<Self::Message>,
-        StateAnchor<crate::runtime::PaintCtx<Self::ImplRenderContext>>,
+        StateAnchor<Rc<<Self::Renderer as crate::runtime::renderer::Renderer>::SceneCtx>>,
     ) {
-        let ctx =
-            StateAnchor::constant(crate::runtime::PaintCtx::<Self::ImplRenderContext>::default());
+        //TODO work here make new PaintCtx
+        let ctx = StateAnchor::constant(crate::runtime::PaintCtx::default());
         let root_id = self.root_id();
 
         g.runtime_prepare(&IdStr::new(root_id), &ctx, events, cursor_position)

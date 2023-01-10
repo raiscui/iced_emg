@@ -37,7 +37,7 @@ type PathDict<Ix> = Dict<EPath<Ix>, ()>;
 // type CurrentPathChildrenEixGElSA<Message> =
 // StateAnchor<(EdgeIndex<IdStr>, Either<GelType<Message>, GelType<Message>>)>;
 
-// type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
+// type GElement<Message> = Either<GelType<Message>, GelType<Message>>;
 
 pub struct EmgNodeItem<NItem, GelType, Ix = IdStr>
 where

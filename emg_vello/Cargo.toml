@@ -1,15 +1,19 @@
 [package]
-name = "emg_graphics_backend"
+name = "emg_vello"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# [lib]
+# crate-type = ["rlib"]
 
 [dependencies]
-emg_common = { path = "../emg_common" }
 emg_native = { path = "../emg_native" }
-emg_layout = { path = "../emg_layout" }
-emg_state = { path = "../emg_state" }
-#--------
+emg_graphics_backend = { path = "../emg_graphics_backend" }
+#------
+vello = { path = "../../piet-gpu-new" }
+#------
+tracing = "0.1"
 raw-window-handle = "0.5.0"
-thiserror = "1.0"
+wgpu = "0.14"
+ouroboros = "0.15.5"

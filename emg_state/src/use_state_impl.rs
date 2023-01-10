@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2022-09-14 12:35:47
+ * @LastEditTime: 2023-01-07 00:12:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -1259,6 +1259,16 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
         f: F,
     ) -> StateAnchor<T> {
         self.0.increment_reduction(init, f).into()
+    }
+
+    #[track_caller]
+    pub fn reduction<F: FnMut(&mut T, &K, &V) -> bool + 'static, T: Clone + PartialEq + 'static>(
+        &self,
+        init: T,
+        add_or_update: F,
+        remove: F,
+    ) -> StateAnchor<T> {
+        self.0.reduction(init, add_or_update, remove).into()
     }
 }
 

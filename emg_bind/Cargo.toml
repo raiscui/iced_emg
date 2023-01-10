@@ -21,11 +21,12 @@ crate-type = ["rlib"]
 default = ["gpu"]
 gpu = [
     "emg_winit",
-    "emg_piet_gpu",
+    "emg_vello",
     "emg_element/gpu",
     "emg_layout/gpu",
     "emg_graphics_backend",
 ]
+debug = ["emg_winit/debug", "emg_common/debug", "emg_layout/debug"]
 pool = []
 no_default_shaping = ["emg_shaping/no_default_shaping"]
 
@@ -54,4 +55,5 @@ thiserror = "1.0"
 emg_web = { path = "../emg_web" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
+# emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
+emg_vello = { path = "../emg_vello", optional = true }

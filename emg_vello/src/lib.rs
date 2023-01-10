@@ -1,4 +1,5 @@
 mod backend;
+mod scene_ctx;
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub mod settings;
@@ -6,7 +7,7 @@ pub mod window;
 
 // ────────────────────────────────────────────────────────────────────────────────
 pub use backend::Backend;
-pub use piet_gpu::PietGpuRenderContext as SceneCtx;
+pub use scene_ctx::SceneFrag;
 pub use settings::Settings;
 // ────────────────────────────────────────────────────────────────────────────────
 

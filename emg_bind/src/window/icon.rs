@@ -73,10 +73,9 @@ impl fmt::Display for Error {
             Self::InvalidData { byte_count } => {
                 write!(
                     f,
-                    "The provided RGBA data (with length {:?}) isn't divisble by \
+                    "The provided RGBA data (with length {byte_count:?}) isn't divisble by \
                 4. Therefore, it cannot be safely interpreted as 32bpp RGBA \
                 pixels.",
-                    byte_count,
                 )
             }
             Self::DimensionsMismatch {
@@ -86,16 +85,14 @@ impl fmt::Display for Error {
             } => {
                 write!(
                     f,
-                    "The number of RGBA pixels ({:?}) does not match the provided \
-                dimensions ({:?}x{:?}).",
-                    pixel_count, width, height,
+                    "The number of RGBA pixels ({pixel_count:?}) does not match the provided \
+                dimensions ({width:?}x{height:?}).",
                 )
             }
             Self::Os(e) => write!(
                 f,
                 "The underlying OS failed to create the window \
-                icon: {:?}",
-                e
+                icon: {e:?}"
             ),
         }
     }

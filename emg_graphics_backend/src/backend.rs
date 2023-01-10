@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-15 21:19:37
- * @LastEditTime: 2022-09-02 19:15:41
+ * @LastEditTime: 2023-01-04 10:19:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,14 +11,9 @@
 ///
 /// [`Renderer`]: crate::Renderer
 pub trait Backend {
-    type ImplRenderContext: emg_native::renderer::RenderContext;
-    // /// Trims the measurements cache.
-    // ///
-    // /// This method is currently necessary to properly trim the text cache in
-    // /// `iced_wgpu` and `iced_glow` because of limitations in the text rendering
-    // /// pipeline. It will be removed in the future.
-    // fn trim_measurements(&mut self) {}
-    fn new_render_ctx(&self) -> Self::ImplRenderContext;
+    type SceneCtx;
+
+    fn new_scene_ctx() -> Self::SceneCtx;
 
     fn on_loop_destroyed(&mut self);
 }

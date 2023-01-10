@@ -6,7 +6,7 @@ use piet_gpu_hal::{Device, ImageLayout, Instance, Session, Surface};
 use raw_window_handle::HasRawWindowHandle;
 use tracing::{info, instrument};
 
-use crate::{Backend, RenderCtx, Renderer, Settings, NUM_FRAMES};
+use crate::{Backend, Renderer, SceneCtx, Settings, NUM_FRAMES};
 // ────────────────────────────────────────────────────────────────────────────────
 
 /// A window graphics backend for iced powered by `wgpu`.
@@ -122,14 +122,14 @@ impl emg_graphics_backend::window::Compositor for Compositor {
     fn present(
         &mut self,
         renderer: &mut Renderer,
-        render_ctx: &mut RenderCtx,
+        scene_ctx: &mut SceneCtx,
         _surface: &mut Option<()>,
         // viewport: &Viewport,
         // background_color: Color,
         // overlay: &[T],
     ) -> Result<(), compositor_arch::SurfaceError> {
         let backend = renderer.backend_mut();
-        backend.present(render_ctx);
+        backend.present(scene_ctx);
         Ok(())
     }
 }

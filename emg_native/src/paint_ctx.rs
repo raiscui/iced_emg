@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2022-09-14 16:03:31
+ * @LastEditTime: 2023-01-09 15:58:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,17 +13,18 @@ use std::{
     rc::Rc,
 };
 
-use crate::renderer::{Color, Size};
+use crate::renderer::{Affine, Color, Size};
 use emg_common::{na::Translation3, LayoutOverride, Vector};
-use emg_renderer::Rect;
 use emg_shaping::ShapingWhoNoWarper;
-use emg_state::StateAnchor;
+use emg_state::{state_lit::StateVarLit, StateAnchor};
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
 use tracing::{debug, info};
 
 //TODO use app state viewport dpr
+//TODO use  window.scale_factor()
 pub const DPR: f64 = 2.0;
 
+/// used for check restore right
 #[derive(Clone)]
 pub struct CtxIndex(Rc<Cell<usize>>);
 
@@ -47,13 +48,12 @@ impl CtxIndex {
     }
 }
 
-#[derive(Clone, Default, PartialEq)]
-pub struct PaintCtx<RenderContext> {
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct PaintCtx {
     // pub(crate) state: &'a mut ContextState<'b>,
     widget_state: WidgetState,
     /// The render context for actually painting.
-    pub render_ctx: RenderContext,
-
+    // pub scene_ctx: SceneCtx,
     widget_state_stack: Vector<WidgetState>,
     // /// The z-order paint operations.
     // pub(crate) z_ops: Vec<ZOrderPaintOp>,
@@ -63,21 +63,18 @@ pub struct PaintCtx<RenderContext> {
     // pub(crate) depth: u32,
 }
 
-impl<RenderCtx> PaintCtx<RenderCtx>
-where
-    RenderCtx: crate::renderer::RenderContext,
-{
-    // pub fn new(widget_state: WidgetState, render_ctx: RenderCtx) -> Self {
-    //     Self {
-    //         widget_state,
-    //         render_ctx,
-    //         widget_state_stack: Default::default(),
-    //     }
-    // }
-
+impl PaintCtx {
     pub fn size(&self) -> Size {
         //TODO move DPR to const T
         self.widget_state.size() * DPR
+    }
+    pub fn get_translation(&self) -> Option<Affine> {
+        let t = self.widget_state.translation;
+        if t.x == 0. && t.y == 0. {
+            None
+        } else {
+            Some(crate::renderer::Affine::translate((t.x * DPR, t.y * DPR)))
+        }
     }
     pub fn get_fill_color(&self) -> Option<Color> {
         self.widget_state.fill.as_ref().map(|fill| match *fill {
@@ -128,9 +125,7 @@ where
 
     pub fn save(&mut self) {
         self.widget_state_stack.push_back(self.widget_state.clone());
-        self.render_ctx
-            .save()
-            .expect("Failed to save RenderContext");
+        // self.scene_ctx.save().expect("Failed to save RenderContext");
     }
 
     pub fn save_assert(&mut self, index: &CtxIndex) {
@@ -153,48 +148,15 @@ where
         assert!(s_len == index_len);
     }
     pub fn restore(&mut self) {
-        self.render_ctx
-            .restore()
-            .expect("Failed to restore RenderContext");
+        // self.scene_ctx
+        //     .restore()
+        //     .expect("Failed to restore RenderContext");
 
         let widget_state = self
             .widget_state_stack
             .pop_back()
             .expect("widget_state_stack pop error");
         self.widget_state = widget_state;
-    }
-
-    pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx<RenderCtx>)) {
-        self.render_ctx
-            .save()
-            .expect("Failed to save RenderContext");
-        // if let Err(e) = self.render_ctx.save() {
-        //     error!("Failed to save RenderContext: '{}'", e);
-        //     return;
-        // }
-
-        f(self);
-
-        self.render_ctx
-            .restore()
-            .expect("Failed to restore RenderContext");
-        // if let Err(e) = self.render_ctx.restore() {
-        //     error!("Failed to restore RenderContext: '{}'", e);
-        // }
-    }
-}
-
-impl<RenderContext> Deref for PaintCtx<RenderContext> {
-    type Target = RenderContext;
-
-    fn deref(&self) -> &Self::Target {
-        &self.render_ctx
-    }
-}
-
-impl<RenderContext> DerefMut for PaintCtx<RenderContext> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.render_ctx
     }
 }
 
@@ -326,6 +288,8 @@ impl WidgetState {
         // };
 
         //NOTE because the css Inherit
+        //混合的时候，如果是Inherit，就不要覆盖了
+        //如果是其他值,self 的值就覆盖为 new_current 的值
         css_merge!(self, new_current, CssFill, fill);
         css_merge!(self, new_current, CssBorderWidth, border_width);
         css_merge!(self, new_current, CssBorderColor, border_color);

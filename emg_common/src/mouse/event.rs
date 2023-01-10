@@ -14,11 +14,11 @@ bitflags! {
 /// 所以需要一个标志位来表示多重语义的事件
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct EventFlag: u32 {
-        const CLICK =           1<<0;
+        const GENERAL_CLICK =           1<<0;
         const LEFT =            1<<1;
         const RIGHT =           1<<2;
-        const PRESSED =         1<<3 | Self::CLICK.bits();
-        const RELEASED =        1<<4 | Self::CLICK.bits();
+        const PRESSED =         1<<3 | Self::GENERAL_CLICK.bits();
+        const RELEASED =        1<<4 | Self::GENERAL_CLICK.bits();
         const CURSOR_MOVED =    1<<5;
         const CURSOR_ENTERED =  1<<6;
         const CURSOR_LEFT =     1<<7;
@@ -27,24 +27,27 @@ bitflags! {
         const WHEEL_SCROLLED =  1<<10;
 // ────────────────────────────────────────────────────────────────────────────────
 
-        const LEFT_CLICK = Self::CLICK.bits() | Self::LEFT.bits();
+        const LEFT_CLICK = Self::GENERAL_CLICK.bits() | Self::LEFT.bits();
         const LEFT_PRESSED= Self::PRESSED.bits() | Self::LEFT.bits();
         const LEFT_RELEASED= Self::RELEASED.bits() | Self::LEFT.bits();
 // ────────────────────────────────────────────────────────────────────────────────
 
-        const RIGHT_CLICK = Self::CLICK.bits() | Self::RIGHT.bits();
+        const RIGHT_CLICK = Self::GENERAL_CLICK.bits() | Self::RIGHT.bits();
         const RIGHT_PRESSED = Self::PRESSED.bits() | Self::RIGHT.bits();
         const RIGHT_RELEASED = Self::RELEASED.bits() | Self::RIGHT.bits();
 // ────────────────────────────────────────────────────────────────────────────────
 
-        const MIDDLE_CLICK = Self::CLICK.bits() | Self::MIDDLE.bits();
+        const MIDDLE_CLICK = Self::GENERAL_CLICK.bits() | Self::MIDDLE.bits();
         const MIDDLE_PRESSED = Self::PRESSED.bits() | Self::MIDDLE.bits();
         const MIDDLE_RELEASED = Self::RELEASED.bits() | Self::MIDDLE.bits();
         // ─────────────────────────────────────────────────────────────────
 
-        const OTHER_CLICK = Self::CLICK.bits() | Self::OTHER_BUTTOM.bits();
+        const OTHER_CLICK = Self::GENERAL_CLICK.bits() | Self::OTHER_BUTTOM.bits();
         const OTHER_PRESSED = Self::PRESSED.bits() | Self::OTHER_BUTTOM.bits();
         const OTHER_RELEASED = Self::RELEASED.bits() | Self::OTHER_BUTTOM.bits();
+        // alias ─────────────────────────────────────────────────────────────
+
+        const CLICK = Self::LEFT_RELEASED.bits();
     }
 }
 

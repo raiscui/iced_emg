@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2022-09-07 14:39:33
+ * @LastEditTime: 2023-01-04 18:40:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,22 +16,22 @@ use std::{cell::Ref, rc::Rc};
 
 type SaBuilderFn<T> = dyn Fn(&StateAnchor<Rc<T>>) -> StateAnchor<Rc<T>>;
 
-pub enum GTreeBuilderElement<Message, RenderCtx, Ix = IdStr>
+pub enum GTreeBuilderElement<Message, Ix = IdStr>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
 {
     Layer(
         Ix,
-        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix, RenderCtx>>>>, //NOTE Rc for clone
-        Vec<GTreeBuilderElement<Message, RenderCtx, Ix>>,
+        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
+        Vec<GTreeBuilderElement<Message, Ix>>,
     ),
     // El(Ix, Element< Message>),
     GElementTree(
         Ix,
-        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix, RenderCtx>>>>,
-        GElement<Message, RenderCtx>,
-        Vec<GTreeBuilderElement<Message, RenderCtx, Ix>>,
+        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
+        GElement<Message>,
+        Vec<GTreeBuilderElement<Message, Ix>>,
     ),
     // SaMapEffectGElementTree(
     //     Ix,
@@ -39,13 +39,13 @@ where
     //     Rc< SaBuilderFn< GElement<Message>>>,
     //     Vec<GTreeBuilderElement<Message, Ix>>,
     // ),
-    ShapingUse(Ix, Rc<dyn EqShaping<GElement<Message, RenderCtx>>>),
+    ShapingUse(Ix, Rc<dyn EqShaping<GElement<Message>>>),
     Cl(Ix, Rc<dyn Fn()>),
     Event(Ix, EventNode<Message>),
     Dyn(
         Ix,
-        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix, RenderCtx>>>>,
-        StateVar<Dict<Ix, GTreeBuilderElement<Message, RenderCtx, Ix>>>,
+        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
+        StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>,
     ),
     // Fragment(Vec<GTreeBuilderElement< Message, Ix>>),
     // GenericTree(
@@ -56,7 +56,7 @@ where
     // )
 }
 
-impl<Message, RenderContext, Ix> Clone for GTreeBuilderElement<Message, RenderContext, Ix>
+impl<Message, Ix> Clone for GTreeBuilderElement<Message, Ix>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
@@ -75,8 +75,7 @@ where
     }
 }
 
-impl<Message, RenderContext, Ix> From<StateVar<Dict<Ix, Self>>>
-    for GTreeBuilderElement<Message, RenderContext, Ix>
+impl<Message, Ix> From<StateVar<Dict<Ix, Self>>> for GTreeBuilderElement<Message, Ix>
 where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
@@ -87,11 +86,9 @@ where
     }
 }
 
-impl<Message, RenderContext> std::fmt::Debug for GTreeBuilderElement<Message, RenderContext>
+impl<Message> std::fmt::Debug for GTreeBuilderElement<Message>
 // where
 //     Message: std::fmt::Debug + std::clone::Clone + std::cmp::PartialEq,
-where
-    RenderContext: 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -151,7 +148,7 @@ where
     }
 }
 
-pub trait GTreeBuilderFn<Message, RenderCtx>
+pub trait GTreeBuilderFn<Message>
 where
     Self::Ix: Clone + Default + std::hash::Hash + Ord,
 {
@@ -170,7 +167,7 @@ where
         origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
         align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
         //TODO right error type
-    ) -> Result<EmgEdgeItem<Self::Ix, RenderCtx>, String>;
+    ) -> Result<EmgEdgeItem<Self::Ix>, String>;
 
     /// # Errors
     ///
@@ -178,12 +175,12 @@ where
     fn setup_default_edge_in_topo(
         &self,
         edge_index: EdgeIndex<Self::Ix>,
-    ) -> Result<EmgEdgeItem<Self::Ix, RenderCtx>, String>;
+    ) -> Result<EmgEdgeItem<Self::Ix>, String>;
 
-    fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message, RenderCtx>);
+    fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message>);
     fn handle_children_in_topo(
         &self,
         replace_id: Option<&Self::Ix>,
-        tree_element: &'_ GTreeBuilderElement<Message, RenderCtx>,
+        tree_element: &'_ GTreeBuilderElement<Message>,
     );
 }

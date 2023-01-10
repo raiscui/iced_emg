@@ -1,14 +1,7 @@
 /*
  * @Author: Rais
- * @Date: 2022-08-19 17:44:58
- * @LastEditTime: 2022-08-19 17:44:58
- * @LastEditors: Rais
- * @Description: 
- */
-/*
- * @Author: Rais
  * @Date: 2022-06-18 12:53:14
- * @LastEditTime: 2022-08-19 10:29:52
+ * @LastEditTime: 2022-08-23 00:05:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,7 +21,7 @@ use tracing::{debug, error, trace, trace_span, warn};
 
 use crate::{GElement, NodeBuilderWidget};
 
-use super::EmgNodeItem;
+use super::{EmgNodeItem, PathDict};
 
 const POOL_SIZE: usize = 1;
 // ────────────────────────────────────────────────────────────────────────────────
@@ -36,19 +29,20 @@ const POOL_SIZE: usize = 1;
 pub type GelType<Message> = Rc<GElement<Message>>;
 
 pub type NItem<Message> = StateVar<StateAnchor<GelType<Message>>>;
-pub type N<Message, Ix> = EmgNodeItem<NItem<Message>, GelType<Message>, Ix>;
+pub type N<Message, RenderContext, Ix> = EmgNodeItem<NItem<Message>, GelType<Message>, Ix>;
 pub type E<Ix> = EmgEdgeItem<Ix>;
-pub type GraphType<Message, Ix = IdStr> = Graph<N<Message, Ix>, E<Ix>, Ix>;
+pub type GraphType<Message, RenderContext, Ix = IdStr> =
+    Graph<N<Message, RenderContext, Ix>, E<Ix>, Ix>;
 // ────────────────────────────────────────────────────────────────────────────────
+type GElEither<Message, RenderContext> = Either<GelType<Message>, GelType<Message>>;
 
-type CurrentPathChildrenEixGElSA<Message> =
-    StateAnchor<(EdgeIndex<IdStr>, Either<GelType<Message>, GelType<Message>>)>;
+type CurrentPathChildrenEixGElSA<Message, RenderContext> =
+    StateAnchor<(EdgeIndex<IdStr>, GElEither<Message, RenderContext>)>;
 
-type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
-
-impl<Message> EmgNodeItem<NItem<Message>, GelType<Message>>
+impl<Message, RenderContext> EmgNodeItem<NItem<Message>, GelType<Message>>
 where
-    Message: Clone + std::cmp::PartialEq + 'static,
+    Message: 'static,
+    RenderContext: 'static,
     // Dict<EPath<Ix>, EmgNodeItem<Message, Ix>>: PartialEq,
 {
     #[allow(clippy::too_many_lines)]
@@ -58,7 +52,7 @@ where
         gel_sa: NItem<Message>,
         incoming_eix_sa: &StateAnchor<EdgeCollect<IdStr>>,
         outgoing_eix_sa: &StateAnchor<EdgeCollect<IdStr>>,
-        graph_rc: Rc<RefCell<GraphType<Message>>>,
+        graph_rc: Rc<RefCell<GraphType<Message, RenderContext>>>,
     ) -> Self {
         let graph_rc2 = graph_rc.clone();
         let nix2 = nix.clone();
@@ -197,8 +191,10 @@ where
         let graph_rc3 = graph_rc.clone();
         let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
 
-        let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex<IdStr>, GElEither<Message>> =
-            OrdMapPool::new(POOL_SIZE);
+        let children_either_ord_map_pool_0: OrdMapPool<
+            EdgeIndex<IdStr>,
+            GElEither<Message, RenderContext>,
+        > = OrdMapPool::new(POOL_SIZE);
 
         let paths_view_gel_sa = paths_sa.map_(move |current_path, _v| {
             let current_path2 = current_path.clone();
@@ -206,7 +202,7 @@ where
 
             let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 
-            let this_path_children_sa: StateAnchor<Dict<EdgeIndex<IdStr>, GElEither<Message>>> =
+            let this_path_children_sa: StateAnchor<Dict<EdgeIndex<IdStr>, GElEither<Message, RenderContext>>> =
                 children_view_gel_sv_sa
                     .filter_map(move |k_child_path, v_child_gel_sv_sa| {
                         let mut child_path_clone = k_child_path.clone();
@@ -218,7 +214,7 @@ where
                             //
                             let graph_rc5 = graph_rc4.clone();
                             let v_child_gel_sa_clone = v_child_gel_sv_sa.clone();
-                            let gel_l_r: CurrentPathChildrenEixGElSA<Message> = v_child_gel_sv_sa
+                            let gel_l_r: CurrentPathChildrenEixGElSA<Message, RenderContext> = v_child_gel_sv_sa
                                 .then(move |gel| {
                                     // NOTE handle note_ref
 
@@ -251,12 +247,14 @@ where
                                     }
                                 })
                                 .map(move |gel| {
-                                    if gel.is_event_() {
-                                        //Left event
-                                        (current_child_ei.clone(), Left(gel.clone()))
-                                    } else {
+                                    // if gel.is_event_() {
+                                    //     //Left event
+                                    //     (current_child_ei.clone(), Left(gel.clone()))
+                                    // } else {
+                                    //     (current_child_ei.clone(), Right(gel.clone()))
+                                    // }
                                         (current_child_ei.clone(), Right(gel.clone()))
-                                    }
+
                                 });
 
                             Some(gel_l_r)
@@ -277,19 +275,19 @@ where
                                 // cfg_if! {
 
                                 //     if #[cfg(feature = "pool")]{
-                                //         let mut dict = Dict::<EdgeIndex<IdStr>, GElEither<Message>>::with_pool(
+                                //         let mut dict = Dict::<EdgeIndex<IdStr>, GElement<Message>>::with_pool(
                                 //             &children_either_ord_map_pool_2
                                 //         );
                                 //         v.clone().into_iter().collect_into(&mut dict);
                                 //         dict
                                 //     }else{
-                                //         v.clone().into_iter().collect::<Dict<EdgeIndex<IdStr>, GElEither<Message>>>()
+                                //         v.clone().into_iter().collect::<Dict<EdgeIndex<IdStr>, GElement<Message>>>()
                                 //     }
 
                                 // }
                                 v.clone()
                                     .into_iter()
-                                    .collect::<Dict<EdgeIndex<IdStr>, GElEither<Message>>>()
+                                    .collect::<Dict<EdgeIndex<IdStr>, GElEither<Message, RenderContext>>>()
                             })
                     });
 
@@ -373,9 +371,9 @@ where
                     //         gel_clone.shape_of_use(child_gel);
                     //     }
                     // }
-                    match NodeBuilderWidget::<Message>::try_new_use(gel_clone) {
-                        Ok(node_builder_widget) => {
-                            
+                    match NodeBuilderWidget::<Message, RenderContext>::try_new_use(gel_clone) {
+                        Ok(mut node_builder_widget) => {
+
                     let _g = trace_span!("-> in NodeBuilderWidget").entered();
                     {
                         trace!("[combine view gel] NodeBuilderWidget::<Message>::try_from  OK");
@@ -412,10 +410,11 @@ where
                         // }
 
                         Rc::new(GElement::Builder_(
-                            node_builder_widget.and_widget(gel_clone),
+                            // node_builder_widget.and_widget(gel_clone),
+                            node_builder_widget
                         ))
                     }
-                
+
                         },
                         Err(other_gel) => {
                             trace!(
@@ -425,7 +424,7 @@ where
                             Rc::new(other_gel)
                         },
                     }
-                    
+
                 })
         });
 

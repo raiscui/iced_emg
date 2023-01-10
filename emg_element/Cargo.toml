@@ -11,7 +11,8 @@ crate-type = ["rlib"]
 
 [features]
 default = ["gpu", "new_node"]
-gpu = ["emg_native", "emg_piet_gpu", "emg_layout/gpu"]
+# gpu = ["emg_native", "emg_piet_gpu", "emg_layout/gpu"]
+gpu = ["emg_native", "emg_vello", "emg_layout/gpu"]
 old_node = []
 new_node = []
 
@@ -38,4 +39,5 @@ emg_native = { path = "../emg_native", optional = true }
 #------------------
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
+# emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
+emg_vello = { path = "../emg_vello", optional = true }

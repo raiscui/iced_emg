@@ -10,6 +10,7 @@ resolver = "2"
 default = ["gpu"]
 gpu = ["emg_native"]
 pool = []
+debug = []
 
 
 [profile.dev]
@@ -33,11 +34,11 @@ emg_native = { path = "../emg_native", optional = true }
 
 #----------------
 float-cmp = { version = "0.9.0", features = ["std"] }
-either = "1.7.0"
+either = "1.8.0"
 parse-display = "0.5.5"
 slotmap = "1.0.6"
-nalgebra = "0.31.1"
-# nalgebra = "0.29.0"
+nalgebra = "0.31.4"
+#  "0.29.0"
 derive_more = "0.99"
 seed_styles = { path = "../../styles_hooks/seed_styles" }
 seed_style_macros = { path = "../../styles_hooks/seed_styles/seed_style_macros" }
