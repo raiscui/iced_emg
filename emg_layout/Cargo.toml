@@ -35,7 +35,7 @@ emg_native = { path = "../emg_native", optional = true }
 #----------------
 float-cmp = { version = "0.9.0", features = ["std"] }
 either = "1.8.0"
-parse-display = "0.5.5"
+parse-display = "0.8.0"
 slotmap = "1.0.6"
 nalgebra = "0.31.4"
 #  "0.29.0"
@@ -56,7 +56,7 @@ cassowary = { path = "../../cassowary-rs" }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 tracing-flame = "0.2.0"
 insta = "1"
-criterion = { version = "0.3", features = ["html_reports", "real_blackbox"] }
+criterion = { version = "0.4.0", features = ["html_reports", "real_blackbox"] }
 
 [[bench]]
 name = "my_benchmark"

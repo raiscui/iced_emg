@@ -80,7 +80,6 @@ struct Counter {
     dt: StateVar<Duration>,
     dt2: Cell<Duration>,
     // an: emg_animation::State<Message>,
-    // ffxx: StateVar<CssWidth>,
 }
 impl Counter {
     // pub fn emg_setup<'a>(

@@ -2117,11 +2117,8 @@ mod tests {
     use emg_shaping::ShapeOfUse;
     use emg_state::StateVar;
 
-    use styles::{
-        bg_color, h, hsl, pc, width, CssBackgroundColor, CssBackgroundColorTrait, CssHeight,
-        CssWidth,
-    };
-    use tracing::{debug, info, span, warn};
+    use styles::{bg_color, h, hsl, pc, width, CssBackgroundColorTrait, CssHeight, CssWidth};
+    use tracing::{info, span, warn};
 
     use test::{black_box, Bencher};
     use tracing_flame::FlameLayer;

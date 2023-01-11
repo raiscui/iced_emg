@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-01-10 22:07:21
+ * @LastEditTime: 2023-01-11 17:28:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,11 +11,11 @@ use std::rc::Rc;
 use emg::{edge_index_no_source, NodeIndex, Outgoing};
 use emg_common::{vector, IdStr, Pos, Vector};
 use emg_layout::EPath;
-use emg_native::{Event, EventWithFlagType, PaintCtx, Widget};
+use emg_native::{EventWithFlagType, PaintCtx, Widget};
 use emg_state::{Anchor, AnchorMultiAnchor, Dict, StateAnchor};
 use tracing::debug;
 
-use crate::{node_builder::EventMatchsDict, EventNode};
+use crate::node_builder::EventMatchsDict;
 
 use super::{EventMatchsSa, GraphType};
 pub trait GraphMethods<Message, Ix = IdStr> {

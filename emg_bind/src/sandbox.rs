@@ -1,6 +1,6 @@
 use emg_state::StateAnchor;
 
-use crate::{element, Application, Command, Error, Settings};
+use crate::{element, Application, Command, Settings};
 
 pub trait Sandbox {
     /// The type of __messages__ your [`Sandbox`] will produce.

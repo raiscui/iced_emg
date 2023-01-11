@@ -27,7 +27,7 @@ emg = { path = "../../emg" }
 #-----
 derive_more = "0.99"
 strum = { version = "0.24", features = ["derive"] }
-dyn-clone = "1.0.9"
+dyn-clone = "1.0.10"
 tracing = "0.1"
 match_any = "1.0.1"
 either = "1.8.0"

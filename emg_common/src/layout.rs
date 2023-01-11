@@ -1,15 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-09 16:53:34
- * @LastEditTime: 2023-01-10 15:00:48
+ * @LastEditTime: 2023-01-11 17:26:56
  * @LastEditors: Rais
  * @Description:
  */
 
 use std::cmp::Ordering;
 
-use im_rc::{vector, OrdSet, Vector};
-use nalgebra::{Point2, Translation2, Vector2};
+use im_rc::OrdSet;
 use ordered_float::NotNan;
 use tracing::{debug, debug_span};
 

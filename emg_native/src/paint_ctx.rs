@@ -1,17 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2023-01-09 15:58:02
+ * @LastEditTime: 2023-01-11 17:29:13
  * @LastEditors: Rais
  * @Description:
  */
 
 mod impl_refresh;
-use std::{
-    cell::Cell,
-    ops::{Deref, DerefMut},
-    rc::Rc,
-};
+use std::{cell::Cell, rc::Rc};
 
 use crate::renderer::{Affine, Color, Size};
 use emg_common::{na::Translation3, LayoutOverride, Vector};

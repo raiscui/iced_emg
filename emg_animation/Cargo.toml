@@ -41,9 +41,7 @@ insta = "1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 easybench = "1.1.0"
-criterion = { git = "https://github.com/bheisler/criterion.rs", branch = "version-0.4", features = [
-    "real_blackbox",
-] }
+criterion = { version = "0.4.0", features = ["real_blackbox"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 easybench-wasm = "0.2"

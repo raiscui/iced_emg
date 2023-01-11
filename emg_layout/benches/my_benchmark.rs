@@ -1,13 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2022-07-27 15:01:05
+ * @LastEditTime: 2023-01-11 17:28:16
  * @LastEditors: Rais
  * @Description:
  */
-
-use std::{collections::VecDeque, time::Duration};
-const PROP_SIZE: usize = 3;
+#![allow(unused_imports)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use emg_animation::{
     fill, init_motion, interrupt, interrupt_og, loop_am, loop_am_og,
@@ -23,6 +21,7 @@ use emg_common::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vec
 use emg_layout::{global_clock, AnimationE};
 use emg_state::{topo, CloneStateVar};
 use seed_styles::{height, px, width, Unit};
+use std::{collections::VecDeque, time::Duration};
 
 #[derive(Debug, Clone, PartialEq)]
 enum Message {

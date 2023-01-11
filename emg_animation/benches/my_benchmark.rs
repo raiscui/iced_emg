@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2022-06-09 13:02:01
+ * @LastEditTime: 2023-01-11 17:26:07
  * @LastEditors: Rais
  * @Description:
  */
 //
-use std::time::Instant;
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 enum Message {
     A,
 }
@@ -140,22 +140,21 @@ mod need {
         res_props
     }
 }
-use std::{cell::RefCell, collections::VecDeque, rc::Rc, time::Duration};
-const PROP_SIZE: usize = 3;
 #[cfg(not(target_arch = "wasm32"))]
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 use emg_animation::{
-    fill, init_motion, loop_am, loop_am_og,
+    fill, init_motion, loop_am,
     models::{
         color::{fill_sm, Color},
-        resolve_steps, resolve_steps_og, step, step_og, zip_properties_greedy_mut,
-        zip_properties_greedy_og, MsgBackIsNew, PropName, Property, PropertyOG, Step, StepOG,
+        resolve_steps, resolve_steps_og, step, step_og, zip_properties_greedy_mut, MsgBackIsNew,
+        PropName, Property, PropertyOG, Step, StepOG,
     },
-    to, to_og,
+    to, to_og, PROP_SIZE,
 };
 use emg_common::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
 use need::{zip_properties_greedy_mut_3, zip_properties_greedy_mut_8};
 use seed_styles::{height, px, width, Unit};
+use std::{collections::VecDeque, time::Duration};
 
 pub fn clone_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("clone-vecs");
@@ -173,6 +172,7 @@ pub fn clone_benchmark(c: &mut Criterion) {
         ];
 
         b.iter(|| {
+            #[allow(unused)]
             let x = initial_props.clone();
         })
     });
@@ -184,6 +184,7 @@ pub fn clone_benchmark(c: &mut Criterion) {
         ];
 
         b.iter(|| {
+            #[allow(unused)]
             let x = initial_props.clone();
         })
     });
@@ -195,6 +196,7 @@ pub fn clone_benchmark(c: &mut Criterion) {
         ];
 
         b.iter(|| {
+            #[allow(unused)]
             let x = initial_props.clone();
         })
     });
@@ -205,6 +207,7 @@ pub fn clone_benchmark(c: &mut Criterion) {
                 width(px(black_box(0))),
                 width(px(black_box(1)))
             ];
+            #[allow(unused)]
             let x = initial_props.clone();
         })
     });
@@ -215,6 +218,7 @@ pub fn clone_benchmark(c: &mut Criterion) {
                 width(px(black_box(0))).into(),
                 width(px(black_box(1))).into(),
             ];
+            #[allow(unused)]
             let x = initial_props.clone();
         })
     });
@@ -303,17 +307,16 @@ pub fn zip_properties_benchmark(c: &mut Criterion) {
     });
     group.bench_function("mut_tinyvec-color", |b| {
         b.iter(|| {
-            let mut initial_props: SmallVec<[PropertyOG; PROP_SIZE]> =
+            let mut initial_props: SmallVec<[PropertyOG; 3]> =
                 into_smvec![fill(Color::new(0, 0, 0, 0.))];
-            let new_target_props: SmallVec<[PropertyOG; PROP_SIZE]> =
+            let new_target_props: SmallVec<[PropertyOG; 3]> =
                 into_smvec![fill(Color::new(1, 1, 1, 1.))];
             zip_properties_greedy_mut_3(&mut initial_props, new_target_props);
         })
     });
     group.bench_function("mut_tinyvec-color-has-init", |b| {
-        let initial_props: SmallVec<[PropertyOG; PROP_SIZE]> =
-            into_smvec![fill(Color::new(0, 0, 0, 0.))];
-        let new_target_props: SmallVec<[PropertyOG; PROP_SIZE]> =
+        let initial_props: SmallVec<[PropertyOG; 3]> = into_smvec![fill(Color::new(0, 0, 0, 0.))];
+        let new_target_props: SmallVec<[PropertyOG; 3]> =
             into_smvec![fill(Color::new(1, 1, 1, 1.))];
 
         b.iter(|| {
@@ -411,6 +414,7 @@ pub fn resolve_steps_benchmark(c: &mut Criterion) {
         b.iter_batched(
             || (initial_props.clone(), steps.clone()),
             |(i, s)| {
+                #[allow(unused)]
                 let (ps, _, ss) = resolve_steps_og(i, s, &Duration::from_millis(black_box(16)));
             },
             BatchSize::PerIteration,

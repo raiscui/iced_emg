@@ -24,7 +24,7 @@ emg_renderer = { path = "../emg_renderer" }
 emg_state = { path = "../emg_state" }
 emg_shaping = { path = "../emg_shaping" }
 #---------------
-dyn-clone = "1.0.9"
+dyn-clone = "1.0.10"
 tracing = "0.1"
 static_init = "1.0.3"
 bitflags = { path = "../../bitflags_export_const" }

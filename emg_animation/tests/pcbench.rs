@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-17 11:30:44
- * @LastEditTime: 2022-05-18 17:02:37
+ * @LastEditTime: 2023-01-11 17:24:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,6 +19,7 @@
  * @LastEditors: Rais
  * @Description:
  */
+#![allow(unused_imports)]
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod pc_bench {
@@ -162,7 +163,7 @@ mod pc_bench {
         rc::Rc,
         time::{Duration, Instant},
     };
-    const PROP_SIZE: usize = 3;
+    // const PROP_SIZE: usize = 1;
     use emg_animation::{
         fill, init_motion, loop_am, loop_am_og,
         models::{
@@ -170,7 +171,7 @@ mod pc_bench {
             resolve_steps, resolve_steps_og, step, step_og, zip_properties_greedy_mut,
             zip_properties_greedy_og, MsgBackIsNew, PropName, Property, PropertyOG, Step, StepOG,
         },
-        to, to_og,
+        to, to_og, PROP_SIZE,
     };
     use emg_common::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
     use need::{zip_properties_greedy_mut_3, zip_properties_greedy_mut_8};
