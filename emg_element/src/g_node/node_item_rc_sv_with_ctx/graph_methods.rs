@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-01-04 23:08:32
+ * @LastEditTime: 2023-01-10 22:07:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -94,10 +94,17 @@ where
                     ix.clone()
                 )]));
         let self_event_nodes = gel_rc_sa.then(move |gel| {
-            gel.as_builder()
-                .unwrap()
-                .event_matching(&events, &cursor_position_clone)
-                .into_anchor()
+            //TODO 使用 判断event EventIdentify 类型 来优化
+
+            let builder = gel.as_builder().unwrap();
+            if builder.has_event_callback() {
+                builder
+                    .event_matching(&events, &cursor_position_clone)
+                    .into_anchor()
+            } else {
+                //NOTE check if Panics , can not use constant, do Dict::new() in fn event_matching
+                Anchor::constant(Dict::new())
+            }
         });
 
         let children_event_matchs = self
@@ -151,8 +158,9 @@ where
                 .paths_view_gel
                 .filter_map(move |_k, gel| {
                     gel.as_builder()
-                        // .map(|nb_widget| nb_widget.event_callbacks().clone())
+                        .filter(|gel| gel.has_event_callback())
                         .map(|nb_widget| {
+                            //TODO 使用 判断event EventIdentify 类型 来优化
                             nb_widget
                                 .event_matching(&events, &cursor_position_clone)
                                 .into_anchor()

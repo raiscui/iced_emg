@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-10 14:47:11
+ * @LastEditTime: 2023-01-11 16:02:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -41,7 +41,7 @@ impl EventIdentify {
 
 impl From<mouse::EventFlag> for EventIdentify {
     fn from(x: mouse::EventFlag) -> Self {
-        Self(EventFlag::MOUSE.bits(), x.bits())
+        Self(emg_native::event::MOUSE.bits(), x.bits())
     }
 }
 
@@ -177,7 +177,7 @@ impl<Message> PartialEq for EventMessage<Message>
         // consider extracting and comparing data pointers only
         // for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#vtable_address_comparisons
         //
-        //&& Rc::ptr_eq(&self.1, &other.1)
+        // && Rc::ptr_eq(&self.1, &other.1)
     }
 }
 #[derive(From)]
@@ -576,6 +576,9 @@ where
         self.event_listener
             .register_listener(event_callback.get_identify(), event_callback);
     }
+    pub fn has_event_callback(&self) -> bool {
+        !self.event_listener.event_callbacks().is_empty()
+    }
     pub fn event_matching(
         &self,
         events_sa: &StateAnchor<Vector<emg_native::EventWithFlagType>>,
@@ -586,6 +589,7 @@ where
         let id = self.id.clone();
 
         (events_sa, &self.widget_state).then(move |events, state| {
+            let _span = debug_span!("event_matching...", ?id).entered();
 
             // if events.is_empty() {
             //     return Anchor::constant(Dict::default());
