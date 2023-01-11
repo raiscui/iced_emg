@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-01-05 00:30:25
+ * @LastEditTime: 2023-01-11 16:41:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -501,7 +501,8 @@ where
             Shaper_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Generic_(x) => {
                 warn!("Generic_:: Generic_ paint_sa");
-                 x.paint_sa(ctx)
+                (x.as_ref() as &dyn Widget<SceneCtxType = Self::SceneCtxType>).paint_sa(ctx)
+
                 // panic!("Generic_ should be Builder here");
                 },
             NodeRef_(_)=> panic!("TryFrom<GElement to dyn Widget: \n     GElement::NodeIndex_() should handle before."),
