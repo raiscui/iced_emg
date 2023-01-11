@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2022-12-15 16:09:57
+ * @LastEditTime: 2023-01-10 16:38:17
  * @LastEditors: Rais
  * @Description:
  */
@@ -2745,6 +2745,14 @@ mod tests {
             "#;
 
         token_test("chain", input);
+    }
+    #[test]
+    fn chain_v() {
+        let input = r#"
+        @v (#b1)(#b2) chain-top chain-bottom(250)
+            "#;
+
+        token_test("chain_v", input);
     }
     #[test]
     fn chain_multiply() {

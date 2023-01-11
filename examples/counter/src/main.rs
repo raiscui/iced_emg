@@ -42,7 +42,8 @@ fn tracing_init() -> Result<(), Report> {
             //         return current_span.name() == "LayoutOverride";
             //     }
             // }
-            // return false;
+            #[cfg(feature = "debug")]
+            return false;
 
 
 
@@ -57,16 +58,29 @@ fn tracing_init() -> Result<(), Report> {
             // && !metadata.target().contains("winit event: DeviceEvent")
         }));
 
-    // let layout_override_layer = tracing_tree::HierarchicalLayer::new(2)
-    //     .with_indent_lines(true)
-    //     .with_indent_amount(4)
-    //     .with_targets(true)
-    //     .with_filter(EnvFilter::new("[LayoutOverride]=debug"));
+    #[cfg(feature = "debug")]
+    let layout_override_layer = tracing_tree::HierarchicalLayer::new(2)
+        .with_indent_lines(true)
+        .with_indent_amount(4)
+        .with_targets(true)
+        .with_filter(EnvFilter::new("[LayoutOverride]=debug"));
 
+    #[cfg(feature = "debug")]
+    let event_matching_layer = tracing_tree::HierarchicalLayer::new(2)
+        .with_indent_lines(true)
+        .with_indent_amount(4)
+        .with_targets(true)
+        .with_filter(EnvFilter::new("[event_matching...]=debug"));
+
+    #[cfg(feature = "debug")]
     tracing_subscriber::registry()
-        // .with(layout_override_layer)
+        .with(layout_override_layer)
+        .with(event_matching_layer)
         .with(out_layer)
         .init();
+
+    #[cfg(not(feature = "debug"))]
+    tracing_subscriber::registry().with(out_layer).init();
 
     // tracing_subscriber::Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
     color_eyre::install()
@@ -132,10 +146,10 @@ impl Sandbox for Counter {
                 On:CLICK  ||{
                     let _span = debug_span!("LayoutOverride", "click cb")
                             .entered();
-                    debug!(" on [debug_layer]----click cb ----");
                     info!(" on [debug_layer]----click cb ----");
                 },
                 @=a1 @E=[
+                        {@h (#a2)(#a3)(#a4) chain-top chain-bottom chain-height chain-width(250)},
                         origin_x(pc(0)),align_x(pc(0)),
                         w(px(100)),h(px(100)),
                         ff,
@@ -144,8 +158,10 @@ impl Sandbox for Counter {
                     ]
                 Layer [
                     @=a2 @E=[
-                        origin_x(px( 0)),align_x(px(200)),
-                        origin_y(px(0)),align_y(px(200)),
+                        // origin_x(px( 100)),
+                        align_x(px(100)),
+                        // origin_y(px(0)),
+                        align_y(px(10)),
                         w(px(20)),h(px(20)),
                         fill(rgba(1, 0.5, 0, 1))
                     ]
@@ -153,19 +169,17 @@ impl Sandbox for Counter {
                         On:CLICK  move||{
                             let _span = debug_span!("LayoutOverride", "click cb")
                             .entered();
-                            debug!(" on [a2] ----click cb ----");
                             info!(" on [a2] ----click cb ----");
                             let nn =n.get()+4;
                             n.set(nn);
                             ww.set(w(px(nn)));
                             ff.set(fill(hsl(nn as f64/100.*360.%360., 50, 50)));
 
-
                         },
                     ],
                     @=a3 @E=[
-                        origin_x(px( 0)),align_x(px(300)),
-                        origin_y(px(0)),align_y(px(300)),
+                        // origin_x(px( 0)),align_x(px(300)),
+                        // origin_y(px(0)),align_y(px(300)),
                         w(px(30)),h(px(30)),
                         fill(rgba(1, 1, 0, 1)),
                         b_width(px(1)),
@@ -173,8 +187,8 @@ impl Sandbox for Counter {
                     ]
                     Layer [],
                     @=a4 @E=[
-                        origin_x(px( 0)),align_x(px(400)),
-                        origin_y(px(0)),align_y(px(400)),
+                        // origin_x(px( 0)),align_x(px(400)),
+                        // origin_y(px(0)),align_y(px(400)),
                         // ww,
                         w(px(40)),h(px(40)),
                         fill(rgba(1, 1, 0, 1)),
