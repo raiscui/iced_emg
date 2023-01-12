@@ -5,7 +5,7 @@
 #![feature(box_into_inner)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
-
+#![feature(is_some_and)]
 // ────────────────────────────────────────────────────────────────────────────────
 
 // #![feature(specialization)]

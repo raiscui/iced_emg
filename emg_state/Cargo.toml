@@ -17,7 +17,8 @@ split-debuginfo = "unpacked"
 emg_hasher = { path = "../emg_hasher" }
 
 anchors = { path = "../../anchors" }
-anymap = "0.12.1"
+# anymap = "0.12.1"
+anymap = "1.0.0-beta.2"
 slotmap = "1.0"
 topo = { version = "0.13.2", features = ["wasm-bindgen"] }
 # log = "0.4"

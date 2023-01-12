@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-01-07 00:12:57
+ * @LastEditTime: 2023-01-12 11:46:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,9 +16,8 @@ use anchors::{
     expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
     singlethread::MultiAnchor,
 };
-use anymap::any::Any;
-use emg_common::{IdStr, TypeCheck, TypeName};
-use tracing::{debug, info, warn};
+use emg_common::{TypeCheck, TypeName};
+use tracing::{debug, warn};
 
 use std::{hash::BuildHasherDefault, panic::Location};
 // use im::HashMap;
@@ -47,7 +46,7 @@ use emg_hasher::CustomHasher;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct GStateStore {
-    anymap: anymap::Map<dyn Any>,
+    anymap: anymap::AnyMap,
     id_to_key_map: HashMap<StorageKey, DefaultKey>,
     primary_slotmap: SlotMap<DefaultKey, StorageKey>,
     engine: RefCell<Engine>,
@@ -63,7 +62,7 @@ impl Default for GStateStore {
     fn default() -> Self {
         //TODO with capacity
         Self {
-            anymap: anymap::Map::new(),
+            anymap: anymap::AnyMap::new(),
             id_to_key_map: HashMap::default(),
             primary_slotmap: SlotMap::new(),
             // engine: RefCell::new(Engine::new()),
@@ -191,6 +190,10 @@ impl GStateStore {
         self.anymap.get_mut::<VarSecMap<T>>()
     }
     fn get_mut_before_secondarymap<T: 'static>(&mut self) -> Option<&mut VarBeforeSecMap<T>> {
+        trace!(
+            "-- get_mut_before_secondarymap: {}",
+            &std::any::type_name::<T>()
+        );
         self.anymap.get_mut::<VarBeforeSecMap<T>>()
     }
     fn get_mut_after_secondarymap<T: 'static>(&mut self) -> Option<&mut VarAfterSecMap<T>> {
@@ -338,6 +341,7 @@ impl GStateStore {
     ///
     /// Will return `Err` if `fns.contains_key(after_fn_id)`
     /// permission to read it.
+    #[tracing::instrument(skip(self, func), level = "debug")]
     pub fn insert_before_fn<T: 'static>(
         &mut self,
         current_id: &StorageKey,
@@ -347,19 +351,28 @@ impl GStateStore {
         assert_ne!(current_id, before_fn_id);
 
         let key = self.id_to_key_map.get(current_id).copied();
-        let secondarymap = self.get_mut_before_secondarymap::<T>();
-        match (key, secondarymap) {
-            (Some(existing_key), Some(existing_secondary_map)) => {
-                let fns = existing_secondary_map
-                    .get_mut(existing_key)
-                    .expect("cannot get second map");
+        let before_secondary_map = self.get_mut_before_secondarymap::<T>();
+        match (key, before_secondary_map) {
+            (Some(existing_key), Some(existing_before_secondary_map)) => {
+                let fns = existing_before_secondary_map
+                    .entry(existing_key)
+                    .unwrap()
+                    .or_insert_with(|| SynCallBeforeFnsMap::<T>::with_capacity(1));
 
                 if fns.contains_key(before_fn_id) {
                     return Err("before_fns already has this fn".to_string());
                 }
 
                 fns.insert(*before_fn_id, func);
+
                 Ok(())
+
+                // if fns.contains_key(before_fn_id) {
+                //     return Err("before_fns already has this fn".to_string());
+                // }
+
+                // fns.insert(*before_fn_id, func);
+                // Ok(())
             }
             (Some(existing_key), None) => {
                 self.register_before_secondarymap::<T>();
@@ -399,18 +412,20 @@ impl GStateStore {
         assert_ne!(current_id, after_fn_id);
 
         let key = self.id_to_key_map.get(current_id).copied();
-        let secondarymap = self.get_mut_after_secondarymap::<T>();
-        match (key, secondarymap) {
-            (Some(existing_key), Some(existing_secondary_map)) => {
-                let fns = existing_secondary_map
-                    .get_mut(existing_key)
-                    .expect("cannot get second map");
+        let after_secondary_map = self.get_mut_after_secondarymap::<T>();
+        match (key, after_secondary_map) {
+            (Some(existing_key), Some(existing_after_secondary_map)) => {
+                let fns = existing_after_secondary_map
+                    .entry(existing_key)
+                    .unwrap()
+                    .or_insert_with(|| SynCallAfterFnsMap::<T>::with_capacity(1));
 
                 if fns.contains_key(after_fn_id) {
                     return Err("before_fns already has this fn".to_string());
                 }
 
                 fns.insert(*after_fn_id, func);
+
                 Ok(())
             }
             (Some(existing_key), None) => {
@@ -464,7 +479,7 @@ impl GStateStore {
     fn opt_get_var_and_bf_use_id<T: 'static>(
         &self,
         current_id: &StorageKey,
-    ) -> Option<(&Var<T>, &SynCallBeforeFnsMap<T>)> {
+    ) -> (&Var<T>, Option<&SynCallBeforeFnsMap<T>>) {
         match (
             self.id_to_key_map.get(current_id),
             self.get_secondarymap::<T>(),
@@ -477,20 +492,30 @@ impl GStateStore {
             ) => {
                 let v = existing_secondary_map.get(*existing_key);
                 let b = existing_before_secondary_map.get(*existing_key);
+                trace!("v: {:?} b: {:?}", v.is_some(), b.is_some());
 
-                match (v, b) {
-                    (Some(vv), Some(bb)) => Some((vv, bb)),
-                    _ => None,
+                match v {
+                    Some(vv) => (vv, b),
+                    None => {
+                        panic!("can't get var , use existing_secondary_map, key:existing_key")
+                    }
                 }
             }
-            _ => None,
+            (key, sec_map, before_sec_map) => {
+                panic!(
+                    "can't get existing_key or maybe other map-> key:{},sec_map:{},before_sec_map:{}",
+                    key.is_some(),
+                    sec_map.is_some(),
+                    before_sec_map.is_some()
+                );
+            }
         }
     }
     #[must_use]
     fn opt_get_var_and_af_use_id<T: 'static>(
         &self,
         current_id: &StorageKey,
-    ) -> Option<(&Var<T>, &SynCallAfterFnsMap<T>)> {
+    ) -> (&Var<T>, Option<&SynCallAfterFnsMap<T>>) {
         match (
             self.id_to_key_map.get(current_id),
             self.get_secondarymap::<T>(),
@@ -503,13 +528,23 @@ impl GStateStore {
             ) => {
                 let v = existing_secondary_map.get(*existing_key);
                 let a = existing_after_secondary_map.get(*existing_key);
+                trace!("v: {:?} a: {:?}", v.is_some(), a.is_some());
 
-                match (v, a) {
-                    (Some(vv), Some(aa)) => Some((vv, aa)),
-                    _ => None,
+                match v {
+                    Some(vv) => (vv, a),
+                    None => {
+                        panic!("can't get var , use existing_secondary_map, key:existing_key")
+                    }
                 }
             }
-            _ => None,
+            (key, sec_map, after_sec_map) => {
+                panic!(
+                    "can't get existing_key or maybe other map-> key:{},sec_map:{},after_sec_map:{}",
+                    key.is_some(),
+                    sec_map.is_some(),
+                    after_sec_map.is_some()
+                );
+            }
         }
     }
 
@@ -1064,7 +1099,7 @@ where
         func: impl Fn(&SkipKeyCollection, &Option<Rc<T>>, &T) + 'static,
         init: bool,
     ) -> Result<(), String> {
-        insert_before_fn(
+        insert_before_fn_common(
             self,
             &StorageKey::TopoKey(before_fn_key),
             Rc::new(func),
@@ -1077,7 +1112,7 @@ where
         func: impl Fn(&SkipKeyCollection, &T) + 'static,
         init: bool,
     ) -> Result<(), String> {
-        insert_after_fn(
+        insert_after_fn_common(
             self,
             &StorageKey::TopoKey(after_fn_key),
             Rc::new(func),
@@ -1094,7 +1129,7 @@ where
     ) -> StateVar<B> {
         let v = self.get();
         let b: StateVar<B> = use_state(v.into());
-        insert_before_fn(
+        insert_before_fn_common(
             self,
             &StorageKey::TopoKey(b.id),
             Rc::new(move |skip, _current, value| {
@@ -1117,7 +1152,7 @@ where
 
         let this = *self;
 
-        insert_before_fn(
+        insert_before_fn_common(
             self,
             &StorageKey::TopoKey(b.id),
             Rc::new(move |skip, _current, value| {
@@ -1125,7 +1160,7 @@ where
             }),
             false,
         )
-        .and(insert_before_fn(
+        .and(insert_before_fn_common(
             &b,
             &StorageKey::TopoKey(self.id),
             Rc::new(move |skip, _current, value| {
@@ -1720,7 +1755,7 @@ fn read_var_b_a_with_topo_id<F: FnOnce(VarOptBAfnCollectRef<T>) -> R, T: 'static
 type BoxSynCallAfterFn<T> = Rc<dyn Fn(&SkipKeyCollection, &T)>;
 type BoxSynCallBeforeFn<T> = Rc<dyn Fn(&SkipKeyCollection, &Option<Rc<T>>, &T)>;
 
-fn insert_before_fn<T: 'static + std::clone::Clone>(
+fn insert_before_fn_common<T: 'static + std::clone::Clone>(
     sv: &StateVar<T>,
     before_id: &StorageKey,
     func: BoxSynCallBeforeFn<T>,
@@ -1730,16 +1765,13 @@ fn insert_before_fn<T: 'static + std::clone::Clone>(
         if init {
             trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
             let store = &g_state_store_refcell.borrow();
-            let (var, fns) = store
-                .opt_get_var_and_bf_use_id::<T>(&StorageKey::TopoKey(sv.id))
-                .expect("set_state_with_key: can't set state that doesn't exist in this context!");
+            let var = store
+                .opt_get_var_use_id::<T>(&StorageKey::TopoKey(sv.id))
+                .unwrap();
+            // .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 
             let key_collection = vec![StorageKey::TopoKey(sv.id)];
             let skip = RefCell::new(key_collection);
-
-            if fns.contains_key(before_id) {
-                return Err("before_fns already has this fn".to_string());
-            }
 
             func(&skip, &None, &*var.get());
             // let v = &(*var.get());
@@ -1757,7 +1789,7 @@ fn insert_before_fn<T: 'static + std::clone::Clone>(
         )
     })
 }
-fn insert_after_fn<T: 'static + std::clone::Clone>(
+fn insert_after_fn_common<T: 'static + std::clone::Clone>(
     sv: &StateVar<T>,
     after_id: &StorageKey,
     func: BoxSynCallAfterFn<T>,
@@ -1768,16 +1800,9 @@ fn insert_after_fn<T: 'static + std::clone::Clone>(
             trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
 
             let store = &g_state_store_refcell.borrow();
-            let (var, fns) = store
-                .opt_get_var_and_af_use_id::<T>(&StorageKey::TopoKey(sv.id))
-                .expect("set_state_with_key: can't set state that doesn't exist in this context!");
-
-            if fns.contains_key(after_id) {
-                return Err(format!(
-                    "after_fns already has this fn,in init \n id {:?}",
-                    &after_id
-                ));
-            }
+            let var = store
+                .opt_get_var_use_id::<T>(&StorageKey::TopoKey(sv.id))
+                .unwrap();
 
             let key_collection = vec![StorageKey::TopoKey(sv.id)];
             let skip = RefCell::new(key_collection);
@@ -1868,6 +1893,7 @@ where
 
     let id = topo::CallId::current();
     let id = TopoKey { id };
+    trace!("use_state::TopoKey:\n{:#?}", &id);
 
     if !state_exists_for_topo_id::<T>(id) {
         insert_var_with_topo_id::<T>(Var::new(data), id);
@@ -1950,6 +1976,19 @@ mod state_test {
         }
     }
 
+    impl From<u32> for TT {
+        fn from(v: u32) -> Self {
+            Self(format!("{}", v))
+        }
+    }
+    impl From<TT> for u32 {
+        fn from(v: TT) -> Self {
+            let s = v.0;
+            let i = s.parse::<u32>().unwrap();
+            i
+        }
+    }
+
     use tracing::Level;
 
     use tracing_flame::FlameLayer;
@@ -1966,7 +2005,7 @@ mod state_test {
                     | tracing_subscriber::fmt::format::FmtSpan::ENTER
                     | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
             )
-            .with_max_level(Level::DEBUG)
+            .with_max_level(Level::TRACE)
             .try_init();
 
         // tracing::subscriber::set_global_default(subscriber)
@@ -1995,9 +2034,37 @@ mod state_test {
         a.set(19);
         assert_eq!(a.get(), d.get());
     }
+
+    #[test]
+    #[topo::nested]
+    fn callback2_clone() {
+        let _g = _init();
+
+        let a = use_state(1);
+        let a_2 = use_state(11);
+        let update_id_a_2 = TopoKey::new(topo::call(topo::CallId::current));
+        trace!("update_id_a_2:{:#?}", &update_id_a_2);
+        a_2.insert_before_fn(
+            update_id_a_2.into(),
+            move |skip, current, value| {
+                // println!("current:{:?}", &current);
+                // println!("value:{}", value);
+                // assert_eq!(current, &Some(Rc::new(1)));
+                // assert_eq!(*value, 2);
+            },
+            false,
+        )
+        .unwrap();
+        // a_2.set(2);
+        trace!("==================build_bi_similar_use_into_in_topo========================");
+
+        let b = a.build_bi_similar_use_into_in_topo::<TT>();
+    }
     #[test]
     // #[wasm_bindgen_test]
     fn callback2() {
+        let _g = _init();
+
         let a = use_state(1);
         let a_2 = use_state(1);
         let update_id_a_2 = TopoKey::new(topo::call(topo::CallId::current));
