@@ -1,8 +1,6 @@
 ---
 source: emg_layout/src/impl_refresh.rs
-assertion_line: 445
 expression: "&root_e"
-
 ---
 EmgEdgeItem {
     id: StateVar(
@@ -58,100 +56,68 @@ EmgEdgeItem {
         origin_x: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Length(
-                        Simplex(
-                            ExactLengthSimplex {
-                                unit: Px,
-                                value: NotNan(
-                                    0.0,
-                                ),
-                            },
-                        ),
-                    ),
+                    None,
                 ),
             ),
         ),
         origin_y: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Length(
-                        Simplex(
-                            ExactLengthSimplex {
-                                unit: Px,
-                                value: NotNan(
-                                    0.0,
-                                ),
-                            },
-                        ),
-                    ),
+                    None,
                 ),
             ),
         ),
         origin_z: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Length(
-                        Simplex(
-                            ExactLengthSimplex {
-                                unit: Px,
-                                value: NotNan(
-                                    0.0,
-                                ),
-                            },
-                        ),
-                    ),
+                    None,
                 ),
             ),
         ),
         align_x: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Length(
-                        Simplex(
-                            ExactLengthSimplex {
-                                unit: Px,
-                                value: NotNan(
-                                    0.0,
-                                ),
-                            },
-                        ),
-                    ),
+                    None,
                 ),
             ),
         ),
         align_y: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Length(
-                        Simplex(
-                            ExactLengthSimplex {
-                                unit: Px,
-                                value: NotNan(
-                                    0.0,
-                                ),
-                            },
-                        ),
-                    ),
+                    None,
                 ),
             ),
         ),
         align_z: StateVar(
             GenericSizeAnchor(
                 StateAnchor(
-                    Length(
-                        Simplex(
-                            ExactLengthSimplex {
-                                unit: Px,
-                                value: NotNan(
-                                    0.0,
-                                ),
-                            },
-                        ),
-                    ),
+                    None,
                 ),
             ),
         ),
+        cassowary_constants: StateVar(
+            StateAnchor(
+                [],
+            ),
+        ),
+        cassowary_selectors: StateVar(
+            [],
+        ),
+        cassowary_generals: StateVar(
+            CassowaryGeneralMap {
+                map: {},
+                v_v: {},
+                virtual_constraints: {},
+                top_virtual_constraints: {},
+                top_map: {},
+                top_v_v: {},
+                parent: None,
+            },
+        ),
     },
+    styles: StateVar(
+        {},
+    ),
     path_styles: StateVar(
         {},
     ),
@@ -202,108 +168,73 @@ EmgEdgeItem {
                 origin_x: StateVar(
                     GenericSizeAnchor(
                         StateAnchor(
-                            Length(
-                                Simplex(
-                                    ExactLengthSimplex {
-                                        unit: Px,
-                                        value: NotNan(
-                                            0.0,
-                                        ),
-                                    },
-                                ),
-                            ),
+                            None,
                         ),
                     ),
                 ),
                 origin_y: StateVar(
                     GenericSizeAnchor(
                         StateAnchor(
-                            Length(
-                                Simplex(
-                                    ExactLengthSimplex {
-                                        unit: Px,
-                                        value: NotNan(
-                                            0.0,
-                                        ),
-                                    },
-                                ),
-                            ),
+                            None,
                         ),
                     ),
                 ),
                 origin_z: StateVar(
                     GenericSizeAnchor(
                         StateAnchor(
-                            Length(
-                                Simplex(
-                                    ExactLengthSimplex {
-                                        unit: Px,
-                                        value: NotNan(
-                                            0.0,
-                                        ),
-                                    },
-                                ),
-                            ),
+                            None,
                         ),
                     ),
                 ),
                 align_x: StateVar(
                     GenericSizeAnchor(
                         StateAnchor(
-                            Length(
-                                Simplex(
-                                    ExactLengthSimplex {
-                                        unit: Px,
-                                        value: NotNan(
-                                            0.0,
-                                        ),
-                                    },
-                                ),
-                            ),
+                            None,
                         ),
                     ),
                 ),
                 align_y: StateVar(
                     GenericSizeAnchor(
                         StateAnchor(
-                            Length(
-                                Simplex(
-                                    ExactLengthSimplex {
-                                        unit: Px,
-                                        value: NotNan(
-                                            0.0,
-                                        ),
-                                    },
-                                ),
-                            ),
+                            None,
                         ),
                     ),
                 ),
                 align_z: StateVar(
                     GenericSizeAnchor(
                         StateAnchor(
-                            Length(
-                                Simplex(
-                                    ExactLengthSimplex {
-                                        unit: Px,
-                                        value: NotNan(
-                                            0.0,
-                                        ),
-                                    },
-                                ),
-                            ),
+                            None,
                         ),
                     ),
+                ),
+                cassowary_constants: StateVar(
+                    StateAnchor(
+                        [],
+                    ),
+                ),
+                cassowary_selectors: StateVar(
+                    [],
+                ),
+                cassowary_generals: StateVar(
+                    CassowaryGeneralMap {
+                        map: {},
+                        v_v: {},
+                        virtual_constraints: {},
+                        top_virtual_constraints: {},
+                        top_map: {},
+                        top_v_v: {},
+                        parent: None,
+                    },
                 ),
             },
         },
     ),
-    other_styles: StateVar(
+    other_css_styles: StateVar(
         Style {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:781:41",
+                "emg_layout/src/lib.rs:1007:45",
             ],
             pseudo: None,
             media: None,
@@ -323,8 +254,482 @@ EmgEdgeItem {
                 ],
             ): EdgeData(
                 EdgeData {
+                    path_layout: StateAnchor(
+                        Layout {
+                            w: StateVar(
+                                GenericSizeAnchor(
+                                    StateAnchor(
+                                        Length(
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        94.32537399252,
+                                                    ),
+                                                },
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                            h: StateVar(
+                                GenericSizeAnchor(
+                                    StateAnchor(
+                                        Length(
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        1080.0,
+                                                    ),
+                                                },
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                            z: StateVar(
+                                StateAnchor(
+                                    0,
+                                ),
+                            ),
+                            origin_x: StateVar(
+                                GenericSizeAnchor(
+                                    StateAnchor(
+                                        None,
+                                    ),
+                                ),
+                            ),
+                            origin_y: StateVar(
+                                GenericSizeAnchor(
+                                    StateAnchor(
+                                        None,
+                                    ),
+                                ),
+                            ),
+                            origin_z: StateVar(
+                                GenericSizeAnchor(
+                                    StateAnchor(
+                                        None,
+                                    ),
+                                ),
+                            ),
+                            align_x: StateVar(
+                                GenericSizeAnchor(
+                                    StateAnchor(
+                                        None,
+                                    ),
+                                ),
+                            ),
+                            align_y: StateVar(
+                                GenericSizeAnchor(
+                                    StateAnchor(
+                                        None,
+                                    ),
+                                ),
+                            ),
+                            align_z: StateVar(
+                                GenericSizeAnchor(
+                                    StateAnchor(
+                                        None,
+                                    ),
+                                ),
+                            ),
+                            cassowary_constants: StateVar(
+                                StateAnchor(
+                                    [],
+                                ),
+                            ),
+                            cassowary_selectors: StateVar(
+                                [],
+                            ),
+                            cassowary_generals: StateVar(
+                                CassowaryGeneralMap {
+                                    map: {},
+                                    v_v: {},
+                                    virtual_constraints: {},
+                                    top_virtual_constraints: {},
+                                    top_map: {},
+                                    top_v_v: {},
+                                    parent: None,
+                                },
+                            ),
+                        },
+                    ),
                     calculated: LayoutCalculated {
-                        size: StateAnchor(
+                        size_constraints: StateAnchor(
+                            [
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        51,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                -94.32537399252,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1001001000.0,
+                                        ),
+                                        op: Equal,
+                                    },
+                                ),
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        52,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                -1080.0,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1001001000.0,
+                                        ),
+                                        op: Equal,
+                                    },
+                                ),
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        55,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                                Term {
+                                                    variable: Variable(
+                                                        53,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        -1.0,
+                                                    ),
+                                                },
+                                                Term {
+                                                    variable: Variable(
+                                                        52,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        -1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                0.0,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1001001000.0,
+                                        ),
+                                        op: Equal,
+                                    },
+                                ),
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        56,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                                Term {
+                                                    variable: Variable(
+                                                        54,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        -1.0,
+                                                    ),
+                                                },
+                                                Term {
+                                                    variable: Variable(
+                                                        51,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        -1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                0.0,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1001001000.0,
+                                        ),
+                                        op: Equal,
+                                    },
+                                ),
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        55,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                                Term {
+                                                    variable: Variable(
+                                                        53,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        -1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                0.0,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1001001000.0,
+                                        ),
+                                        op: GreaterOrEqual,
+                                    },
+                                ),
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        56,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                                Term {
+                                                    variable: Variable(
+                                                        54,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        -1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                0.0,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1001001000.0,
+                                        ),
+                                        op: GreaterOrEqual,
+                                    },
+                                ),
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        51,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                0.0,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1001001000.0,
+                                        ),
+                                        op: GreaterOrEqual,
+                                    },
+                                ),
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        52,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                0.0,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1001001000.0,
+                                        ),
+                                        op: GreaterOrEqual,
+                                    },
+                                ),
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        53,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                0.0,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1.0,
+                                        ),
+                                        op: GreaterOrEqual,
+                                    },
+                                ),
+                                Constraint(
+                                    ConstraintData {
+                                        expression: Expression {
+                                            terms: [
+                                                Term {
+                                                    variable: Variable(
+                                                        54,
+                                                    ),
+                                                    coefficient: NotNan(
+                                                        1.0,
+                                                    ),
+                                                },
+                                            ],
+                                            constant: NotNan(
+                                                0.0,
+                                            ),
+                                        },
+                                        strength: NotNan(
+                                            1.0,
+                                        ),
+                                        op: GreaterOrEqual,
+                                    },
+                                ),
+                            ],
+                        ),
+                        cassowary_inherited_generals_sa: StateAnchor(
+                            CassowaryGeneralMap {
+                                map: {
+                                    "align_x": Variable(
+                                        61,
+                                    ),
+                                    "align_y": Variable(
+                                        62,
+                                    ),
+                                    "align_z": Variable(
+                                        63,
+                                    ),
+                                    "baseline": Variable(
+                                        69,
+                                    ),
+                                    "bottom": Variable(
+                                        55,
+                                    ),
+                                    "height": Variable(
+                                        52,
+                                    ),
+                                    "hgap": Variable(
+                                        65,
+                                    ),
+                                    "left": Variable(
+                                        54,
+                                    ),
+                                    "origin_x": Variable(
+                                        58,
+                                    ),
+                                    "origin_y": Variable(
+                                        59,
+                                    ),
+                                    "origin_z": Variable(
+                                        60,
+                                    ),
+                                    "right": Variable(
+                                        56,
+                                    ),
+                                    "top": Variable(
+                                        53,
+                                    ),
+                                    "vgap": Variable(
+                                        67,
+                                    ),
+                                    "width": Variable(
+                                        51,
+                                    ),
+                                    "z": Variable(
+                                        57,
+                                    ),
+                                },
+                                v_v: {
+                                    Variable(
+                                        65,
+                                    ): 10.0,
+                                    Variable(
+                                        67,
+                                    ): 10.0,
+                                    Variable(
+                                        69,
+                                    ): 16.0,
+                                },
+                                virtual_constraints: {},
+                                top_virtual_constraints: {},
+                                top_map: {
+                                    "baseline": Variable(
+                                        68,
+                                    ),
+                                    "hgap": Variable(
+                                        64,
+                                    ),
+                                    "vgap": Variable(
+                                        66,
+                                    ),
+                                },
+                                top_v_v: {
+                                    Variable(
+                                        64,
+                                    ): 10.0,
+                                    Variable(
+                                        66,
+                                    ): 10.0,
+                                    Variable(
+                                        68,
+                                    ): 16.0,
+                                },
+                                parent: None,
+                            },
+                        ),
+                        cass_or_calc_size: StateAnchor(
                             [
                                 [
                                     94.32537399252,
@@ -346,7 +751,21 @@ EmgEdgeItem {
                                 0.0,
                             ],
                         ),
+                        translation: StateAnchor(
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
+                        ),
                         coordinates_trans: StateAnchor(
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
+                        ),
+                        cass_trans: StateAnchor(
                             [
                                 0.0,
                                 0.0,
@@ -418,10 +837,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/lib.rs:1007:13",
-                                    "emg_layout/src/lib.rs:1007:17",
-                                    "emg_layout/src/lib.rs:1007:31",
-                                    "emg_layout/src/lib.rs:1007:45",
+                                    "emg_layout/src/lib.rs:1961:9",
+                                    "emg_layout/src/lib.rs:1961:13",
+                                    "emg_layout/src/lib.rs:1961:27",
+                                    "emg_layout/src/lib.rs:1961:41",
                                 ],
                                 pseudo: None,
                                 media: None,
@@ -433,16 +852,275 @@ EmgEdgeItem {
                                 pre_combinators: [],
                             },
                         ),
+                        world: StateAnchor(
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
+                        ),
                     },
-                    styles_string: StateAnchor(
-                        "width: 94.32537399252px;\nheight: 1080px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n",
+                    cassowary_map: CassowaryMap {
+                        map: {
+                            "align_x": Variable(
+                                61,
+                            ),
+                            "align_y": Variable(
+                                62,
+                            ),
+                            "align_z": Variable(
+                                63,
+                            ),
+                            "bottom": Variable(
+                                55,
+                            ),
+                            "height": Variable(
+                                52,
+                            ),
+                            "left": Variable(
+                                54,
+                            ),
+                            "origin_x": Variable(
+                                58,
+                            ),
+                            "origin_y": Variable(
+                                59,
+                            ),
+                            "origin_z": Variable(
+                                60,
+                            ),
+                            "right": Variable(
+                                56,
+                            ),
+                            "top": Variable(
+                                53,
+                            ),
+                            "width": Variable(
+                                51,
+                            ),
+                            "z": Variable(
+                                57,
+                            ),
+                        },
+                        v_k: {
+                            Variable(
+                                51,
+                            ): "width",
+                            Variable(
+                                52,
+                            ): "height",
+                            Variable(
+                                53,
+                            ): "top",
+                            Variable(
+                                54,
+                            ): "left",
+                            Variable(
+                                55,
+                            ): "bottom",
+                            Variable(
+                                56,
+                            ): "right",
+                            Variable(
+                                57,
+                            ): "z",
+                            Variable(
+                                58,
+                            ): "origin_x",
+                            Variable(
+                                59,
+                            ): "origin_y",
+                            Variable(
+                                60,
+                            ): "origin_z",
+                            Variable(
+                                61,
+                            ): "align_x",
+                            Variable(
+                                62,
+                            ): "align_y",
+                            Variable(
+                                63,
+                            ): "align_z",
+                        },
+                    },
+                    children_vars_sa: StateAnchor(
+                        {},
                     ),
+                    cassowary_calculated_vars: StateAnchor(
+                        {
+                            Variable(
+                                51,
+                            ): (
+                                NotNan(
+                                    94.32537399252,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][width] ",
+                            ),
+                            Variable(
+                                52,
+                            ): (
+                                NotNan(
+                                    1080.0,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][height] ",
+                            ),
+                            Variable(
+                                53,
+                            ): (
+                                NotNan(
+                                    -0.0,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][top] ",
+                            ),
+                            Variable(
+                                54,
+                            ): (
+                                NotNan(
+                                    -0.0,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][left] ",
+                            ),
+                            Variable(
+                                55,
+                            ): (
+                                NotNan(
+                                    1080.0,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][bottom] ",
+                            ),
+                            Variable(
+                                56,
+                            ): (
+                                NotNan(
+                                    94.32537399252,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][right] ",
+                            ),
+                            Variable(
+                                58,
+                            ): (
+                                NotNan(
+                                    0.0,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][origin_x] ",
+                            ),
+                            Variable(
+                                59,
+                            ): (
+                                NotNan(
+                                    0.0,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][origin_y] ",
+                            ),
+                            Variable(
+                                61,
+                            ): (
+                                NotNan(
+                                    0.0,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][align_x] ",
+                            ),
+                            Variable(
+                                62,
+                            ): (
+                                NotNan(
+                                    0.0,
+                                ),
+                                "path [◈├─ ▢ -> ▣ root ][align_y] ",
+                            ),
+                            Variable(
+                                64,
+                            ): (
+                                NotNan(
+                                    10.0,
+                                ),
+                                "",
+                            ),
+                            Variable(
+                                65,
+                            ): (
+                                NotNan(
+                                    10.0,
+                                ),
+                                "",
+                            ),
+                            Variable(
+                                66,
+                            ): (
+                                NotNan(
+                                    10.0,
+                                ),
+                                "",
+                            ),
+                            Variable(
+                                67,
+                            ): (
+                                NotNan(
+                                    10.0,
+                                ),
+                                "",
+                            ),
+                            Variable(
+                                68,
+                            ): (
+                                NotNan(
+                                    16.0,
+                                ),
+                                "",
+                            ),
+                            Variable(
+                                69,
+                            ): (
+                                NotNan(
+                                    16.0,
+                                ),
+                                "",
+                            ),
+                        },
+                    ),
+                    cassowary_calculated_layout: StateAnchor(
+                        (
+                            Some(
+                                94.32537399252,
+                            ),
+                            Some(
+                                1080.0,
+                            ),
+                        ),
+                    ),
+                    styles_string: StateAnchor(
+                        "width: 94.32537399252px;\nheight: 1080px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n width: 94.32537399252px;\nheight: 1080px;\n",
+                    ),
+                    ctx: EdgeCtx {
+                        styles_end: StateAnchor(
+                            {},
+                        ),
+                        layout_end: StateAnchor(
+                            (
+                                [
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                ],
+                                94.32537399252,
+                                1080.0,
+                            ),
+                        ),
+                        world: StateAnchor(
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
+                        ),
+                        children_layout: StateAnchor(
+                            None,
+                        ),
+                    },
                     opt_p_calculated: None,
                 },
             ),
         },
     ),
-    store: RefCell {
-        value: the graph store,
-    },
 }

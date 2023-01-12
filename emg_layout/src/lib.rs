@@ -69,7 +69,7 @@ use styles::{CssHeightTrait, CssTransformTrait, CssWidthTrait};
 
 use indented::indented;
 use tracing::{
-    debug, debug_span, error, info, instrument, span, trace, trace_span, warn, warn_span, Level,
+    debug, debug_span, info, instrument, span, trace, trace_span, warn, warn_span, Level,
 };
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -1211,7 +1211,7 @@ where
                             } else {
                                 //目前是没有 这种情况,但是如果有的话,看下是什么情况
                                 unreachable!("not match (child_path.last_target(),child_node.as_edge_data())->{:?} ,{:?}",child_path.last_target(),child_node.as_edge_data());
-                                None
+                                // None
                             }
                         // }else{
                         //     panic!(" not child_path.except_tail_match(&self_path3)");
