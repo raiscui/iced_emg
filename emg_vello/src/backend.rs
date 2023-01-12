@@ -1,18 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2023-01-05 16:22:57
+ * @LastEditTime: 2023-01-12 15:37:52
  * @LastEditors: Rais
  * @Description:
  */
-use vello::{util::RenderContext as VelloRenderContext, Scene, SceneBuilder, SceneFragment};
+use vello::{util::DeviceHandle, Scene};
 use vello::{util::RenderSurface as VelloRenderSurface, Renderer as VelloRenderer};
 
-use crate::{scene_ctx::SceneFrag, Settings, NUM_FRAMES};
-
 use emg_graphics_backend::Error;
-
-use tracing::{debug, info};
 
 // #[cfg(any(feature = "image_rs", feature = "svg"))]
 // use crate::image;
@@ -21,26 +17,27 @@ use tracing::{debug, info};
 pub struct Backend {
     renderer: VelloRenderer,
     current_frame: usize,
-    pub scene: Scene,
 }
 
 impl Backend {
     /// Creates a new [`Backend`].
-    pub fn new(render_cx: &VelloRenderContext) -> Result<Self, Error> {
-        let renderer = VelloRenderer::new(&render_cx.device)
+    pub fn new(device_handle: &DeviceHandle) -> Result<Self, Error> {
+        let renderer = VelloRenderer::new(&device_handle.device)
             .map_err(|e| Error::BackendError(e.to_string()))?;
-
-        let scene = Scene::new();
 
         Ok(Self {
             renderer,
             current_frame: 0,
-            scene,
         })
     }
 
     /// Draws the provided primitives in the given `TextureView`.
-    pub fn present(&mut self, render_cx: &VelloRenderContext, surface: &VelloRenderSurface) {
+    pub fn present(
+        &mut self,
+        device_handle: &DeviceHandle,
+        scene: &Scene,
+        surface: &VelloRenderSurface,
+    ) {
         let surface_texture = surface
             .surface
             .get_current_texture()
@@ -48,9 +45,9 @@ impl Backend {
 
         self.renderer
             .render_to_surface(
-                &render_cx.device,
-                &render_cx.queue,
-                &self.scene,
+                &device_handle.device,
+                &device_handle.queue,
+                scene,
                 &surface_texture,
                 surface.config.width,
                 surface.config.height,
@@ -59,7 +56,7 @@ impl Backend {
 
         surface_texture.present();
 
-        render_cx.device.poll(wgpu::Maintain::Wait);
+        device_handle.device.poll(wgpu::Maintain::Wait);
     }
 }
 

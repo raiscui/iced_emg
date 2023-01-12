@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 16:06:48
- * @LastEditTime: 2023-01-05 17:59:32
+ * @LastEditTime: 2023-01-12 15:13:39
  * @LastEditors: Rais
  * @Description:
  */
 //! A compositor is responsible for initializing a renderer and managing window
 //! surfaces.
 
-use emg_native::renderer::{Renderer, SceneCtx};
+use emg_native::renderer::Renderer;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use thiserror::Error as TError;
 
@@ -26,7 +26,9 @@ pub trait Compositor: Sized {
     type Surface;
 
     /// Creates a new [`Compositor`].
-    fn new(settings: Self::Settings) -> Result<(Self, Self::Renderer), Error>;
+    fn new<W>(settings: Self::Settings, window: &W) -> Result<(Self, Self::Renderer), Error>
+    where
+        W: HasRawWindowHandle + HasRawDisplayHandle;
 
     /// Crates a new [`Surface`] for the given window.
     ///

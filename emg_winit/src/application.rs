@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-01-09 16:42:42
+ * @LastEditTime: 2023-01-12 15:29:17
  * @LastEditors: Rais
  * @Description:
  */
@@ -200,7 +200,7 @@ where
 
     let mut clipboard = Clipboard::connect(&window);
 
-    let (compositor, renderer) = C::new(compositor_settings)?;
+    let (compositor, renderer) = C::new(compositor_settings, &window)?;
 
     run_command(
         init_command,
