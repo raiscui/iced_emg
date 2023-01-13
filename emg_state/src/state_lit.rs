@@ -3,7 +3,7 @@ use std::rc::Rc;
 /*
  * @Author: Rais
  * @Date: 2022-06-14 11:38:22
- * @LastEditTime: 2022-06-14 15:47:08
+ * @LastEditTime: 2023-01-13 15:55:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,6 +16,20 @@ use crate::StateAnchor;
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(PartialEq, Eq, Clone)]
 pub struct StateVarLit<T>(Var<T>);
+
+impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVarLit<T> {
+    default fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = self.get();
+        write!(f, "\u{2726}-Lit ({})", &v)
+    }
+}
+
+impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVarLit<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = self.get();
+        f.debug_tuple("StateVarLit").field(&v).finish()
+    }
+}
 
 impl<T: 'static> StateVarLit<T> {
     pub fn new(v: T) -> Self {
@@ -40,8 +54,13 @@ impl<T: 'static> StateVarLit<T> {
         self.0.set(val);
     }
 
-    pub fn update<F: Fn(&T) -> T>(&self, func: F) {
-        self.0.set(func(&*self.0.get()));
+    pub fn update<F: FnOnce(&mut T)>(&self, func: F)
+    where
+        T: Clone,
+    {
+        let mut v = self.0.get().as_ref().clone();
+        func(&mut v);
+        self.0.set(v);
     }
 
     #[must_use]

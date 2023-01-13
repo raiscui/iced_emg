@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-13 11:54:24
+ * @LastEditTime: 2023-01-13 15:19:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -50,9 +50,21 @@ impl From<(EventFlag, u32)> for EventIdentify {
 }
 
 // Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>;
+//TODO in web, EventCallbackFn has 3 arg, native need same arg
 type EventCallbackFn<Message> = Rc<dyn Fn(&mut i32) -> Option<Message>>;
+type EventMessageFn<Message> = Rc<dyn Fn() -> Option<Message>>;
 
+/// 3 arg event callback
 pub struct EventCallback<Message>(EventIdentify, EventCallbackFn<Message>);
+
+impl<Message> std::fmt::Debug for EventCallback<Message> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("EventCallback")
+            .field(&self.0)
+            .field(&"EventCallbackFn<Message>")
+            .finish()
+    }
+}
 
 impl<Message> Clone for EventCallback<Message> {
     fn clone(&self) -> Self {
@@ -66,30 +78,27 @@ impl<Message> PartialEq for EventCallback<Message>
 {
     fn eq(&self, other: &Self) -> bool {
         if self.0 == other.0 {
-            assert_eq!(
+            debug_assert_eq!(
                 &*self.1 as *const _ as *const u8,
                 &*other.1 as *const _ as *const u8
             );
 
-            assert!(std::ptr::eq(
+            debug_assert!(std::ptr::eq(
                 &*self.1 as *const _ as *const u8,
                 &*other.1 as *const _ as *const u8
             ));
+            true
         } else {
-            assert_ne!(
+            debug_assert_ne!(
                 &*self.1 as *const _ as *const u8,
                 &*other.1 as *const _ as *const u8
             );
-            assert!(!std::ptr::eq(
+            debug_assert!(!std::ptr::eq(
                 &*self.1 as *const _ as *const u8,
                 &*other.1 as *const _ as *const u8
             ));
+            false
         }
-        self.0 == other.0
-            && std::ptr::eq(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8,
-            )
     }
 }
 
@@ -100,7 +109,16 @@ impl<Message> EventCallback<Message> {
     }
 }
 
-pub struct EventMessage<Message>(EventIdentify, Rc<dyn Fn() -> Option<Message>>);
+pub struct EventMessage<Message>(EventIdentify, EventMessageFn<Message>);
+
+impl<Message> std::fmt::Debug for EventMessage<Message> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("EventMessage")
+            .field(&self.0)
+            .field(&"EventMessageFn<Message>")
+            .finish()
+    }
+}
 
 impl<Message> Clone for EventMessage<Message> {
     fn clone(&self) -> Self {
@@ -169,18 +187,44 @@ impl<Message> PartialEq for EventMessage<Message>
 //     Message: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+        // self.0 == other.0
+
         //FIXME comparing trait object pointers compares a non-unique vtable address
         //comparing trait object pointers compares a non-unique vtable address
         // consider extracting and comparing data pointers only
         // for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#vtable_address_comparisons
         //
         // && Rc::ptr_eq(&self.1, &other.1)
+
+        if self.0 == other.0 {
+            debug_assert_eq!(
+                &*self.1 as *const _ as *const u8,
+                &*other.1 as *const _ as *const u8
+            );
+
+            debug_assert!(std::ptr::eq(
+                &*self.1 as *const _ as *const u8,
+                &*other.1 as *const _ as *const u8
+            ));
+            true
+        } else {
+            debug_assert_ne!(
+                &*self.1 as *const _ as *const u8,
+                &*other.1 as *const _ as *const u8
+            );
+            debug_assert!(!std::ptr::eq(
+                &*self.1 as *const _ as *const u8,
+                &*other.1 as *const _ as *const u8
+            ));
+            false
+        }
     }
 }
 #[derive(From)]
 pub enum EventNode<Message> {
+    // no arg
     Cb(EventCallback<Message>),
+    // 3 arg
     CbMessage(EventMessage<Message>),
 }
 
@@ -191,15 +235,14 @@ impl<Message> EventNode<Message> {
             EventNode::CbMessage(x) => x.0.clone(),
         }
     }
-    pub fn call(&self) {
+    pub fn call(&self) -> Option<Message> {
         match self {
             EventNode::Cb(x) => {
                 info!("EventNode::Cb call");
-                (x.1)(&mut 1);
+                //TODO real 3 arg
+                (x.1)(&mut 1)
             }
-            EventNode::CbMessage(x) => {
-                (x.1)();
-            }
+            EventNode::CbMessage(x) => (x.1)(),
         }
     }
 }
@@ -258,14 +301,8 @@ impl<Message> std::fmt::Debug for EventNode<Message>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EventNode::Cb(EventCallback(k, _)) => {
-                let v = (k, "Box<dyn EventCbClone>");
-                f.debug_tuple("EventNode<Message>").field(&v).finish()
-            }
-            EventNode::CbMessage(EventMessage(k, _)) => {
-                let v = (k, "Box<dyn EventMessageCbClone>");
-                f.debug_tuple("EventNode<Message>").field(&v).finish()
-            }
+            EventNode::Cb(x) => f.debug_tuple("EventNode<Message>").field(x).finish(),
+            EventNode::CbMessage(x) => f.debug_tuple("EventNode<Message>").field(x).finish(),
         }
     }
 }

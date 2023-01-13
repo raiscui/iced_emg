@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-01-13 12:23:17
+ * @LastEditTime: 2023-01-13 16:13:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,7 +16,7 @@ use crate::clipboard::{self, Clipboard};
 use crate::conversion;
 use crate::mouse;
 use crate::{Command, Debug, Executor, FutureRuntime, Mode, Proxy, Settings};
-use emg_state::{use_state, use_state_impl::CloneStateVar, StateVar};
+use emg_state::{state_lit::StateVarLit, use_state, use_state_impl::CloneStateVar, StateVar};
 
 use emg_element::{GTreeBuilderFn, GraphProgram};
 use emg_futures::futures;
@@ -264,12 +264,12 @@ where
 
 #[instrument(skip_all)]
 async fn run_instance<A, E, C>(
-    application: A,
+    mut application: A,
     mut compositor: C,
     mut renderer: A::Renderer,
-    future_runtime: FutureRuntime<E, Proxy<A::Message>, A::Message>,
-    clipboard: Clipboard,
-    proxy: winit::event_loop::EventLoopProxy<A::Message>,
+    mut future_runtime: FutureRuntime<E, Proxy<A::Message>, A::Message>,
+    mut clipboard: Clipboard,
+    mut proxy: winit::event_loop::EventLoopProxy<A::Message>,
     mut debug: Debug,
     mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
     window: winit::window::Window,
@@ -307,18 +307,14 @@ async fn run_instance<A, E, C>(
     // let ctx = renderer.new_paint_ctx();
     //view
 
-    let native_events: StateVar<Vector<EventWithFlagType>> = use_state(Vector::new());
+    // let native_events: StateVar<Vector<EventWithFlagType>> = use_state(Vector::new());
+    let native_events: StateVarLit<Vector<EventWithFlagType>> = StateVarLit::new(Vector::new());
     let (event_matchs_sa, ctx_sa) =
         application.ctx(&g.graph(), &native_events.watch(), state.cursor_position());
     let mut ctx = ctx_sa.get();
     // let mut element = application.view(&g.graph());
 
-    // window.request_redraw();
-
-    //base node  = renderer.layout
-
     let mouse_interaction = mouse::Interaction::default();
-    // let mut native_events: Vec<Event> = Vec::new();
     let native_events_is_empty = native_events.watch().map(|v| v.is_empty());
     let mut messages = Vec::new();
 
@@ -330,19 +326,28 @@ async fn run_instance<A, E, C>(
         match winit_event {
             event::Event::MainEventsCleared => {
                 let _span = info_span!(target:"winit event","MainEventsCleared").entered();
-                if native_events_is_empty.get() && messages.is_empty() {
+
+                if native_events_is_empty.get() {
                     continue;
                 }
+                info!(target:"winit event","native_events:{:?}", native_events);
+
                 //NOTE  has events or messages now -------------------
 
                 debug.event_processing_started();
-                info!(target:"winit event","native_events:{:?}", native_events);
 
                 let event_matchs = event_matchs_sa.get();
-                for ev in event_matchs.values().flat_map(|x| x.1.clone()) {
-                    ev.call();
-                }
+                //清空 native_events, 因为 event_matchs 已经获得, native_events使用完毕;
                 native_events.set(Vector::new());
+                //快速跳过 ev.call()
+                if event_matchs.is_empty() {
+                    continue;
+                }
+                for ev in event_matchs.values().flat_map(|x| x.1.clone()) {
+                    if let Some(msg) = ev.call() {
+                        messages.push(msg);
+                    }
+                }
 
                 // let (interface_state, statuses) = user_interface.update(
                 //     &events,
@@ -352,8 +357,6 @@ async fn run_instance<A, E, C>(
                 //     &mut messages,
                 // );
 
-                //widget.on_event
-
                 debug.event_processing_finished();
 
                 // for event in events.drain(..).zip(statuses.into_iter()) {
@@ -361,21 +364,22 @@ async fn run_instance<A, E, C>(
                 // }
 
                 if !messages.is_empty()
+                //TODO 实现 Outdated check, SceneFrag 变更 -> Outdated
                 // || matches!(interface_state, user_interface::State::Outdated,)
                 {
                     // let cache = ManuallyDrop::into_inner(user_interface).into_cache();
 
                     // TODO Update application
-                    // update(
-                    //     &mut application,
-                    //     &mut future_runtime,
-                    //     &mut clipboard,
-                    //     &mut proxy,
-                    //     &mut debug,
-                    //     &mut messages,
-                    //     &window,
-                    //     || compositor.fetch_information(),
-                    // );
+                    update(
+                        &mut application,
+                        &mut future_runtime,
+                        &mut clipboard,
+                        &mut proxy,
+                        &mut debug,
+                        &mut messages,
+                        &window,
+                        || compositor.fetch_information(),
+                    );
 
                     //TODO Update window
                     // state.synchronize(&application, &window);
@@ -640,9 +644,11 @@ pub fn run_command<Message: 'static + std::fmt::Debug + Send, E: Executor>(
 
     for action in command.actions() {
         match action {
+            //TODO check work
             command::Action::Future(future) => {
                 future_runtime.spawn(future);
             }
+            //TODO check work
             command::Action::Clipboard(action) => match action {
                 clipboard::Action::Read(tag) => {
                     let message = tag(clipboard.read());
@@ -655,6 +661,7 @@ pub fn run_command<Message: 'static + std::fmt::Debug + Send, E: Executor>(
                     clipboard.write(contents);
                 }
             },
+            //TODO check work
             command::Action::Window(action) => match action {
                 window::Action::Resize { width, height } => {
                     window.set_inner_size(winit::dpi::LogicalSize { width, height });
@@ -664,6 +671,7 @@ pub fn run_command<Message: 'static + std::fmt::Debug + Send, E: Executor>(
                     window.set_outer_position(winit::dpi::LogicalPosition { x, y });
                 }
             },
+            //TODO check work
             command::Action::System(action) => match action {
                 system::Action::QueryInformation(_tag) => {
                     #[cfg(feature = "system")]

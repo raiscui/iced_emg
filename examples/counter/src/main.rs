@@ -142,6 +142,7 @@ impl Sandbox for Counter {
                     let _span = debug_span!("LayoutOverride", "click cb")
                             .entered();
                     info!(" on [debug_layer]----click cb ----");
+                    Message::Empty
                 },
                 @=a1 @E=[
                         {@h (#a2)(#a3)(#a4) chain-top chain-bottom chain-height chain-width(250)},
