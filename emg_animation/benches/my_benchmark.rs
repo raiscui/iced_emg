@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2023-01-11 17:26:07
+ * @LastEditTime: 2023-01-13 12:02:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -229,6 +229,7 @@ pub fn clone_benchmark(c: &mut Criterion) {
                 width(px(black_box(0))).into(),
                 width(px(black_box(1))).into(),
             ];
+            #[allow(unused)]
             let x = initial_props.clone();
         })
     });
@@ -252,7 +253,8 @@ pub fn step_benchmark(c: &mut Criterion) {
             );
             let vp = vector![p];
 
-            step_og(&Duration::from_millis(black_box(16)), vp);
+            #[allow(unused)]
+            let x = step_og(&Duration::from_millis(black_box(16)), vp);
         })
     });
     // group.bench_function("step2-mut", |b| {

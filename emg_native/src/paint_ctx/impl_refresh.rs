@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-30 12:18:05
- * @LastEditTime: 2022-09-14 15:09:39
+ * @LastEditTime: 2023-01-13 12:15:42
  * @LastEditors: Rais
  * @Description:
  */
-use emg_shaping::{EqShaping, Shaping, ShapingWhoNoWarper};
+use emg_shaping::{Shaping, ShapingWhoNoWarper};
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
 
 use crate::WidgetState;

@@ -8,16 +8,9 @@
 
 // mod index;
 
-#[cfg(all(feature = "old_node"))]
-mod node_item_rc_sv;
-#[cfg(all(feature = "old_node"))]
-pub use node_item_rc_sv::{GelType, GraphType, NItem, E, N};
 
-#[cfg(all(feature = "new_node"))]
 mod node_item_rc_sv_with_ctx;
-#[cfg(all(feature = "new_node"))]
 pub use node_item_rc_sv_with_ctx::GraphMethods;
-#[cfg(all(feature = "new_node"))]
 pub use node_item_rc_sv_with_ctx::{EventMatchsSa, GelType, GraphType, NItem, E, N};
 
 use emg_common::IdStr;

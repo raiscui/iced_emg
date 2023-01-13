@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-01-06 19:10:22
+ * @LastEditTime: 2023-01-13 12:00:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,21 +19,17 @@ use std::{cell::RefCell, rc::Rc};
 
 // use cfg_if::cfg_if;
 use either::Either::{self, Left, Right};
-use emg::{edge_index_no_source, EdgeCollect, EdgeIndex, Graph};
+use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_common::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
-use emg_native::{Event, PaintCtx, Widget};
-use emg_shaping::{ShapeOfUse, ShapingUse};
+use emg_shaping::ShapingUse;
 use emg_state::{
-    Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar, Var,
+    Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar,
 };
-use tracing::{debug, error, event, info, info_span, trace, trace_span, warn, Level};
+use tracing::{debug, error, info, info_span, trace, trace_span, warn};
 // use vec_string::VecString;
 
-use crate::{
-    node_builder::{EventMatchsDict, EventNode},
-    GElement, NodeBuilderWidget,
-};
+use crate::{node_builder::EventMatchsDict, GElement, NodeBuilderWidget};
 
 use super::{EmgNodeItem, PathDict};
 
@@ -233,7 +229,6 @@ where
             let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 
             let this_path_children_sa: StateAnchor<Dict<EdgeIndex<IdStr>, GElEither<Message>>> =
-                //TODO move [children_view_gel_sv_sa] here, directly use [children_view_gel_sv_sa]
                 children_view_gel_sv_sa
                     .filter_map(move |k_child_path, v_child_gel_sv_sa| {
                         let _span = info_span!("[this_path_children_sa] recalculation,( in [Dict] children_view_gel_sv_sa.filter_map => )",current_path = %current_path_clone2).entered();
@@ -415,7 +410,7 @@ where
                             //     error!("child_gel is node ref:{} ",refs);
                             // }
 
-                            gel_clone.shaping_use(child_gel.as_ref());//TODO use rc
+                            gel_clone.shaping_use(child_gel.as_ref());
                         }
                     }
 
@@ -444,7 +439,6 @@ where
 
                             // if !event_callbacks.is_empty() {
                             //     for callback in event_callbacks {
-                            //         //TODO maybe just directly push event
                             //         node_builder_widget.shape_of_use(callback);
                             //     }
                             // }
@@ -454,6 +448,7 @@ where
                                     children.get(eix).and_then(|child| child.as_ref().left())
                                 {
                                     info!("will shaping node builder : {:?}", event_gel);
+                                     //TODO maybe just directly push event?
                                     node_builder_widget.shaping_use(event_gel.as_ref());
                                 }
                             }
@@ -504,7 +499,6 @@ where
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    //TODO make no clone fn
     pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> StateAnchor<GelType<Message>> {
         self.paths_view_gel_sa
             .get_with(|x| x.get(eix).unwrap().clone())

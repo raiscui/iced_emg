@@ -1,15 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2023-01-04 23:53:36
+ * @LastEditTime: 2023-01-13 11:56:29
  * @LastEditors: Rais
  * @Description:
  */
 
-use crate::{node_builder::EventNode, PaintCtx};
-use emg_common::{IdStr, Pos, Vector};
-use emg_native::{event::EventWithFlagType, renderer::Renderer, Event, Program, Widget};
-use emg_state::{Dict, StateAnchor};
+use emg_common::{Pos, Vector};
+use emg_native::{event::EventWithFlagType, renderer::Renderer, Program, Widget};
+use emg_state::StateAnchor;
 use std::{ops::Deref, rc::Rc};
 
 use crate::GTreeBuilderElement;

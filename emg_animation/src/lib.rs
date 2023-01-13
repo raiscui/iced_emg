@@ -293,7 +293,6 @@ where
 /// Never panic
 #[must_use]
 pub fn extract_initial_wait<Message>(
-    //TODO check mut , opt all
     mut steps: VecDeque<Step<Message>>,
 ) -> (Duration, VecDeque<Step<Message>>)
 where
@@ -314,18 +313,26 @@ where
 
     //         _ ->
     //             ( Time.millisToPosix 0, steps )
-    use Step::Wait;
-    let front = steps.front();
-    if let Some(Wait(_)) = front {
-        let till = steps
-            .pop_front()
-            .and_then(|x| x.try_into_wait().ok())
-            .unwrap();
-        let (additional_time, remaining_steps) = extract_initial_wait(steps);
-        (till + additional_time, remaining_steps)
+
+    if let Some(Step::Wait(dt)) = steps.front().cloned() {
+        let (additional_time, remaining_steps) = extract_initial_wait(steps.split_off(1));
+        (dt + additional_time, remaining_steps)
     } else {
         (Duration::ZERO, steps)
     }
+
+    // use Step::Wait;
+    // let front = steps.front();
+    // if let Some(Wait(_)) = front {
+    //     let till = steps
+    //         .pop_front()
+    //         .and_then(|x| x.try_into_wait().ok())
+    //         .unwrap();
+    //     let (additional_time, remaining_steps) = extract_initial_wait(steps);
+    //     (till + additional_time, remaining_steps)
+    // } else {
+    //     (Duration::ZERO, steps)
+    // }
 }
 
 ///Interrupt any running animations with the following animation.

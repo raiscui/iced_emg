@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2023-01-11 17:29:13
+ * @LastEditTime: 2023-01-13 12:16:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,9 +12,8 @@ use std::{cell::Cell, rc::Rc};
 use crate::renderer::{Affine, Color, Size};
 use emg_common::{na::Translation3, LayoutOverride, Vector};
 use emg_shaping::ShapingWhoNoWarper;
-use emg_state::{state_lit::StateVarLit, StateAnchor};
+use emg_state::StateAnchor;
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
-use tracing::{debug, info};
 
 //TODO use app state viewport dpr
 //TODO use  window.scale_factor()

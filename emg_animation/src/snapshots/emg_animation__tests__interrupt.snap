@@ -1,13 +1,14 @@
 ---
 source: emg_animation/src/lib.rs
 expression: "&am_state"
-
 ---
-Animation {
+AnimationOG {
     steps: [],
     props: [
         Prop(
-            "opacity",
+            TypeName(
+                "opacity",
+            ),
             Motion {
                 position: NotNan(
                     1.0,
@@ -26,7 +27,7 @@ Animation {
                         26.0,
                     ),
                 },
-                unit: None,
+                unit: Empty,
                 interpolation_override: None,
             },
         ),
@@ -43,7 +44,9 @@ Animation {
                 To(
                     [
                         Prop(
-                            "opacity",
+                            TypeName(
+                                "opacity",
+                            ),
                             Motion {
                                 position: NotNan(
                                     0.0,
@@ -62,7 +65,7 @@ Animation {
                                         26.0,
                                     ),
                                 },
-                                unit: None,
+                                unit: Empty,
                                 interpolation_override: None,
                             },
                         ),
@@ -71,7 +74,9 @@ Animation {
                 To(
                     [
                         Prop(
-                            "opacity",
+                            TypeName(
+                                "opacity",
+                            ),
                             Motion {
                                 position: NotNan(
                                     1.0,
@@ -90,7 +95,7 @@ Animation {
                                         26.0,
                                     ),
                                 },
-                                unit: None,
+                                unit: Empty,
                                 interpolation_override: None,
                             },
                         ),

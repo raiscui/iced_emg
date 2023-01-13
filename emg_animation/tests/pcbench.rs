@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-17 11:30:44
- * @LastEditTime: 2023-01-11 17:24:23
+ * @LastEditTime: 2023-01-13 12:01:17
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,12 +20,14 @@
  * @Description:
  */
 #![allow(unused_imports)]
+#![allow(unused)]
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod pc_bench {
     use easybench::{bench, bench_env};
 
     #[derive(Debug, Clone, PartialEq)]
+    #[allow(dead_code)]
     enum Message {
         A,
     }

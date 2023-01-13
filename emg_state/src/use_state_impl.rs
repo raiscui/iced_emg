@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-01-12 11:46:51
+ * @LastEditTime: 2023-01-13 12:04:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -475,78 +475,78 @@ impl GStateStore {
         fns.remove(after_fn_id);
     }
 
-    #[must_use]
-    fn opt_get_var_and_bf_use_id<T: 'static>(
-        &self,
-        current_id: &StorageKey,
-    ) -> (&Var<T>, Option<&SynCallBeforeFnsMap<T>>) {
-        match (
-            self.id_to_key_map.get(current_id),
-            self.get_secondarymap::<T>(),
-            self.get_before_secondarymap::<T>(),
-        ) {
-            (
-                Some(existing_key),
-                Some(existing_secondary_map),
-                Some(existing_before_secondary_map),
-            ) => {
-                let v = existing_secondary_map.get(*existing_key);
-                let b = existing_before_secondary_map.get(*existing_key);
-                trace!("v: {:?} b: {:?}", v.is_some(), b.is_some());
+    // #[must_use]
+    // fn opt_get_var_and_bf_use_id<T: 'static>(
+    //     &self,
+    //     current_id: &StorageKey,
+    // ) -> (&Var<T>, Option<&SynCallBeforeFnsMap<T>>) {
+    //     match (
+    //         self.id_to_key_map.get(current_id),
+    //         self.get_secondarymap::<T>(),
+    //         self.get_before_secondarymap::<T>(),
+    //     ) {
+    //         (
+    //             Some(existing_key),
+    //             Some(existing_secondary_map),
+    //             Some(existing_before_secondary_map),
+    //         ) => {
+    //             let v = existing_secondary_map.get(*existing_key);
+    //             let b = existing_before_secondary_map.get(*existing_key);
+    //             trace!("v: {:?} b: {:?}", v.is_some(), b.is_some());
 
-                match v {
-                    Some(vv) => (vv, b),
-                    None => {
-                        panic!("can't get var , use existing_secondary_map, key:existing_key")
-                    }
-                }
-            }
-            (key, sec_map, before_sec_map) => {
-                panic!(
-                    "can't get existing_key or maybe other map-> key:{},sec_map:{},before_sec_map:{}",
-                    key.is_some(),
-                    sec_map.is_some(),
-                    before_sec_map.is_some()
-                );
-            }
-        }
-    }
-    #[must_use]
-    fn opt_get_var_and_af_use_id<T: 'static>(
-        &self,
-        current_id: &StorageKey,
-    ) -> (&Var<T>, Option<&SynCallAfterFnsMap<T>>) {
-        match (
-            self.id_to_key_map.get(current_id),
-            self.get_secondarymap::<T>(),
-            self.get_after_secondarymap::<T>(),
-        ) {
-            (
-                Some(existing_key),
-                Some(existing_secondary_map),
-                Some(existing_after_secondary_map),
-            ) => {
-                let v = existing_secondary_map.get(*existing_key);
-                let a = existing_after_secondary_map.get(*existing_key);
-                trace!("v: {:?} a: {:?}", v.is_some(), a.is_some());
+    //             match v {
+    //                 Some(vv) => (vv, b),
+    //                 None => {
+    //                     panic!("can't get var , use existing_secondary_map, key:existing_key")
+    //                 }
+    //             }
+    //         }
+    //         (key, sec_map, before_sec_map) => {
+    //             panic!(
+    //                 "can't get existing_key or maybe other map-> key:{},sec_map:{},before_sec_map:{}",
+    //                 key.is_some(),
+    //                 sec_map.is_some(),
+    //                 before_sec_map.is_some()
+    //             );
+    //         }
+    //     }
+    // }
+    // #[must_use]
+    // fn opt_get_var_and_af_use_id<T: 'static>(
+    //     &self,
+    //     current_id: &StorageKey,
+    // ) -> (&Var<T>, Option<&SynCallAfterFnsMap<T>>) {
+    //     match (
+    //         self.id_to_key_map.get(current_id),
+    //         self.get_secondarymap::<T>(),
+    //         self.get_after_secondarymap::<T>(),
+    //     ) {
+    //         (
+    //             Some(existing_key),
+    //             Some(existing_secondary_map),
+    //             Some(existing_after_secondary_map),
+    //         ) => {
+    //             let v = existing_secondary_map.get(*existing_key);
+    //             let a = existing_after_secondary_map.get(*existing_key);
+    //             trace!("v: {:?} a: {:?}", v.is_some(), a.is_some());
 
-                match v {
-                    Some(vv) => (vv, a),
-                    None => {
-                        panic!("can't get var , use existing_secondary_map, key:existing_key")
-                    }
-                }
-            }
-            (key, sec_map, after_sec_map) => {
-                panic!(
-                    "can't get existing_key or maybe other map-> key:{},sec_map:{},after_sec_map:{}",
-                    key.is_some(),
-                    sec_map.is_some(),
-                    after_sec_map.is_some()
-                );
-            }
-        }
-    }
+    //             match v {
+    //                 Some(vv) => (vv, a),
+    //                 None => {
+    //                     panic!("can't get var , use existing_secondary_map, key:existing_key")
+    //                 }
+    //             }
+    //         }
+    //         (key, sec_map, after_sec_map) => {
+    //             panic!(
+    //                 "can't get existing_key or maybe other map-> key:{},sec_map:{},after_sec_map:{}",
+    //                 key.is_some(),
+    //                 sec_map.is_some(),
+    //                 after_sec_map.is_some()
+    //             );
+    //         }
+    //     }
+    // }
 
     #[must_use]
     fn opt_get_var_and_bf_af_use_id<T: 'static>(

@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-29 23:19:00
- * @LastEditTime: 2023-01-04 19:14:24
+ * @LastEditTime: 2023-01-13 12:03:32
  * @LastEditors: Rais
  * @Description:
  */
 
 use crate::EmgEdgeItem;
-use emg_common::{dyn_partial_eq::DynPartialEq, TypeCheck};
+use emg_common::TypeCheck;
 use emg_native::WidgetState;
 use emg_shaping::{EqShapingWithDebug, Shaping, ShapingWhoNoWarper};
 use emg_state::StateTypeCheck;

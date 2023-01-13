@@ -1149,7 +1149,7 @@ where
 
 
                     let self_path2 =self_path.clone();
-                    let self_path3 =self_path.clone();
+                    // let self_path3 =self_path.clone();
                     let self_path4 =self_path.clone();
                     let self_path5 =self_path.clone();
                     let self_path6 =self_path.clone();
@@ -1397,34 +1397,36 @@ where
                     });
 
 // ────────────────────────────────────────────────────────────────────────────────
-let children_cass_maps_no_val_sa = children_cass_maps_sa.map_(|_ix,(map,..)|{
-    map.clone()
-});
+// let children_cass_maps_no_val_sa = children_cass_maps_sa.map_(|_ix,(map,..)|{
+//     map.clone()
+// });
 let children_cass_size_constraints_sa = children_cass_maps_sa.then(|d|{
     d.values().map(|(_,sa)|sa.get_anchor()).collect::<Vec<_>>().into_iter().collect::<Anchor<Vector<Vec<Constraint>>>>()
 });
-let current_cassowary_map3 = current_cassowary_map.clone();
+// let current_cassowary_map3 = current_cassowary_map.clone();
 
-let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa,&children_cass_size_constraints_sa).map(move |cass_maps,children_size_constraints|{
+// let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa,&children_cass_size_constraints_sa).map(move |cass_maps,children_size_constraints|{
+let children_for_current_addition_constants_sa =  children_cass_size_constraints_sa.map(move |children_size_constraints|{
 
 
     let mut  res_exprs = OrdSet::new();
 
     //NOTE add some each child custom  cassowary map to current constants map
 
-    for (_,map) in cass_maps {
+    // for (_,map) in cass_maps {
 
-        res_exprs.extend([
-            // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("left").unwrap()+map.var("width").unwrap(),
-            // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("top").unwrap() + map.var("height").unwrap(),
+    //     res_exprs.extend([
+    //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("left").unwrap()+map.var("width").unwrap(),
+    //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("top").unwrap() + map.var("height").unwrap(),
 
-            // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("right").unwrap(),
-            // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("bottom").unwrap(),
+    //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("right").unwrap(),
+    //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("bottom").unwrap(),
 
-        ]);
+    //     ]);
 
 
-    }
+    // }
+
     res_exprs.extend(children_size_constraints.clone().into_iter().flatten());
 
 
@@ -1863,7 +1865,7 @@ where
 
 fn path_ein_empty_node_builder<Ix: 'static>(
     path_layout: &StateAnchor<Layout>,
-    path: &EPath<Ix>,
+    _path: &EPath<Ix>,
     current_cassowary_map: &Rc<CassowaryMap>,
 
     path_styles: StateVar<PathVarMap<Ix, Style>>,
@@ -1879,7 +1881,7 @@ where
     // println!("run path_ein_empty_node_builder ******************************************************************");
 
     // ─────────────────────────────────────────────────────────────────
-    let path_clone = path.clone();
+    // let path_clone = path.clone();
 
     let w = path_layout.then(|l: &Layout| l.w.watch().into());
     let h = path_layout.then(|l: &Layout| l.h.watch().into());
@@ -1899,8 +1901,6 @@ where
     let bottom_var = current_cassowary_map.var("bottom").unwrap();
     let right_var = current_cassowary_map.var("right").unwrap();
     // ─────────────────────────────────────────────────────────────────
-
-    let current_cassowary_map2 = current_cassowary_map.clone();
 
     let size_constraints = (&sa_w, &sa_h).map(move |w: &GenericSize, h: &GenericSize| {
         let size_constraints = vec![

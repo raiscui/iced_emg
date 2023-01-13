@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2022-12-19 14:21:19
+ * @LastEditTime: 2023-01-13 12:49:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -59,18 +59,18 @@ pub fn window_event(
             let position = position.to_logical::<f64>(scale_factor);
 
             Some((
-                (EventFlag::MOUSE, mouse::EventFlag::CURSOR_MOVED.bits()),
+                (EventFlag::MOUSE, mouse::CURSOR_MOVED.bits()),
                 Event::Mouse(mouse::Event::CursorMoved {
                     position: Pos::new(position.x as f32, position.y as f32),
                 }),
             ))
         }
         WindowEvent::CursorEntered { .. } => Some((
-            (EventFlag::MOUSE, mouse::EventFlag::CURSOR_ENTERED.bits()),
+            (EventFlag::MOUSE, mouse::CURSOR_ENTERED.bits()),
             Event::Mouse(mouse::Event::CursorEntered),
         )),
         WindowEvent::CursorLeft { .. } => Some((
-            (EventFlag::MOUSE, mouse::EventFlag::CURSOR_LEFT.bits()),
+            (EventFlag::MOUSE, mouse::CURSOR_LEFT.bits()),
             Event::Mouse(mouse::Event::CursorLeft),
         )),
         WindowEvent::MouseInput { button, state, .. } => {
@@ -78,42 +78,42 @@ pub fn window_event(
             //TODO 当前使用 flag 也使用 event::ButtonPressed 等, 可能不需要同时使用
             Some(match (button, state) {
                 (mouse::Button::Left, winit::event::ElementState::Pressed) => (
-                    (EventFlag::MOUSE, mouse::EventFlag::LEFT_PRESSED.bits()),
+                    (EventFlag::MOUSE, mouse::LEFT_PRESSED.bits()),
                     Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)),
                 ),
                 (mouse::Button::Left, winit::event::ElementState::Released) => (
-                    (EventFlag::MOUSE, mouse::EventFlag::LEFT_RELEASED.bits()),
+                    (EventFlag::MOUSE, mouse::LEFT_RELEASED.bits()),
                     Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)),
                 ),
                 (mouse::Button::Right, winit::event::ElementState::Pressed) => (
-                    (EventFlag::MOUSE, mouse::EventFlag::RIGHT_PRESSED.bits()),
+                    (EventFlag::MOUSE, mouse::RIGHT_PRESSED.bits()),
                     Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)),
                 ),
                 (mouse::Button::Right, winit::event::ElementState::Released) => (
-                    (EventFlag::MOUSE, mouse::EventFlag::RIGHT_RELEASED.bits()),
+                    (EventFlag::MOUSE, mouse::RIGHT_RELEASED.bits()),
                     Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)),
                 ),
                 (mouse::Button::Middle, winit::event::ElementState::Pressed) => (
-                    (EventFlag::MOUSE, mouse::EventFlag::MIDDLE_PRESSED.bits()),
+                    (EventFlag::MOUSE, mouse::MIDDLE_PRESSED.bits()),
                     Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)),
                 ),
                 (mouse::Button::Middle, winit::event::ElementState::Released) => (
-                    (EventFlag::MOUSE, mouse::EventFlag::MIDDLE_RELEASED.bits()),
+                    (EventFlag::MOUSE, mouse::MIDDLE_RELEASED.bits()),
                     Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Middle)),
                 ),
                 (mouse::Button::Other(x), winit::event::ElementState::Pressed) => (
-                    (EventFlag::MOUSE, mouse::EventFlag::OTHER_PRESSED.bits()),
+                    (EventFlag::MOUSE, mouse::OTHER_PRESSED.bits()),
                     Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Other(x))),
                 ),
                 (mouse::Button::Other(x), winit::event::ElementState::Released) => (
-                    (EventFlag::MOUSE, mouse::EventFlag::OTHER_RELEASED.bits()),
+                    (EventFlag::MOUSE, mouse::OTHER_RELEASED.bits()),
                     Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Other(x))),
                 ),
             })
         }
         WindowEvent::MouseWheel { delta, .. } => match delta {
             winit::event::MouseScrollDelta::LineDelta(delta_x, delta_y) => Some((
-                (EventFlag::MOUSE, mouse::EventFlag::WHEEL_SCROLLED.bits()),
+                (EventFlag::MOUSE, mouse::WHEEL_SCROLLED.bits()),
                 Event::Mouse(mouse::Event::WheelScrolled {
                     delta: mouse::ScrollDelta::Lines {
                         x: *delta_x,
@@ -122,7 +122,7 @@ pub fn window_event(
                 }),
             )),
             winit::event::MouseScrollDelta::PixelDelta(position) => Some((
-                (EventFlag::MOUSE, mouse::EventFlag::WHEEL_SCROLLED.bits()),
+                (EventFlag::MOUSE, mouse::WHEEL_SCROLLED.bits()),
                 Event::Mouse(mouse::Event::WheelScrolled {
                     delta: mouse::ScrollDelta::Pixels {
                         x: position.x as f32,
@@ -132,10 +132,7 @@ pub fn window_event(
             )),
         },
         WindowEvent::ReceivedCharacter(c) if !is_private_use_character(*c) => Some((
-            (
-                EventFlag::KEYBOARD,
-                keyboard::EventFlag::CHARACTER_RECEIVED.bits(),
-            ),
+            (EventFlag::KEYBOARD, keyboard::CHARACTER_RECEIVED.bits()),
             Event::Keyboard(keyboard::Event::CharacterReceived(*c)),
         )),
         WindowEvent::KeyboardInput {
@@ -152,17 +149,14 @@ pub fn window_event(
 
             match state {
                 winit::event::ElementState::Pressed => Some((
-                    (EventFlag::KEYBOARD, keyboard::EventFlag::KEY_PRESSED.bits()),
+                    (EventFlag::KEYBOARD, keyboard::KEY_PRESSED.bits()),
                     Event::Keyboard(keyboard::Event::KeyPressed {
                         key_code,
                         modifiers,
                     }),
                 )),
                 winit::event::ElementState::Released => Some((
-                    (
-                        EventFlag::KEYBOARD,
-                        keyboard::EventFlag::KEY_RELEASED.bits(),
-                    ),
+                    (EventFlag::KEYBOARD, keyboard::KEY_RELEASED.bits()),
                     Event::Keyboard(keyboard::Event::KeyReleased {
                         key_code,
                         modifiers,
@@ -171,10 +165,7 @@ pub fn window_event(
             }
         }
         WindowEvent::ModifiersChanged(new_modifiers) => Some((
-            (
-                EventFlag::KEYBOARD,
-                keyboard::EventFlag::MODIFIERS_CHANGED.bits(),
-            ),
+            (EventFlag::KEYBOARD, keyboard::MODIFIERS_CHANGED.bits()),
             Event::Keyboard(keyboard::Event::ModifiersChanged(self::modifiers(
                 *new_modifiers,
             ))),
@@ -206,10 +197,10 @@ pub fn window_event(
             (EventFlag::WINDOW, window::FILES_HOVERED_LEFT.bits()),
             Event::Window(window::Event::FilesHoveredLeft),
         )),
-        WindowEvent::Touch(touch) => Some((
-            (EventFlag::TOUCH, todo!()),
-            Event::Touch(touch_event(*touch, scale_factor)),
-        )),
+        WindowEvent::Touch(touch) => {
+            let (touch_flag, touch_event) = touch_event(*touch, scale_factor);
+            Some(((EventFlag::TOUCH, touch_flag), Event::Touch(touch_event)))
+        }
         WindowEvent::Moved(position) => {
             let winit::dpi::LogicalPosition { x, y } = position.to_logical(scale_factor);
 
@@ -355,7 +346,7 @@ pub fn cursor_na_position(position: &Pos<f64>, scale_factor: f64) -> Pos {
 ///
 /// [`winit`]: https://github.com/rust-windowing/winit
 /// [`iced_native`]: https://github.com/iced-rs/iced/tree/0.4/native
-pub fn touch_event(touch: winit::event::Touch, scale_factor: f64) -> touch::Event {
+pub fn touch_event(touch: winit::event::Touch, scale_factor: f64) -> (u32, touch::Event) {
     let id = touch::Finger(touch.id);
     let position = {
         let location = touch.location.to_logical::<f64>(scale_factor);
@@ -364,10 +355,22 @@ pub fn touch_event(touch: winit::event::Touch, scale_factor: f64) -> touch::Even
     };
 
     match touch.phase {
-        winit::event::TouchPhase::Started => touch::Event::FingerPressed { id, position },
-        winit::event::TouchPhase::Moved => touch::Event::FingerMoved { id, position },
-        winit::event::TouchPhase::Ended => touch::Event::FingerLifted { id, position },
-        winit::event::TouchPhase::Cancelled => touch::Event::FingerLost { id, position },
+        winit::event::TouchPhase::Started => (
+            touch::FINGER_PRESSED.bits(),
+            touch::Event::FingerPressed { id, position },
+        ),
+        winit::event::TouchPhase::Moved => (
+            touch::FINGER_MOVED.bits(),
+            touch::Event::FingerMoved { id, position },
+        ),
+        winit::event::TouchPhase::Ended => (
+            touch::FINGER_LIFTED.bits(),
+            touch::Event::FingerLifted { id, position },
+        ),
+        winit::event::TouchPhase::Cancelled => (
+            touch::FINGER_LOST.bits(),
+            touch::Event::FingerLost { id, position },
+        ),
     }
 }
 

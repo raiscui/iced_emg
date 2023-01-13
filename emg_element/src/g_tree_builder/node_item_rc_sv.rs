@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-01-04 18:44:28
+ * @LastEditTime: 2023-01-13 12:00:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -29,7 +29,6 @@ use indexmap::IndexSet;
 use std::{
     cell::{Ref, RefCell},
     hash::BuildHasherDefault,
-    ops::Deref,
     rc::Rc,
 };
 use tracing::{debug, info, info_span, instrument, trace, trace_span, warn};
@@ -94,7 +93,7 @@ where
             &outgoing_eix_set.watch(),
             self.graph_rc.clone(),
         );
-        //TODO all use or_insert_node?
+        //TODO all use or_insert_node? 目前没有使用 or_insert_node , same key 会覆盖
         self.graph_rc.borrow_mut().insert_node_with_edges(
             self.key.unwrap(),
             node_item,
@@ -202,7 +201,6 @@ impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
                 let width = global_width();
                 let height = global_height();
                 let mut root_ei = self
-                    //TODO: bind browser w h.
                     .setup_edge_in_topo(
                         edge_index.clone(),
                         (width.into(), height.into()),
@@ -269,20 +267,13 @@ impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
                 trace!("handle_children:\n{:?}==>{:#?}", &id, &children_list);
 
                 //NOTE current node 因为dyn 节点 插入新节点时候 没有删除原存在节点,所以会重复走 handle_children_in_topo, 当前这里处理是ID存在就全部跳过
-                //TODO make GTreeBuilderElement all type same like this
-                //TODO 处理如下更新时候 内容变更情况
-                // dyn_tree2.set_with_once(move|dict| {
-                //     dict.update(
-                //         "aa3".to_string(),
-                //         new_dom
-                //     )
-                // });
+
                 if self.borrow().nodes_contains_key(id) {
                     warn!("children:Layer id:{} already exists , pass", id);
                     return;
                 }
                 // node index
-                //NOTE current node 因为`or_insert_node` 1个ID 只插入一次
+                //TODO 检查重复插入节点时候 会出现什么问题,build_in_topo 没有使用 or_insert_node
 
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_index = EdgeIndex::new(parent_nix, nix.clone());
@@ -683,7 +674,6 @@ mod tests {
     use emg_common::IdStr;
     use emg_hasher::CustomHasher;
     use emg_state::{use_state, StateAnchor};
-    use emg_vello::SceneFrag;
     use indexmap::IndexSet;
 
     use crate::{widget::Layer, GraphType};

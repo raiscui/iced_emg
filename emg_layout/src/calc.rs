@@ -3,7 +3,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2023-01-06 16:54:22
+ * @LastEditTime: 2023-01-13 12:07:16
  * @LastEditors: Rais
 * @Description:
 */
@@ -19,11 +19,11 @@ use cassowary::{
 use derive_more::From;
 use emg::EdgeIndex;
 use emg_common::TypeName;
-use emg_state::{state_lit::StateVarLit, topo, Anchor, StateAnchor, StateMultiAnchor, StateVar};
+use emg_state::{topo, StateAnchor, StateMultiAnchor, StateVar};
 use float_cmp::assert_approx_eq;
 use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
-use styles::{px, s, CssHeightTrait, CssTransform, CssTransformTrait, CssWidthTrait, LogicLength};
+use styles::{s, CssTransform, CssTransformTrait, LogicLength};
 use tracing::{debug_span, info, trace, trace_span, warn, warn_span};
 
 use self::cassowary_calc::cassowary_calculation;

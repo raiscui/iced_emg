@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-01-04 21:25:22
+ * @LastEditTime: 2023-01-13 12:08:53
  * @LastEditors: Rais
  * @Description:
  */
@@ -948,7 +948,7 @@ mod tests {
 
         debug!("===================================main loop ");
         let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(0.5))]);
-        for i in 0..4 {
+        for _i in 0..4 {
             black_box(many_am_run_for_test(&a, &sv_now));
         }
     }

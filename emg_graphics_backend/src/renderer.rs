@@ -1,15 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-15 21:17:17
- * @LastEditTime: 2023-01-03 18:12:14
+ * @LastEditTime: 2023-01-13 12:05:40
  * @LastEditors: Rais
  * @Description:
  */
 //! Create a renderer from a [`Backend`].
-
-use std::marker::PhantomData;
-
-use emg_native::{PaintCtx, WidgetState};
 
 use crate::Backend;
 

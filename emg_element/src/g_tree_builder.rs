@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-01-04 18:40:09
+ * @LastEditTime: 2023-01-13 11:57:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,10 +11,10 @@ use emg::EdgeIndex;
 use emg_common::IdStr;
 use emg_layout::{EmgEdgeItem, GenericSizeAnchor};
 use emg_shaping::{EqShaping, Shaping};
-use emg_state::{Dict, StateAnchor, StateVar};
+use emg_state::{Dict, StateVar};
 use std::{cell::Ref, rc::Rc};
 
-type SaBuilderFn<T> = dyn Fn(&StateAnchor<Rc<T>>) -> StateAnchor<Rc<T>>;
+// type SaBuilderFn<T> = dyn Fn(&StateAnchor<Rc<T>>) -> StateAnchor<Rc<T>>;
 
 pub enum GTreeBuilderElement<Message, Ix = IdStr>
 where
@@ -81,7 +81,7 @@ where
     Message: 'static,
 {
     fn from(value: StateVar<Dict<Ix, Self>>) -> Self {
-        //TODO check ix use default value or build uuid ?
+        //TODO check ix use default value or build uuid ?(先检查在哪里用了)
         Self::Dyn(Ix::default(), vec![], value)
     }
 }

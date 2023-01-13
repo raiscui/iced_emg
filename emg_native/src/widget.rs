@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2023-01-04 23:26:32
+ * @LastEditTime: 2023-01-13 12:16:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,7 +25,7 @@
 use std::rc::Rc;
 
 use dyn_clone::DynClone;
-use emg_common::{dyn_partial_eq::DynPartialEq, IdStr};
+use emg_common::dyn_partial_eq::DynPartialEq;
 use emg_state::StateAnchor;
 
 pub trait Widget: DynClone + DynPartialEq {

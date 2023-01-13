@@ -4,7 +4,6 @@ use bitflags::bitflags;
 
 // use crate::Point;
 use super::Button;
-use derive_more::Display;
 
 // Event bigflags
 

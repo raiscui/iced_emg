@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-11 16:02:50
+ * @LastEditTime: 2023-01-13 11:54:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,17 +13,15 @@
 mod event_builder;
 use derive_more::From;
 
-use emg_common::{mouse, na::Translation3, vector, IdStr, NotNan, Pos, TypeName, Vector};
-use emg_layout::{EdgeCtx, LayoutEndType};
-use emg_native::{
-    event::EventFlag, paint_ctx::CtxIndex, renderer::Rect, Event, WidgetState, DPR, G_POS,
-};
-use emg_shaping::{EqShapingWithDebug, ShapeOfUse, Shaping, ShapingUse};
+use emg_common::{mouse, IdStr, Pos, TypeName, Vector};
+use emg_layout::EdgeCtx;
+use emg_native::{event::EventFlag, renderer::Rect, Event, WidgetState};
+use emg_shaping::EqShapingWithDebug;
 use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
-use tracing::{debug, debug_span, info, info_span, instrument, trace, Span};
+use tracing::{debug, debug_span, info, info_span, instrument, Span};
 
-use crate::{map_fn_callback_return_to_option_ms, widget::Widget, GElement};
-use std::{cell::Cell, collections::VecDeque, rc::Rc, string::String};
+use crate::GElement;
+use std::{rc::Rc, string::String};
 
 use self::event_builder::EventListener;
 
@@ -497,67 +495,6 @@ where
             GElement::EvolutionaryFactor(_) => todo!(),
         }
     }
-    // pub fn set_id(&mut self, id: IdStr) {
-    //     self.id = id;
-    // }
-
-    // pub fn add_styles_string(&mut self, styles: &str) {
-    //     self.layout_str += styles;
-    // }
-
-    /// Get a reference to the node builder widgets event callbacks.
-    // #[must_use]
-    // pub const fn event_callbacks(&self) -> &VecDeque<EventNode<Message>> {
-    //     &self.event_callbacks
-    // }
-
-    /// Set the node builder widget's widget.
-    /// # Panics
-    ///
-    /// Will Panics if `gel` is Refresher_ | Event_
-    /// permission to read it.
-    // #[must_use]
-    // pub fn and_widget(mut self, gel: GElement<Message>) -> Self {
-    //     // use match_any::match_any;
-    //     #[allow(unused)]
-    //     use GElement::{
-    //         Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,
-    //     };
-    //     let gel_take = gel;
-    //     //TODO check in debug , combine  use  try_new_use
-    //     match &gel_take {
-    //         Builder_(_builder) => {
-    //             // builder.and_widget(*gel_in);
-    //             panic!("check what happened , Builder in builder");
-    //             // FIXME impl NodeBuilder<Message> can set
-    //             // self.widget = Some(BuilderWidget::Static(Rc::new(builder)));
-    //         }
-    //         // Layer_(x) => {
-    //         //     self.widget = Some(BuilderWidget::Static(Rc::new(x) as Rc<dyn Widget<Message>>));
-    //         // }
-    //         // Text_(x) => {
-    //         //     self.widget = Some(BuilderWidget::Static(Rc::new(x) as Rc<dyn Widget<Message>>));
-    //         // }
-    //         // Button_(x) => {
-    //         //     self.widget = Some(BuilderWidget::Static(Rc::new(x) as Rc<dyn Widget<Message>>));
-    //         // }
-    //         Refresher_(_) | Event_(_) => {
-    //             todo!();
-    //         }
-    //         // Generic_(x) => {
-    //         //     debug!("Generic_:: NodeBuilderWidget set widget: Generic_");
-    //         //     self.widget = Some(BuilderWidget::Dyn(x));
-    //         // }
-    //         NodeRef_(_) => panic!("set_widget: GElement::NodeIndex_() should handle before."),
-
-    //         EmptyNeverUse => panic!("EmptyNeverUse never here"),
-    //         _ => (),
-    //     };
-    //     self.widget = Some(Box::new(gel_take));
-    //     self
-
-    //     //TODO add type_name
-    // }
 
     #[must_use]
     #[allow(clippy::borrowed_box)]
@@ -737,18 +674,13 @@ where
     #[instrument(skip(self, ctx), name = "NodeBuilderWidget paint")]
     fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id1 = self.id.clone();
-        let id2 = self.id.clone();
         let opt_span = illicit::get::<Span>().ok();
 
         let span1 = opt_span.map_or_else(
             || info_span!("NodeBuilderWidget::paint_sa", id = %self.id),
             |span_| info_span!(parent:&*span_,"NodeBuilderWidget::paint_sa", id = %self.id),
         );
-        let span2 = span1.clone();
         let span3 = span1.clone();
-
-        let ctx_id = CtxIndex::new();
-        let ctx_id2 = ctx_id.clone();
 
         let current_ctx =
             (ctx, &self.widget_state).map(move |incoming_ctx, current_widget_state| {

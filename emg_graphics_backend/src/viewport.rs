@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-02 20:24:27
- * @LastEditTime: 2022-09-09 13:05:59
+ * @LastEditTime: 2023-01-13 12:06:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 use std::{cell::Cell, rc::Rc};
 
 use emg_common::na;
-use emg_state::{reset_state, CloneStateVar, StateVar};
+use emg_state::CloneStateVar;
 /// A viewing region for displaying computer graphics.
 #[derive(Debug, Clone)]
 pub struct Viewport {

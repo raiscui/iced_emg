@@ -10,11 +10,9 @@ split-debuginfo = "unpacked"
 crate-type = ["rlib"]
 
 [features]
-default = ["gpu", "new_node"]
+default = ["gpu"]
 # gpu = ["emg_native", "emg_piet_gpu", "emg_layout/gpu"]
 gpu = ["emg_native", "emg_vello", "emg_layout/gpu"]
-old_node = []
-new_node = []
 
 
 [dependencies]

@@ -1,33 +1,28 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-01-12 15:29:17
+ * @LastEditTime: 2023-01-13 12:23:17
  * @LastEditors: Rais
  * @Description:
  */
 //! Create interactive, native cross-platform applications.
 mod state;
 
-use emg_common::{IdStr, Pos, Vector};
+use emg_common::Vector;
 pub use state::State;
 use winit::event_loop::EventLoopBuilder;
 
 use crate::clipboard::{self, Clipboard};
 use crate::conversion;
 use crate::mouse;
-use crate::{Command, Debug, Error, Executor, FutureRuntime, Mode, Proxy, Settings};
+use crate::{Command, Debug, Executor, FutureRuntime, Mode, Proxy, Settings};
 use emg_state::{use_state, use_state_impl::CloneStateVar, StateVar};
 
 use emg_element::{GTreeBuilderFn, GraphProgram};
 use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
 use emg_graphics_backend::window::{compositor, Compositor};
-use emg_native::{
-    event::{EventFlag, EventWithFlagType},
-    program::Program,
-    renderer::Renderer,
-    Event,
-};
+use emg_native::{event::EventWithFlagType, renderer::Renderer};
 use emg_state::CloneStateAnchor;
 use tracing::{info, info_span, instrument};
 
@@ -140,7 +135,6 @@ where
 {
     use futures::task;
     use futures::Future;
-    use winit::event_loop::EventLoop;
 
     let mut debug = Debug::new();
     debug.startup_started();
@@ -270,12 +264,12 @@ where
 
 #[instrument(skip_all)]
 async fn run_instance<A, E, C>(
-    mut application: A,
+    application: A,
     mut compositor: C,
     mut renderer: A::Renderer,
-    mut future_runtime: FutureRuntime<E, Proxy<A::Message>, A::Message>,
-    mut clipboard: Clipboard,
-    mut proxy: winit::event_loop::EventLoopProxy<A::Message>,
+    future_runtime: FutureRuntime<E, Proxy<A::Message>, A::Message>,
+    clipboard: Clipboard,
+    proxy: winit::event_loop::EventLoopProxy<A::Message>,
     mut debug: Debug,
     mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
     window: winit::window::Window,
@@ -312,7 +306,6 @@ async fn run_instance<A, E, C>(
 
     // let ctx = renderer.new_paint_ctx();
     //view
-    let root_id = application.root_id();
 
     let native_events: StateVar<Vector<EventWithFlagType>> = use_state(Vector::new());
     let (event_matchs_sa, ctx_sa) =
@@ -551,7 +544,6 @@ async fn run_instance<A, E, C>(
     }
 
     // Manually drop the user interface
-    //TODO check this need
     // drop(ManuallyDrop::into_inner(user_interface));
 }
 

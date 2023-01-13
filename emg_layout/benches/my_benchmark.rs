@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2023-01-11 17:28:16
+ * @LastEditTime: 2023-01-13 12:06:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,6 +24,7 @@ use seed_styles::{height, px, width, Unit};
 use std::{collections::VecDeque, time::Duration};
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 enum Message {
     A,
 }
@@ -188,7 +189,8 @@ pub fn ame_new_benchmark(c: &mut Criterion) {
                 (*t).checked_add(Duration::from_millis(16))
                     .unwrap_or(Duration::ZERO)
             });
-            a.get_position(0);
+            #[allow(unused)]
+            let x = a.get_position(0);
         })
     });
 }

@@ -1,12 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:22:19
- * @LastEditTime: 2022-12-15 18:41:31
+ * @LastEditTime: 2023-01-13 12:16:14
  * @LastEditors: Rais
  * @Description:
  */
 //! Handle events of a user interface.
-use emg_common::{id_str::ToCompactString, IdStr};
 
 use crate::keyboard;
 use crate::mouse;

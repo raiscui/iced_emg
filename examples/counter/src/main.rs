@@ -1,8 +1,4 @@
-use color_eyre::{
-    eyre::WrapErr,
-    eyre::{eyre, Report},
-    Section,
-};
+use color_eyre::{eyre::Report, eyre::WrapErr};
 use emg_bind::{
     better_any::TidAble,
     common::mouse::CLICK,
@@ -14,9 +10,7 @@ use emg_bind::{
     Error, Sandbox, Settings,
 };
 use std::{cell::Cell, rc::Rc};
-use tracing::{debug, debug_span, info, instrument};
-use tracing_subscriber::EnvFilter;
-// use tracing_error::InstrumentResult;
+use tracing::{debug_span, info, instrument};
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
@@ -26,7 +20,7 @@ fn tracing_init() -> Result<(), Report> {
     tracing_tree::HierarchicalLayer::new(2) .with_indent_lines(true)
     .with_indent_amount(4)
         .with_targets(true)
-        .with_filter(tracing_subscriber::filter::dynamic_filter_fn(|metadata,cx| {
+        .with_filter(tracing_subscriber::filter::dynamic_filter_fn(|metadata,_cx| {
 
 
 
@@ -102,6 +96,7 @@ struct Counter {
 
 #[emg_msg]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[allow(dead_code)]
 enum Message {
     Empty,
     IncrementPressed,
@@ -170,6 +165,8 @@ impl Sandbox for Counter {
                             let _span = debug_span!("LayoutOverride", "click cb")
                             .entered();
                             info!(" on [a2] ----click cb ----");
+
+
                             let nn =n.get()+4;
                             n.set(nn);
                             ww.set(w(px(nn)));

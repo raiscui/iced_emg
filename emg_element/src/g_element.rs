@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-01-11 16:41:54
+ * @LastEditTime: 2023-01-13 11:58:59
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,6 @@ use crate::{
     NodeBuilderWidget,
 };
 use dyn_clone::DynClone;
-use emg_native::Bus;
 use emg_state::{StateAnchor, StateMultiAnchor};
 use match_any::match_any;
 
@@ -24,7 +23,7 @@ use derive_more::From;
 // use dyn_clonable::clonable;
 use std::{any::Any, rc::Rc};
 use strum::Display;
-use tracing::{info, instrument, warn};
+use tracing::{instrument, warn};
 
 #[allow(clippy::module_name_repetitions)]
 // #[clonable]
@@ -69,11 +68,11 @@ mod tests {
     // use emg_piet_gpu::SceneCtx;
     use emg_shaping::{EqShaping, Shaper};
     use emg_state::use_state;
-    use emg_vello::SceneFrag;
 
     use crate::GElement;
 
     #[derive(Clone, PartialEq, Eq)]
+    #[allow(dead_code)]
     enum Message {
         A,
     }
@@ -103,14 +102,14 @@ pub enum GElement<Message> {
     // Text_(Text),
     // Button_(Button<Message>),
     Shaper_(Rc<dyn EqShaping<Self>>),
-    //NOTE temp comment
     Event_(EventNode<Message>),
     //NOTE internal
     Generic_(Box<dyn DynGElement<Message>>), //范型 //TODO check batter when use rc?
     #[from(ignore)]
     NodeRef_(IdStr),     // IntoE(Rc<dyn Into<Element< Message>>>),
     // #[from(ignore)]
-    // InsideDirectUseSa_(StateAnchor<Rc<Self>>),//NOTE generate by tree builder use into()
+    // InsideDirectUseSa_(StateAnchor<Rc<Self>>),
+    //NOTE generate by tree builder use into()
     #[from(ignore)]
     SaNode_(StateAnchor<Rc<Self>>),
     EvolutionaryFactor(Rc<dyn Evolution<StateAnchor<Rc<Self>>>>),
@@ -274,7 +273,6 @@ mod evolution_test {
     use std::rc::Rc;
 
     use emg_state::{use_state, StateAnchor};
-    use emg_vello::SceneFrag;
 
     use crate::GElement;
 
@@ -435,7 +433,6 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use GElement::{Builder_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Shaper_};
-        let nbw = "NodeBuilderWidget< Message>(empty Widget)".to_string();
 
         match self {
             Layer_(l) => f.debug_tuple("GElement::Layer").field(l).finish(),

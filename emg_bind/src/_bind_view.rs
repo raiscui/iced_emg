@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-16 15:45:57
- * @LastEditTime: 2022-08-10 10:20:40
+ * @LastEditTime: 2023-01-12 18:45:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -78,10 +78,10 @@ where
         // current_node: &RefCell<GElement< Message>>,
     ) -> GElement<Self::Message> {
         // debug!("run here 01");
-        //TODO has no drop clone for AnimationE inside,need bumpalo do drop
+
         let node: &Node<Self::N, Self::Ix> = self.get_node_use_ix(cix).unwrap();
-        let mut current_node_item_clone = node.item.get(); //TODO cache
-                                                           // debug!("run here 01.1");
+        let mut current_node_item_clone = node.item.get();
+        // debug!("run here 01.1");
 
         let mut children_s = self.children_to_elements(node, edges, cix, paths);
 
@@ -91,7 +91,6 @@ where
 
         //make node_ref real
 
-        //TODO link node use shape_of_use
         //NOTE NodeRef_ 处理
         children_s
             .iter_mut()
@@ -104,12 +103,8 @@ where
                     .expect("expect get node id")
                     .get();
             });
-        //TODO edge gel 一起 refresh?
         // The const / dyn child node performs the change
-        // TODO: cache.    use edge type?
-        //TODO illicit::Layer path
         for child in &children_s {
-            //  TODO use COW
             current_node_item_clone.shape_of_use(child);
         }
         if let Ok(mut node_builder_widget) =
@@ -125,7 +120,6 @@ where
 
                 let store = self.store();
 
-                //TODO use StateAnchor ? for child edge change
                 trace!("edge::path:  {}", &paths);
                 let edge_styles = {
                     let ed = ei.store_edge_data_with(&store, paths, |ed| {
@@ -141,7 +135,6 @@ where
 
                 if !event_callbacks.is_empty() {
                     for event_callback in &event_callbacks {
-                        //TODO maybe just directly push event
                         node_builder_widget.shape_of_use(event_callback);
                     }
                 }
@@ -179,7 +172,7 @@ where
                     self.gelement_refresh_and_comb(edges, this_child_nix.index(), &new_paths)
                 })
             })
-            .collect() //TODO use iter
+            .collect()
     }
 
     fn view(&self, into_ix: impl Into<Self::Ix>) -> GElement<Self::Message> {
@@ -188,7 +181,6 @@ where
         {
             let edges = self.raw_edges().store_get_rc(&self.store());
             let paths = EPath::<IdStr>::new(vector![edge_index_no_source(cix.clone())]);
-            // TODO add store in gelement_refresh_and_comb
 
             self.gelement_refresh_and_comb(&edges, &cix, &paths)
         }

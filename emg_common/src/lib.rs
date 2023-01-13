@@ -7,8 +7,9 @@ pub mod any;
 pub mod keyboard;
 pub mod measures;
 pub mod mouse;
-pub mod window;
 pub mod time;
+pub mod touch;
+pub mod window;
 // ────────────────────────────────────────────────────────────────────────────────
 pub type Pos<T = f32> = na::Point2<T>;
 pub use crate::SVec::{smallvec, SmallVec};
@@ -42,7 +43,7 @@ pub trait TypeCheckObjectSafe {
 }
 
 // // use derive_more::Into;
-//TODO full this  "-,/"
+//TODO full this  "-,/" op
 #[derive(Display, Clone, Debug, PartialEq, PartialOrd, Eq)]
 pub enum CalcOp<T>
 where
@@ -70,7 +71,7 @@ where
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Display, Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct TypeName(IdStr);
 
 impl TypeName {
@@ -148,7 +149,7 @@ pub fn parent_str(type_name: &str) -> GenericSize {
 // impl Default for GenericSize {
 //     fn default() -> Self {
 //         Self::Length(px(0))
-//         //TODO init val
+
 //         // Self::Initial
 //     }
 // }

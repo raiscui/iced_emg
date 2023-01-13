@@ -1,23 +1,12 @@
 /*
  * @Author: Rais
- * @Date: 2022-08-22 16:28:40
- * @LastEditTime: 2023-01-04 18:51:40
- * @LastEditors: Rais
- * @Description:
- */
-use std::{any::Any, rc::Rc};
-
-/*
- * @Author: Rais
  * @Date: 2021-02-19 16:16:22
  * @LastEditTime: 2022-08-10 15:31:34
  * @LastEditors: Rais
  * @Description:
  */
 use crate::{GElement, NodeBuilderWidget};
-use emg_shaping::{
-    EqShaping, ShapeOfUse, Shaping, ShapingUse, ShapingUseNoWarper, ShapingWhoNoWarper,
-};
+use emg_shaping::{EqShaping, ShapeOfUse, Shaping, ShapingUseNoWarper, ShapingWhoNoWarper};
 use tracing::{trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -33,8 +22,8 @@ where
 {
     fn shaping(&self, who_el: &mut Self) {
         use GElement::{Builder_, Generic_, Layer_, Shaper_};
-        //TODO for builder
-        //TODO allways check when add GElement number;
+        //TODO for who:builder?
+        //CHECK allways check when add GElement number;
 
         match (who_el, self) {
             (who, Generic_(use_something)) => {
@@ -207,10 +196,10 @@ mod tests {
     use std::rc::Rc;
 
     use emg_shaping::Shaper;
-    use emg_vello::SceneFrag;
 
     use crate::GElement;
 
+    #[allow(dead_code)]
     enum Message {
         A,
     }

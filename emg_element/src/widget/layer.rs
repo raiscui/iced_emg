@@ -2,7 +2,7 @@ use std::{clone::Clone, cmp::PartialEq, rc::Rc};
 
 use emg_common::IdStr;
 use emg_state::{Anchor, StateAnchor, StateMultiAnchor};
-use tracing::{info, info_span, instrument, trace, Span};
+use tracing::{info, Span};
 
 use crate::GElement;
 

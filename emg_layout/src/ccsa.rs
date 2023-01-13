@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2023-01-04 21:30:30
+ * @LastEditTime: 2023-01-13 12:09:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,14 +12,13 @@ use cassowary::{
     strength::{REQUIRED, WEAK},
     Constraint, Variable, WeightedRelation,
 };
-use derive_more::From;
 
 use emg_common::{im::HashMap, IdStr, NotNan};
 use emg_hasher::CustomHasher;
 use emg_state::Dict;
 
 use indexmap::IndexMap;
-use parse_display::{Display, FromStr};
+use parse_display::Display;
 
 mod impl_refresh;
 mod ops;

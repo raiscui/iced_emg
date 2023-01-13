@@ -1,7 +1,7 @@
 pub mod color;
 pub mod convert;
 pub mod opacity;
-use emg_common::{measures::Unit, smallvec, IdStr, SmallVec, TypeName};
+use emg_common::{im::HashSet, measures::Unit, smallvec, IdStr, SmallVec, TypeName};
 use emg_common::{vector, Vector};
 // use iter_fixed::IntoIteratorFixed;
 use crate::{Debuggable, MOTION_SIZE, PROP_SIZE};
@@ -331,26 +331,6 @@ where
     Send(Message),
     Repeat(u32, VecDeque<Step<Message>>),
     Loop(VecDeque<Step<Message>>),
-}
-
-impl<Message> Step<Message>
-where
-    Message: Clone,
-{
-    /// # Errors
-    ///
-    /// Will return `Err` if `self` does not is `Step::Wait(Duration)`
-    /// permission to read it.
-    // TODO result_large_err
-    #[allow(clippy::missing_const_for_fn)]
-    #[allow(clippy::result_large_err)]
-    pub fn try_into_wait(self) -> Result<Duration, Self> {
-        if let Self::Wait(v) = self {
-            Ok(v)
-        } else {
-            Err(self)
-        }
-    }
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
@@ -1129,8 +1109,6 @@ where
                 (new_style, msgs, remaining_steps)
             }
             StepOG::To(target) => {
-                //TODO 优化, 目前 alreadyThere 内部会 start_towards 然后判断 all(is_done)
-
                 let x = start_towards_og(false, current_style, target);
                 // assert_eq!(x, current_style);
                 //NOTE  px 0.05 会直接变
@@ -1158,7 +1136,6 @@ where
                 // assert_eq!(x0, x);
                 let done = x0.iter().all(is_done_og);
 
-                //TODO 优化, 目前 alreadyThere 内部会 start_towards 然后判断 all(is_done)
                 if done {
                     (x0, vector![], steps)
                 } else {
@@ -1286,23 +1263,30 @@ fn replace_props(
     props: &mut SmallVec<[Property; PROP_SIZE]>,
     replacements: SmallVec<[Property; PROP_SIZE]>,
 ) {
-    //TODO deep opt use sorted name
-    let replacement_names: SmallVec<[PropName; PROP_SIZE * 2]> =
-        replacements.iter().map(Property::name).collect();
+    //TODO hash 优化
+    // let replacement_names: SmallVec<[PropName; PROP_SIZE * 2]> =
+    let replacement_names: HashSet<PropName> = replacements.iter().map(Property::name).collect();
+    // assert_eq!(
+    //     replacement_names.len(),
+    //     replacements.len(),
+    //     "{:#?}\nreplacements\n{:#?}",
+    //     &replacement_names,
+    //     &replacements
+    // );
     // for r in &replacement_names {
     //     println!("replacement_names --:{}", r);
     // }
 
+    //同名不保留
     props.retain(|p| {
         // println!("--:{}", &p.name());
-        //TODO deep opt use sorted name
         !replacement_names.contains(&p.name())
+        // replacement_names.remove(&p.name()).is_none()
     });
     // for p in props.iter() {
     //     println!("==== : {}", &p.name());
     // }
     props.extend(replacements);
-    // props.append(&mut replacements);
 }
 fn replace_props_og(
     props: Vector<PropertyOG>,
@@ -1508,58 +1492,55 @@ fn is_cmd_done_og(cmd: &PathCommandOG) -> bool {
 
 pub fn step(dt: &Duration, props: &mut SmallVec<[Property; PROP_SIZE]>) {
     use Property::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
-    props
-        .iter_mut()
-        // .into_iter() //TODO iter_mut
-        .for_each(|property| match property {
-            Exact(..) => (),
-            Prop(_, motion) => step_interpolation_mut(dt, motion),
-            Prop2(_, m) => m
-                .iter_mut()
-                .for_each(|motion| step_interpolation_mut(dt, motion)),
+    props.iter_mut().for_each(|property| match property {
+        Exact(..) => (),
+        Prop(_, motion) => step_interpolation_mut(dt, motion),
+        Prop2(_, m) => m
+            .iter_mut()
+            .for_each(|motion| step_interpolation_mut(dt, motion)),
 
-            Prop3(_, m) => m
-                .iter_mut()
-                .for_each(|motion| step_interpolation_mut(dt, motion)),
+        Prop3(_, m) => m
+            .iter_mut()
+            .for_each(|motion| step_interpolation_mut(dt, motion)),
 
-            Prop4(_, m) => m
-                .iter_mut()
-                .for_each(|motion| step_interpolation_mut(dt, motion)),
+        Prop4(_, m) => m
+            .iter_mut()
+            .for_each(|motion| step_interpolation_mut(dt, motion)),
 
-            Angle(_, m) => step_interpolation_mut(dt, m),
-            Color(_, m) => m
-                .iter_mut()
-                .for_each(|motion| step_interpolation_mut(dt, motion)),
-            Shadow(_, _, box shadow) => {
-                step_interpolation_mut(dt, &mut shadow.offset_x);
-                step_interpolation_mut(dt, &mut shadow.offset_y);
-                step_interpolation_mut(dt, &mut shadow.size);
-                step_interpolation_mut(dt, &mut shadow.blur);
-                step_interpolation_mut(dt, &mut shadow.red);
-                step_interpolation_mut(dt, &mut shadow.green);
-                step_interpolation_mut(dt, &mut shadow.blue);
-                step_interpolation_mut(dt, &mut shadow.alpha);
-            }
-            Points(points) => points.iter_mut().for_each(|[x, y]| {
-                step_interpolation_mut(dt, x);
-                step_interpolation_mut(dt, y);
-            }),
+        Angle(_, m) => step_interpolation_mut(dt, m),
+        Color(_, m) => m
+            .iter_mut()
+            .for_each(|motion| step_interpolation_mut(dt, motion)),
+        Shadow(_, _, box shadow) => {
+            step_interpolation_mut(dt, &mut shadow.offset_x);
+            step_interpolation_mut(dt, &mut shadow.offset_y);
+            step_interpolation_mut(dt, &mut shadow.size);
+            step_interpolation_mut(dt, &mut shadow.blur);
+            step_interpolation_mut(dt, &mut shadow.red);
+            step_interpolation_mut(dt, &mut shadow.green);
+            step_interpolation_mut(dt, &mut shadow.blue);
+            step_interpolation_mut(dt, &mut shadow.alpha);
+        }
+        Points(points) => points.iter_mut().for_each(|[x, y]| {
+            step_interpolation_mut(dt, x);
+            step_interpolation_mut(dt, y);
+        }),
 
-            Path(cmds) => cmds.iter_mut().for_each(|cmd| step_path(dt, cmd)),
-        });
+        Path(cmds) => cmds.iter_mut().for_each(|cmd| step_path(dt, cmd)),
+    });
 }
 
 #[must_use]
 pub fn step_og(dt: &Duration, props: Vector<PropertyOG>) -> Vector<PropertyOG> {
     use PropertyOG::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
     props
-        .into_iter() //TODO iter_mut
+        .into_iter()
         .map(|property| match property {
             Exact(..) => property,
             Prop(name, motion) => Prop(name, step_interpolation_og(dt, motion)),
             Prop2(name, m) => Prop2(
                 name,
-                m.into_iter() //TODO iter_mut
+                m.into_iter()
                     .map(|motion| step_interpolation_og(dt, motion))
                     .collect(),
             ),
@@ -2370,7 +2351,7 @@ pub fn zip_properties_greedy_og(
                         //     }
                         // };
                         //
-                        //TODO: check use [result, [(*a, b_head)].as_ref()]  no need reverse
+
                         result.push_back((a, b_head));
                         // let new_result = [[(*a, b_head)].as_ref(), result].concat().as_slice();
                         (stack_a, new_stack_b, result)
@@ -2522,7 +2503,7 @@ fn set_target_og(
                 }),
             ),
             _ => current,
-        }, //TODO all like prop , no clone/ref
+        },
         Prop(name, m) => match new_target {
             Prop(_, t) => Prop(name, set_motion_target((m, t))),
             _ => Prop(name, m),

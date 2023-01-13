@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-01-10 16:38:17
+ * @LastEditTime: 2023-01-13 12:20:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,7 +12,7 @@ use parse_display::Display;
 use proc_macro2::{Span, TokenStream};
 use std::collections::HashMap;
 
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     braced, bracketed, parenthesized,
     parse::{discouraged::Speculative, Parse, ParseStream},
@@ -607,7 +607,6 @@ impl Parse for PredExpression {
         debug!("in PredExpression");
         let first: ScopeViewVariable = input.parse()?;
         // ─────────────────────────────────────────────────────────────────
-        let fork = input.fork();
 
         let mut exps = vec![];
         let mut op = None;
@@ -752,7 +751,7 @@ impl Parse for StrengthAndWeight {
             debug!("got weak");
             if input.peek(token::Paren) {
                 let content;
-                let paren_token = parenthesized!(content in input);
+                let _paren_token = parenthesized!(content in input);
                 debug!("got weak number");
                 if let Ok(x) = content.parse::<LitInt>() {
                     return Ok(Self::Weak(Some(Left(x))));
@@ -765,7 +764,7 @@ impl Parse for StrengthAndWeight {
         if input.parse::<kw_strength::medium>().is_ok() {
             if input.peek(token::Paren) {
                 let content;
-                let paren_token = parenthesized!(content in input);
+                let _paren_token = parenthesized!(content in input);
                 debug!("got medium number");
                 if let Ok(x) = content.parse::<LitInt>() {
                     return Ok(Self::Medium(Some(Left(x))));
@@ -777,7 +776,7 @@ impl Parse for StrengthAndWeight {
         if input.parse::<kw_strength::strong>().is_ok() {
             if input.peek(token::Paren) {
                 let content;
-                let paren_token = parenthesized!(content in input);
+                let _paren_token = parenthesized!(content in input);
                 debug!("got strong number");
                 if let Ok(x) = content.parse::<LitInt>() {
                     return Ok(Self::Strong(Some(Left(x))));
@@ -1503,7 +1502,7 @@ struct ChainPredicate(Vec<ChainPredicateItem>);
 impl Parse for ChainPredicate {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
-        let paren_token = parenthesized!(content in input);
+        let _paren_token = parenthesized!(content in input);
         let content: Punctuated<ChainPredicateItem, Token![,]> =
             content.parse_terminated(ChainPredicateItem::parse)?;
 
@@ -2245,7 +2244,7 @@ mod tests {
     use crate::{cassowary::VFLStatement, Gtree};
     use tracing_subscriber::{prelude::*, registry::Registry};
 
-    fn token_expect_error(name: &str, input: &str) {
+    fn token_expect_error(_name: &str, input: &str) {
         // ────────────────────────────────────────────────────────────────────────────────
 
         let subscriber = Registry::default().with(tracing_tree::HierarchicalLayer::new(2));

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-01-04 23:58:32
+ * @LastEditTime: 2023-01-12 18:47:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -238,11 +238,10 @@ where
         crate::runtime::EventMatchsSa<Self::Message>,
         StateAnchor<Rc<<Self::Renderer as crate::runtime::renderer::Renderer>::SceneCtx>>,
     ) {
-        //TODO work here make new PaintCtx
-        let ctx = StateAnchor::constant(crate::runtime::PaintCtx::default());
+        let paint_ctx = StateAnchor::constant(crate::runtime::PaintCtx::default());
         let root_id = self.root_id();
 
-        g.runtime_prepare(&IdStr::new(root_id), &ctx, events, cursor_position)
+        g.runtime_prepare(&IdStr::new(root_id), &paint_ctx, events, cursor_position)
     }
 }
 

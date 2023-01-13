@@ -1,16 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2022-09-14 16:31:08
+ * @LastEditTime: 2023-01-13 12:04:42
  * @LastEditors: Rais
  * @Description:
  */
 use emg_common::dyn_partial_eq::DynPartialEq;
-use emg_state::StateAnchor;
 use std::{any::Any, rc::Rc};
-use tracing::{error, warn};
+use tracing::error;
 
-use crate::{ShapeOfUse, ShapingUse, ShapingWhoNoWarper};
+use crate::ShapingWhoNoWarper;
 
 #[derive(Clone)]
 pub struct Shaper<Use>(Rc<dyn Fn() -> Use>);
