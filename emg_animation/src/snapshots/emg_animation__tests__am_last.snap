@@ -2,7 +2,7 @@
 source: emg_animation/src/lib.rs
 expression: "&am_state"
 ---
-AnimationOG {
+Animation {
     steps: [],
     props: [
         Prop(

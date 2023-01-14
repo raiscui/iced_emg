@@ -11,70 +11,80 @@ use emg_bind::{
 };
 use std::{cell::Cell, rc::Rc};
 use tracing::{debug_span, info, instrument};
+#[cfg(feature = "debug")]
+use tracing_subscriber::EnvFilter;
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
 
-    let out_layer =
-    //  tracing_subscriber::fmt::layer()
-    tracing_tree::HierarchicalLayer::new(2) .with_indent_lines(true)
-    .with_indent_amount(4)
-        .with_targets(true)
-        .with_filter(tracing_subscriber::filter::dynamic_filter_fn(|metadata,_cx| {
-
-
-
-
-            // if metadata.level() <= &tracing::Level::DEBUG{
-            //     // If this *is* "interesting_span", make sure to enable it.
-            //     if metadata.is_span() && metadata.name() == "LayoutOverride" {
-            //         return true;
-            //     }
-
-            //     // Otherwise, are we in an interesting span?
-            //     if let Some(current_span) = cx.lookup_current()  {
-            //         return current_span.name() == "LayoutOverride";
-            //     }
-            // }
-            #[cfg(feature = "debug")]
-            return false;
-
-
-
-                 !metadata.target().contains("anchors")
-                && !metadata.target().contains("emg_layout")
-                && !metadata.target().contains("emg_state")
-                && !metadata.target().contains("cassowary")
-                && !metadata.target().contains("wgpu")
-                && metadata.level() <= &tracing::Level::INFO
-            // && !metadata.target().contains("winit event")
-            // && !metadata.fields().field("event").map(|x|x.to_string())
-            // && !metadata.target().contains("winit event: DeviceEvent")
-        }));
-
-    #[cfg(feature = "debug")]
-    let layout_override_layer = tracing_tree::HierarchicalLayer::new(2)
+    #[cfg(not(feature = "debug"))]
+    let out_layer = tracing_tree::HierarchicalLayer::new(2)
         .with_indent_lines(true)
         .with_indent_amount(4)
         .with_targets(true)
-        .with_filter(EnvFilter::new("[LayoutOverride]=debug"));
+        .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
+            |metadata, _cx| {
+                // if metadata.level() <= &tracing::Level::DEBUG{
+                //     // If this *is* "interesting_span", make sure to enable it.
+                //     if metadata.is_span() && metadata.name() == "LayoutOverride" {
+                //         return true;
+                //     }
+
+                //     // Otherwise, are we in an interesting span?
+                //     if let Some(current_span) = cx.lookup_current()  {
+                //         return current_span.name() == "LayoutOverride";
+                //     }
+                // }
+                // ─────────────────────────────────────────────────────
+
+                // #[cfg(feature = "debug")]
+                // return false;
+
+                !metadata.target().contains("anchors")
+                    && !metadata.target().contains("emg_layout")
+                    && !metadata.target().contains("emg_state")
+                    && !metadata.target().contains("cassowary")
+                    && !metadata.target().contains("wgpu")
+                    && metadata.level() <= &tracing::Level::INFO
+                // && !metadata.target().contains("winit event")
+                // && !metadata.fields().field("event").map(|x|x.to_string())
+                // && !metadata.target().contains("winit event: DeviceEvent")
+            },
+        ));
+
+    // #[cfg(feature = "debug")]
+    // let layout_override_layer = tracing_tree::HierarchicalLayer::new(2)
+    //     .with_indent_lines(true)
+    //     .with_indent_amount(4)
+    //     .with_targets(true)
+    //     .with_filter(EnvFilter::new("[LayoutOverride]=debug"));
+
+    // #[cfg(feature = "debug")]
+    // let event_matching_layer = tracing_tree::HierarchicalLayer::new(2)
+    //     .with_indent_lines(true)
+    //     .with_indent_amount(4)
+    //     .with_targets(true)
+    //     .with_filter(EnvFilter::new("[event_matching...]=debug"));
 
     #[cfg(feature = "debug")]
-    let event_matching_layer = tracing_tree::HierarchicalLayer::new(2)
+    let touch_layer = tracing_tree::HierarchicalLayer::new(2)
         .with_indent_lines(true)
         .with_indent_amount(4)
         .with_targets(true)
-        .with_filter(EnvFilter::new("[event_matching...]=debug"));
+        .with_filter(EnvFilter::new("[Touch]=debug"));
+    // ─────────────────────────────────────────────────────────────────────────────
 
     #[cfg(feature = "debug")]
     tracing_subscriber::registry()
-        .with(layout_override_layer)
-        .with(event_matching_layer)
-        .with(out_layer)
+        // .with(layout_override_layer)
+        // .with(event_matching_layer)
+        .with(touch_layer)
+        // .with(out_layer)
         .init();
 
     #[cfg(not(feature = "debug"))]
     tracing_subscriber::registry().with(out_layer).init();
+    // ─────────────────────────────────────────────────────────────────────────────
 
     // tracing_subscriber::Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
     color_eyre::install()
@@ -145,9 +155,9 @@ impl Sandbox for Counter {
                     Message::Empty
                 },
                 @=a1 @E=[
-                        {@h (#a2)(#a3)(#a4) chain-top chain-bottom chain-height chain-width(250)},
+                        {@h |(#a2)(#a3)(#a4)|   },
                         origin_x(pc(0)),align_x(pc(0)),
-                        w(px(100)),h(px(100)),
+                        w(pc(90)),h(pc(90)),
                         ff,
                         b_width(px(5)),
                         b_color(rgb(1,0,0))

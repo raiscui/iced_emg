@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2023-01-13 12:09:08
+ * @LastEditTime: 2023-01-14 01:04:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,7 @@ use cassowary::{
     Constraint, Variable, WeightedRelation,
 };
 
-use emg_common::{im::HashMap, IdStr, NotNan};
+use emg_common::{im::HashMap, IdStr, NotNan, Precision};
 use emg_hasher::CustomHasher;
 use emg_state::Dict;
 

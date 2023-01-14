@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-09 16:53:34
- * @LastEditTime: 2023-01-11 17:26:56
+ * @LastEditTime: 2023-01-14 01:11:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,21 +9,22 @@
 use std::cmp::Ordering;
 
 use im_rc::OrdSet;
+use num_traits::AsPrimitive;
 use ordered_float::NotNan;
 use tracing::{debug, debug_span};
 
-use crate::Pos;
+use crate::{Pos, Precision};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct RectLTRB {
     /// The minimum x coordinate (left edge).
-    pub x0: NotNan<f64>,
+    pub x0: NotNan<Precision>,
     /// The minimum y coordinate (top edge in y-down spaces).
-    pub y0: NotNan<f64>,
+    pub y0: NotNan<Precision>,
     /// The maximum x coordinate (right edge).
-    pub x1: NotNan<f64>,
+    pub x1: NotNan<Precision>,
     /// The maximum y coordinate (bottom edge in y-down spaces).
-    pub y1: NotNan<f64>,
+    pub y1: NotNan<Precision>,
 }
 // const EPSILON: f64 = 1e-10;
 
@@ -58,7 +59,7 @@ impl PartialOrd for RectLTRB {
 
 impl RectLTRB {
     #[inline]
-    pub fn from_origin_size(origin: Pos<f64>, w: f64, h: f64) -> Self {
+    pub fn from_origin_size(origin: Pos, w: Precision, h: Precision) -> Self {
         Self {
             x0: NotNan::new(origin.x).unwrap(),
             y0: NotNan::new(origin.y).unwrap(),
@@ -77,7 +78,10 @@ impl RectLTRB {
     }
     #[inline]
     pub fn contains(&self, point: &Pos<f64>) -> bool {
-        point.x >= *self.x0 && point.x < *self.x1 && point.y >= *self.y0 && point.y < *self.y1
+        point.x >= *self.x0 as f64
+            && point.x < *self.x1 as f64
+            && point.y >= *self.y0 as f64
+            && point.y < *self.y1 as f64
     }
 
     #[inline]

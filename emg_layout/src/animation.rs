@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-01-13 12:08:53
+ * @LastEditTime: 2023-01-14 01:01:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 mod define;
 mod func;
 
-use emg_common::{vector, SmallVec, Vector};
+use emg_common::{vector, Precision, SmallVec, Vector};
 use emg_state::{
     state_store, topo, use_state, use_state_impl::TopoKey, Anchor, CloneStateAnchor, CloneStateVar,
     StateAnchor, StateMultiAnchor, StateVar,
@@ -23,10 +23,7 @@ use std::{
 
 use emg_animation::{
     extract_initial_wait,
-    models::{
-        map_to_motion, resolve_steps, Motion, MsgBackIsNew, Precision, Property, Step,
-        StepTimeVector,
-    },
+    models::{map_to_motion, resolve_steps, Motion, MsgBackIsNew, Property, Step, StepTimeVector},
     set_default_interpolation, Timing, PROP_SIZE,
 };
 use tracing::{debug, info, trace};
@@ -708,8 +705,8 @@ mod tests {
     use std::time::Duration;
 
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
-    use emg_animation::{interrupt, models::Property, opacity, style, to, Tick};
-    use emg_common::{into_smvec, smallvec, vector, IdStr};
+    use emg_animation::{interrupt, models::Property, opacity, style, to};
+    use emg_common::{animation::Tick, into_smvec, smallvec, vector, IdStr};
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
     };

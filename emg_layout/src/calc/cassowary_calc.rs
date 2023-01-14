@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-15 14:46:40
- * @LastEditTime: 2023-01-04 21:35:18
+ * @LastEditTime: 2023-01-14 01:14:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,7 +22,7 @@ pub fn cassowary_calculation_logiclength(
 ) -> Expression {
     match l {
         LogicLength::Simplex(els) => {
-            let v = els.value();
+            let v = els.value() as f64;
             match els.unit {
                 styles::Unit::Px | styles::Unit::Empty => v.into(),
                 styles::Unit::Rem

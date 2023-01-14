@@ -38,15 +38,16 @@ use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
 use emg::{Edge, EdgeIndex, NodeIndex};
-use emg_common::Vector;
 use emg_common::{
     im::{
         self,
         ordmap::{self, NodeDiffItem},
         HashMap, HashSet, OrdSet,
     },
+    num_traits::AsPrimitive,
     vector, GenericSize, IdStr, LayoutOverride, NotNan, RectLTRB, TypeName, VectorDisp,
 };
+use emg_common::{Precision, Vector};
 use emg_shaping::{EqShapingWithDebug, Shaping, ShapingWithDebug};
 use emg_state::{
     state_store, topo, use_state, use_state_impl::Engine, Anchor, CloneStateAnchor, CloneStateVar,
@@ -89,7 +90,7 @@ pub mod ccsa;
 static CURRENT_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 1.5;
 static CHILD_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 0.9;
 
-pub type LayoutEndType = (Translation3<f64>, f64, f64);
+pub type LayoutEndType = (Translation3<Precision>, Precision, Precision);
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -151,7 +152,7 @@ pub fn global_height() -> StateVar<f64> {
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[derive(Display, Debug, PartialEq, PartialOrd, Copy, Clone, From, Into)]
-struct Mat4(Matrix4<f64>);
+struct Mat4(Matrix4<Precision>);
 
 // type Mat4 = Matrix4<f64>;
 
@@ -383,21 +384,22 @@ pub struct LayoutCalculated {
     // suggest_size: StateAnchor<Vector2<f64>>,
     size_constraints: StateAnchor<Vec<Constraint>>,
     cassowary_inherited_generals_sa: StateAnchor<Rc<CassowaryGeneralMap>>,
-    cass_or_calc_size: StateAnchor<Vector2<f64>>,
-    origin: StateAnchor<Translation3<f64>>,
-    align: StateAnchor<Translation3<f64>>,
-    translation: StateAnchor<Translation3<f64>>,
-    coordinates_trans: StateAnchor<Translation3<f64>>,
-    cass_trans: StateAnchor<Translation3<f64>>,
+    cass_or_calc_size: StateAnchor<Vector2<Precision>>,
+    origin: StateAnchor<Translation3<Precision>>,
+    align: StateAnchor<Translation3<Precision>>,
+    translation: StateAnchor<Translation3<Precision>>,
+    coordinates_trans: StateAnchor<Translation3<Precision>>,
+    cass_trans: StateAnchor<Translation3<Precision>>,
     matrix: StateAnchor<Mat4>,
     loc_styles: StateAnchor<Style>,
-    world: StateAnchor<Translation3<f64>>,
+    //TODO what different with EdgeCtx:world?
+    world: StateAnchor<Translation3<Precision>>,
 }
 
 pub struct EdgeCtx {
     pub styles_end: StateAnchor<StylesDict>,
     pub layout_end: StateAnchor<LayoutEndType>,
-    pub world: StateAnchor<Translation3<f64>>,
+    pub world: StateAnchor<Translation3<Precision>>,
     pub children_layout_override: StateAnchor<Option<LayoutOverride>>,
     //TODO temp keep here for future use
     // _phantom_data: std::marker::PhantomData<RenderCtx>,
@@ -504,8 +506,8 @@ pub struct EdgeData {
     calculated: LayoutCalculated,
     cassowary_map: Rc<CassowaryMap>,
     children_vars_sa: StateAnchor<HashSet<Variable, BuildHasherDefault<CustomHasher>>>,
-    cassowary_calculated_vars: StateAnchor<Dict<Variable, (NotNan<f64>, IdStr)>>,
-    cassowary_calculated_layout: StateAnchor<(Option<f64>, Option<f64>)>,
+    cassowary_calculated_vars: StateAnchor<Dict<Variable, (NotNan<Precision>, IdStr)>>,
+    cassowary_calculated_layout: StateAnchor<(Option<Precision>, Option<Precision>)>,
     pub styles_string: StateAnchor<String>,
     // pub info_string: StateAnchor<String>,
     pub ctx: EdgeCtx,
@@ -930,7 +932,7 @@ where
 
     #[topo::nested]
     #[instrument(skip(edges))]
-    pub fn default_with_wh_in_topo<T: Into<f64> + std::fmt::Debug>(
+    pub fn default_with_wh_in_topo<T: AsPrimitive<Precision> + std::fmt::Debug>(
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         edges: StateAnchor<GraphEdgesDict<Ix>>,
@@ -969,7 +971,7 @@ where
     ) -> Self
     where
         Ix: std::fmt::Debug,
-        (IdStr, NotNan<f64>): PartialEq,
+        (IdStr, NotNan<Precision>): PartialEq,
     {
         let id_sa: StateAnchor<EdgeIndex<Ix>> =
             (&source_node_nix_sa, &target_node_nix_sa).map(|s, t| {
@@ -1375,9 +1377,9 @@ where
 
                         //TODO real val because cassowary calc need suggestions???
                         //TODO bottom right use from bottom or from top??
-                        let top  =  0f64;
+                        let top=  0. as Precision;
                         let bottom = height;
-                        let left = 0f64;
+                        let left = 0. as Precision;
                         let right = width;
 
                         //TODO 使用 variable => notnan f64 , 避免后续 计算 每次都要获取 variable.
@@ -1437,7 +1439,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 // ────────────────────────────────────────────────────────────────────────────────
 
                     let mut last_observation_constants:OrdSet<Constraint>  =  OrdSet::new();
-                    let mut last_observation_current_props:Dict<IdStr, NotNan<f64>> =  Dict::new();
+                    let mut last_observation_current_props:Dict<IdStr, NotNan<Precision>> =  Dict::new();
                     let mut last_observation_children_for_current_constants :OrdSet<Constraint>  =  OrdSet::new();
                     let mut last_current_cassowary_inherited_general_vals: Dict<Variable, f64> = Dict::new();
                     let mut last_current_cassowary_top_general_vals: Dict<Variable, f64> = Dict::new();
@@ -1546,7 +1548,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                     ordmap::DiffItem::Add(&var, &v) => {
                                         warn!("path:{} , cass_solver add v:{}",&self_path6,&v);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
-                                        cass_solver.suggest_value(var, v).unwrap();
+                                        cass_solver.suggest_value(var, v as f64).unwrap();
                                         general_top_vals_did_update = true;
 
                                     },
@@ -1554,7 +1556,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                         //TODO check, remove .
                                         assert_eq!(old_var,var);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
-                                        cass_solver.suggest_value(var, v).unwrap();
+                                        cass_solver.suggest_value(var, v as f64).unwrap();
                                         general_top_vals_did_update = true;
 
                                     },
@@ -1578,7 +1580,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                     ordmap::DiffItem::Add(&var, &v) => {
                                         warn!("path:{} , cass_solver add v:{}",&self_path6,&v);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
-                                        cass_solver.suggest_value(var, v).unwrap();
+                                        cass_solver.suggest_value(var, v as f64).unwrap();
                                         general_inherited_vals_did_update = true;
 
                                     },
@@ -1586,7 +1588,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                         //TODO check, remove .
                                         assert_eq!(old_var,var);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
-                                        cass_solver.suggest_value(var, v).unwrap();
+                                        cass_solver.suggest_value(var, v as f64).unwrap();
                                         general_inherited_vals_did_update = true;
 
                                     },
@@ -1614,7 +1616,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                     ordmap::DiffItem::Add(prop, v) => {
                                         //TODO use option , not this
                                         match prop.as_str() {
-                                            "width" | "height" | "bottom" | "right" if approx_eq!(f64,v.into_inner(),0.0,(0.01,2)) => {
+                                            "width" | "height" | "bottom" | "right" if approx_eq!(Precision,v.into_inner(),0.0,(0.01,2)) => {
                                                     continue;
                                             }
                                             _ => {}
@@ -1652,6 +1654,9 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                             if constants_did_update || prop_vals_did_update || general_inherited_vals_did_update || general_top_vals_did_update || children_for_current_constants_did_update{
                                 let changes = cass_solver.fetch_changes();
                                 // warn!("cass solver change:{:#?}",&changes);
+
+
+
                                 if !changes.is_empty() {
                                     *out =  changes.into();
                                     return true
@@ -1663,7 +1668,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                         });
                     // ────────────────────────────────────────────────────────────────────────────────
                     let current_cassowary_map3 = current_cassowary_map.clone();
-                    let cassowary_calculated_vars =  (&children_cass_maps_sa,&calculated_changed_vars_sa).map_mut(Dict::<Variable, (NotNan<f64>,IdStr)>::new(),move|out,children_cass_maps,changed_vars|{
+                    let cassowary_calculated_vars =  (&children_cass_maps_sa,&calculated_changed_vars_sa).map_mut(Dict::<Variable, (NotNan<Precision>,IdStr)>::new(),move|out,children_cass_maps,changed_vars|{
                         let _debug_span_ = warn_span!( "->[ calculated_vars calc map_mut ] ").entered();
 
                         if !changed_vars.is_empty() {
@@ -1686,7 +1691,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                 warn!("[calculated_vars] changed  prop:{:?}  v:{}",&id_prop_str,&v);
 
 
-                                out.insert(*var,(*v,id_prop_str));
+                                out.insert(*var,(NotNan::new(v.into_inner() as Precision).unwrap(),id_prop_str));
 
 
                             }
@@ -1706,8 +1711,8 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                         warn!("[calculated_vars] [calculated_cassowary_layout] total  prop:\n{:#?} ",&cassowary_vars);
 
 
-                        let w  =cassowary_vars.get(&width_var).map(|x|x.0.into_inner());
-                        let h  =cassowary_vars.get(&height_var).map(|x|x.0.into_inner());
+                        let w  =cassowary_vars.get(&width_var).map(|x|x.0.into_inner() as Precision);
+                        let h  =cassowary_vars.get(&height_var).map(|x|x.0.into_inner() as Precision);
                         // let top = cassowary_vars.get(&current_cassowary_map4.var("top").unwrap()).map(|x|x.0.into_inner());
                         // let left = cassowary_vars.get(&current_cassowary_map4.var("left").unwrap()).map(|x|x.0.into_inner());
                         // let bottom = cassowary_vars.get(&current_cassowary_map4.var("bottom").unwrap()).map(|x|x.0.into_inner());
@@ -1933,33 +1938,34 @@ where
         });
 
     //TODO 如果没有parent 那么 parent 就是 screen w h
-    let cass_or_calc_size: StateAnchor<Vector2<f64>> =
+    let cass_or_calc_size: StateAnchor<Vector2<Precision>> =
         (&sa_w, &sa_h).map(|w: &GenericSize, h: &GenericSize| {
             //TODO check editor display error
-            Vector2::<f64>::new(w.get_length_value(), h.get_length_value())
+            Vector2::<Precision>::new(w.get_length_value(), h.get_length_value())
         });
 
     //TODO 审视是否要自定义定位
-    let calculated_origin = StateAnchor::constant(Translation3::<f64>::identity());
-    let calculated_align = StateAnchor::constant(Translation3::<f64>::identity());
-    let coordinates_trans = StateAnchor::constant(Translation3::<f64>::identity());
-    let cass_trans = StateAnchor::constant(Translation3::<f64>::identity());
+    let calculated_origin = StateAnchor::constant(Translation3::<Precision>::identity());
+    let calculated_align = StateAnchor::constant(Translation3::<Precision>::identity());
+    let coordinates_trans = StateAnchor::constant(Translation3::<Precision>::identity());
+    let cass_trans = StateAnchor::constant(Translation3::<Precision>::identity());
     let calculated_translation =
         (&cass_trans, &coordinates_trans).map(|cass, defined| cass * defined);
 
     let matrix = cass_trans.map(|x| x.to_homogeneous().into());
-    let loc_styles = (&cass_or_calc_size, &matrix).map(move |size: &Vector2<f64>, mat4: &Mat4| {
-        let _enter = span!(
-            Level::TRACE,
-            "-> [root] [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
-        )
-        .entered();
+    let loc_styles =
+        (&cass_or_calc_size, &matrix).map(move |size: &Vector2<Precision>, mat4: &Mat4| {
+            let _enter = span!(
+                Level::TRACE,
+                "-> [root] [ loc_styles ] recalculation..(&calculated_size, &matrix).map ",
+            )
+            .entered();
 
-        trace!("size: {}  , matrix: {}", size, CssTransform::from(*mat4));
+            trace!("size: {}  , matrix: {}", size, CssTransform::from(*mat4));
 
-        // TODO use  key 更新 s(),
-        s().w(px(size.x)).h(px(size.y)).transform(*mat4)
-    });
+            // TODO use  key 更新 s(),
+            s().w(px(size.x)).h(px(size.y)).transform(*mat4)
+        });
 
     let world = calculated_translation.clone();
     let layout_calculated = LayoutCalculated {
@@ -2261,7 +2267,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-                Translation3::<f64>::new(50., 50., 0.)
+                Translation3::<Precision>::new(50., 50., 0.)
             );
             info!("=========================================================");
 
@@ -2281,7 +2287,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-                Translation3::<f64>::new(30., 30., 0.)
+                Translation3::<Precision>::new(30., 30., 0.)
             );
             trace!(
                 "{}",
@@ -2396,7 +2402,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-            Translation3::<f64>::new(950.0, 206.0, 0.)
+            Translation3::<Precision>::new(950.0, 206.0, 0.)
         );
 
         let xx = vec![css_width];
@@ -2457,7 +2463,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-            Translation3::<f64>::new(40., 10., 0.)
+            Translation3::<Precision>::new(40., 10., 0.)
         );
         info!("=========================================================");
         tempcss.set(h(px(1111)));
@@ -2473,7 +2479,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-            Translation3::<f64>::new(40., 10., 0.)
+            Translation3::<Precision>::new(40., 10., 0.)
         );
         tempcss.set(h(px(100)));
         assert_eq!(
@@ -2488,7 +2494,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-            Translation3::<f64>::new(40., 10., 0.)
+            Translation3::<Precision>::new(40., 10., 0.)
         );
 
         info!("=========================================================");
@@ -2535,7 +2541,7 @@ mod tests {
                 .calculated
                 .cass_or_calc_size
                 .get(),
-            Vector2::<f64>::new(12., 10.)
+            Vector2::<Precision>::new(12., 10.)
         );
         info!("=========================================================");
         assert_eq!(
@@ -2565,7 +2571,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-            Translation3::<f64>::new(-4.0, -48.0, 0.0)
+            Translation3::<Precision>::new(-4.0, -48.0, 0.0)
         );
         e2.set_size(px(100), px(100));
         assert_eq!(
@@ -2581,7 +2587,7 @@ mod tests {
                 .calculated
                 .cass_or_calc_size
                 .get(),
-            Vector2::<f64>::new(100.0, 100.0)
+            Vector2::<Precision>::new(100.0, 100.0)
         );
         let _span1 = span!(Level::TRACE, "debug print 1");
         _span1.in_scope(|| {
@@ -2731,7 +2737,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Translation3::<f64>::new(-2040.0, -1944.0, 0.)
+                Translation3::<Precision>::new(-2040.0, -1944.0, 0.)
             );
             warn!("calculated 2 =========================================================");
             warn!(
@@ -2835,7 +2841,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Translation3::<f64>::new(-150.0, -180.0, 0.)
+                Translation3::<Precision>::new(-150.0, -180.0, 0.)
             );
             info!("=========================================================");
             tempcss.set(h(px(1111)));
@@ -2862,7 +2868,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Translation3::<f64>::new(40., 10., 0.)
+                Translation3::<Precision>::new(40., 10., 0.)
             );
             tempcss.set(h(px(100)));
             assert_eq!(
@@ -2877,7 +2883,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Translation3::<f64>::new(-150.0, -180.0, 0.)
+                Translation3::<Precision>::new(-150.0, -180.0, 0.)
             );
 
             info!("=========================================================");
@@ -2925,7 +2931,7 @@ mod tests {
                     .calculated
                     .cass_or_calc_size
                     .get(),
-                Vector2::<f64>::new(12., 200.)
+                Vector2::<Precision>::new(12., 200.)
             );
             info!("=========================================================");
             assert_eq!(
@@ -2955,7 +2961,7 @@ mod tests {
                     .calculated
                     .coordinates_trans
                     .get(),
-                Translation3::<f64>::new(-4.0, -10.0, 0.0)
+                Translation3::<Precision>::new(-4.0, -10.0, 0.0)
             );
             e2.set_size(px(100), px(100));
             assert_eq!(
@@ -2971,7 +2977,7 @@ mod tests {
                     .calculated
                     .cass_or_calc_size
                     .get(),
-                Vector2::<f64>::new(100.0, 100.0)
+                Vector2::<Precision>::new(100.0, 100.0)
             );
             let _span1 = span!(Level::TRACE, "debug print 1");
             _span1.in_scope(|| {
@@ -3104,7 +3110,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-                Translation3::<f64>::new(50.0, 50.0, 0.)
+                Translation3::<Precision>::new(50.0, 50.0, 0.)
             );
 
             e1_source.set(Some(node_index("root2")));
@@ -3119,7 +3125,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-                Translation3::<f64>::new(100., 100., 0.)
+                Translation3::<Precision>::new(100., 100., 0.)
             );
             info!("..=========================================================");
             trace!("new root_e2:e1 {}", &e1);
@@ -3138,7 +3144,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-                Translation3::<f64>::new(10.0, 00.0, 0.)
+                Translation3::<Precision>::new(10.0, 00.0, 0.)
             );
             info!("================= e_dict_sv: {:#?}", &e_dict_sv);
 
@@ -3157,7 +3163,7 @@ mod tests {
                 .calculated
                 .coordinates_trans
                 .get(),
-                Translation3::<f64>::new(100.0, 0.0, 0.)
+                Translation3::<Precision>::new(100.0, 0.0, 0.)
             );
             trace!("re new root:e2 {}", &e2);
             info!("l1525 =========================================================");

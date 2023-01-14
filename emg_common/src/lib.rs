@@ -1,8 +1,11 @@
+// ─────────────────────────────────────────────────────────────────────────────
+
 mod func;
 mod layout;
 mod macros;
 mod tools;
 // ────────────────────────────────────────────────────────────────────────────────
+pub mod animation;
 pub mod any;
 pub mod keyboard;
 pub mod measures;
@@ -11,7 +14,11 @@ pub mod time;
 pub mod touch;
 pub mod window;
 // ────────────────────────────────────────────────────────────────────────────────
-pub type Pos<T = f32> = na::Point2<T>;
+pub type Pos<T = Precision> = na::Point2<T>;
+pub type Precision = f32;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 pub use crate::SVec::{smallvec, SmallVec};
 pub use ::smallvec as SVec;
 pub use better_any;
@@ -23,6 +30,9 @@ pub use im_rc as im;
 pub use layout::*;
 pub use measures::*;
 pub use nalgebra as na;
+use num_traits::AsPrimitive;
+
+pub use num_traits;
 pub use ordered_float::NotNan;
 pub use tools::*;
 // ────────────────────────────────────────────────────────────────────────────────
@@ -52,7 +62,7 @@ where
     #[display(fmt = "{} + {}", a, b)]
     Add { a: T, b: T },
     #[display(fmt = "{} * {}", a, b)]
-    Mul { a: T, b: NotNan<f64> },
+    Mul { a: T, b: NotNan<Precision> },
 }
 
 impl<T> CalcOp<T>
@@ -63,10 +73,10 @@ where
         Self::Add { a, b }
     }
 
-    pub fn mul(a: T, b: f64) -> Self {
+    pub fn mul(a: T, b: Precision) -> Self {
         Self::Mul {
             a,
-            b: NotNan::new(b).unwrap(),
+            b: NotNan::new(b.as_()).unwrap(),
         }
     }
 }
@@ -159,25 +169,23 @@ impl From<f64> for GenericSize {
         Self::Length(
             ExactLengthSimplex {
                 unit: Unit::Empty,
-                value: NotNan::new(v).unwrap(),
+                value: NotNan::new(v.as_()).unwrap(),
             }
             .into(),
         )
     }
 }
 
-impl ::core::ops::Mul<f64> for GenericSize {
+impl<T> ::core::ops::Mul<T> for GenericSize
+where
+    T: AsPrimitive<Precision>,
+{
     type Output = GenericSize;
-    fn mul(self, rhs: f64) -> GenericSize {
-        Self::Calculation(Box::new(CalcOp::mul(self, rhs)))
+    fn mul(self, rhs: T) -> GenericSize {
+        Self::Calculation(Box::new(CalcOp::mul(self, rhs.as_())))
     }
 }
-// impl ::core::ops::Add for GenericSize {
-//     type Output = GenericSize;
-//     fn add(self, rhs: GenericSize) -> GenericSize {
-//         Self::Calculation(Box::new(CalcOp::add(self, rhs)))
-//     }
-// }
+
 impl<T> ::core::ops::Add<T> for GenericSize
 where
     T: Into<Self>,
@@ -190,7 +198,7 @@ where
 
 impl GenericSize {
     #[must_use]
-    pub fn get_length_value(&self) -> f64 {
+    pub fn get_length_value(&self) -> Precision {
         self.try_get_length_value()
             .expect("directly get length value failed, expected Length Px or None struct")
     }
@@ -198,7 +206,7 @@ impl GenericSize {
     /// # Errors
     ///
     /// Will return `Err` if `self` does not `Length` and `Length`  unit is not px
-    pub fn try_get_length_value(&self) -> Result<f64, &Self> {
+    pub fn try_get_length_value(&self) -> Result<Precision, &Self> {
         self.as_length()
             .and_then(|l| l.try_get_number().ok())
             .ok_or(self)

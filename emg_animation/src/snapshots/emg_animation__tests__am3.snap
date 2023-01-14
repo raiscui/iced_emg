@@ -2,7 +2,7 @@
 source: emg_animation/src/lib.rs
 expression: "&am_state"
 ---
-AnimationOG {
+Animation {
     steps: [
         _Step,
         To(
@@ -43,10 +43,10 @@ AnimationOG {
             ),
             Motion {
                 position: NotNan(
-                    0.8010914294732041,
+                    0.8010914,
                 ),
                 velocity: NotNan(
-                    -4.926556766606249,
+                    -4.926557,
                 ),
                 target: NotNan(
                     0.0,

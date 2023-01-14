@@ -1,23 +1,24 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2023-01-13 12:06:28
+ * @LastEditTime: 2023-01-14 19:20:17
  * @LastEditors: Rais
  * @Description:
  */
 #![allow(unused_imports)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use emg_animation::{
-    fill, init_motion, interrupt, interrupt_og, loop_am, loop_am_og,
+    init_motion, interrupt, loop_am,
     models::{
-        color::{fill_sm, Color},
-        resolve_steps, resolve_steps_og, step, step_og, update_animation, update_animation_og,
-        zip_properties_greedy_mut, zip_properties_greedy_og, Animation, MsgBackIsNew, PropName,
-        Property, PropertyOG, Step, StepOG,
+        color::{fill, Color},
+        resolve_steps, step, update_animation, zip_properties_greedy_mut, Animation, MsgBackIsNew,
+        PropName, Property, Step,
     },
-    opacity, opacity_og, replace, replace_og, style, style_og, to, to_og, AmState, AmStateOG, Tick,
+    opacity, replace, style, to, AmState,
 };
-use emg_common::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
+use emg_common::{
+    animation::Tick, into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector,
+};
 use emg_layout::{global_clock, AnimationE};
 use emg_state::{topo, CloneStateVar};
 use seed_styles::{height, px, width, Unit};
@@ -55,23 +56,6 @@ pub fn ame_benchmark(c: &mut Criterion) {
 
             now += Duration::from_millis(16);
             update_animation(Tick(now), &mut am_state);
-        })
-    });
-    group.bench_function("animation-og-get", |b| {
-        b.iter(|| {
-            let mut am_state: AmStateOG<Message> = style_og(vector![opacity_og(1.)]);
-            let mut now = Duration::from_millis(10000);
-
-            interrupt_og(
-                vector![loop_am_og(vector![
-                    to_og(vector![emg_animation::opacity_og(0.)]),
-                    to_og(vector![emg_animation::opacity_og(1.)])
-                ]),],
-                &mut am_state,
-            );
-
-            now += Duration::from_millis(16);
-            update_animation_og(Tick(now), &mut am_state);
         })
     });
 
@@ -130,22 +114,7 @@ pub fn ame_initd_benchmark(c: &mut Criterion) {
             update_animation(Tick(now), &mut am_state);
         })
     });
-    group.bench_function("animation-og-initd-get", |b| {
-        let mut am_state: AmStateOG<Message> = style_og(vector![opacity_og(1.)]);
-        let mut now = Duration::from_millis(10000);
 
-        replace_og(
-            vector![loop_am_og(vector![
-                to_og(vector![emg_animation::opacity_og(0.)]),
-                to_og(vector![emg_animation::opacity_og(1.)])
-            ])],
-            &mut am_state,
-        );
-        b.iter(|| {
-            now += Duration::from_millis(16);
-            update_animation_og(Tick(now), &mut am_state);
-        })
-    });
     group.bench_function("animationE-initd-get", |b| {
         let sv_now = global_clock();
 

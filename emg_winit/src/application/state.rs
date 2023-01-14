@@ -141,11 +141,16 @@ impl<A: Application> State<A> {
 
                 self.viewport_version = self.viewport_version.wrapping_add(1);
             }
-            WindowEvent::CursorMoved { position, .. }
-            | WindowEvent::Touch(Touch {
-                location: position, ..
+            WindowEvent::CursorMoved { position, .. } => {
+                G_POS.set(Some(Pos::<f64>::new(position.x, position.y)))
+            }
+            WindowEvent::Touch(Touch {
+                phase,
+                location: position,
+                ..
             }) => {
-                // self.cursor_position = *position;
+                //NOTE current never here at my air m2
+                let _span = tracing::debug_span!("Touch", phase = ?phase).entered();
                 G_POS.set(Some(Pos::<f64>::new(position.x, position.y)));
             }
             WindowEvent::CursorLeft { .. } => {

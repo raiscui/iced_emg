@@ -1,7 +1,9 @@
 mod error;
 mod mode;
+mod orders;
 mod proxy;
 mod semantic_position;
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub mod application;
@@ -20,6 +22,7 @@ pub use emg_element::EventMatchsSa;
 pub use emg_element::GraphProgram;
 pub use emg_graphics_backend::Viewport;
 pub use emg_native::*;
+pub use emg_orders::Orders;
 pub use error::Error;
 pub use mode::Mode;
 pub use proxy::Proxy;

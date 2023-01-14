@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-13 15:19:30
+ * @LastEditTime: 2023-01-14 01:20:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,7 @@
 mod event_builder;
 use derive_more::From;
 
-use emg_common::{mouse, IdStr, Pos, TypeName, Vector};
+use emg_common::{mouse, IdStr, Pos, Precision, TypeName, Vector};
 use emg_layout::EdgeCtx;
 use emg_native::{event::EventFlag, renderer::Rect, Event, WidgetState};
 use emg_shaping::EqShapingWithDebug;
@@ -624,7 +624,7 @@ where
                             let ev = ev_.clone();
 
                             let click_cb_clone2 = click_cb_vec.clone();
-                            let rect = Rect::from_origin_size((world.x, world.y), size);
+                            let rect = Rect::from_origin_size((world.x as f64, world.y as f64), size);
 
 
 
@@ -638,9 +638,9 @@ where
                                     debug!(target:"event::click",?world,?size,?rect,?pos);
 
 
-                                let pos64 = pos.cast::<f64>();
+                                let pos_p = pos.cast::<f64>();
 
-                                if rect.contains(emg_native::renderer::Point::new(pos64.x, pos64.y))
+                                if rect.contains(emg_native::renderer::Point::new(pos_p.x, pos_p.y))
                                 {
                                     debug!("⭕️ rect contains pos");
 
@@ -649,7 +649,7 @@ where
                                         debug!("⭕️ rect has layout_override");
                                         debug!("layout_override --> {:#?}",layout_override);
 
-                                        if !layout_override.contains(&pos64) {
+                                        if !layout_override.contains(&pos_p) {
 
                                             debug!("❌ layout_override not contains pos ,not override, 🔔 ");
                                             Some((cb_ev_id, ev, click_cb_clone2))

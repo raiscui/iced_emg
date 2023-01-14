@@ -129,14 +129,14 @@ where
                 if let Some(bc) = incoming_ctx.get_border_color() {
                     info!(parent: &*span,"border width: {:?} color: {:?}", &bw, &bc);
 
-                    builder.stroke(&Stroke::new(bw as f32), Affine::IDENTITY, bc, None, &rect);
+                    builder.stroke(&Stroke::new(bw), Affine::IDENTITY, bc, None, &rect);
                 } else {
                     builder.stroke(
-                        &Stroke::new(bw as f32),
+                        &Stroke::new(bw),
                         Affine::IDENTITY,
                         Color::BLACK,
                         None,
-                        &rect.inset(-bw / 2. - 0.), //TODO 检查,这是临时设置
+                        &rect.inset(-(bw as f64) / 2. - 0.), //TODO 检查,这是临时设置
                     );
                 }
             }

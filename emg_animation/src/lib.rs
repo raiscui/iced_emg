@@ -11,34 +11,32 @@
 // #![feature(generic_const_exprs)]
 #![feature(slice_take)]
 #![allow(clippy::used_underscore_binding)]
+#![feature(type_alias_impl_trait)]
 
 pub mod func;
 pub mod models;
 pub mod props;
 mod render;
-use std::{collections::VecDeque, convert::TryInto};
+use std::collections::VecDeque;
 // ────────────────────────────────────────────────────────────────────────────────
 // use emg_debuggable::dbg4;
 pub use emg_common;
-use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
-
-use emg_common::{vector, SmallVec, Vector};
-use models::{
-    map_to_motion, map_to_motion_og, update_animation_og, Animation, AnimationOG, Interpolation,
-    Property, Step, StepOG,
+use emg_common::{animation::Tick, vector, SmallVec};
+use emg_common::{
+    num_traits::{cast, AsPrimitive, NumCast},
+    Precision,
 };
-use models::{update_animation, PropertyOG};
+use models::update_animation;
+use models::{map_to_motion, Animation, Interpolation, Property, Step};
 use ordered_float::NotNan;
-use props::{warn_for_double_listed_properties, warn_for_double_listed_properties_og};
+use props::warn_for_double_listed_properties;
 use seed_styles::Unit;
+use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
 pub const PROP_SIZE: usize = 1;
 pub const STEP_SIZE: usize = 3;
 pub const MOTION_SIZE: usize = 3;
 // ────────────────────────────────────────────────────────────────────────────────
-pub use crate::models::color::fill;
 pub use crate::models::opacity::opacity;
-pub use crate::models::opacity::opacity_og;
-pub use crate::models::Tick;
 pub use crate::models::Timing;
 // ────────────────────────────────────────────────────────────────────────────────
 use crate::models::{Easing, Motion};
@@ -47,15 +45,18 @@ use crate::models::{Easing, Motion};
 use crate::models::Interpolation::*;
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub type Msg = models::Tick;
-pub type AmStateOG<Message> = models::AnimationOG<Message>;
+pub type Msg = Tick;
 pub type AmState<Message> = models::Animation<Message>;
 
 /// # Panics
 ///
 /// Will panic if 'position' is NaN
-pub fn init_motion<T: TryInto<NotNan<f64>>>(position: T, unit: Unit) -> Motion {
-    let p: NotNan<f64> = position.try_into().ok().unwrap();
+pub fn init_motion(position: impl NumCast, unit: Unit) -> Motion
+// where
+    // T: TryInto<NotNan<Precision>>,
+{
+    let p: NotNan<Precision> = NotNan::new(cast(position).unwrap()).unwrap();
+
     Motion {
         position: p,
         velocity: NotNan::default(),
@@ -87,25 +88,9 @@ where
         interruption: vector![],
     }
 }
-#[must_use]
-pub fn initial_state_og<Message>(current: Vector<PropertyOG>) -> AnimationOG<Message>
-where
-    Message: Clone,
-{
-    AnimationOG {
-        steps: vector![],
-        props: current,
-        timing: Timing {
-            current: Duration::ZERO,
-            dt: Duration::ZERO,
-        },
-        running: false,
-        interruption: vector![],
-    }
-}
 
 // speed : { perSecond : Float } -> Animation.Model.Interpolation
-fn speed(speed_value: f64) -> Interpolation {
+fn speed(speed_value: Precision) -> Interpolation {
     AtSpeed {
         per_second: NotNan::new(speed_value).unwrap(),
     }
@@ -124,7 +109,7 @@ pub fn default_interpolation_by_property(prop: &Property) -> Interpolation {
             progress: NotNan::new(1.).unwrap(),
             start: NotNan::default(),
             duration,
-            ease: Rc::new(dbg4!(Box::new(std::convert::identity::<f64>))),
+            ease: Rc::new(dbg4!(Box::new(std::convert::identity::<Precision>))),
         })
     };
 
@@ -142,68 +127,14 @@ pub fn default_interpolation_by_property(prop: &Property) -> Interpolation {
 
         Prop3(name, ..) => {
             if name.as_str() == "rotate3d" {
-                speed(PI)
+                speed(PI.as_())
             } else {
                 default_spring
             }
         }
 
-        Angle(_, _) => speed(PI),
+        Angle(_, _) => speed(PI.as_()),
     }
-}
-/// # Panics
-///
-/// Will panic if 'prop' is NaN
-#[must_use]
-pub fn default_interpolation_by_property_og(prop: &PropertyOG) -> Interpolation {
-    use PropertyOG::{Angle, Color, Exact, Path, Points, Prop, Prop2, Prop3, Prop4, Shadow};
-    // -- progress is set to 1 because it is changed to 0 when the animation actually starts
-    // -- This is analogous to the spring starting at rest.
-    let linear = |duration: Duration| {
-        Easing(Easing {
-            progress: NotNan::new(1.).unwrap(),
-            start: NotNan::default(),
-            duration,
-            ease: Rc::new(dbg4!(Box::new(std::convert::identity::<f64>))),
-        })
-    };
-
-    let default_spring = Spring {
-        stiffness: NotNan::new(170.).unwrap(),
-        damping: NotNan::new(26.).unwrap(),
-    };
-
-    match prop {
-        Exact(..) | Shadow(..) | Prop(..) | Prop2(..) | Prop4(..) | Points(..) | Path(..) => {
-            default_spring
-        }
-
-        Color(..) => linear(Duration::from_millis(400)),
-
-        Prop3(name, ..) => {
-            if name.as_str() == "rotate3d" {
-                speed(PI)
-            } else {
-                default_spring
-            }
-        }
-
-        Angle(_, _) => speed(PI),
-    }
-}
-
-// setDefaultInterpolation : Animation.Model.Property -> Animation.Model.Property
-
-#[must_use]
-pub fn set_default_interpolation_og(prop: PropertyOG) -> PropertyOG {
-    let i = default_interpolation_by_property_og(&prop);
-    map_to_motion_og(
-        &|mut m: Motion| -> Motion {
-            m.interpolation = i.clone();
-            m
-        },
-        prop,
-    )
 }
 
 pub fn set_default_interpolation(prop: &mut Property) {
@@ -229,20 +160,6 @@ where
     props.iter_mut().for_each(set_default_interpolation);
     initial_state(props)
 }
-#[must_use]
-pub fn style_og<Message>(props: Vector<PropertyOG>) -> AnimationOG<Message>
-where
-    Message: Clone,
-{
-    //
-    warn_for_double_listed_properties_og(&props);
-    initial_state_og(
-        props
-            .into_iter()
-            .map(set_default_interpolation_og)
-            .collect::<Vector<PropertyOG>>(),
-    )
-}
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -250,43 +167,6 @@ where
 ///This is used because the wait at the start of an interruption works differently than a normal wait.
 
 //    extractInitialWait : List (Animation.Model.Step msg) -> ( Time.Posix, List (Animation.Model.Step msg) )
-
-#[must_use]
-pub fn extract_initial_wait_og<Message>(
-    steps: Vector<StepOG<Message>>,
-) -> (Duration, Vector<StepOG<Message>>)
-where
-    Message: Clone,
-{
-    // case List.head steps of
-    // Nothing ->
-    //     ( Time.millisToPosix 0, [] )
-
-    // Just step ->
-    //     case step of
-    //         Wait till ->
-    //             let
-    //                 ( additionalTime, remainingSteps ) =
-    //                     extractInitialWait (List.drop 1 steps)
-    //             in
-    //             ( Time.millisToPosix (Time.posixToMillis till + Time.posixToMillis additionalTime), remainingSteps )
-
-    //         _ ->
-    //             ( Time.millisToPosix 0, steps )
-    use StepOG::Wait;
-    let front = steps.front().cloned();
-    match front {
-        None => (Duration::ZERO, steps),
-        Some(step) => {
-            if let Wait(till) = step {
-                let (additional_time, remaining_steps) = extract_initial_wait_og(steps.skip(1));
-                (till + additional_time, remaining_steps)
-            } else {
-                (Duration::ZERO, steps)
-            }
-        } // [step] => (Duration::ZERO, steps),
-    }
-}
 
 /// # Panics
 ///
@@ -338,19 +218,6 @@ where
 ///Interrupt any running animations with the following animation.
 // interrupt : List (Animation.Model.Step msg) -> Animation msg -> Animation msg
 
-pub fn interrupt_og<Message>(
-    steps: Vector<StepOG<Message>>,
-    model: &mut AnimationOG<Message>,
-) -> &mut AnimationOG<Message>
-where
-    Message: Clone,
-{
-    model
-        .interruption
-        .push_front(extract_initial_wait_og(steps));
-    model.running = true;
-    model
-}
 pub fn interrupt<Message>(
     steps: impl Into<VecDeque<Step<Message>>>,
     model: &mut Animation<Message>,
@@ -375,17 +242,6 @@ where
     model.running = true;
     model
 }
-pub fn replace_og<Message>(
-    steps: Vector<StepOG<Message>>,
-    model: &mut AnimationOG<Message>,
-) -> &mut AnimationOG<Message>
-where
-    Message: Clone,
-{
-    model.interruption = vector![extract_initial_wait_og(steps)];
-    model.running = true;
-    model
-}
 
 // {-| Repeat a number of steps until interrupted.
 //     -}
@@ -397,13 +253,6 @@ where
     Message: Clone,
 {
     Step::Loop(steps.into())
-}
-#[must_use]
-pub const fn loop_am_og<Message>(steps: Vector<StepOG<Message>>) -> StepOG<Message>
-where
-    Message: Clone,
-{
-    StepOG::Loop(steps)
 }
 
 #[must_use]
@@ -424,20 +273,9 @@ macro_rules! to {
     };
 }
 
-#[must_use]
-pub const fn to_og<Message>(props: Vector<PropertyOG>) -> StepOG<Message>
-where
-    Message: Clone,
-{
-    StepOG::To(props)
-}
-
 // custom : String -> Float -> String -> Animation.Model.Property
 fn custom(name: &str, value: f64, unit: Unit) -> Property {
     Property::Prop(name.into(), init_motion(value, unit))
-}
-fn custom_og(name: &str, value: f64, unit: Unit) -> PropertyOG {
-    PropertyOG::Prop(name.into(), init_motion(value, unit))
 }
 
 /// Update an animation.
@@ -447,12 +285,7 @@ pub fn update<Message: std::clone::Clone + std::fmt::Debug>(
 ) {
     update_animation(tick, animation);
 }
-pub fn update_og<Message: std::clone::Clone + std::fmt::Debug>(
-    tick: Tick,
-    animation: &mut AnimationOG<Message>,
-) {
-    update_animation_og(tick, animation);
-}
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -499,14 +332,17 @@ impl<T> fmt::Debug for Debuggable<T> {
 #[allow(dead_code)]
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{collections::VecDeque, time::Duration};
 
-    use emg_common::vector;
+    use emg_common::{animation::Tick, smallvec, vector};
 
     use crate::{
-        extract_initial_wait_og, fill, interrupt_og,
-        models::{color::Color, opacity::opacity_og, update_animation_og, StepOG},
-        style_og, to_og, AmStateOG, Tick,
+        extract_initial_wait, interrupt,
+        models::{
+            color::{fill, Color},
+            update_animation, Step,
+        },
+        opacity, style, AmState,
     };
 
     #[derive(Clone, Debug)]
@@ -516,72 +352,54 @@ mod tests {
     }
     #[test]
     fn it_works() {
-        let styles: AmStateOG<Message> = style_og(vector![fill(Color::new(0, 0, 0, 1.))]);
+        let styles: AmState<Message> = style(smallvec![fill(Color::new(0, 0, 0, 1.))]);
         println!("{:#?}", styles);
     }
     #[test]
     fn test_extract_initial_wait() {
         let xx = vector![
-            StepOG::Wait(Duration::from_millis(16)),
-            StepOG::_Step,
-            StepOG::Send(Message::A),
+            Step::Wait(Duration::from_millis(16)),
+            Step::_Step,
+            Step::Send(Message::A),
         ];
         println!("{:#?}", xx);
-        let ff = extract_initial_wait_og(vector![
-            StepOG::Wait(Duration::from_millis(16)),
-            StepOG::_Step,
-            StepOG::Send(Message::A),
-        ]);
+        let ff = extract_initial_wait(VecDeque::from([
+            Step::Wait(Duration::from_millis(16)),
+            Step::_Step,
+            Step::Send(Message::A),
+        ]));
         println!("{:#?}", &ff);
         let v = (
             Duration::from_millis(16),
-            vec![StepOG::_Step, StepOG::Send(Message::A)],
+            vec![Step::_Step, Step::Send(Message::A)],
         );
         assert_eq!(format!("{:?}", v), format!("{:?}", ff))
     }
     #[test]
     fn test_update_animation() {
-        let mut am_state: AmStateOG<Message> = style_og(vector![opacity_og(1.)]);
+        let mut am_state: AmState<Message> = style(smallvec![opacity(1.)]);
         insta::assert_debug_snapshot!("init", &am_state);
 
-        interrupt_og(
-            vector![
-                to_og(vector![opacity_og(0.)]),
-                to_og(vector![opacity_og(1.)])
-            ],
-            &mut am_state,
-        );
+        interrupt([to![opacity(0.)], to![opacity(1.)]], &mut am_state);
         insta::assert_debug_snapshot!("interrupt", &am_state);
 
         let mut now = Duration::from_millis(10000);
-        update_animation_og(Tick(now), &mut am_state);
+        update_animation(Tick(now), &mut am_state);
         insta::assert_debug_snapshot!("am1-first", &am_state);
 
         now += Duration::from_millis(16);
-        update_animation_og(Tick(now), &mut am_state);
+        update_animation(Tick(now), &mut am_state);
         insta::assert_debug_snapshot!("am2", &am_state);
 
         now += Duration::from_millis(17);
-        update_animation_og(Tick(now), &mut am_state);
+        update_animation(Tick(now), &mut am_state);
         insta::assert_debug_snapshot!("am3", &am_state);
 
         for _ in 0..180 {
             now += Duration::from_millis(17);
-            update_animation_og(Tick(now), &mut am_state);
+            update_animation(Tick(now), &mut am_state);
         }
         println!("{:#?}", &am_state);
         insta::assert_debug_snapshot!("am_last", &am_state);
-    }
-    #[test]
-    fn test_interrupt() {
-        let mut am_state: AmStateOG<Message> = style_og(vector![opacity_og(1.)]);
-        let interrupt1 = interrupt_og(
-            vector![
-                to_og(vector![opacity_og(0.)]),
-                to_og(vector![opacity_og(1.)])
-            ],
-            &mut am_state,
-        );
-        println!("{:#?}", interrupt1);
     }
 }

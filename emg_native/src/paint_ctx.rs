@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2023-01-13 12:16:30
+ * @LastEditTime: 2023-01-14 01:19:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@ mod impl_refresh;
 use std::{cell::Cell, rc::Rc};
 
 use crate::renderer::{Affine, Color, Size};
-use emg_common::{na::Translation3, LayoutOverride, Vector};
+use emg_common::{na::Translation3, num_traits::AsPrimitive, LayoutOverride, Precision, Vector};
 use emg_shaping::ShapingWhoNoWarper;
 use emg_state::StateAnchor;
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
@@ -68,7 +68,10 @@ impl PaintCtx {
         if t.x == 0. && t.y == 0. {
             None
         } else {
-            Some(crate::renderer::Affine::translate((t.x * DPR, t.y * DPR)))
+            Some(crate::renderer::Affine::translate((
+                t.x as f64 * DPR,
+                t.y as f64 * DPR,
+            )))
         }
     }
     pub fn get_fill_color(&self) -> Option<Color> {
@@ -88,17 +91,20 @@ impl PaintCtx {
         })
     }
     // #[instrument(skip(self), ret)]
-    pub fn get_border_width(&self) -> Option<f64> {
-        self.widget_state.border_width.as_ref().map(|bw| match bw {
-            CssBorderWidth::Medium => todo!(),
-            CssBorderWidth::Thin => todo!(),
-            CssBorderWidth::Thick => todo!(),
-            CssBorderWidth::Length(l) => l
-                .try_get_number()
-                .expect("[Unit] currently only px /empty can get"),
-            CssBorderWidth::Initial => todo!(),
-            CssBorderWidth::Inherit => todo!(),
-            CssBorderWidth::StringValue(_) => todo!(),
+    pub fn get_border_width(&self) -> Option<f32> {
+        self.widget_state.border_width.as_ref().map(|bw| {
+            match bw {
+                CssBorderWidth::Medium => todo!(),
+                CssBorderWidth::Thin => todo!(),
+                CssBorderWidth::Thick => todo!(),
+                CssBorderWidth::Length(l) => l
+                    .try_get_number()
+                    .expect("[Unit] currently only px /empty can get"),
+                CssBorderWidth::Initial => todo!(),
+                CssBorderWidth::Inherit => todo!(),
+                CssBorderWidth::StringValue(_) => todo!(),
+            }
+            .as_()
         })
     }
     // #[instrument(skip(self), ret)]
@@ -160,8 +166,8 @@ impl ShapingWhoNoWarper for WidgetState {}
 pub struct WidgetState {
     pub children_layout_override: StateAnchor<Option<LayoutOverride>>,
     size: Size,
-    pub translation: Translation3<f64>,
-    pub world: StateAnchor<Translation3<f64>>,
+    pub translation: Translation3<Precision>,
+    pub world: StateAnchor<Translation3<Precision>>,
     // pub background_color: CssBackgroundColor,
     pub fill: Option<CssFill>,
     pub border_width: Option<CssBorderWidth>,
@@ -252,15 +258,15 @@ macro_rules! css_merge {
 impl WidgetState {
     // pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
     pub fn new(
-        size: (f64, f64),
-        trans: Translation3<f64>,
-        world: StateAnchor<Translation3<f64>>,
+        size: (Precision, Precision),
+        trans: Translation3<Precision>,
+        world: StateAnchor<Translation3<Precision>>,
         children_layout_override: StateAnchor<Option<LayoutOverride>>,
     ) -> WidgetState {
         WidgetState {
             // id,
             // origin: Point::ORIGIN,
-            size: Size::new(size.0, size.1),
+            size: Size::new(size.0 as f64, size.1 as f64),
             translation: trans,
             world,
             children_layout_override,

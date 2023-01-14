@@ -161,9 +161,9 @@ mod wasmBench {
     };
     const PROP_SIZE: usize = 3;
     use emg_animation::{
-        fill, init_motion, loop_am, loop_am_og,
+        fill_og, init_motion, loop_am, loop_am_og,
         models::{
-            color::{fill_sm, Color},
+            color::{fill, Color},
             resolve_steps, resolve_steps_og, step, step_og, zip_properties_greedy_mut,
             zip_properties_greedy_og, MsgBackIsNew, PropName, Property, PropertyOG, Step, StepOG,
         },

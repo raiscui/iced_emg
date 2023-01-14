@@ -1,23 +1,13 @@
-use crate::{window::observe_size, Orders};
+use crate::Orders;
 use emg_common::animation::Tick;
 // use fxhash::FxBuildHasher;
 use emg_hasher::CustomHasher;
 use emg_layout::{global_anima_running_sa, global_clock, global_height, global_width};
 use emg_state::{state_store, CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 
-/*
- * @Author: Rais
- * @Date: 2021-05-12 18:07:36
- * @LastEditTime: 2023-01-14 21:53:06
- * @LastEditors: Rais
- * @Description:
- */
-use crate::{dodrio::VdomWeak, Bus};
+use crate::Bus;
 use indexmap::IndexMap;
 use tracing::debug;
-use wasm_bindgen::prelude::*;
-
-use crate::map_callback_return_to_option_ms;
 
 use std::{
     cell::{Cell, RefCell},
@@ -150,9 +140,8 @@ pub struct OrdersContainer<Message>
     pub(crate) data: Rc<OrdersData<Message, Tick>>,
     bus: Bus<Message>,
     pub(crate) re_render_msg: Rc<RefCell<Option<Message>>>,
-    pub vdom: Rc<RefCell<Option<VdomWeak>>>, //
-                                             // pub(crate) effects: VecDeque<Effect<Ms>>,
-                                             // app: App<Ms, Mdl, INodes>
+    // pub(crate) effects: VecDeque<Effect<Ms>>,
+    // app: App<Ms, Mdl, INodes>
 }
 
 impl<Message> OrdersContainer<Message>
@@ -185,7 +174,6 @@ impl<Message> OrdersContainer<Message>
             }),
             bus,
             re_render_msg: Rc::new(RefCell::new(None)),
-            vdom: Rc::new(RefCell::new(None)),
         }
     }
 
@@ -213,65 +201,19 @@ where
     // }
 
     fn observe_root_size<F: Fn(f64, f64) + 'static>(&self, cb: F) -> &Self {
-        let sv_width = self.data.width;
-        let sv_height = self.data.height;
-        // ─────────────────────────────────────────────────────────────────
-
-        let window = web_sys::window().unwrap();
-        let document = window.document().unwrap();
-        let body = document.body().unwrap();
-        let rc_store = state_store();
-        let orders = self.clone();
-        // ─────────────────────────────────────────────────────────────────
-        // let re_render_timeout: Rc<RefCell<Option<i32>>> = Rc::new(RefCell::new(None));
-        let callback = Box::new(move |width: f64, height: f64| {
-            let store = rc_store.borrow();
-            debug!("resize : will set w h {} {}", &width, &height);
-            sv_width.store_set(&store, width);
-            sv_height.store_set(&store, height);
-
-            cb(width, height);
-
-            // if re_render_timeout.borrow().is_some() {
-            //     warn!("==r idle fn working, should not running again");
-            //     return;
-            // }
-
-            // re_render_timeout.borrow_mut().replace(1);
-            // let re_render_timeout2 = re_render_timeout.clone();
-
-            // idle_callback();
-
-            orders
-                // .after_next_render("reset idle timeout", move |_| {
-                //     let _droppable = re_render_timeout2.borrow_mut().take();
-                // })
-                .vdom
-                .borrow()
-                .as_ref()
-                .unwrap()
-                .schedule_render_with_orders(orders.clone());
-        });
-
-        let closure = Closure::wrap(callback as Box<dyn FnMut(f64, f64)>);
-        // *idle_cb.borrow_mut() = Some(closure);
-        let closure_as_js_value = closure.as_ref().clone();
-
-        unsafe {
-            observe_size(&body, &closure_as_js_value);
-        }
-        closure.forget();
+        // in winit, root size change use emg_graphics_backend::viewport::Viewport
 
         self
     }
 
     fn schedule_render(&self) -> Option<Message> {
         debug!("in orders::schedule_render");
-        self.vdom
-            .borrow()
-            .as_ref()
-            .unwrap()
-            .schedule_render_with_orders(self.clone());
+        todo!();
+        // self.vdom
+        //     .borrow()
+        //     .as_ref()
+        //     .unwrap()
+        //     .schedule_render_with_orders(self.clone());
         None
     }
 
@@ -339,11 +281,12 @@ where
 
         if self.has_anima_running() {
             debug!("has_anima_running , re render....");
-            self.vdom
-                .borrow()
-                .as_ref()
-                .unwrap()
-                .schedule_render_with_orders(self.clone());
+            todo!();
+            // self.vdom
+            //     .borrow()
+            //     .as_ref()
+            //     .unwrap()
+            //     .schedule_render_with_orders(self.clone());
         }
 
         // debug!(
@@ -494,18 +437,18 @@ where
         task_name: &'static str,
         cb: F,
     ) -> &Self {
-        let box_callback = map_callback_return_to_option_ms!(
-            dyn FnOnce(Tick) -> Option<Message>,
-            cb,
-            "Callback can return only Msg, Option<Msg> or ()!",
-            Box
-        );
+        // let box_callback = map_callback_return_to_option_ms!(
+        //     dyn FnOnce(Tick) -> Option<Message>,
+        //     cb,
+        //     "Callback can return only Msg, Option<Msg> or ()!",
+        //     Box
+        // );
 
-        let mut map = self.data.after_next_render_callbacks.borrow_mut();
+        // let mut map = self.data.after_next_render_callbacks.borrow_mut();
 
-        map.shift_remove(task_name);
-        map.insert(task_name.to_string(), box_callback);
-
+        // map.shift_remove(task_name);
+        // map.insert(task_name.to_string(), box_callback);
+        todo!();
         self
     }
 

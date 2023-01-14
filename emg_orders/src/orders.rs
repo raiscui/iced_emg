@@ -1,10 +1,6 @@
 use std::time::Duration;
 
-//TODO Tick 脱库
-use emg_animation::Tick;
-
-// @TODO: Add links to doc comment once https://github.com/rust-lang/rust/issues/43466 is resolved
-// or use nightly rustdoc. Applicable to the entire code base.
+use emg_common::animation::Tick;
 
 // ────────────────────────────────────────────────────────────────────────────────
 

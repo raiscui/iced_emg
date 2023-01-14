@@ -1,9 +1,10 @@
 // use crate::style::css_values::*;
 use derive_more::Display;
 use derive_more::From;
+use num_traits::AsPrimitive;
 use ordered_float::NotNan;
 
-use crate::CalcOp;
+use crate::{CalcOp, Precision};
 
 #[derive(Display, Clone, Debug, From, PartialEq, PartialOrd, Eq)]
 #[display(fmt = "{}")]
@@ -23,7 +24,7 @@ impl Default for LogicLength {
 #[display(fmt = "{}{}", value, unit)]
 pub struct ExactLengthSimplex {
     pub unit: Unit,
-    pub value: NotNan<f64>,
+    pub value: NotNan<Precision>,
 }
 impl Default for ExactLengthSimplex {
     fn default() -> Self {
@@ -36,7 +37,7 @@ impl Default for ExactLengthSimplex {
 
 impl ExactLengthSimplex {
     /// Get a reference to the exact length's value.
-    pub fn value(&self) -> f64 {
+    pub fn value(&self) -> Precision {
         self.value.into_inner()
     }
 }
@@ -48,12 +49,16 @@ impl ExactLengthSimplex {
 // }
 
 //TODO full this
-impl ::core::ops::Mul<f64> for LogicLength {
+impl<T> ::core::ops::Mul<T> for LogicLength
+where
+    T: AsPrimitive<Precision>,
+{
     type Output = LogicLength;
-    fn mul(self, rhs: f64) -> LogicLength {
-        Self::Calculation(Box::new(CalcOp::mul(self, rhs)))
+    fn mul(self, rhs: T) -> LogicLength {
+        Self::Calculation(Box::new(CalcOp::mul(self, rhs.as_())))
     }
 }
+
 impl ::core::ops::Add for LogicLength {
     type Output = LogicLength;
     fn add(self, rhs: LogicLength) -> LogicLength {
@@ -61,33 +66,8 @@ impl ::core::ops::Add for LogicLength {
     }
 }
 
-// impl<__RhsT> ::core::ops::Mul<__RhsT> for ExactLength
-// where
-//     f64: ::core::ops::Mul<__RhsT, Output = f64>,
-// {
-//     type Output = ExactLength;
-//     fn mul(self, rhs: __RhsT) -> ExactLength {
-//         Self {
-//             unit: self.unit,
-//             value: NotNan::new(self.value.into_inner().mul(rhs)).expect("mut ExactLength"),
-//         }
-//     }
-// }
-// impl ::core::ops::Add for ExactLength {
-//     type Output = ExactLength;
-//     fn add(self, rhs: ExactLength) -> ExactLength {
-//         if self.unit != rhs.unit {
-//             panic!("can't add two ExactLength has different units")
-//         }
-//         Self {
-//             unit: self.unit,
-//             value: self.value.add(rhs.value),
-//         }
-//     }
-// }
-
 impl LogicLength {
-    pub fn try_get_number(&self) -> Result<f64, &Self> {
+    pub fn try_get_number(&self) -> Result<Precision, &Self> {
         match self {
             LogicLength::Simplex(l) => {
                 if matches!(l.unit, Unit::Px | Unit::Empty) {
@@ -121,49 +101,49 @@ pub enum Unit {
     Empty,
 }
 
-pub fn px<T: Into<f64>>(val: T) -> LogicLength {
+pub fn px<T: AsPrimitive<Precision>>(val: T) -> LogicLength {
     ExactLengthSimplex {
-        value: NotNan::new(val.into()).unwrap(),
+        value: NotNan::new(val.as_()).unwrap(),
         unit: Unit::Px,
     }
     .into()
 }
 
-pub fn vw<T: Into<f64>>(val: T) -> LogicLength {
+pub fn vw<T: AsPrimitive<Precision>>(val: T) -> LogicLength {
     ExactLengthSimplex {
-        value: NotNan::new(val.into()).unwrap(),
+        value: NotNan::new(val.as_()).unwrap(),
         unit: Unit::Vw,
     }
     .into()
 }
 
-pub fn vh<T: Into<f64>>(val: T) -> LogicLength {
+pub fn vh<T: AsPrimitive<Precision>>(val: T) -> LogicLength {
     ExactLengthSimplex {
-        value: NotNan::new(val.into()).unwrap(),
+        value: NotNan::new(val.as_()).unwrap(),
         unit: Unit::Vh,
     }
     .into()
 }
 
-pub fn cm<T: Into<f64>>(val: T) -> LogicLength {
+pub fn cm<T: AsPrimitive<Precision>>(val: T) -> LogicLength {
     ExactLengthSimplex {
-        value: NotNan::new(val.into()).unwrap(),
+        value: NotNan::new(val.as_()).unwrap(),
         unit: Unit::Cm,
     }
     .into()
 }
 
-pub fn rem<T: Into<f64>>(val: T) -> LogicLength {
+pub fn rem<T: AsPrimitive<Precision>>(val: T) -> LogicLength {
     ExactLengthSimplex {
-        value: NotNan::new(val.into()).unwrap(),
+        value: NotNan::new(val.as_()).unwrap(),
         unit: Unit::Rem,
     }
     .into()
 }
 
-pub fn em<T: Into<f64>>(val: T) -> LogicLength {
+pub fn em<T: AsPrimitive<Precision>>(val: T) -> LogicLength {
     ExactLengthSimplex {
-        value: NotNan::new(val.into()).unwrap(),
+        value: NotNan::new(val.as_()).unwrap(),
         unit: Unit::Em,
     }
     .into()
@@ -210,9 +190,9 @@ pub fn em<T: Into<f64>>(val: T) -> LogicLength {
 //         Self(self.0.add(rhs.0))
 //     }
 // }
-pub fn pc<T: Into<f64>>(val: T) -> LogicLength {
+pub fn pc<T: AsPrimitive<Precision>>(val: T) -> LogicLength {
     ExactLengthSimplex {
-        value: NotNan::new(val.into()).unwrap(),
+        value: NotNan::new(val.as_()).unwrap(),
         unit: Unit::Pc,
     }
     .into()
