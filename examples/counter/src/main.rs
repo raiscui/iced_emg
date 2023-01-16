@@ -116,14 +116,6 @@ enum Message {
 impl Sandbox for Counter {
     type Message = Message;
 
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn title(&self) -> String {
-        String::from("Counter - Iced")
-    }
-
     fn update(
         &mut self,
         graph: &mut Self::GraphType,
@@ -215,18 +207,6 @@ impl Sandbox for Counter {
     fn root_id(&self) -> &str {
         "debug_layer"
     }
-
-    // #[instrument(skip(self, g))]
-    // fn ctx(
-    //         &self,
-    //         g: &GraphType<Self::Message>,
-    //     ) -> StateAnchor<runtime::PaintCtx<renderer::SceneCtx> > {
-    //         let ctx =StateAnchor::constant( runtime::PaintCtx::<renderer::SceneCtx>::default());
-    //         g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
-    //         .unwrap()
-    //         .build_ctx_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]),&ctx)
-
-    // }
 
     // #[instrument(skip(self, g), ret)]
     // fn view(&self, g: &GraphType<Self::Message>) -> GelType<Self::Message> {

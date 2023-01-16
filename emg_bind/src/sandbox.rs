@@ -3,7 +3,7 @@ use emg_orders::Orders;
 
 use crate::{application::Instance, element, Application, Command, Settings};
 
-pub trait Sandbox {
+pub trait Sandbox: std::default::Default {
     /// The type of __messages__ your [`Sandbox`] will produce.
     type Message: std::fmt::Debug + Send;
     type GraphType = element::GraphType<Self::Message>;
@@ -14,13 +14,17 @@ pub trait Sandbox {
     /// Initializes the [`Sandbox`].
     ///
     /// Here is where you should return the initial state of your app.
-    fn new() -> Self;
+    fn new() -> Self {
+        Self::default()
+    }
 
     /// Returns the current title of the [`Sandbox`].
     ///
     /// This title can be dynamic! The runtime will automatically update the
     /// title of your application when necessary.
-    fn title(&self) -> String;
+    fn title(&self) -> String {
+        String::from("emg gui")
+    }
 
     /// Handles a __message__ and updates the state of the [`Sandbox`].
     ///
@@ -28,10 +32,11 @@ pub trait Sandbox {
     /// produced by user interactions, will be handled by this method.
     fn update(
         &mut self,
-        graph: &mut Self::GraphType,
-        orders: &Self::Orders,
-        message: Self::Message,
-    );
+        _graph: &mut Self::GraphType,
+        _orders: &Self::Orders,
+        _message: Self::Message,
+    ) {
+    }
 
     /// Returns the widgets to display in the [`Sandbox`].
     ///
