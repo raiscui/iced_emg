@@ -1,0 +1,308 @@
+---
+source: emg_layout/src/lib.rs
+assertion_line: 1908
+expression: "&root_e"
+
+---
+EmgEdgeItem {
+    id: StateVar(
+        StateAnchor(
+            EdgeIndex(None->Some(NodeIndex("root"))),
+        ),
+    ),
+    paths: StateAnchor(
+        {
+            EPath(
+                [],
+            ): Empty,
+        },
+    ),
+    layout: Layout {
+        w: StateVar(
+            GenericSizeAnchor(
+                StateAnchor(
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    100.0,
+                                ),
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        h: StateVar(
+            GenericSizeAnchor(
+                StateAnchor(
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    100.0,
+                                ),
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        z: StateVar(
+            StateAnchor(
+                0,
+            ),
+        ),
+        origin_x: StateVar(
+            GenericSizeAnchor(
+                StateAnchor(
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        origin_y: StateVar(
+            GenericSizeAnchor(
+                StateAnchor(
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        origin_z: StateVar(
+            GenericSizeAnchor(
+                StateAnchor(
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        align_x: StateVar(
+            GenericSizeAnchor(
+                StateAnchor(
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        align_y: StateVar(
+            GenericSizeAnchor(
+                StateAnchor(
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        align_z: StateVar(
+            GenericSizeAnchor(
+                StateAnchor(
+                    Length(
+                        Simplex(
+                            ExactLengthSimplex {
+                                unit: Px,
+                                value: NotNan(
+                                    0.0,
+                                ),
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    },
+    path_styles: StateVar(
+        {},
+    ),
+    path_layouts: StateVar(
+        {},
+    ),
+    other_styles: StateVar(
+        Style {
+            media_rules: {},
+            rules: [],
+            updated_at: [
+                "emg_layout/src/lib.rs:781:41",
+            ],
+            pseudo: None,
+            media: None,
+            name: "",
+            keyframes: Keyframes {
+                frames: [],
+            },
+            combinator: None,
+            pre_combinators: [],
+        },
+    ),
+    edge_nodes: StateAnchor(
+        {
+            EPath(
+                [
+                    EdgeIndex(None->Some(NodeIndex("root"))),
+                ],
+            ): EdgeData(
+                EdgeData {
+                    calculated: LayoutCalculated {
+                        size: StateAnchor(
+                            [
+                                [
+                                    100.0,
+                                    100.0,
+                                ],
+                            ],
+                        ),
+                        origin: StateAnchor(
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
+                        ),
+                        align: StateAnchor(
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
+                        ),
+                        coordinates_trans: StateAnchor(
+                            [
+                                0.0,
+                                0.0,
+                                0.0,
+                            ],
+                        ),
+                        matrix: StateAnchor(
+                            Mat4(
+                                [
+                                    [
+                                        1.0,
+                                        0.0,
+                                        0.0,
+                                        0.0,
+                                    ],
+                                    [
+                                        0.0,
+                                        1.0,
+                                        0.0,
+                                        0.0,
+                                    ],
+                                    [
+                                        0.0,
+                                        0.0,
+                                        1.0,
+                                        0.0,
+                                    ],
+                                    [
+                                        0.0,
+                                        0.0,
+                                        0.0,
+                                        1.0,
+                                    ],
+                                ],
+                            ),
+                        ),
+                        loc_styles: StateAnchor(
+                            Style {
+                                media_rules: {},
+                                rules: [
+                                    Rule {
+                                        value: Length(
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        100.0,
+                                                    ),
+                                                },
+                                            ),
+                                        ),
+                                    },
+                                    Rule {
+                                        value: Length(
+                                            Simplex(
+                                                ExactLengthSimplex {
+                                                    unit: Px,
+                                                    value: NotNan(
+                                                        100.0,
+                                                    ),
+                                                },
+                                            ),
+                                        ),
+                                    },
+                                    Rule {
+                                        value: StringValue(
+                                            "matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1)",
+                                        ),
+                                    },
+                                ],
+                                updated_at: [
+                                    "emg_layout/src/lib.rs:1007:13",
+                                    "emg_layout/src/lib.rs:1007:17",
+                                    "emg_layout/src/lib.rs:1007:31",
+                                    "emg_layout/src/lib.rs:1007:45",
+                                ],
+                                pseudo: None,
+                                media: None,
+                                name: "",
+                                keyframes: Keyframes {
+                                    frames: [],
+                                },
+                                combinator: None,
+                                pre_combinators: [],
+                            },
+                        ),
+                    },
+                    styles_string: StateAnchor(
+                        "width: 100px;\nheight: 100px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n",
+                    ),
+                    opt_p_calculated: None,
+                },
+            ),
+        },
+    ),
+    store: RefCell {
+        value: the graph store,
+    },
+}

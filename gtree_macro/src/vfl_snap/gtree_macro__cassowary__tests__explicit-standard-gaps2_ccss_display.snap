@@ -1,0 +1,11 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+#b1[bottom] + 20  ==  #b2[top],
+#b2[bottom] + 20  ==  #b3[top],
+#b3[bottom] + 20  ==  #b4[top],
+#b4[bottom] + 20  ==  #b5[top],
+]
+

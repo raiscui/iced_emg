@@ -1,0 +1,9 @@
+---
+source: gtree_macro/tests/test_ccss.rs
+expression: "&disp"
+---
+[
+#b1[right] + [my_gap]  ==  #b2[left],
+#b2[right] + [my_other_gap]  ==  #b3[left],
+]
+

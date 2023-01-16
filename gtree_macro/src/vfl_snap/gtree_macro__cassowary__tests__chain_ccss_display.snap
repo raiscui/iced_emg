@@ -1,0 +1,10 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+#b1[right]  ==  #b2[left],
+#b1[height]  ==  #b2[height],
+#b1[width]  ==  250 ==  #b2[width],
+]
+

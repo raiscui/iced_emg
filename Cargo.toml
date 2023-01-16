@@ -1,11 +1,34 @@
 [workspace]
+resolver = "2"
 members = [
-"gtree_proc_macro",
-"gtree_macro",
-"gtree"
-# "gtree_tests"
+    "gtree_proc_macro",
+    "gtree_macro",
+    "gtree",
+    "emg_common",
+    "emg_element",
+    "emg_layout",
+    "emg_bind",
+    "emg_shaping",
+    "emg_state",
+    "emg_animation",
+    "emg_orders",
+    "emg_debuggable",
+    "emg_msg_macro",
+    "emg_msg_impl",
+    "emg_hasher",
+    # "emg_web",
+    "emg_futures",
+    "emg_native",
+    "emg_winit",
+    # "emg_piet_gpu",
+    "emg_vello",
+    "emg_renderer",
+    "emg_graphics_backend",
+    "tests",
+    "examples/counter",
 ]
-exclude = [
-      "emg_bind",
-      "gtree_tests"
-]
+# exclude = [""]
+[patch.crates-io]
+# Required for metal support to work on wgpu
+# TODO: remove when wgpu is upgraded to 0.15
+naga = { git = "https://github.com/gfx-rs/naga", rev = "ddcd5d3121150b2b1beee6e54e9125ff31aaa9a2" }

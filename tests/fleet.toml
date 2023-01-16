@@ -1,0 +1,5 @@
+rd_enabled = true
+fleet_id = "919de78a-42cf-49e5-8cef-eb0daffe5af0"
+
+[build]
+sccache = "/Users/cuiluming/.cargo/bin/sccache"

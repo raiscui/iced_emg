@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+#b1[right] + [hgap]  <=  #b2[left],
+#b2[right] + 100  <=  #b3[left],
+]
+

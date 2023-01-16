@@ -1,0 +1,30 @@
+[package]
+name = "counter_new_resize"
+version = "0.1.0"
+authors = ["Héctor Ramón Jiménez <hector0193@gmail.com>"]
+edition = "2021"
+publish = false
+resolver = "2"
+
+[profile.dev]
+split-debuginfo = "unpacked"
+
+
+[features]
+gpu = ["emg_bind/gpu"]
+
+[dependencies]
+emg_bind = { path = "../../emg_bind" }
+
+#
+
+
+tracing = "0.1"
+tracing-wasm = { version = "0.2.1" }
+# tracing-wasm = { version = "0.2.1", features = [
+#     "mark-with-rayon-thread-index",
+# ] }
+console_error_panic_hook = "0.1"
+
+# im-rc = "15.0.0"
+# serde = "1.0.130"

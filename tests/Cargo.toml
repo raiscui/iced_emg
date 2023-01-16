@@ -1,0 +1,69 @@
+[package]
+name = "tests"
+version = "0.1.0"
+authors = ["崔路明 <cuiluming@chaoway.net>"]
+edition = "2021"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.bench]
+lto = true
+[dependencies]
+emg_bind = { path = "../emg_bind" }
+# emg_hasher = { path = "../emg_hasher" }
+rustc-hash = "1.1.0"
+
+
+# iced_web = "0.3"
+
+emg_shaping = { path = "../emg_shaping" }
+emg_state = { path = "../emg_state" }
+emg_layout = { path = "../emg_layout" }
+emg_animation = { path = "../emg_animation" }
+gtree = { path = "../gtree" }
+seed_styles = { path = "../../styles_hooks/seed_styles" }
+emg_common = { path = "../emg_common" }
+anchors = { path = "../../anchors" }
+
+
+tracing = "0.1"
+
+tracing-wasm = "0.2"
+console_error_panic_hook = "0.1"
+# im-rc = "15.0.0"
+# serde = "1.0.130"
+
+gtree_proc_macro = { path = "../gtree_proc_macro" }
+
+# [target.'cfg(target_arch = "wasm32")'.dependencies]
+dodrio = { path = "../../dodrio" }
+
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+wasm-bindgen = "0.2"
+insta = "1"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+easybench-wasm = "0.2"
+
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+version = "^0.3"
+features = [
+    "Performance",
+    "Element",
+    "NamedNodeMap",
+    "Attr",
+    "Window",
+    "console",
+    "Document",
+    "HtmlElement",
+    "HtmlInputElement",
+    "Event",
+    "EventTarget",
+    "InputEvent",
+    "KeyboardEvent",
+    "IdleRequestOptions",
+]

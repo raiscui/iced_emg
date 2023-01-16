@@ -1,0 +1,11 @@
+---
+source: gtree_macro/tests/test_ccss.rs
+expression: "&disp"
+---
+[
+#b1[bottom] + [vgap]  ==  #b2[top] !weak,
+#b2[bottom] + [vgap]  ==  #b3[top] !weak,
+#b3[bottom] + [vgap]  ==  #b4[top] !weak,
+#b4[bottom] + [vgap]  ==  #b5[top] !weak,
+]
+

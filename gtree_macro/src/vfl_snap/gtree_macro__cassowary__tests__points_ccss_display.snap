@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+100  ==  #sub[top],
+#sub[bottom]  ==  300,
+]
+

@@ -3,3 +3,10 @@ pkg/
 **/*.rs.bk
 Cargo.lock
 
+emg_layout/tracing/
+.vscode/settings.json
+.history
+examples/*/dist
+.vscode/metago_bookmarks.json
+.cargo
+.vscode

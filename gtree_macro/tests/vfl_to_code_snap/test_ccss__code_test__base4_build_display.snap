@@ -1,0 +1,9 @@
+---
+source: gtree_macro/tests/test_ccss.rs
+expression: "&disp"
+---
+[
+"parent"[top]  ==  #sub[top],
+#sub[bottom]  ==  "parent"[bottom],
+]
+

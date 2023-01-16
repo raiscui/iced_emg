@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+#btn1[right] + 8  ==  "col3"[left],
+"col4"[right] + 8  ==  #btn2[left],
+]
+

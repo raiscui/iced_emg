@@ -1,0 +1,45 @@
+[package]
+name = "emg_winit"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev]
+split-debuginfo = "unpacked"
+[lib]
+crate-type = ["rlib"]
+
+[features]
+default = ["gpu"]
+gpu = ["emg_element/gpu", "emg_layout/gpu"]
+debug = ["emg_native/debug"]
+system = ["sysinfo"]
+
+[dependencies]
+emg_hasher = { path = "../emg_hasher" }
+emg_orders = { path = "../emg_orders" }
+emg_common = { path = "../emg_common" }
+emg_native = { path = "../emg_native" }
+emg_futures = { path = "../emg_futures" }
+emg_graphics_backend = { path = "../emg_graphics_backend" }
+emg_layout = { path = "../emg_layout" }
+emg_state = { path = "../emg_state" }
+#---
+emg_element = { path = "../emg_element" }
+
+#------
+window_clipboard = "0.2"
+tracing = "0.1"
+thiserror = "1.0"
+#--------------
+#for orders
+indexmap = "1.9.2"
+#--------------
+
+
+[dependencies.winit]
+version = "0.27.5"
+
+[dependencies.sysinfo]
+version = "0.23"
+optional = true

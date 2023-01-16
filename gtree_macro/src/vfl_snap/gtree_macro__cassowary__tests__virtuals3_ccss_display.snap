@@ -1,0 +1,8 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+"vv"[bottom] + [vgap]  ==  #b1[top],
+]
+

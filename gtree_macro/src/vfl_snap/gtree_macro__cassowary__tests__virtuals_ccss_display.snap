@@ -1,0 +1,11 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+"Zone"[bottom] + [vgap]  ==  "1"[top],
+"1"[bottom] + [vgap]  ==  "a"[top],
+"a"[bottom] + [vgap]  ==  "q-1"[top],
+"q-1"[bottom] + [vgap]  ==  "_fallout"[top],
+]
+

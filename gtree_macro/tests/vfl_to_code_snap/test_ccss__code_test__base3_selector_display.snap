@@ -1,0 +1,12 @@
+---
+source: gtree_macro/tests/test_ccss.rs
+expression: "&VectorDisp(selector)"
+---
+[
+#b1,
+#b2,
+#b3,
+#b4,
+#b5,
+]
+

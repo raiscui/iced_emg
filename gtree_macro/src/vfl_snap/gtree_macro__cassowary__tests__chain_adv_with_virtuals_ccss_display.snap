@@ -1,0 +1,11 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+"panel"[top] + "outer-zone"[row_size]  ==  #b1[top],
+#b1[bottom] + "zone"[col_size]  ==  #b2[top],
+#b2[bottom] + "outer-zone"[row_size]  ==  "panel"[bottom],
+#b1[centerX]  ==  "panel"[centerX] ==  #b2[centerX] !require,
+]
+

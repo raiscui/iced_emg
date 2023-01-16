@@ -1,0 +1,11 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+&[left] + &[outer_gap]  ==  #btn1[left],
+#btn1[right] + &[gap]  ==  &[right],
+&[right] + &[gap]  ==  #btn2[left],
+#btn2[right] + &[outer_gap]  ==  &[right],
+]
+

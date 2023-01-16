@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+#boox[height]  <=  100 !require,
+#boox[height]  >=  30 !strong(100),
+]
+

@@ -1,0 +1,45 @@
+[package]
+name = "emg_common"
+version = "0.1.0"
+edition = "2021"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[profile.dev]
+split-debuginfo = "unpacked"
+[lib]
+crate-type = ["rlib"]
+
+[features]
+default = []
+pool = ["im-rc/pool"]
+debug = []
+
+[dependencies]
+num-traits = "0.2.15"
+# bitflags = "2.0.0-rc.1"
+nalgebra = "0.32.1"
+
+tracing = "0.1"
+dyn_partial_eq = { path = "../../dyn_partial_eq" }
+
+ordered-float = "3.4.0"
+derive_more = "0.99"
+im-rc = { version = "15.1.0" }
+# imbl = { path = "../../imbl" }
+# smol_str = "0.1.23"
+# smartstring = "1.0.1"
+compact_str = "0.6.1"
+# tinyvec = { version = "1.5.1", features = ["alloc"] }
+smallvec = { version = "1.10.0", features = ["const_generics"] }
+# smallvec = { version = "1.8.0" }
+better_any = { path = "../../better_any/better_any", features = [
+    "nightly",
+    "derive",
+] }
+
+bitflags = { path = "../../bitflags_export_const" }
+
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-timer = { version = "0.2" }

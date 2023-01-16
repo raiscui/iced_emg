@@ -1,0 +1,8 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+.box[right] + 11  ==  .box:next[left],
+]
+

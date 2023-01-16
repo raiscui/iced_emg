@@ -2,22 +2,58 @@
 name = "emg_bind"
 version = "0.1.0"
 authors = ["崔路明 <cuiluming@chaoway.net>"]
-edition = "2018"
+edition = "2021"
+description = "element motion graph iced bind"
+repository = "https://github.com"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+keywords = ["web", "iced", "emg"]
+categories = ["web"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev]
+split-debuginfo = "unpacked"
+[lib]
+crate-type = ["rlib"]
 
+
+[features]
+default = ["gpu"]
+gpu = [
+    "emg_winit",
+    "emg_vello",
+    "emg_element/gpu",
+    "emg_layout/gpu",
+    "emg_graphics_backend",
+]
+debug = ["emg_winit/debug", "emg_common/debug", "emg_layout/debug"]
+pool = []
+no_default_shaping = ["emg_shaping/no_default_shaping"]
 
 
 [dependencies]
-anymap = "0.12.1"
-iced = { path = "../../iced" }
-emg  = { path = "../../emg"}
-functionate ={ path="../../functionate"}
-overloadf ={ path="../../overloadf"}
-illicit="1.1.1"
+gtree = { path = "../gtree" }
+emg_layout = { path = "../emg_layout" }
+emg_shaping = { path = "../emg_shaping" }
+emg_state = { path = "../emg_state" }
+emg_common = { path = "../emg_common" }
+emg_futures = { path = "../emg_futures" }
+emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
+emg_animation = { path = "../emg_animation" }
+emg = { path = "../../emg" }
+emg_element = { path = "../emg_element" }
+emg_orders = { path = "../emg_orders" }
+#--------------
+emg_graphics_backend = { path = "../emg_graphics_backend", optional = true }
+emg_winit = { path = "../emg_winit", optional = true }
+#---------------
+tracing = "0.1"
+thiserror = "1.0"
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-iced_web = { version = "0.3", path = "../../iced/web" }
+emg_web = { path = "../emg_web" }
 
-
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
+emg_vello = { path = "../emg_vello", optional = true }

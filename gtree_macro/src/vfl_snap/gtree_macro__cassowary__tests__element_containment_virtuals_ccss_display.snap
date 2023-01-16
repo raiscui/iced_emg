@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+"parent"[top]  ==  #sub[top],
+#sub[bottom]  ==  "parent"[bottom],
+]
+

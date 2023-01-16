@@ -1,13 +1,13 @@
-pub use console_log;
-pub use gtree_macro::kw::layer;
+extern crate gtree_proc_macro;
+// pub use gtree_proc_macro::glayer;
 pub use gtree_proc_macro::gtree;
-pub use log;
-pub use illicit;
+// pub use gtree_proc_macro::gview;
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let x = 2 + 2;
+        assert_eq!(x, 4);
     }
 }

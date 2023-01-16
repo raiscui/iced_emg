@@ -1,0 +1,8 @@
+---
+source: gtree_macro/tests/test_ccss.rs
+expression: "&VectorDisp(selector)"
+---
+[
+#sub,
+]
+

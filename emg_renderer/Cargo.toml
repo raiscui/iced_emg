@@ -1,0 +1,13 @@
+[package]
+name = "emg_renderer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+emg_common = { path = "../emg_common" }
+peniko = { git = "https://github.com/linebender/peniko" }
+tracing = "0.1"

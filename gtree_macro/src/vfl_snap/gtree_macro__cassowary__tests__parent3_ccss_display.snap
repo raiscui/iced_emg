@@ -1,0 +1,8 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: disp
+---
+[
+#b1[right] + ^(2)md  ==  #b2[left],
+]
+

@@ -1,0 +1,195 @@
+---
+source: gtree_macro/src/cassowary.rs
+expression: "&ok"
+---
+VFLStatement {
+    d: V,
+    head: ViewSelector(
+        ViewSelector {
+            view: ScopeViewVariable {
+                scope: None,
+                view: Some(
+                    Id(
+                        Ident(
+                            b1,
+                        ),
+                    ),
+                ),
+                variable: None,
+            },
+            pred: None,
+        },
+    ),
+    tails: [
+        ConnectionView {
+            opt_connection: Some(
+                Eq(
+                    Standard,
+                ),
+            ),
+            view_obj: ViewSelector(
+                ViewSelector {
+                    view: ScopeViewVariable {
+                        scope: None,
+                        view: Some(
+                            Id(
+                                Ident(
+                                    b2,
+                                ),
+                            ),
+                        ),
+                        variable: None,
+                    },
+                    pred: None,
+                },
+            ),
+        },
+        ConnectionView {
+            opt_connection: Some(
+                Eq(
+                    Standard,
+                ),
+            ),
+            view_obj: ViewSelector(
+                ViewSelector {
+                    view: ScopeViewVariable {
+                        scope: None,
+                        view: Some(
+                            Id(
+                                Ident(
+                                    b3,
+                                ),
+                            ),
+                        ),
+                        variable: None,
+                    },
+                    pred: None,
+                },
+            ),
+        },
+        ConnectionView {
+            opt_connection: Some(
+                Eq(
+                    Standard,
+                ),
+            ),
+            view_obj: ViewSelector(
+                ViewSelector {
+                    view: ScopeViewVariable {
+                        scope: None,
+                        view: Some(
+                            Id(
+                                Ident(
+                                    b4,
+                                ),
+                            ),
+                        ),
+                        variable: None,
+                    },
+                    pred: None,
+                },
+            ),
+        },
+        ConnectionView {
+            opt_connection: Some(
+                Eq(
+                    Standard,
+                ),
+            ),
+            view_obj: ViewSelector(
+                ViewSelector {
+                    view: ScopeViewVariable {
+                        scope: None,
+                        view: Some(
+                            Id(
+                                Ident(
+                                    b5,
+                                ),
+                            ),
+                        ),
+                        variable: None,
+                    },
+                    pred: None,
+                },
+            ),
+        },
+    ],
+    o: Options {
+        map: {
+            "Gap": Gap(
+                ScopeViewVariable {
+                    scope: None,
+                    view: Some(
+                        Number(
+                            Int(
+                                LitInt {
+                                    token: 20,
+                                },
+                            ),
+                        ),
+                    ),
+                    variable: None,
+                },
+            ),
+        },
+        chains: [],
+    },
+    selectors: [
+        ScopeViewVariable {
+            scope: None,
+            view: Some(
+                Id(
+                    Ident(
+                        b1,
+                    ),
+                ),
+            ),
+            variable: None,
+        },
+        ScopeViewVariable {
+            scope: None,
+            view: Some(
+                Id(
+                    Ident(
+                        b2,
+                    ),
+                ),
+            ),
+            variable: None,
+        },
+        ScopeViewVariable {
+            scope: None,
+            view: Some(
+                Id(
+                    Ident(
+                        b3,
+                    ),
+                ),
+            ),
+            variable: None,
+        },
+        ScopeViewVariable {
+            scope: None,
+            view: Some(
+                Id(
+                    Ident(
+                        b4,
+                    ),
+                ),
+            ),
+            variable: None,
+        },
+        ScopeViewVariable {
+            scope: None,
+            view: Some(
+                Id(
+                    Ident(
+                        b5,
+                    ),
+                ),
+            ),
+            variable: None,
+        },
+    ],
+    ccsss: [],
+}
