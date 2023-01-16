@@ -18,10 +18,10 @@ use cassowary::{
 };
 use derive_more::From;
 use emg::EdgeIndex;
+use emg_common::na::{Translation3, Vector2};
 use emg_common::{Precision, TypeName};
 use emg_state::{topo, StateAnchor, StateMultiAnchor, StateVar};
 use float_cmp::assert_approx_eq;
-use nalgebra::{Translation3, Vector2};
 use seed_styles as styles;
 use styles::{s, CssTransform, CssTransformTrait, LogicLength};
 use tracing::{debug_span, info, trace, trace_span, warn, warn_span};

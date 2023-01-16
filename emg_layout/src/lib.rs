@@ -38,6 +38,7 @@ use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
 use emg::{Edge, EdgeIndex, NodeIndex};
+use emg_common::na::{Affine3, Matrix4, Rotation3, Translation3, Vector2, Vector3};
 use emg_common::{
     im::{
         self,
@@ -48,16 +49,12 @@ use emg_common::{
     vector, GenericSize, IdStr, LayoutOverride, NotNan, RectLTRB, TypeName, VectorDisp,
 };
 use emg_common::{Precision, Vector};
-use emg_shaping::{EqShapingWithDebug, Shaping, ShapingWithDebug};
+use emg_shaping::{EqShapingWithDebug, Shaping};
 use emg_state::{
     state_store, topo, use_state, use_state_impl::Engine, Anchor, CloneStateAnchor, CloneStateVar,
     Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar,
 };
 use float_cmp::approx_eq;
-use na::{
-    Affine3, Isometry3, Matrix4, Point3, Rotation3, Similarity3, Translation3, Vector2, Vector3,
-};
-use nalgebra as na;
 pub use seed_styles as styles;
 use styles::{px, s, CssTransform, CssValueTrait, Style, UpdateStyle};
 // use styles::Percent;

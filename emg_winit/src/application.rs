@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-01-16 23:45:44
+ * @LastEditTime: 2023-01-17 00:01:12
  * @LastEditors: Rais
  * @Description:
  */
@@ -373,14 +373,6 @@ async fn run_instance<A, E, C>(
                 }
 
                 //NOTE  has events or messages now -------------------
-
-                // let (interface_state, statuses) = user_interface.update(
-                //     &events,
-                //     state.cursor_position(),
-                //     &mut renderer,
-                //     &mut clipboard,
-                //     &mut messages,
-                // );
 
                 // for event in events.drain(..).zip(statuses.into_iter()) {
                 //     future_runtime.broadcast(event);
