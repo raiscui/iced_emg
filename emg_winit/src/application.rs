@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-01-16 16:07:15
+ * @LastEditTime: 2023-01-16 23:45:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -150,9 +150,9 @@ where
 
     // let event_loop = EventLoop::with_user_event();
     let event_loop = EventLoopBuilder::with_user_event().build();
-    let mut user_event_proxy = event_loop.create_proxy();
+    let user_event_proxy = event_loop.create_proxy();
 
-    let mut future_runtime = {
+    let future_runtime = {
         let proxy = Proxy::new(event_loop.create_proxy());
         let executor = E::new().map_err(crate::Error::ExecutorCreationFailed)?;
 
@@ -215,18 +215,8 @@ where
     // emg_layout::global_height().set(size.1);
     // ────────────────────────────────────────────────────────────────────────────────
 
-    let mut clipboard = Clipboard::connect(&window);
-
     let (compositor, renderer) = C::new(compositor_settings, &window)?;
 
-    run_command(
-        init_command,
-        &mut future_runtime,
-        &mut clipboard,
-        &mut user_event_proxy,
-        &window,
-        || compositor.fetch_information(),
-    );
     // future_runtime.track(subscription);
 
     let (mut sender, receiver) = mpsc::unbounded();
@@ -243,10 +233,10 @@ where
         compositor,
         renderer,
         future_runtime,
-        clipboard,
         user_event_proxy,
         debug,
         receiver,
+        init_command,
         window,
         settings.exit_on_close_request,
         emg_graph_rc_refcell,
@@ -258,7 +248,7 @@ where
     platform::run(event_loop, move |event, _, control_flow| {
         use winit::event_loop::ControlFlow;
 
-        if let &mut ControlFlow::Exit = control_flow {
+        if let &mut ControlFlow::ExitWithCode(_) = control_flow {
             return;
         }
 
@@ -293,10 +283,10 @@ async fn run_instance<A, E, C>(
     mut compositor: C,
     mut renderer: A::Renderer,
     mut future_runtime: FutureRuntime<E, Proxy<A::Message>, A::Message>,
-    mut clipboard: Clipboard,
     mut proxy: winit::event_loop::EventLoopProxy<A::Message>,
     mut debug: Debug,
     mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
+    init_command: Command<A::Message>,
     window: winit::window::Window,
     exit_on_close_request: bool,
     mut g: A::GTreeWithBuilder,
@@ -313,6 +303,8 @@ async fn run_instance<A, E, C>(
         "======== will create_surface inner_size: {:?} ",
         window.inner_size()
     );
+
+    let mut clipboard = Clipboard::connect(&window);
 
     let mut surface = compositor.create_surface(&window);
     let mut state = State::new(&application, &window);
@@ -346,6 +338,15 @@ async fn run_instance<A, E, C>(
 
     debug.startup_finished();
 
+    run_command(
+        init_command,
+        &mut future_runtime,
+        &mut clipboard,
+        &mut proxy,
+        &window,
+        || compositor.fetch_information(),
+    );
+
     while let Some(winit_event) = receiver.next().await {
         // info!(target:"winit event", ?winit_event);
 
@@ -353,27 +354,25 @@ async fn run_instance<A, E, C>(
             event::Event::MainEventsCleared => {
                 let _span = info_span!(target:"winit event","MainEventsCleared").entered();
 
-                if native_events_is_empty.get() {
-                    continue;
+                if !native_events_is_empty.get() {
+                    info!(target:"winit event","native_events:{:?}", native_events);
+                    debug.event_processing_started();
+                    let event_matchs = event_matchs_sa.get();
+                    //清空 native_events, 因为 event_matchs 已经获得, native_events使用完毕;
+                    native_events.set(Vector::new());
+
+                    if !event_matchs.is_empty() {
+                        for ev in event_matchs.values().flat_map(|x| x.1.clone()) {
+                            if let Some(msg) = ev.call() {
+                                messages.push(msg);
+                            }
+                        }
+                    }
+
+                    debug.event_processing_finished();
                 }
-                info!(target:"winit event","native_events:{:?}", native_events);
 
                 //NOTE  has events or messages now -------------------
-
-                debug.event_processing_started();
-
-                let event_matchs = event_matchs_sa.get();
-                //清空 native_events, 因为 event_matchs 已经获得, native_events使用完毕;
-                native_events.set(Vector::new());
-                //快速跳过 ev.call()
-                if event_matchs.is_empty() {
-                    continue;
-                }
-                for ev in event_matchs.values().flat_map(|x| x.1.clone()) {
-                    if let Some(msg) = ev.call() {
-                        messages.push(msg);
-                    }
-                }
 
                 // let (interface_state, statuses) = user_interface.update(
                 //     &events,
@@ -382,8 +381,6 @@ async fn run_instance<A, E, C>(
                 //     &mut clipboard,
                 //     &mut messages,
                 // );
-
-                debug.event_processing_finished();
 
                 // for event in events.drain(..).zip(statuses.into_iter()) {
                 //     future_runtime.broadcast(event);
@@ -430,6 +427,13 @@ async fn run_instance<A, E, C>(
                     }
                 }
 
+                let new_ctx = ctx_sa.get();
+                if new_ctx == ctx {
+                    continue;
+                } else {
+                    ctx = new_ctx;
+                }
+
                 debug.draw_started();
                 // let new_mouse_interaction = user_interface.draw(
                 //     &mut renderer,
@@ -441,7 +445,7 @@ async fn run_instance<A, E, C>(
                 // );
                 info!(target:"winit event","element painting");
                 // element.paint(&mut ctx);
-                ctx = ctx_sa.get();
+                // ctx = ctx_sa.get();
 
                 debug.draw_finished();
 
@@ -741,7 +745,7 @@ mod platform {
     {
         use winit::platform::run_return::EventLoopExtRunReturn;
         //TODO try not use run_return, use run
-        event_loop.run_return(event_handler);
+        let _ = event_loop.run_return(event_handler);
 
         Ok(())
     }

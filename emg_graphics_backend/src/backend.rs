@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-15 21:19:37
- * @LastEditTime: 2023-01-04 10:19:41
+ * @LastEditTime: 2023-01-16 23:42:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,9 +11,7 @@
 ///
 /// [`Renderer`]: crate::Renderer
 pub trait Backend {
-    type SceneCtx;
-
-    fn new_scene_ctx() -> Self::SceneCtx;
+    type SceneCtx: PartialEq;
 
     fn on_loop_destroyed(&mut self);
 }

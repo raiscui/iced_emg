@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:17:45
- * @LastEditTime: 2022-08-11 14:17:45
+ * @LastEditTime: 2023-01-16 22:24:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -34,7 +34,7 @@ impl<T> Command<T> {
     /// Creates a [`Command`] that performs the action of the given future.
     pub fn perform<A>(
         future: impl Future<Output = T> + 'static + MaybeSend,
-        f: impl Fn(T) -> A + 'static + MaybeSend,
+        f: impl FnOnce(T) -> A + 'static + MaybeSend,
     ) -> Command<A> {
         use emg_futures::futures::FutureExt;
 

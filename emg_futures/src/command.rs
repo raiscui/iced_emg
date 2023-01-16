@@ -50,9 +50,7 @@ impl<T> Command<T> {
         match command {
             Internal::None => Command::none(),
             Internal::Single(action) => Command::single(f(action)),
-            Internal::Batch(batch) => {
-                Command(Internal::Batch(batch.into_iter().map(f).collect()))
-            }
+            Internal::Batch(batch) => Command(Internal::Batch(batch.into_iter().map(f).collect())),
         }
     }
 

@@ -63,10 +63,6 @@ impl Backend {
 impl emg_graphics_backend::Backend for Backend {
     type SceneCtx = crate::SceneFrag;
 
-    fn new_scene_ctx() -> crate::SceneFrag {
-        crate::SceneFrag::default()
-    }
-
     fn on_loop_destroyed(&mut self) {}
 
     // fn trim_measurements(&mut self) {
