@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 00:21:57
- * @LastEditTime: 2023-01-14 21:50:42
+ * @LastEditTime: 2023-01-15 14:18:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,6 +21,7 @@ use std::rc::Rc;
 ///
 /// [`Application`]: crate::Application
 #[allow(missing_debug_implementations)]
+
 pub struct Bus<Message> {
     publish: Rc<dyn Fn(Message)>,
 }
@@ -37,13 +38,9 @@ impl<Message> Bus<Message>
 where
     Message: 'static,
 {
-    /// New Bus
-    #[must_use]
-    pub fn new(publish: mpsc::UnboundedSender<Message>) -> Self {
+    pub fn new(publish: impl Fn(Message) + 'static) -> Self {
         Self {
-            publish: Rc::new(move |message| {
-                publish.unbounded_send(message).expect("Send message");
-            }),
+            publish: Rc::new(publish),
         }
     }
 

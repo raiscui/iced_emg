@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-12 14:43:52
- * @LastEditTime: 2023-01-13 12:16:39
+ * @LastEditTime: 2023-01-16 17:43:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,6 +16,8 @@ pub trait Program: Sized {
 
     /// The type of __messages__ your [`Program`] will produce.
     type Message: std::fmt::Debug + Send;
+    type GraphType;
+    type Orders;
 
     // type GElement: Widget<Self::Message, Self::ImplRenderContext>;
 
@@ -27,7 +29,12 @@ pub trait Program: Sized {
     ///
     /// Any [`Command`] returned will be executed immediately in the
     /// background by shells.
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message>;
+    fn update(
+        &mut self,
+        graph: &mut Self::GraphType,
+        orders: &Self::Orders,
+        message: Self::Message,
+    ) -> Command<Self::Message>;
 
     // /// Returns the widgets to display in the [`Program`].
     // ///

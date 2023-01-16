@@ -21,6 +21,7 @@ emg_state = { path = "../emg_state" }
 emg_shaping = { path = "../emg_shaping" }
 emg_layout = { path = "../emg_layout" }
 emg_hasher = { path = "../emg_hasher" }
+emg_orders = { path = "../emg_orders" }
 emg = { path = "../../emg" }
 #-----
 derive_more = "0.99"

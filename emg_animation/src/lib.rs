@@ -11,7 +11,6 @@
 // #![feature(generic_const_exprs)]
 #![feature(slice_take)]
 #![allow(clippy::used_underscore_binding)]
-#![feature(type_alias_impl_trait)]
 
 pub mod func;
 pub mod models;

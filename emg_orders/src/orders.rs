@@ -4,7 +4,7 @@ use emg_common::animation::Tick;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-pub trait Orders<Message>: Clone {
+pub trait Orders<Message> {
     type AppMs: 'static;
 
     // type Mdl: 'static;

@@ -1,28 +1,33 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-01-13 16:13:19
+ * @LastEditTime: 2023-01-16 16:07:15
  * @LastEditors: Rais
  * @Description:
  */
 //! Create interactive, native cross-platform applications.
 mod state;
 
+use std::{cell::RefCell, rc::Rc};
+
 use emg_common::Vector;
+use emg_orders::Orders;
 pub use state::State;
 use winit::event_loop::EventLoopBuilder;
 
-use crate::clipboard::{self, Clipboard};
 use crate::conversion;
 use crate::mouse;
+use crate::{
+    clipboard::{self, Clipboard},
+    orders::OrdersContainer,
+};
 use crate::{Command, Debug, Executor, FutureRuntime, Mode, Proxy, Settings};
-use emg_state::{state_lit::StateVarLit, use_state, use_state_impl::CloneStateVar, StateVar};
-
-use emg_element::{GTreeBuilderFn, GraphProgram};
+use emg_element::{GTreeBuilderFn, GraphMethods, GraphProgram, GraphType};
 use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
 use emg_graphics_backend::window::{compositor, Compositor};
-use emg_native::{event::EventWithFlagType, renderer::Renderer};
+use emg_native::{event::EventWithFlagType, renderer::Renderer, Bus, Program};
+use emg_state::state_lit::StateVarLit;
 use emg_state::CloneStateAnchor;
 use tracing::{info, info_span, instrument};
 
@@ -129,7 +134,11 @@ pub fn run<A, E, C>(
     compositor_settings: C::Settings,
 ) -> Result<(), crate::Error>
 where
-    A: Application + 'static,
+    A: Application<Orders = OrdersContainer<<A as Program>::Message>> + 'static,
+    // <A as Program>::Message: 'static,
+    // <A as Program>::GraphType: GraphMethods<<A as Program>::Message>,
+    // Rc<RefCell<<A as Program>::GraphType>>:
+    // GTreeBuilderFn<<A as Program>::Message, GraphType = <A as Program>::GraphType>,
     E: Executor + 'static,
     C: Compositor<Renderer = A::Renderer> + 'static,
 {
@@ -141,7 +150,7 @@ where
 
     // let event_loop = EventLoop::with_user_event();
     let event_loop = EventLoopBuilder::with_user_event().build();
-    let mut proxy = event_loop.create_proxy();
+    let mut user_event_proxy = event_loop.create_proxy();
 
     let mut future_runtime = {
         let proxy = Proxy::new(event_loop.create_proxy());
@@ -149,12 +158,26 @@ where
 
         FutureRuntime::new(executor, proxy)
     };
+    // ─────────────────────────────────────────────────────────────────────────────
+    // bus
+
+    let bus_sender = user_event_proxy.clone();
+
+    let orders: A::Orders = OrdersContainer::new(Bus::new(move |msg| {
+        bus_sender
+            .send_event(msg)
+            .expect("OrdersContainer Send user message");
+    }));
+    // ─────────────────────────────────────────────────────────────────────────────
+    // app
 
     let (application, init_command) = {
         let flags = settings.flags;
 
+        // let (app, command) = future_runtime.enter(|| Self::new(flags.flags, &orders));
         future_runtime.enter(|| A::new(flags))
     };
+    // ─────────────────────────────────────────────────────────────────────────────
 
     let builder = settings.window.into_builder(
         &application.title(),
@@ -200,7 +223,7 @@ where
         init_command,
         &mut future_runtime,
         &mut clipboard,
-        &mut proxy,
+        &mut user_event_proxy,
         &window,
         || compositor.fetch_information(),
     );
@@ -209,10 +232,11 @@ where
     let (mut sender, receiver) = mpsc::unbounded();
 
     // let emg_graph = A::GraphType::default();
-    // let root = application.tree_build();
     // let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
     // emg_graph_rc_refcell.handle_root_in_topo(&root);
-    let emg_graph_rc_refcell = application.graph_setup(&renderer);
+
+    let orders2 = orders.clone();
+    let emg_graph_rc_refcell = application.graph_setup(&renderer, orders2);
 
     let mut instance = Box::pin(run_instance::<A, E, C>(
         application,
@@ -220,12 +244,13 @@ where
         renderer,
         future_runtime,
         clipboard,
-        proxy,
+        user_event_proxy,
         debug,
         receiver,
         window,
         settings.exit_on_close_request,
         emg_graph_rc_refcell,
+        orders,
     ));
 
     let mut context = task::Context::from_waker(task::noop_waker_ref());
@@ -274,7 +299,8 @@ async fn run_instance<A, E, C>(
     mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
     window: winit::window::Window,
     exit_on_close_request: bool,
-    g: A::GTreeBuilder,
+    mut g: A::GTreeWithBuilder,
+    orders: A::Orders,
 ) where
     A: Application + 'static,
     E: Executor + 'static,
@@ -378,6 +404,8 @@ async fn run_instance<A, E, C>(
                         &mut debug,
                         &mut messages,
                         &window,
+                        &mut g.graph_mut(),
+                        &orders,
                         || compositor.fetch_information(),
                     );
 
@@ -606,13 +634,15 @@ pub fn update<A: Application, E: Executor>(
     debug: &mut Debug,
     messages: &mut Vec<A::Message>,
     window: &winit::window::Window,
+    graph: &mut A::GraphType,
+    orders: &A::Orders,
     graphics_info: impl FnOnce() -> compositor::Information + Copy,
 ) {
     for message in messages.drain(..) {
         debug.log_message(&message);
 
         debug.update_started();
-        let command = future_runtime.enter(|| application.update(message));
+        let command = future_runtime.enter(|| application.update(graph, orders, message));
         debug.update_finished();
 
         run_command(

@@ -3,7 +3,7 @@ use emg_common::animation::Tick;
 // use fxhash::FxBuildHasher;
 use emg_hasher::CustomHasher;
 use emg_layout::{global_anima_running_sa, global_clock, global_height, global_width};
-use emg_state::{state_store, CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
+use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 
 use crate::Bus;
 use indexmap::IndexMap;
@@ -130,7 +130,6 @@ pub(crate) struct OrdersData<Message, TickMsg> {
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone)]
 pub struct OrdersContainer<Message>
 // where
 // Message: 'static,
@@ -142,6 +141,17 @@ pub struct OrdersContainer<Message>
     pub(crate) re_render_msg: Rc<RefCell<Option<Message>>>,
     // pub(crate) effects: VecDeque<Effect<Ms>>,
     // app: App<Ms, Mdl, INodes>
+}
+
+impl<Message> Clone for OrdersContainer<Message> {
+    fn clone(&self) -> Self {
+        Self {
+            should_render: self.should_render.clone(),
+            data: self.data.clone(),
+            bus: self.bus.clone(),
+            re_render_msg: self.re_render_msg.clone(),
+        }
+    }
 }
 
 impl<Message> OrdersContainer<Message>
@@ -184,7 +194,7 @@ impl<Message> OrdersContainer<Message>
 
 impl<Message> Orders<Message> for OrdersContainer<Message>
 where
-    Message: Clone + 'static,
+    Message: 'static,
 {
     type AppMs = Message;
     // type Mdl = Mdl;

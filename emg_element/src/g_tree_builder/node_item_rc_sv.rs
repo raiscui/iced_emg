@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-01-13 12:00:00
+ * @LastEditTime: 2023-01-15 23:09:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -27,7 +27,7 @@ use emg_state::{
 };
 use indexmap::IndexSet;
 use std::{
-    cell::{Ref, RefCell},
+    cell::{Ref, RefCell, RefMut},
     hash::BuildHasherDefault,
     rc::Rc,
 };
@@ -112,6 +112,9 @@ impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
 
     fn graph(&self) -> Ref<GraphType<Message>> {
         self.borrow()
+    }
+    fn graph_mut(&mut self) -> RefMut<GraphType<Message>> {
+        self.borrow_mut()
     }
 
     #[topo::nested]

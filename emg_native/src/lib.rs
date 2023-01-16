@@ -1,4 +1,5 @@
 #![feature(fn_traits)]
+//for trait Program
 #![feature(specialization)]
 // #![feature(trivial_bounds)] // for emg_state::StateAnchor<emg_common::nalgebra::Translation<f64, 3>>: emg_shaping::ShapingWhoNoWarper;
 // ────────────────────────────────────────────────────────────────────────────────

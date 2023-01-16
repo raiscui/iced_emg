@@ -12,7 +12,10 @@ use emg_common::IdStr;
 use emg_layout::{EmgEdgeItem, GenericSizeAnchor};
 use emg_shaping::{EqShaping, Shaping};
 use emg_state::{Dict, StateVar};
-use std::{cell::Ref, rc::Rc};
+use std::{
+    cell::{Ref, RefMut},
+    rc::Rc,
+};
 
 // type SaBuilderFn<T> = dyn Fn(&StateAnchor<Rc<T>>) -> StateAnchor<Rc<T>>;
 
@@ -156,6 +159,7 @@ where
     type GraphType;
 
     fn graph(&self) -> Ref<Self::GraphType>;
+    fn graph_mut(&mut self) -> RefMut<Self::GraphType>;
 
     /// # Errors
     ///

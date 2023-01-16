@@ -1,10 +1,15 @@
-use emg_state::StateAnchor;
+use emg_element::GraphMethods;
+use emg_orders::Orders;
 
-use crate::{element, Application, Command, Settings};
+use crate::{application::Instance, element, Application, Command, Settings};
 
 pub trait Sandbox {
     /// The type of __messages__ your [`Sandbox`] will produce.
     type Message: std::fmt::Debug + Send;
+    type GraphType = element::GraphType<Self::Message>;
+    // type GraphType: GraphMethods<Self::Message> + Default;
+    type Orders = crate::runtime::OrdersContainer<Self::Message>;
+    // type Orders: Orders<Self::Message>;
 
     /// Initializes the [`Sandbox`].
     ///
@@ -21,7 +26,12 @@ pub trait Sandbox {
     ///
     /// This is where you define your __update logic__. All the __messages__,
     /// produced by user interactions, will be handled by this method.
-    fn update(&mut self, message: Self::Message);
+    fn update(
+        &mut self,
+        graph: &mut Self::GraphType,
+        orders: &Self::Orders,
+        message: Self::Message,
+    );
 
     /// Returns the widgets to display in the [`Sandbox`].
     ///
@@ -70,10 +80,7 @@ pub trait Sandbox {
     fn should_exit(&self) -> bool {
         false
     }
-    fn tree_build(
-        &self,
-        // orders: impl Orders<Self::Message> + 'static,
-    ) -> element::GTreeBuilderElement<Self::Message>;
+    fn tree_build(&self, orders: Self::Orders) -> element::GTreeBuilderElement<Self::Message>;
 
     /// Runs the [`Sandbox`].
     ///
@@ -88,32 +95,54 @@ pub trait Sandbox {
     /// Error: [`crate::Error`]
     fn run(settings: Settings<()>) -> crate::Result
     where
-        Self: 'static + Sized,
+        Self: 'static,
+        Self: Application<Flags = ()>,
+        Instance<Self>: crate::runtime::Application<
+            Flags = (),
+            Message = <Self as Application>::Message,
+            Orders = crate::runtime::OrdersContainer<<Self as Application>::Message>,
+        >,
+        crate::renderer::window::Compositor: crate::runtime::Compositor<
+            Renderer = <Instance<Self> as crate::runtime::GraphProgram>::Renderer,
+        >,
     {
         <Self as Application>::run(settings)
     }
 }
 
-impl<T> Application for T
+impl<SB> Application for SB
 where
-    T: Sandbox,
+    SB: Sandbox,
+    <SB as Sandbox>::Message: 'static,
+    <SB as Sandbox>::GraphType: GraphMethods<<SB as Sandbox>::Message> + Default,
+    <SB as Sandbox>::Orders: Orders<<SB as Sandbox>::Message>,
 {
     //TODO use cargo.toml choose emg_futures backend
     // type Executor = emg_futures::backend::null::Executor;
     type Executor = emg_futures::backend::default::Executor;
     type Flags = ();
-    type Message = T::Message;
+    type Message = SB::Message;
+    // type Orders = crate::runtime::OrdersContainer<Self::Message>;
+    // type GraphType = element::GraphType<Self::Message>;
 
-    fn new(_flags: ()) -> (Self, Command<T::Message>) {
-        (T::new(), Command::none())
+    type GraphType = SB::GraphType;
+    type Orders = SB::Orders;
+
+    fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+        (SB::new(), Command::none())
     }
 
     fn title(&self) -> String {
-        T::title(self)
+        SB::title(self)
     }
 
-    fn update(&mut self, message: T::Message) -> Command<T::Message> {
-        T::update(self, message);
+    fn update(
+        &mut self,
+        graph: &mut Self::GraphType,
+        orders: &Self::Orders,
+        message: Self::Message,
+    ) -> Command<Self::Message> {
+        SB::update(self, graph, orders, message);
 
         Command::none()
     }
@@ -121,7 +150,7 @@ where
     //     T::view(self, g)
     // }
     fn root_id(&self) -> &str {
-        T::root_id(self)
+        SB::root_id(self)
     }
 
     // fn ctx(
@@ -144,16 +173,13 @@ where
     // }
 
     fn scale_factor(&self) -> f64 {
-        T::scale_factor(self)
+        SB::scale_factor(self)
     }
 
     fn should_exit(&self) -> bool {
-        T::should_exit(self)
+        SB::should_exit(self)
     }
-    fn tree_build(
-        &self,
-        // orders: impl Orders<Self::Message> + 'static,
-    ) -> element::GTreeBuilderElement<T::Message> {
-        T::tree_build(self)
+    fn tree_build(&self, orders: Self::Orders) -> element::GTreeBuilderElement<Self::Message> {
+        SB::tree_build(self, orders)
     }
 }

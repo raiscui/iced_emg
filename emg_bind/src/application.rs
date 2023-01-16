@@ -1,15 +1,16 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-01-12 18:47:14
+ * @LastEditTime: 2023-01-16 18:24:34
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive cross-platform applications.
 
 use emg_common::{IdStr, Pos, Vector};
-use emg_element::{EventNode, GTreeBuilderFn, GraphMethods};
-use emg_state::{Dict, StateAnchor};
+use emg_element::{GTreeBuilderFn, GraphMethods};
+use emg_orders::Orders;
+use emg_state::StateAnchor;
 use tracing::instrument;
 
 use crate::{element, window, Command, Executor, Settings};
@@ -34,6 +35,10 @@ pub trait Application: Sized {
 
     /// The data needed to initialize your [`Application`].
     type Flags;
+
+    type GraphType: GraphMethods<Self::Message> + Default;
+    type Orders: Orders<Self::Message>;
+    // type GTreeWithBuilder = Rc<RefCell<Self::GraphType>>;
 
     /// Initializes the [`Application`] with the flags provided to
     /// [`run`] as part of the [`Settings`].
@@ -60,7 +65,12 @@ pub trait Application: Sized {
     /// this method.
     ///
     /// Any [`Command`] returned will be executed immediately in the background.
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message>;
+    fn update(
+        &mut self,
+        graph: &mut Self::GraphType,
+        orders: &Self::Orders,
+        message: Self::Message,
+    ) -> Command<Self::Message>;
 
     /// Returns the widgets to display in the [`Application`].
     ///
@@ -134,10 +144,7 @@ pub trait Application: Sized {
         false
     }
 
-    fn tree_build(
-        &self,
-        // orders: impl Orders<Self::Message> + 'static,
-    ) -> element::GTreeBuilderElement<Self::Message>;
+    fn tree_build(&self, orders: Self::Orders) -> element::GTreeBuilderElement<Self::Message>;
 
     /// Runs the [`Application`].
     ///
@@ -153,6 +160,15 @@ pub trait Application: Sized {
     fn run(settings: Settings<Self::Flags>) -> crate::Result
     where
         Self: 'static,
+        Instance<Self>: crate::runtime::Application<
+            Flags = Self::Flags,
+            Message = Self::Message,
+            Orders = crate::runtime::OrdersContainer<Self::Message>,
+        >,
+
+        crate::renderer::window::Compositor: crate::runtime::Compositor<
+            Renderer = <Instance<Self> as crate::runtime::GraphProgram>::Renderer,
+        >,
     {
         #[allow(clippy::needless_update)]
         let renderer_settings = crate::renderer::Settings {
@@ -177,42 +193,54 @@ pub trait Application: Sized {
     }
 }
 
-struct Instance<A: Application>(A);
+pub struct Instance<A: Application>(A);
 
 impl<A> crate::runtime::Program for Instance<A>
 where
     A: Application,
 {
-    // type SceneCtx = crate::renderer::SceneCtx;
     type Message = A::Message;
+    type GraphType = A::GraphType;
+    type Orders = A::Orders;
 
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
-        self.0.update(message)
+    fn update(
+        &mut self,
+        graph: &mut Self::GraphType,
+        orders: &Self::Orders,
+        message: Self::Message,
+    ) -> Command<Self::Message> {
+        self.0.update(graph, orders, message)
     }
 }
 impl<A> crate::runtime::GraphProgram for Instance<A>
 where
+    // ─────────────────────────────────────────────────────────────────────────────
     A: Application,
+
+    <A as Application>::GraphType: GraphMethods<
+        <A as Application>::Message,
+        SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
+    >,
+
+    // ─────────────────────────────────────────────────────────────────────
     <A as Application>::Message: 'static,
+    // ─────────────────────────────────────────────────────────────────────
+    Rc<RefCell<<A as Application>::GraphType>>:
+        GTreeBuilderFn<<A as Application>::Message, GraphType = <A as Application>::GraphType>,
+    // ─────────────────────────────────────────────────────────────────────
 {
     type Renderer = crate::Renderer;
 
-    type GraphType = element::GraphType<A::Message>;
-    type GTreeBuilder = Rc<RefCell<Self::GraphType>>;
-    type GElementType = element::GElement<A::Message>;
-    type RefedGelType = element::GelType<A::Message>;
+    type GTreeWithBuilder = Rc<RefCell<<A as Application>::GraphType>>;
 
-    fn tree_build(
+    fn graph_setup(
         &self,
-        // orders: impl Orders<Self::Message> + 'static,
-    ) -> element::GTreeBuilderElement<Self::Message> {
-        self.0.tree_build()
-    }
-
-    fn graph_setup(&self, renderer: &Self::Renderer) -> Self::GTreeBuilder {
+        renderer: &Self::Renderer,
+        orders: Self::Orders,
+    ) -> Self::GTreeWithBuilder {
         let emg_graph = <Self::GraphType>::default();
-        let tree = self.0.tree_build();
-        let emg_graph_rc_refcell: Rc<RefCell<Self::GraphType>> = Rc::new(RefCell::new(emg_graph));
+        let tree = self.0.tree_build(orders);
+        let emg_graph_rc_refcell: Self::GTreeWithBuilder = Rc::new(RefCell::new(emg_graph));
         emg_graph_rc_refcell.handle_root_in_topo(&tree);
         emg_graph_rc_refcell
     }
@@ -249,10 +277,17 @@ impl<A> crate::runtime::Application for Instance<A>
 where
     A: Application,
     <A as Application>::Message: 'static,
+
+    <A as Application>::GraphType: GraphMethods<
+        <A as Application>::Message,
+        SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
+    >,
+    Rc<RefCell<<A as Application>::GraphType>>:
+        GTreeBuilderFn<<A as Application>::Message, GraphType = <A as Application>::GraphType>,
 {
     type Flags = A::Flags;
 
-    fn new(flags: Self::Flags) -> (Self, Command<A::Message>) {
+    fn new(flags: Self::Flags) -> (Self, Command<<A as Application>::Message>) {
         let (app, command) = A::new(flags);
 
         (Self(app), command)
@@ -289,11 +324,4 @@ where
     fn should_exit(&self) -> bool {
         self.0.should_exit()
     }
-
-    // fn tree_build(
-    //     &self,
-    //     // orders: impl Orders<Self::Message> + 'static,
-    // ) -> GTreeBuilderElement<A::Message> {
-    //     self.0.tree_build()
-    // }
 }

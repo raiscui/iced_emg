@@ -1,34 +1,30 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2023-01-13 11:56:29
+ * @LastEditTime: 2023-01-16 01:26:18
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg_common::{Pos, Vector};
 use emg_native::{event::EventWithFlagType, renderer::Renderer, Program, Widget};
+use emg_orders::Orders;
 use emg_state::StateAnchor;
 use std::{ops::Deref, rc::Rc};
-
-use crate::GTreeBuilderElement;
 
 pub trait GraphProgram: Program {
     // type Renderer: Renderer<SceneCtx = <Self as Program>::WhoImplSceneCtx>;
     type Renderer: Renderer;
 
-    type GTreeBuilder: crate::GTreeBuilderFn<<Self as Program>::Message, GraphType = Self::GraphType>
-        + Clone;
-    type GraphType: Default;
-    type GElementType: Widget;
-    type RefedGelType: Deref<Target = Self::GElementType>;
+    type GTreeWithBuilder: crate::GTreeBuilderFn<Self::Message, GraphType = Self::GraphType> + Clone;
+    // type GElementType: Widget;
+    // type RefedGelType: Deref<Target = Self::GElementType>;
 
-    fn tree_build(
+    fn graph_setup(
         &self,
-        // orders: impl Orders<Self::Message> + 'static,
-    ) -> GTreeBuilderElement<Self::Message>;
-
-    fn graph_setup(&self, renderer: &Self::Renderer) -> Self::GTreeBuilder;
+        renderer: &Self::Renderer,
+        orders: Self::Orders,
+    ) -> Self::GTreeWithBuilder;
 
     // fn view(&self, g: &Self::GraphType) -> Self::RefedGelType;
     fn root_id(&self) -> &str;

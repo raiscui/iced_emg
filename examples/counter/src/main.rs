@@ -7,7 +7,7 @@ use emg_bind::{
     emg_msg, gtree,
     layout::styles::{fill, hsl, w},
     state::use_state,
-    Error, Sandbox, Settings,
+    Error, Orders, Sandbox, Settings,
 };
 use std::{cell::Cell, rc::Rc};
 use tracing::{debug_span, info, instrument};
@@ -124,7 +124,12 @@ impl Sandbox for Counter {
         String::from("Counter - Iced")
     }
 
-    fn update(&mut self, message: Message) {
+    fn update(
+        &mut self,
+        graph: &mut Self::GraphType,
+        orders: &Self::Orders,
+        message: Self::Message,
+    ) {
         match message {
             Message::IncrementPressed => {
                 self.value += 1;
@@ -138,10 +143,7 @@ impl Sandbox for Counter {
         }
     }
 
-    fn tree_build(
-        &self,
-        // orders: impl Orders<Self::Message> + 'static,
-    ) -> GTreeBuilderElement<Self::Message> {
+    fn tree_build(&self, orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
         let n = Rc::new(Cell::new(100));
         let ww = use_state(w(px(100)));
         let ff = use_state(fill(hsl(150, 100, 100)));
@@ -155,7 +157,7 @@ impl Sandbox for Counter {
                     Message::Empty
                 },
                 @=a1 @E=[
-                        {@h |(#a2)(#a3)(#a4)|   },
+                        // {@h |(#a2)(#a3)(#a4)|   },
                         origin_x(pc(0)),align_x(pc(0)),
                         w(pc(90)),h(pc(90)),
                         ff,
@@ -164,9 +166,9 @@ impl Sandbox for Counter {
                     ]
                 Layer [
                     @=a2 @E=[
-                        // origin_x(px( 100)),
+                        origin_x(px( 100)),
                         align_x(px(100)),
-                        // origin_y(px(0)),
+                        origin_y(px(0)),
                         align_y(px(10)),
                         w(px(20)),h(px(20)),
                         fill(rgba(1, 0.5, 0, 1))
@@ -186,8 +188,8 @@ impl Sandbox for Counter {
                         },
                     ],
                     @=a3 @E=[
-                        // origin_x(px( 0)),align_x(px(300)),
-                        // origin_y(px(0)),align_y(px(300)),
+                        origin_x(px( 0)),align_x(px(300)),
+                        origin_y(px(0)),align_y(px(300)),
                         w(px(30)),h(px(30)),
                         fill(rgba(1, 1, 0, 1)),
                         b_width(px(1)),
@@ -195,10 +197,11 @@ impl Sandbox for Counter {
                     ]
                     Layer [],
                     @=a4 @E=[
-                        // origin_x(px( 0)),align_x(px(400)),
-                        // origin_y(px(0)),align_y(px(400)),
-                        // ww,
-                        w(px(40)),h(px(40)),
+                        origin_x(px( 0)),align_x(px(400)),
+                        origin_y(px(0)),align_y(px(400)),
+                        ww,
+                        // w(px(40)),
+                        h(px(40)),
                         fill(rgba(1, 1, 0, 1)),
                         b_width(px(7)),
                         b_color(rgb(1,0,1))

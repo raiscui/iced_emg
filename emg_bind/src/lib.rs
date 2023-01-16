@@ -14,10 +14,11 @@
 #![feature(box_patterns)]
 #![feature(trait_upcasting)]
 #![feature(iter_collect_into)]
+#![feature(associated_type_defaults)]
+
 // #![feature(associated_type_bounds)]
 // bumpalo
 // #![feature(allocator_api)]
-// #![feature(generic_associated_types)]
 // ────────────────────────────────────────────────────────────────────────────────
 mod application;
 mod error;
@@ -57,6 +58,7 @@ pub use emg_common::better_any;
 pub use emg_common::mouse;
 pub use emg_layout as layout;
 pub use emg_msg_macro::emg_msg;
+pub use emg_orders::Orders;
 pub use emg_shaping as shaping;
 pub use emg_state as state;
 pub use emg_state::topo;

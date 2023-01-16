@@ -16,7 +16,7 @@ members = [
     "emg_msg_macro",
     "emg_msg_impl",
     "emg_hasher",
-    "emg_web",
+    # "emg_web",
     "emg_futures",
     "emg_native",
     "emg_winit",
