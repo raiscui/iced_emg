@@ -66,19 +66,31 @@ fn tracing_init() -> Result<(), Report> {
     //     .with_targets(true)
     //     .with_filter(EnvFilter::new("[event_matching...]=debug"));
 
+    // #[cfg(feature = "debug")]
+    // let touch_layer = tracing_tree::HierarchicalLayer::new(2)
+    //     .with_indent_lines(true)
+    //     .with_indent_amount(4)
+    //     .with_targets(true)
+    //     .with_filter(EnvFilter::new("[Touch]=debug"));
+
+    //NOTE emg_layout
     #[cfg(feature = "debug")]
-    let touch_layer = tracing_tree::HierarchicalLayer::new(2)
+    let emg_layout_layer = tracing_tree::HierarchicalLayer::new(2)
         .with_indent_lines(true)
         .with_indent_amount(4)
         .with_targets(true)
-        .with_filter(EnvFilter::new("[Touch]=debug"));
+        .with_filter(EnvFilter::new(
+            // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
+            "emg_layout[build inherited cassowary_generals_map]",
+        ));
     // ─────────────────────────────────────────────────────────────────────────────
 
     #[cfg(feature = "debug")]
     tracing_subscriber::registry()
         // .with(layout_override_layer)
         // .with(event_matching_layer)
-        .with(touch_layer)
+        // .with(touch_layer)
+        .with(emg_layout_layer)
         // .with(out_layer)
         .init();
 
@@ -149,7 +161,8 @@ impl Sandbox for Counter {
                     Message::Empty
                 },
                 @=a1 @E=[
-                        // {@h |(#a2)(#a3)(#a4)|   },
+                        {hgap==120,my_other_gap==28},
+                        {@h |-(#a2)-|   },
                         origin_x(pc(0)),align_x(pc(0)),
                         w(pc(90)),h(pc(90)),
                         ff,
@@ -158,11 +171,12 @@ impl Sandbox for Counter {
                     ]
                 Layer [
                     @=a2 @E=[
-                        origin_x(px( 100)),
-                        align_x(px(100)),
-                        origin_y(px(0)),
-                        align_y(px(10)),
-                        w(px(20)),h(px(20)),
+                        // origin_x(px( 100)),
+                        // align_x(px(100)),
+                        // origin_y(px(0)),
+                        // align_y(px(10)),
+                        // w(px(20)),
+                        h(px(20)),
                         fill(rgba(1, 0.5, 0, 1))
                     ]
                     Layer [

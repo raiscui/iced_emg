@@ -3,7 +3,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2023-01-14 01:00:21
+ * @LastEditTime: 2023-01-18 13:26:15
  * @LastEditors: Rais
 * @Description:
 */
@@ -144,10 +144,19 @@ where
         &current_cassowary_generals_sa,
     )
         .map(move |p_cass_inherited_generals, self_generals| {
-            let f = p_cass_inherited_generals.clone()
+            let _span = trace_span!("build inherited cassowary_generals_map").entered();
+            trace!("parent_cassowary_generals + current_cassowary_generals + current_cassowary_map:----");
+            trace!("-- parent_cassowary_generals:{:#?}", &p_cass_inherited_generals);
+            trace!("-- current_cassowary_generals:{:#?}", &self_generals);
+            trace!("-- current_cassowary_map:{:#?}", &current_cassowary_map2);
+
+            //TODO 当前 + 法 使 Rc<CassowaryGeneralMap> 中包含 Rc<CassowaryGeneralMap>  可能会导致 无法 Drop?
+            let end = p_cass_inherited_generals.clone()
                 + self_generals.clone()
                 + current_cassowary_map2.clone();
-            Rc::new(f)
+            trace!("-- end final map:{:#?}", &end);
+
+            Rc::new(end)
         });
 
     let no_cass_downgrade_calculated_size = (&p_cass_p_size_sa, &sa_gs_w, &sa_gs_h).map(

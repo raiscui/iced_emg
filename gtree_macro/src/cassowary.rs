@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-01-14 01:27:02
+ * @LastEditTime: 2023-01-18 17:30:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -149,7 +149,7 @@ impl Parse for Number {
     }
 }
 #[derive(Debug, Clone, Display)]
-pub enum NameChars {
+pub enum NameCharsOrNumber {
     #[display("#{0}")]
     Id(Ident), // #xxx
     #[display(".{0}")]
@@ -168,7 +168,7 @@ pub enum NameChars {
     First(Box<Self>),
 }
 
-impl NameChars {
+impl NameCharsOrNumber {
     // fn into_next(self) -> Self {
     //     assert!(!self.is_id());
     //     Self::Next(Box::new(self))
@@ -188,7 +188,7 @@ impl NameChars {
 
     /// Returns `true` if the name chars is [`Id`].
     ///
-    /// [`Id`]: NameChars::Id
+    /// [`Id`]: NameCharsOrNumber::Id
     #[must_use]
     const fn is_id(&self) -> bool {
         matches!(self, Self::Id(..))
@@ -196,15 +196,15 @@ impl NameChars {
 
     /// Returns `true` if the name chars is [`Number`].
     ///
-    /// [`Number`]: NameChars::Number
+    /// [`Number`]: NameCharsOrNumber::Number
     #[must_use]
     const fn is_number(&self) -> bool {
         matches!(self, Self::Number(..))
     }
 }
 
-impl Parse for NameChars {
-    #[instrument(name = "NameChars")]
+impl Parse for NameCharsOrNumber {
+    #[instrument(name = "NameCharsOrNumber")]
     fn parse(input: ParseStream) -> syn::Result<Self> {
         // TODO [a-zA-Z0-9#.\-_$:""&]
 
@@ -257,36 +257,36 @@ impl Parse for NameChars {
     }
 }
 
-impl ToTokens for NameChars {
+impl ToTokens for NameCharsOrNumber {
     #[allow(clippy::match_same_arms)]
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
             Self::Id(x) => {
                 let str = x.to_string();
-                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameChars::Id(emg_bind::common::IdStr::new(#str)))
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameCharsOrNumber::Id(emg_bind::common::IdStr::new(#str)))
                     .to_tokens(tokens);
             }
             Self::Class(x) => {
                 let str = x.to_string();
-                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameChars::Class(emg_bind::common::IdStr::new(#str)))
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameCharsOrNumber::Class(emg_bind::common::IdStr::new(#str)))
                     .to_tokens(tokens);
             }
             Self::Element(x) => {
                 let str = x.to_string();
-                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameChars::Element(emg_bind::common::IdStr::new(#str)))
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameCharsOrNumber::Element(emg_bind::common::IdStr::new(#str)))
                     .to_tokens(tokens);
             }
             Self::Virtual(x) => {
-                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameChars::Virtual(emg_bind::common::IdStr::new(#x)))
+                quote_spanned!(x.span()=> emg_bind::layout::ccsa::NameCharsOrNumber::Virtual(emg_bind::common::IdStr::new(#x)))
                     .to_tokens(tokens);
             }
             Self::Number(n) => match n {
                 Number::Int(int) => {
-                    quote_spanned!(int.span()=> emg_bind::layout::ccsa::NameChars::Number( emg_bind::common::NotNan::new(#int.into()).unwrap() ))
+                    quote_spanned!(int.span()=> emg_bind::layout::ccsa::NameCharsOrNumber::Number( emg_bind::common::NotNan::new(#int.into()).unwrap() ))
                         .to_tokens(tokens);
                 }
                 Number::Float(float) => {
-                    quote_spanned!(float.span()=> emg_bind::layout::ccsa::NameChars::Number( emg_bind::common::NotNan::new(#float).unwrap() ))
+                    quote_spanned!(float.span()=> emg_bind::layout::ccsa::NameCharsOrNumber::Number( emg_bind::common::NotNan::new(#float).unwrap() ))
                         .to_tokens(tokens);
                 }
             },
@@ -382,7 +382,7 @@ fn disp_opt<T: std::fmt::Display>(o: Option<T>) -> String {
 #[derive(Debug, Clone)]
 pub struct ScopeViewVariable {
     scope: Option<Scope>,
-    view: Option<NameChars>,
+    view: Option<NameCharsOrNumber>,
     variable: Option<PredVariable>,
 }
 
@@ -458,21 +458,22 @@ impl ScopeViewVariable {
     }
     #[must_use]
     fn with_variable(mut self, var: Ident) -> Self {
-        if !self.view.as_ref().is_some_and(NameChars::is_number) {
+        if !self.view.as_ref().is_some_and(NameCharsOrNumber::is_number) {
             self.variable = Some(PredVariable(var));
         }
         self
     }
     #[must_use]
     fn or_with_variable(mut self, var: Ident) -> Self {
-        if self.variable_is_none() && !self.view.as_ref().is_some_and(NameChars::is_number) {
+        if self.variable_is_none() && !self.view.as_ref().is_some_and(NameCharsOrNumber::is_number)
+        {
             self.variable = Some(PredVariable(var));
         }
         self
     }
 
     fn set_variable(&mut self, var: Ident) {
-        if !self.view.as_ref().is_some_and(NameChars::is_number) {
+        if !self.view.as_ref().is_some_and(NameCharsOrNumber::is_number) {
             self.variable = Some(PredVariable(var));
         }
     }
@@ -538,7 +539,7 @@ impl ToTokens for ScopeViewVariable {
 /// `name[var]`
 #[derive(Debug, Clone)]
 struct PredViewVariable {
-    view: NameChars,
+    view: NameCharsOrNumber,
     pred_variable: PredVariable,
 }
 impl Parse for PredViewVariable {
@@ -555,7 +556,7 @@ impl Parse for PredViewVariable {
 /// `name`
 #[derive(Debug, Clone)]
 struct PredView {
-    view: NameChars,
+    view: NameCharsOrNumber,
 }
 impl Parse for PredView {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -1090,7 +1091,7 @@ impl Parse for Connection {
     }
 }
 
-/// ( `NameChars`[`Predicate`]? ) `[- ~]?` ...
+/// ( `NameCharsOrNumber`[`Predicate`]? ) `[- ~]?` ...
 #[derive(Debug, Clone)]
 struct Splat {
     view_selector: ViewSelector,
@@ -1100,7 +1101,7 @@ struct Splat {
 impl Parse for Splat {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let _span =
-            debug_span!("in Splat, parse-> ( `NameChars`[`Predicate`]? ) `[- ~]` ... ").entered();
+            debug_span!("in Splat, parse-> ( `NameCharsOrNumber`[`Predicate`]? ) `[- ~]` ... ").entered();
 
         let view_selector = input.parse::<ViewSelector>()?;
         debug!("got view_selector:{:?}", &view_selector);
@@ -1314,8 +1315,8 @@ struct ViewProcessed {
     pred: Option<Predicate>,
 }
 
-/// - ( `NameChars`[`Predicate`]? ) `[- ~]` ...
-/// - ( `NameChars`[`Predicate`]? )
+/// - ( `NameCharsOrNumber`[`Predicate`]? ) `[- ~]` ...
+/// - ( `NameCharsOrNumber`[`Predicate`]? )
 /// - `< Predicate >`
 /// - |
 
@@ -1428,8 +1429,8 @@ impl Parse for ViewObj {
 
 /// `[- ~ ]? `
 /// with........
-/// - ( `NameChars` [`Predicate`]? ) `[- ~]` ...
-/// - ( `NameChars` [`Predicate`]? )
+/// - ( `NameCharsOrNumber` [`Predicate`]? ) `[- ~]` ...
+/// - ( `NameCharsOrNumber` [`Predicate`]? )
 /// - `< Predicate >`
 /// - |
 #[derive(Debug, Clone)]
@@ -1455,7 +1456,7 @@ impl Parse for ConnectionView {
     }
 }
 
-/// `[== < > >= <=]? NameChars? [== < > >= <=]? StrengthAndWeight?`
+/// `[== < > >= <=]? NameCharsOrNumber? [== < > >= <=]? StrengthAndWeight?`
 #[derive(Debug, Clone)]
 struct ChainPredicateItem {
     head_eq: Option<PredEq>,
@@ -1485,7 +1486,7 @@ impl Parse for ChainPredicateItem {
         let s = input.parse::<StrengthAndWeight>().ok();
         assert!(
             !(head_eq.is_none() && value.is_none() && s.is_none()),
-            "PredEq/NameChars/StrengthAndWeight must has one"
+            "PredEq/NameCharsOrNumber/StrengthAndWeight must has one"
         );
         Ok(Self {
             head_eq,
@@ -1496,7 +1497,7 @@ impl Parse for ChainPredicateItem {
     }
 }
 
-/// `([== < > >= <=]? NameChars? [== < > >= <=]? StrengthAndWeight? , ...)`
+/// `([== < > >= <=]? NameCharsOrNumber? [== < > >= <=]? StrengthAndWeight? , ...)`
 #[derive(Debug, Clone)]
 struct ChainPredicate(Vec<ChainPredicateItem>);
 impl Parse for ChainPredicate {
@@ -1510,7 +1511,7 @@ impl Parse for ChainPredicate {
     }
 }
 
-/// `chain-xxx([== < > >= <=]? NameChars? [== < > >= <=]? StrengthAndWeight? ,  ...)`
+/// `chain-xxx([== < > >= <=]? NameCharsOrNumber? [== < > >= <=]? StrengthAndWeight? ,  ...)`
 #[derive(Debug, Clone)]
 struct Chain {
     prop: Ident, //chain-[what]
@@ -2091,7 +2092,7 @@ impl Parse for VFLStatement {
         // head: ViewObj,
         // tails: Vec<ConnectionView>,
         // o: Options,
-        // selectors: Vec<NameChars>,
+        // selectors: Vec<NameCharsOrNumber>,
         // ccsss: Vec<CCSS>,
 
         let mut vfl_statement = Self {
@@ -2295,7 +2296,7 @@ mod tests {
                     // let x = format!("{}", ok.to_token_stream());
                     // println!("===================\n {}\n", x);
 
-                    // assert_eq!(x.as_str(), r#"NameChars :: Id (IdStr :: new ("button"))"#)
+                    // assert_eq!(x.as_str(), r#"NameCharsOrNumber :: Id (IdStr :: new ("button"))"#)
                 }
                 Err(error) => panic!("...{:?}", error),
             }

@@ -1178,7 +1178,7 @@ where
                     let (opt_p_calculated,layout_calculated,layout_styles_string) =  match p_path_edge_item_node {
                         //NOTE 上一级节点: empty => 此节点是root
                         EdgeItemNode::Empty => path_ein_empty_node_builder(&path_layout, self_path,&current_cassowary_map,path_styles, other_css_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped,&current_cassowary_map, &path_layout, self_path, path_styles, other_css_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &path_layout, self_path, &current_cassowary_map,path_styles, other_css_styles_sv),
                         EdgeItemNode::String(_)  => {
                             todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
@@ -1539,7 +1539,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 
 
                             //TODO optimization, no need all val.
-                            for diff_item in last_current_cassowary_top_general_vals.diff(&current_cassowary_inherited_generals.top_v_v){
+                            for diff_item in last_current_cassowary_top_general_vals.diff(&current_cassowary_inherited_generals.top_v_v_suggest){
 
                                 match diff_item {
                                     ordmap::DiffItem::Add(&var, &v) => {
@@ -1564,14 +1564,14 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 
                             };
                             if general_top_vals_did_update{
-                                last_current_cassowary_top_general_vals = current_cassowary_inherited_generals.top_v_v.clone();
+                                last_current_cassowary_top_general_vals = current_cassowary_inherited_generals.top_v_v_suggest.clone();
                             }
                             // @ current cassowary inherited general vals ────────────────────────────────────────────────────────────────────────────────
                             let mut general_inherited_vals_did_update = false;
 
 
                             //TODO optimization, no need all val.
-                            for diff_item in last_current_cassowary_inherited_general_vals.diff(&current_cassowary_inherited_generals.v_v){
+                            for diff_item in last_current_cassowary_inherited_general_vals.diff(&current_cassowary_inherited_generals.v_v_suggest){
 
                                 match diff_item {
                                     ordmap::DiffItem::Add(&var, &v) => {
@@ -1596,7 +1596,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 
                             };
                             if general_inherited_vals_did_update{
-                                last_current_cassowary_inherited_general_vals = current_cassowary_inherited_generals.v_v.clone();
+                                last_current_cassowary_inherited_general_vals = current_cassowary_inherited_generals.v_v_suggest.clone();
                             }
 
 
@@ -1805,9 +1805,9 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 fn path_with_ed_node_builder<Ix>(
     id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>,
     ped: &EdgeData,
-    current_cassowary_map: &Rc<CassowaryMap>,
     path_layout: &StateAnchor<Layout>,
     path: &EPath<Ix>,
+    current_cassowary_map: &Rc<CassowaryMap>,
     path_styles: StateVar<PathVarMap<Ix, Style>>,
     other_styles_sv: StateVar<Style>,
 ) -> (
@@ -1929,9 +1929,15 @@ where
 
     let current_cassowary_inherited_generals_sa =
         current_cassowary_generals_sa.map(move |self_generals| {
-            let f =
+            let _span = trace_span!("build inherited cassowary_generals_map").entered();
+            trace!("current_cassowary_generals + current_cassowary_map:----");
+            trace!("-- current_cassowary_generals:{:#?}", &self_generals);
+            trace!("-- current_cassowary_map:{:#?}", &current_cassowary_map3);
+            let end =
                 self_generals.clone().with_default_not_overwrite() + current_cassowary_map3.clone();
-            Rc::new(f)
+            trace!("-- end final map:{:#?}", &end);
+
+            Rc::new(end)
         });
 
     //TODO 如果没有parent 那么 parent 就是 screen w h

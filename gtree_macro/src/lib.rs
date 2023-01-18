@@ -1289,7 +1289,7 @@ mod tests {
         //                     emg_layout :: ccsa :: ScopeViewVariable :: new (
         //                         :: std :: option :: Option :: None ,
         //                         :: std :: option :: Option :: Some (
-        //                             emg_layout :: ccsa :: NameChars :: Number (
+        //                             emg_layout :: ccsa :: NameCharsOrNumber :: Number (
         //                                 NotNan :: new (120 as f64) . unwrap ()
         //                             )
         //                         ) ,
@@ -1307,7 +1307,7 @@ mod tests {
         //                             emg_common :: IdStr :: new ("width") ,
         //                             emg_layout :: ccsa :: ScopeViewVariable :: new (
         //                                 :: std :: option :: Option :: None ,
-        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (100 as f64) . unwrap ())) ,
+        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameCharsOrNumber :: Number (NotNan :: new (100 as f64) . unwrap ())) ,
         //                                 :: std :: option :: Option :: None
         //                             )
         //                         ) ,
@@ -1315,7 +1315,7 @@ mod tests {
         //                             emg_common :: IdStr :: new ("height") ,
         //                             emg_layout :: ccsa :: ScopeViewVariable :: new (
         //                                 :: std :: option :: Option :: None ,
-        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameChars :: Number (NotNan :: new (20 as f64) . unwrap ())) ,
+        //                                 :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameCharsOrNumber :: Number (NotNan :: new (20 as f64) . unwrap ())) ,
         //                                 :: std :: option :: Option :: None
         //                             )
         //                         )

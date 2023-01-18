@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-21 10:50:01
- * @LastEditTime: 2023-01-04 21:31:04
+ * @LastEditTime: 2023-01-18 17:31:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,8 +23,8 @@ use tracing::{debug_span, instrument, warn};
 use Either::{Left, Right};
 
 use super::{
-    CCSSOpSvv, CCSSSvvOpSvvExpr, CassowaryGeneralMap, CassowaryMap, ConstraintList, NameChars,
-    PredEq, PredOp, PredVariable, Scope, ScopeViewVariable, StrengthAndWeight,
+    CCSSOpSvv, CCSSSvvOpSvvExpr, CassowaryGeneralMap, CassowaryMap, ConstraintList,
+    NameCharsOrNumber, PredEq, PredOp, PredVariable, Scope, ScopeViewVariable, StrengthAndWeight,
 };
 
 pub(crate) fn eq_opt_sw_to_weighted_relation(
@@ -177,18 +177,18 @@ where
         (None, Some(name), None) => {
             //NOTE no prop
             match name {
-                NameChars::Id(_) => todo!(),
-                NameChars::Class(_) => todo!(),
-                NameChars::Element(_) => todo!(),
-                NameChars::Virtual(_) => todo!(),
-                NameChars::Number(n) => (Some(Right((*n).into())), None),
-                NameChars::Next(_) => todo!(),
-                NameChars::Last(_) => todo!(),
-                NameChars::First(_) => todo!(),
+                NameCharsOrNumber::Id(_) => todo!(),
+                NameCharsOrNumber::Class(_) => todo!(),
+                NameCharsOrNumber::Element(_) => todo!(),
+                NameCharsOrNumber::Virtual(_) => todo!(),
+                NameCharsOrNumber::Number(n) => (Some(Right((*n).into())), None),
+                NameCharsOrNumber::Next(_) => todo!(),
+                NameCharsOrNumber::Last(_) => todo!(),
+                NameCharsOrNumber::First(_) => todo!(),
             }
         }
         (None, Some(name), Some(PredVariable(prop))) => match name {
-            NameChars::Id(id) => {
+            NameCharsOrNumber::Id(id) => {
                 let _debug_span_ = debug_span!("->[ get child variable ] ").entered();
 
                 warn!("[svv_to_var] parsed scope_view_variable,  find child var : child id:{:?} prop:{:?}",&id,&prop);
@@ -207,10 +207,10 @@ where
                     None,
                 )
             }
-            NameChars::Class(_) => todo!(),
-            NameChars::Element(_) => todo!(),
+            NameCharsOrNumber::Class(_) => todo!(),
+            NameCharsOrNumber::Element(_) => todo!(),
             //TODO return virtual constraints , not need add after this
-            NameChars::Virtual(v_name) => {
+            NameCharsOrNumber::Virtual(v_name) => {
                 let var = current_cassowary_inherited_generals
                     .var(&(v_name.clone() + "." + prop))
                     .map_or_else(
@@ -228,10 +228,10 @@ where
                     });
                 (var, expr)
             }
-            NameChars::Number(_) => todo!(),
-            NameChars::Next(_) => todo!(),
-            NameChars::Last(_) => todo!(),
-            NameChars::First(_) => todo!(),
+            NameCharsOrNumber::Number(_) => todo!(),
+            NameCharsOrNumber::Next(_) => todo!(),
+            NameCharsOrNumber::Last(_) => todo!(),
+            NameCharsOrNumber::First(_) => todo!(),
         },
         (Some(_), None, None) => todo!(),
         (Some(s), None, Some(PredVariable(prop))) => match s {
@@ -254,24 +254,24 @@ where
             match s {
                 Scope::Local => todo!(),
                 Scope::Parent(_lv) => match name {
-                    NameChars::Id(_) => todo!(),
-                    NameChars::Class(_) => todo!(),
-                    NameChars::Element(_) => todo!(),
-                    // NameChars::Element(e_as_prop) => {
+                    NameCharsOrNumber::Id(_) => todo!(),
+                    NameCharsOrNumber::Class(_) => todo!(),
+                    NameCharsOrNumber::Element(_) => todo!(),
+                    // NameCharsOrNumber::Element(e_as_prop) => {
                     // scope_parent_val(*lv, e_as_prop, current_cassowary_inherited_generals)
                     // }
-                    NameChars::Virtual(_) => todo!(),
-                    NameChars::Number(_) => todo!(),
-                    NameChars::Next(_) => todo!(),
-                    NameChars::Last(_) => todo!(),
-                    NameChars::First(_) => todo!(),
+                    NameCharsOrNumber::Virtual(_) => todo!(),
+                    NameCharsOrNumber::Number(_) => todo!(),
+                    NameCharsOrNumber::Next(_) => todo!(),
+                    NameCharsOrNumber::Last(_) => todo!(),
+                    NameCharsOrNumber::First(_) => todo!(),
                 },
                 Scope::Global => {
                     match name {
-                        NameChars::Id(_) => todo!(),
-                        NameChars::Class(_) => todo!(),
-                        NameChars::Element(_) => todo!(),
-                        // NameChars::Element(e_as_prop) => {
+                        NameCharsOrNumber::Id(_) => todo!(),
+                        NameCharsOrNumber::Class(_) => todo!(),
+                        NameCharsOrNumber::Element(_) => todo!(),
+                        // NameCharsOrNumber::Element(e_as_prop) => {
                         //     //NOTE use as prop
                         //     if let Some(v) = current_cassowary_inherited_generals.top_var(e_as_prop)
                         //     {
@@ -286,11 +286,11 @@ where
                         //         panic!("top global generals: {} -> not find", e_as_prop)
                         //     }
                         // }
-                        NameChars::Virtual(_) => todo!(),
-                        NameChars::Number(_) => todo!(),
-                        NameChars::Next(_) => todo!(),
-                        NameChars::Last(_) => todo!(),
-                        NameChars::First(_) => todo!(),
+                        NameCharsOrNumber::Virtual(_) => todo!(),
+                        NameCharsOrNumber::Number(_) => todo!(),
+                        NameCharsOrNumber::Next(_) => todo!(),
+                        NameCharsOrNumber::Last(_) => todo!(),
+                        NameCharsOrNumber::First(_) => todo!(),
                     }
                 }
             }
