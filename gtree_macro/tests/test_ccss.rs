@@ -81,8 +81,8 @@ mod code_test {
         println!();
         let input = r#"#button"#;
 
-        cass_code_test::<NameChars>("name_chars", input);
-        let code = emg_layout::ccsa::NameChars::Id(IdStr::new("button"));
+        cass_code_test::<NameCharsOrNumber>("name_chars", input);
+        let code = emg_layout::ccsa::NameCharsOrNumber::Id(IdStr::new("button"));
         println!("{}", code);
         assert_eq!(input, format!("{}", code));
     }
@@ -96,9 +96,9 @@ mod code_test {
         let code = emg_layout::ccsa::ScopeViewVariable::new_id_var("button", "width");
         let code_gen = emg_layout::ccsa::ScopeViewVariable::new(
             ::std::option::Option::None,
-            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(emg_common::IdStr::new(
-                "button",
-            ))),
+            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
+                emg_common::IdStr::new("button"),
+            )),
             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(emg_common::IdStr::new(
                 "width",
             ))),
@@ -129,7 +129,7 @@ mod code_test {
     }
     #[test]
     fn base1() {
-        let input = r#" 
+        let input = r#"
                 @h (#b1)(#b2)
             "#;
 
@@ -141,7 +141,7 @@ mod code_test {
                 emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                     emg_layout::ccsa::ScopeViewVariable::new(
                         ::std::option::Option::None,
-                        ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                        ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                             emg_common::IdStr::new("b1")
                         )),
                         ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -155,7 +155,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -170,14 +170,14 @@ mod code_test {
             emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
@@ -196,7 +196,7 @@ mod code_test {
 
     #[test]
     fn base2() {
-        let input = r#" 
+        let input = r#"
                 @v (#b1)(#b2)
             "#;
 
@@ -208,7 +208,7 @@ mod code_test {
                 emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                     emg_layout::ccsa::ScopeViewVariable::new(
                         ::std::option::Option::None,
-                        ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                        ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                             emg_common::IdStr::new("b1")
                         )),
                         ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -222,7 +222,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -237,14 +237,14 @@ mod code_test {
             emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
@@ -263,7 +263,7 @@ mod code_test {
     }
     #[test]
     fn base3() {
-        let input = r#" 
+        let input = r#"
         @v (#b1)-(#b2)  -  (#b3)- (#b4) -(#b5) !weak
             "#;
 
@@ -276,7 +276,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b1")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -299,9 +299,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_common::IdStr::new("b2")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Id(
+                                        emg_common::IdStr::new("b2")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("top")
                                 ))
@@ -317,7 +319,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -340,9 +342,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_common::IdStr::new("b3")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Id(
+                                        emg_common::IdStr::new("b3")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("top")
                                 ))
@@ -358,7 +362,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b3")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -381,9 +385,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_common::IdStr::new("b4")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Id(
+                                        emg_common::IdStr::new("b4")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("top")
                                 ))
@@ -399,7 +405,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b4")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -422,9 +428,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_common::IdStr::new("b5")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Id(
+                                        emg_common::IdStr::new("b5")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("top")
                                 ))
@@ -440,35 +448,35 @@ mod code_test {
             emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b3")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b4")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b5")
                     )),
                     ::std::option::Option::None
@@ -488,7 +496,7 @@ mod code_test {
 
     #[test]
     fn base4() {
-        let input = r#" 
+        let input = r#"
         @v |(#sub)| in("parent")
             "#;
 
@@ -501,9 +509,11 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Virtual(
-                                emg_common::IdStr::new("parent")
-                            )),
+                            ::std::option::Option::Some(
+                                emg_layout::ccsa::NameCharsOrNumber::Virtual(
+                                    emg_common::IdStr::new("parent")
+                                )
+                            ),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                 emg_common::IdStr::new("top")
                             ))
@@ -515,9 +525,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_common::IdStr::new("sub")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Id(
+                                        emg_common::IdStr::new("sub")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("top")
                                 ))
@@ -531,7 +543,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("sub")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -545,9 +557,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Virtual(
-                                    emg_common::IdStr::new("parent")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Virtual(
+                                        emg_common::IdStr::new("parent")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("bottom")
                                 ))
@@ -560,7 +574,7 @@ mod code_test {
             ],
             emg_common::vector![emg_layout::ccsa::ScopeViewVariable::new(
                 ::std::option::Option::None,
-                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                     emg_common::IdStr::new("sub")
                 )),
                 ::std::option::Option::None
@@ -579,7 +593,7 @@ mod code_test {
 
     #[test]
     fn base5() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)-100-(#b2)-8-(#b3)
             "#;
 
@@ -592,7 +606,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b1")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -603,9 +617,11 @@ mod code_test {
                             emg_layout::ccsa::PredOp::Add,
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Number(
-                                    emg_common::NotNan::new(100 as f64).unwrap()
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Number(
+                                        emg_common::NotNan::new(100 as f64).unwrap()
+                                    )
+                                ),
                                 ::std::option::Option::None
                             )
                         )]
@@ -615,9 +631,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_common::IdStr::new("b2")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Id(
+                                        emg_common::IdStr::new("b2")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("left")
                                 ))
@@ -631,7 +649,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -642,9 +660,11 @@ mod code_test {
                             emg_layout::ccsa::PredOp::Add,
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Number(
-                                    emg_common::NotNan::new(8 as f64).unwrap()
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Number(
+                                        emg_common::NotNan::new(8 as f64).unwrap()
+                                    )
+                                ),
                                 ::std::option::Option::None
                             )
                         )]
@@ -654,9 +674,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_common::IdStr::new("b3")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Id(
+                                        emg_common::IdStr::new("b3")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("left")
                                 ))
@@ -670,21 +692,21 @@ mod code_test {
             emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b3")
                     )),
                     ::std::option::Option::None
@@ -704,7 +726,7 @@ mod code_test {
 
     #[test]
     fn base6() {
-        let input = r#" 
+        let input = r#"
         @h (#b1)-[my_gap]-(#b2)-[my_other_gap]-(#b3)
             "#;
 
@@ -717,7 +739,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b1")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -740,9 +762,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_common::IdStr::new("b2")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Id(
+                                        emg_common::IdStr::new("b2")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("left")
                                 ))
@@ -756,7 +780,7 @@ mod code_test {
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
                             ::std::option::Option::None,
-                            ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                            ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                                 emg_common::IdStr::new("b2")
                             )),
                             ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
@@ -779,9 +803,11 @@ mod code_test {
                         emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                             emg_layout::ccsa::ScopeViewVariable::new(
                                 ::std::option::Option::None,
-                                ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
-                                    emg_common::IdStr::new("b3")
-                                )),
+                                ::std::option::Option::Some(
+                                    emg_layout::ccsa::NameCharsOrNumber::Id(
+                                        emg_common::IdStr::new("b3")
+                                    )
+                                ),
                                 ::std::option::Option::Some(emg_layout::ccsa::PredVariable(
                                     emg_common::IdStr::new("left")
                                 ))
@@ -795,21 +821,21 @@ mod code_test {
             emg_common::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b1")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b2")
                     )),
                     ::std::option::Option::None
                 ),
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
-                    ::std::option::Option::Some(emg_layout::ccsa::NameChars::Id(
+                    ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                         emg_common::IdStr::new("b3")
                     )),
                     ::std::option::Option::None

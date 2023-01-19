@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2023-01-17 00:48:59
+ * @LastEditTime: 2023-01-18 17:28:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,7 +25,7 @@ mod ops;
 pub mod svv_process;
 
 #[derive(Debug, Clone, Display, PartialEq, Eq)]
-pub enum NameChars<Ix = IdStr> {
+pub enum NameCharsOrNumber<Ix = IdStr> {
     #[display("#{0}")]
     Id(Ix), // #xxx
     #[display(".{0}")]
@@ -85,9 +85,10 @@ impl std::ops::Deref for PredVariable {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ScopeViewVariable {
-    pub scope: Option<Scope>,
-    pub view: Option<NameChars>,
-    pub variable: Option<PredVariable>,
+    pub scope: Option<Scope>, // eg. & or # or .
+
+    pub view: Option<NameCharsOrNumber>, // eg. idxx  or  1 / 2/ 3/ 4...
+    pub variable: Option<PredVariable>,  //  eg. [width]
 }
 
 impl std::fmt::Display for ScopeViewVariable {
@@ -110,7 +111,7 @@ impl ScopeViewVariable {
     #[must_use]
     pub const fn new(
         scope: Option<Scope>,
-        view: Option<NameChars>,
+        view: Option<NameCharsOrNumber>,
         variable: Option<PredVariable>,
     ) -> Self {
         Self {
@@ -135,7 +136,7 @@ impl ScopeViewVariable {
     pub fn new_number(number: f64) -> Self {
         Self::new(
             None,
-            Some(NameChars::Number(NotNan::new(number).unwrap())),
+            Some(NameCharsOrNumber::Number(NotNan::new(number).unwrap())),
             None,
         )
     }
@@ -143,18 +144,10 @@ impl ScopeViewVariable {
     pub fn new_id_var(id: &str, var: &str) -> Self {
         Self::new(
             None,
-            Some(NameChars::Id(id.into())),
+            Some(NameCharsOrNumber::Id(id.into())),
             Some(PredVariable(var.into())),
         )
     }
-
-    // pub(crate) fn scope(&self) -> Option<Scope> {
-    //     self.scope
-    // }
-
-    // pub(crate) fn view(&self) -> Option<&NameChars> {
-    //     self.view.as_ref()
-    // }
 }
 
 #[derive(Debug, Clone, Display, PartialEq, Eq)]
@@ -350,7 +343,7 @@ impl GeneralVar {
     }
 }
 
-static VIRTUAL_PROPS: [&str; 6] = ["width", "height", "top", "left", "bottom", "right"];
+static VIRTUAL_PROPS: [&'static str; 6] = ["width", "height", "top", "left", "bottom", "right"];
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Virtual(pub IdStr, pub Vec<GeneralVar>);
 
@@ -362,8 +355,16 @@ impl Virtual {
 }
 
 type VirtualProcessed<'a> = (
-    IndexMap<&'a str, (Variable, Variable, Option<&'a GeneralVar>)>,
-    (ConstraintList, ConstraintList),
+    IndexMap<
+        &'a str,
+        (
+            Variable, /*top */
+            Variable, /*current */
+            Option<&'a GeneralVar>,
+        ),
+        BuildHasherDefault<CustomHasher>,
+    >,
+    (ConstraintList /*top */, ConstraintList),
     HashMap<&'a str, Option<&'a GeneralVar>>,
 );
 
@@ -391,9 +392,9 @@ impl Virtual {
                     (p, (Variable::new(), Variable::new(), None))
                 }
             })
-            .collect::<IndexMap<_, _>>();
+            .collect::<IndexMap<_, _, BuildHasherDefault<CustomHasher>>>();
 
-        //NOTE need strict order for [w,h,t,l,b,r] iter
+        //NOTE need strict order for [(tw, w), (th, h), (tt, t), (tl, l), (tb, b), (tr, r)] iter
         let vars_constraints = if let &[(tw, w), (th, h), (tt, t), (tl, l), (tb, b), (tr, r)] =
             gvs_match_props
                 .iter()
@@ -455,13 +456,13 @@ pub enum CassowaryVar {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CassowaryGeneralMap {
     pub(crate) map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
-    pub(crate) v_v: Dict<Variable, f64>,
+    pub(crate) v_v_suggest: Dict<Variable, f64>,
     pub(crate) virtual_constraints:
         HashMap<IdStr, ConstraintList, BuildHasherDefault<CustomHasher>>,
     pub(crate) top_virtual_constraints:
         HashMap<IdStr, ConstraintList, BuildHasherDefault<CustomHasher>>,
     pub(crate) top_map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
-    pub(crate) top_v_v: Dict<Variable, f64>,
+    pub(crate) top_v_v_suggest: Dict<Variable, f64>,
     pub(crate) parent: Option<Rc<CassowaryGeneralMap>>,
     // pub(crate) cassowary_map: Option<Rc<CassowaryMap>>,
 }
@@ -498,25 +499,56 @@ impl CassowaryGeneralMap {
         self.map.get(key).copied()
     }
 
-    pub fn insert(&mut self, id: IdStr, v: f64) {
+    pub fn insert_with_suggest(&mut self, id: IdStr, v: f64) {
+        self.insert_with_var_and_suggest_opt(id, None, None, Some(v))
+    }
+    pub fn insert_with_var(&mut self, id: IdStr, top_var: Variable, var: Variable) {
+        self.insert_with_var_and_suggest_opt(id, Some(top_var), Some(var), None)
+    }
+
+    pub fn insert_with_var_and_suggest(
+        &mut self,
+        id: IdStr,
+        top_var: Variable,
+        var: Variable,
+        v: f64,
+    ) {
+        self.insert_with_var_and_suggest_opt(id, Some(top_var), Some(var), Some(v))
+    }
+
+    fn insert_with_var_and_suggest_opt(
+        &mut self,
+        id: IdStr,
+        opt_top_var: Option<Variable>,
+        opt_var: Option<Variable>,
+        opt_v: Option<f64>,
+    ) {
+        if !self.top_map.contains_key(&id) {
+            let top_var = opt_top_var.unwrap_or_default();
+            self.top_map.insert(id.clone(), top_var);
+            if let Some(v) = opt_v {
+                self.top_v_v_suggest.insert(top_var, v);
+            }
+        }
+        let var = opt_var.unwrap_or_default();
+
+        self.map.insert(id, var);
+        if let Some(v) = opt_v {
+            self.v_v_suggest.insert(var, v);
+        }
+    }
+
+    fn insert_with_suggest_not_overwrite(&mut self, id: IdStr, v: f64) {
         if !self.top_map.contains_key(&id) {
             let var = Variable::new();
             self.top_map.insert(id.clone(), var);
-            self.top_v_v.insert(var, v);
+            self.top_v_v_suggest.insert(var, v);
         }
-
-        let var2 = Variable::new();
-        self.map.insert(id, var2);
-        self.v_v.insert(var2, v);
-    }
-    pub fn insert_only_var(&mut self, id: IdStr, top_var: Variable, var: Variable) {
-        if !self.top_map.contains_key(&id) {
-            self.top_map.insert(id.clone(), top_var);
-            // self.top_v_v.insert(var, v);
+        if !self.map.contains_key(&id) {
+            let var2 = Variable::new();
+            self.map.insert(id, var2);
+            self.v_v_suggest.insert(var2, v);
         }
-
-        self.map.insert(id, var);
-        // self.v_v.insert(var2, v);
     }
 
     pub fn insert_constants(
@@ -532,39 +564,16 @@ impl CassowaryGeneralMap {
 
         self.virtual_constraints.insert(v_name, constants);
     }
-
-    pub fn insert_with_var(&mut self, id: IdStr, top_var: Variable, var: Variable, v: f64) {
-        if !self.top_map.contains_key(&id) {
-            self.top_map.insert(id.clone(), top_var);
-            self.top_v_v.insert(top_var, v);
-        }
-
-        self.map.insert(id, var);
-        self.v_v.insert(var, v);
-    }
-    fn insert_not_overwrite(&mut self, id: IdStr, v: f64) {
-        if !self.top_map.contains_key(&id) {
-            let var = Variable::new();
-            self.top_map.insert(id.clone(), var);
-            self.top_v_v.insert(var, v);
-        }
-        if !self.map.contains_key(&id) {
-            let var2 = Variable::new();
-            self.map.insert(id, var2);
-            self.v_v.insert(var2, v);
-        }
-    }
     #[must_use]
     pub fn new() -> Self {
-        let top_map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>> =
-            HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
+        let top_map = HashMap::<IdStr, Variable, BuildHasherDefault<CustomHasher>>::default();
         let top_v_v: Dict<Variable, f64> = Dict::new();
 
         let map = top_map.clone();
         let v_v = top_v_v.clone();
 
-        let virtual_constraints: HashMap<IdStr, ConstraintList, BuildHasherDefault<CustomHasher>> =
-            HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
+        let virtual_constraints =
+            HashMap::<IdStr, ConstraintList, BuildHasherDefault<CustomHasher>>::default();
         let top_virtual_constraints = virtual_constraints.clone();
 
         // let hgap = Variable::new();
@@ -573,9 +582,9 @@ impl CassowaryGeneralMap {
 
         Self {
             map,
-            v_v,
+            v_v_suggest: v_v,
             top_map,
-            top_v_v,
+            top_v_v_suggest: top_v_v,
             parent: None,
             virtual_constraints,
             top_virtual_constraints,
@@ -591,9 +600,9 @@ impl CassowaryGeneralMap {
     //TODO global prop config
     #[must_use]
     pub fn with_default_not_overwrite(mut self) -> Self {
-        self.insert_not_overwrite("hgap".into(), 10.0);
-        self.insert_not_overwrite("vgap".into(), 10.0);
-        self.insert_not_overwrite("baseline".into(), 16.0);
+        self.insert_with_suggest_not_overwrite("hgap".into(), 10.0);
+        self.insert_with_suggest_not_overwrite("vgap".into(), 10.0);
+        self.insert_with_suggest_not_overwrite("baseline".into(), 16.0);
 
         self
     }
@@ -610,15 +619,17 @@ impl std::ops::Add<CassowaryGeneralMap> for Rc<CassowaryGeneralMap> {
     fn add(self, current_new: CassowaryGeneralMap) -> Self::Output {
         Self::Output {
             map: current_new.map.union_with(self.map.clone(), |l, _| l),
-            v_v: current_new.v_v.union_with(self.v_v.clone(), |l, _| l),
+            v_v_suggest: current_new
+                .v_v_suggest
+                .union_with(self.v_v_suggest.clone(), |l, _| l),
             top_map: self
                 .top_map
                 .clone()
                 .union_with(current_new.top_map.clone(), |l, _| l),
-            top_v_v: self
-                .top_v_v
+            top_v_v_suggest: self
+                .top_v_v_suggest
                 .clone()
-                .union_with(current_new.top_v_v.clone(), |l, _| l),
+                .union_with(current_new.top_v_v_suggest.clone(), |l, _| l),
             virtual_constraints: current_new
                 .virtual_constraints
                 .union(self.virtual_constraints.clone()),
@@ -677,63 +688,74 @@ impl CassowaryMap {
 
     #[must_use]
     pub fn new() -> Self {
-        let mut map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>> =
-            HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
-        let mut v_k: HashMap<Variable, IdStr, BuildHasherDefault<CustomHasher>> =
-            HashMap::with_hasher(BuildHasherDefault::<CustomHasher>::default());
+        let mut map = HashMap::<IdStr, Variable, BuildHasherDefault<CustomHasher>>::default();
+        let mut v_k = HashMap::<Variable, IdStr, BuildHasherDefault<CustomHasher>>::default();
         // @add self layout ─────────────────────────────────────────────────────────────────
 
         let width = Variable::new();
-        map.insert("width".into(), width);
-        v_k.insert(width, "width".into());
+        let width_idstr: IdStr = "width".into();
+        map.insert(width_idstr.clone(), width);
+        v_k.insert(width, width_idstr);
 
         let height = Variable::new();
-        map.insert("height".into(), height);
-        v_k.insert(height, "height".into());
+        let height_idstr: IdStr = "height".into();
+        map.insert(height_idstr.clone(), height);
+        v_k.insert(height, height_idstr);
 
         let top = Variable::new();
-        map.insert("top".into(), top);
-        v_k.insert(top, "top".into());
+        let top_idstr: IdStr = "top".into();
+        map.insert(top_idstr.clone(), top);
+        v_k.insert(top, top_idstr);
 
         let left = Variable::new();
-        map.insert("left".into(), left);
-        v_k.insert(left, "left".into());
+        let left_idstr: IdStr = "left".into();
+        map.insert(left_idstr.clone(), left);
+        v_k.insert(left, left_idstr);
 
         let bottom = Variable::new();
-        map.insert("bottom".into(), bottom);
-        v_k.insert(bottom, "bottom".into());
+        let bottom_idstr: IdStr = "bottom".into();
+        map.insert(bottom_idstr.clone(), bottom);
+        v_k.insert(bottom, bottom_idstr);
 
         let right = Variable::new();
-        map.insert("right".into(), right);
-        v_k.insert(right, "right".into());
+        let right_idstr: IdStr = "right".into();
+        map.insert(right_idstr.clone(), right);
+        v_k.insert(right, right_idstr);
 
         let z = Variable::new();
-        map.insert("z".into(), z);
-        v_k.insert(z, "z".into());
+        let z_idstr: IdStr = "z".into();
+        map.insert(z_idstr.clone(), z);
+        v_k.insert(z, z_idstr);
 
         let origin_x = Variable::new();
-        map.insert("origin_x".into(), origin_x);
-        v_k.insert(origin_x, "origin_x".into());
+        let origin_x_idstr: IdStr = "origin_x".into();
+        map.insert(origin_x_idstr.clone(), origin_x);
+        v_k.insert(origin_x, origin_x_idstr);
 
         let origin_y = Variable::new();
-        map.insert("origin_y".into(), origin_y);
-        v_k.insert(origin_y, "origin_y".into());
+        let origin_y_idstr: IdStr = "origin_y".into();
+        map.insert(origin_y_idstr.clone(), origin_y);
+        v_k.insert(origin_y, origin_y_idstr);
 
         let origin_z = Variable::new();
-        map.insert("origin_z".into(), origin_z);
-        v_k.insert(origin_z, "origin_z".into());
+        let origin_z_idstr: IdStr = "origin_z".into();
+        map.insert(origin_z_idstr.clone(), origin_z);
+        v_k.insert(origin_z, origin_z_idstr);
 
         let align_x = Variable::new();
-        map.insert("align_x".into(), align_x);
-        v_k.insert(align_x, "align_x".into());
+        let align_x_idstr: IdStr = "align_x".into();
+        map.insert(align_x_idstr.clone(), align_x);
+        v_k.insert(align_x, align_x_idstr);
 
         let align_y = Variable::new();
-        map.insert("align_y".into(), align_y);
-        v_k.insert(align_y, "align_y".into());
+        let align_y_idstr: IdStr = "align_y".into();
+        map.insert(align_y_idstr.clone(), align_y);
+        v_k.insert(align_y, align_y_idstr);
 
         let align_z = Variable::new();
-        map.insert("align_z".into(), align_z);
-        v_k.insert(align_z, "align_z".into());
+        let align_z_idstr: IdStr = "align_z".into();
+        map.insert(align_z_idstr.clone(), align_z);
+        v_k.insert(align_z, align_z_idstr);
 
         Self { map, v_k }
     }

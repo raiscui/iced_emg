@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 18:16:47
- * @LastEditTime: 2023-01-14 01:02:39
+ * @LastEditTime: 2023-01-18 17:26:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,7 +12,7 @@ use emg_state::CloneStateVar;
 
 use crate::EmgEdgeItem;
 
-use super::{CassowaryVar, GeneralVar, NameChars, ScopeViewVariable, Virtual, CCSS};
+use super::{CassowaryVar, GeneralVar, NameCharsOrNumber, ScopeViewVariable, Virtual, CCSS};
 
 impl<Ix> Shaping<EmgEdgeItem<Ix>> for (Vector<CCSS>, Vector<ScopeViewVariable>)
 where
@@ -60,17 +60,17 @@ where
             (None, None, None) => todo!(),
             (None, None, Some(_)) => todo!(),
             (None, Some(view_), None) => match view_ {
-                NameChars::Id(_) => todo!(),
-                NameChars::Class(_) => todo!(),
-                NameChars::Element(_) => todo!(),
-                NameChars::Virtual(_) => todo!(),
-                NameChars::Number(n) => who.layout.cassowary_generals.update(|x| {
-                    x.insert(name.clone(), n.into_inner());
+                NameCharsOrNumber::Id(_) => todo!(),
+                NameCharsOrNumber::Class(_) => todo!(),
+                NameCharsOrNumber::Element(_) => todo!(),
+                NameCharsOrNumber::Virtual(_) => todo!(),
+                NameCharsOrNumber::Number(n) => who.layout.cassowary_generals.update(|x| {
+                    x.insert_with_suggest(name.clone(), n.into_inner());
                     // warn!("cassowary_generals update \n{:?}", &x);
                 }),
-                NameChars::Next(_) => todo!(),
-                NameChars::Last(_) => todo!(),
-                NameChars::First(_) => todo!(),
+                NameCharsOrNumber::Next(_) => todo!(),
+                NameCharsOrNumber::Last(_) => todo!(),
+                NameCharsOrNumber::First(_) => todo!(),
             },
             (None, Some(_), Some(_)) => todo!(),
             (Some(_), None, None) => todo!(),
@@ -119,13 +119,13 @@ where
                     (None, None, None) => todo!(),
                     (None, None, Some(_)) => todo!(),
                     (None, Some(view_), None) => match view_ {
-                        NameChars::Id(_) => todo!(),
-                        NameChars::Class(_) => todo!(),
-                        NameChars::Element(_) => todo!(),
-                        NameChars::Virtual(_) => todo!(),
-                        NameChars::Number(n) => {
+                        NameCharsOrNumber::Id(_) => todo!(),
+                        NameCharsOrNumber::Class(_) => todo!(),
+                        NameCharsOrNumber::Element(_) => todo!(),
+                        NameCharsOrNumber::Virtual(_) => todo!(),
+                        NameCharsOrNumber::Number(n) => {
                             who.layout.cassowary_generals.update(|x| {
-                                x.insert_with_var(
+                                x.insert_with_var_and_suggest(
                                     virtual_name.clone() + "." + prop,
                                     top_var,
                                     var,
@@ -133,9 +133,9 @@ where
                                 );
                             });
                         }
-                        NameChars::Next(_) => todo!(),
-                        NameChars::Last(_) => todo!(),
-                        NameChars::First(_) => todo!(),
+                        NameCharsOrNumber::Next(_) => todo!(),
+                        NameCharsOrNumber::Last(_) => todo!(),
+                        NameCharsOrNumber::First(_) => todo!(),
                     },
                     (None, Some(_), Some(_)) => todo!(),
                     (Some(_), None, None) => todo!(),
@@ -145,7 +145,7 @@ where
                 };
             } else {
                 who.layout.cassowary_generals.update(|x| {
-                    x.insert_only_var(virtual_name.clone() + "." + prop, top_var, var);
+                    x.insert_with_var(virtual_name.clone() + "." + prop, top_var, var);
                 });
             }
         }
