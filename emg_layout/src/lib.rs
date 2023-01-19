@@ -1446,8 +1446,10 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                     let current_cassowary_map2 = current_cassowary_map.clone();
                     let mut cass_solver = Solver::new();
 
+
+
                     //NOTE current default constraints
-                    cass_solver.add_constraints(&[
+                    cass_solver.add_constraints([
                         //NOTE add for current cassowary
                         width_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
                         height_var | WeightedRelation::GE(cassowary::strength::REQUIRED) | 0.0,
