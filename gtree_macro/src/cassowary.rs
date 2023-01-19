@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-01-18 17:30:07
+ * @LastEditTime: 2023-01-19 17:10:16
  * @LastEditors: Rais
  * @Description:
  */
@@ -484,18 +484,12 @@ impl Parse for ScopeViewVariable {
         let scope = input.parse();
         let fork = input.fork();
 
-        // assert!(fork.parse::<Scope>().is_err(), "scope duplicated ");
-
         if let Ok(scope2) = fork.parse::<Scope>() {
             return Err(syn::Error::new(scope2.span(), "scope duplicated "));
         }
 
         let view = input.parse();
         let variable = input.parse();
-        // assert!(
-        //     !(scope.is_none() && view.is_none() && variable.is_none()),
-        //     "all none in ScopeViewVariable"
-        // );
 
         if scope.is_err() && view.is_err() && variable.is_err() {
             let e = scope.err().unwrap();
@@ -536,37 +530,37 @@ impl ToTokens for ScopeViewVariable {
     }
 }
 
-/// `name[var]`
-#[derive(Debug, Clone)]
-struct PredViewVariable {
-    view: NameCharsOrNumber,
-    pred_variable: PredVariable,
-}
-impl Parse for PredViewVariable {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        debug!("in PredViewVariable");
+// /// `name[var]`
+// #[derive(Debug, Clone)]
+// struct PredViewVariable {
+//     view: NameCharsOrNumber,
+//     pred_variable: PredVariable,
+// }
+// impl Parse for PredViewVariable {
+//     fn parse(input: ParseStream) -> syn::Result<Self> {
+//         debug!("in PredViewVariable");
 
-        Ok(Self {
-            view: input.parse()?,
-            pred_variable: input.parse()?,
-        })
-    }
-}
+//         Ok(Self {
+//             view: input.parse()?,
+//             pred_variable: input.parse()?,
+//         })
+//     }
+// }
 
-/// `name`
-#[derive(Debug, Clone)]
-struct PredView {
-    view: NameCharsOrNumber,
-}
-impl Parse for PredView {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        debug!("in PredView");
+// /// `name`
+// #[derive(Debug, Clone)]
+// struct PredView {
+//     view: NameCharsOrNumber,
+// }
+// impl Parse for PredView {
+//     fn parse(input: ParseStream) -> syn::Result<Self> {
+//         debug!("in PredView");
 
-        Ok(Self {
-            view: input.parse()?,
-        })
-    }
-}
+//         Ok(Self {
+//             view: input.parse()?,
+//         })
+//     }
+// }
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone)]
@@ -1101,7 +1095,8 @@ struct Splat {
 impl Parse for Splat {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let _span =
-            debug_span!("in Splat, parse-> ( `NameCharsOrNumber`[`Predicate`]? ) `[- ~]` ... ").entered();
+            debug_span!("in Splat, parse-> ( `NameCharsOrNumber`[`Predicate`]? ) `[- ~]` ... ")
+                .entered();
 
         let view_selector = input.parse::<ViewSelector>()?;
         debug!("got view_selector:{:?}", &view_selector);
@@ -1615,7 +1610,7 @@ impl Parse for OptionItem {
             input.parse::<Token![in]>()?;
 
             let content;
-            let paren_token = parenthesized!(content in input);
+            let _paren_token = parenthesized!(content in input);
 
             //TODO 原版使用空格, 这里使用 “,” ,测试是否有问题
             let content: Punctuated<ScopeViewVariable, Token![,]> =
@@ -1628,7 +1623,7 @@ impl Parse for OptionItem {
             input.parse::<kw_opt::gap>()?;
 
             let content;
-            let paren_token = parenthesized!(content in input);
+            let _paren_token = parenthesized!(content in input);
 
             //TODO 原版使用空格, 这里使用 “,” ,测试是否有问题
             let content: Punctuated<ScopeViewVariable, Token![,]> =
@@ -1643,7 +1638,7 @@ impl Parse for OptionItem {
             input.parse::<kw_opt::gap>()?;
 
             let content;
-            let paren_token = parenthesized!(content in input);
+            let _paren_token = parenthesized!(content in input);
 
             //TODO 原版使用空格, 这里使用 “,” ,测试是否有问题
             let content: Punctuated<ScopeViewVariable, Token![,]> =
@@ -2113,7 +2108,7 @@ impl Parse for VFLStatement {
 pub struct Virtual(LitStr, Punctuated<GeneralVar, Token![,]>);
 impl ToTokens for Virtual {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let Virtual(name, vars) = self;
+        let Self(name, vars) = self;
         let vars_iter = vars.iter();
         quote_spanned!(name.span().join(vars.span()).unwrap()=>emg_bind::layout::ccsa::Virtual(emg_bind::common::IdStr::new(#name),vec![ #(#vars_iter),* ]))
             .to_tokens(tokens);
@@ -2139,7 +2134,7 @@ impl Parse for Virtual {
 pub struct GeneralVar(Ident, ScopeViewVariable);
 impl ToTokens for GeneralVar {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let GeneralVar(name, svv) = self;
+        let Self(name, svv) = self;
 
         let name_str = name.to_string();
         quote_spanned!(name.span().join(svv.span()).unwrap()=>emg_bind::layout::ccsa::GeneralVar(emg_bind::common::IdStr::new(#name_str),#svv))

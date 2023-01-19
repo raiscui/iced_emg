@@ -488,7 +488,7 @@ impl Clone for EdgeCtx {
 impl std::fmt::Debug for EdgeCtx {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EdgeCtx")
-            .field("styles_end", &self.styles_end)
+            .field("styles_end", &self.styles_end as &dyn std::fmt::Debug)
             .field("layout_end", &self.layout_end as &dyn std::fmt::Debug)
             .field("world", &self.world as &dyn std::fmt::Debug)
             .field(

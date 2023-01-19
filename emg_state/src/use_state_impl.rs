@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-01-13 16:03:12
+ * @LastEditTime: 2023-01-19 16:52:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -1284,6 +1284,8 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
         self.0.filter_map(f).into()
     }
 
+    /// Dict 增加/更新 K V 会增量执行 function f , 用于更新 out,
+    /// Dict 移除 K V 并不会触发 out 的更新,
     #[track_caller]
     pub fn increment_reduction<
         F: FnMut(&mut T, &K, &V) + 'static,
@@ -1296,6 +1298,8 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
         self.0.increment_reduction(init, f).into()
     }
 
+    /// Dict 增加/更新 K V 会增量执行 function f , 用于更新 out,
+    /// Dict 移除 K V 也会执行 remove f,
     #[track_caller]
     pub fn reduction<F: FnMut(&mut T, &K, &V) -> bool + 'static, T: Clone + PartialEq + 'static>(
         &self,
