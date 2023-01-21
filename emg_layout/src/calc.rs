@@ -3,7 +3,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2023-01-18 13:26:15
+ * @LastEditTime: 2023-01-20 15:19:16
  * @LastEditors: Rais
 * @Description:
 */
@@ -160,15 +160,13 @@ where
         });
 
     let no_cass_downgrade_calculated_size = (&p_cass_p_size_sa, &sa_gs_w, &sa_gs_h).map(
-        move |p_calc_size: &Vector2<Precision>, w: &GenericSize, h: &GenericSize| {
-            let p_calc_size = *p_calc_size;
-
+        move |&p_calc_size: &Vector2<Precision>, w: &GenericSize, h: &GenericSize| {
             // TODO  如果根 parent 无关 不是百分比  那么 不监听 parent, 如果 w, h 独立 不依赖, 分开计算suggest_calculated_width suggest_calculated_height
 
             //TODO check editor display error
             let new_size = Vector2::<Precision>::new(
-                calculation_w(&p_calc_size, w),
-                calculation_h(&p_calc_size, h),
+                calculation_w(p_calc_size, w),
+                calculation_h(p_calc_size, h),
             );
             trace!("new size: {}", &new_size);
             info!("==== new size: {}", &new_size);
@@ -252,12 +250,12 @@ where
         &right,
     )
         .map(
-            move |w: &Precision,
-                  h: &Precision,
-                  opt_t: &Option<Precision>,
-                  opt_l: &Option<Precision>,
-                  opt_b: &Option<Precision>,
-                  opt_r: &Option<Precision>| {
+            move |&w: &Precision,
+                  &h: &Precision,
+                  &opt_t: &Option<Precision>,
+                  &opt_l: &Option<Precision>,
+                  &opt_b: &Option<Precision>,
+                  &opt_r: &Option<Precision>| {
                 let _span = warn_span!("cass_trans calculting map").entered();
                 warn!(
                     "[cass_trans] t:{:?} l:{:?} b:{:?} r:{:?}",
@@ -271,53 +269,49 @@ where
                     (None, None, Some(b), Some(r)) => {
                         Translation3::<Precision>::new(r - w, b - h, 0.0)
                     }
-                    (None, Some(l), None, None) => Translation3::<Precision>::new(*l, 0., 0.0),
+                    (None, Some(l), None, None) => Translation3::<Precision>::new(l, 0., 0.0),
                     (None, Some(l), None, Some(r)) => {
                         if check {
-                            assert_approx_eq!(Precision, r - l, *w, (0.1, 2));
+                            assert_approx_eq!(Precision, r - l, w, (0.1, 2));
                         }
-                        Translation3::<Precision>::new(*l, 0., 0.0)
+                        Translation3::<Precision>::new(l, 0., 0.0)
                     }
-                    (None, Some(l), Some(b), None) => {
-                        Translation3::<Precision>::new(*l, b - h, 0.0)
-                    }
+                    (None, Some(l), Some(b), None) => Translation3::<Precision>::new(l, b - h, 0.0),
                     (None, Some(l), Some(b), Some(r)) => {
                         if check {
-                            assert_approx_eq!(Precision, r - l, *w, (0.1, 2));
+                            assert_approx_eq!(Precision, r - l, w, (0.1, 2));
                         }
-                        Translation3::<Precision>::new(*l, b - h, 0.0)
+                        Translation3::<Precision>::new(l, b - h, 0.0)
                     }
-                    (Some(t), None, None, None) => Translation3::<Precision>::new(0., *t, 0.0),
-                    (Some(t), None, None, Some(r)) => {
-                        Translation3::<Precision>::new(r - w, *t, 0.0)
-                    }
+                    (Some(t), None, None, None) => Translation3::<Precision>::new(0., t, 0.0),
+                    (Some(t), None, None, Some(r)) => Translation3::<Precision>::new(r - w, t, 0.0),
                     (Some(t), None, Some(b), None) => {
                         if check {
-                            assert_approx_eq!(Precision, b - t, *h, (0.1, 2));
+                            assert_approx_eq!(Precision, b - t, h, (0.1, 2));
                         }
-                        Translation3::<Precision>::new(0.0, *t, 0.0)
+                        Translation3::<Precision>::new(0.0, t, 0.0)
                     }
                     (Some(t), None, Some(b), Some(r)) => {
                         if check {
-                            assert_approx_eq!(Precision, b - t, *h, (0.1, 2));
+                            assert_approx_eq!(Precision, b - t, h, (0.1, 2));
                         }
-                        Translation3::<Precision>::new(r - w, *t, 0.0)
+                        Translation3::<Precision>::new(r - w, t, 0.0)
                     }
-                    (Some(t), Some(l), None, None) => Translation3::<Precision>::new(*l, *t, 0.0),
+                    (Some(t), Some(l), None, None) => Translation3::<Precision>::new(l, t, 0.0),
                     (Some(t), Some(l), None, Some(r)) => {
                         warn!("t:{} l:{} r:{}", t, l, r);
                         //TODO remove this if release
                         if check {
-                            assert_approx_eq!(Precision, r - l, *w, (0.1, 2));
+                            assert_approx_eq!(Precision, r - l, w, (0.1, 2));
                         }
-                        Translation3::<Precision>::new(*l, *t, 0.0)
+                        Translation3::<Precision>::new(l, t, 0.0)
                     }
                     (Some(t), Some(l), Some(b), None) => {
                         //TODO remove this if release
                         if check {
-                            assert_approx_eq!(Precision, b - t, *h, (0.1, 2));
+                            assert_approx_eq!(Precision, b - t, h, (0.1, 2));
                         }
-                        Translation3::<Precision>::new(*l, *t, 0.0)
+                        Translation3::<Precision>::new(l, t, 0.0)
                     }
                     (Some(t), Some(l), Some(b), Some(_r)) => {
                         //TODO remove this if release
@@ -326,11 +320,11 @@ where
                         // let b_t = buffer.format_finite(b-t);
                         // let mut buffer2 = ryu::Buffer::new();
                         // let h_ = buffer2.format_finite(*h);
-                        warn!("b-t:{:.10} h:{:.10}", b - t, *h);
+                        warn!("b-t:{:.10} h:{:.10}", b - t, h);
 
                         // assert_approx_eq!(Precision,b-t,*h,(0.1,2));
                         // assert_approx_eq!(Precision,r-l,*w,(0.1,2));
-                        Translation3::<Precision>::new(*l, *t, 0.0)
+                        Translation3::<Precision>::new(l, t, 0.0)
                     }
                 }
             },
@@ -395,25 +389,21 @@ where
         &origin_y,
     )
         .then(
-            move |p_calc_size: &Vector2<Precision>,
-                  p_calc_origin: &Translation3<Precision>,
-                  p_calc_align: &Translation3<Precision>,
-                  size: &Vector2<Precision>,
+            move |&p_calc_size: &Vector2<Precision>,
+                  &p_calc_origin: &Translation3<Precision>,
+                  &p_calc_align: &Translation3<Precision>,
+                  &calc_size: &Vector2<Precision>,
                   origin_x: &GenericSizeAnchor,
                   origin_y: &GenericSizeAnchor| {
-                let calc_size = *size;
-                let p_calc_size = *p_calc_size;
-                let p_calc_origin = *p_calc_origin;
-                let p_calc_align = *p_calc_align;
                 let _enter = trace_span!("-> [ calculated_origin ] recalculation..",).entered();
 
                 (&**origin_x, &**origin_y)
                     .map(move |ox: &GenericSize, oy: &GenericSize| {
                         calculation_origin(
-                            &p_calc_size,
-                            &p_calc_origin,
-                            &p_calc_align,
-                            &calc_size,
+                            p_calc_size,
+                            p_calc_origin,
+                            p_calc_align,
+                            calc_size,
                             ox,
                             oy,
                         )
@@ -423,20 +413,17 @@ where
         );
 
     let calculated_align:StateAnchor<Translation3<Precision>> = (&p_cass_p_size_sa,&p_calculated.origin, &p_calculated.align, &align_x, &align_y).then(
-                move |p_calc_size: &Vector2<Precision>,p_calc_origin:&Translation3<Precision>,p_calc_align:&Translation3<Precision>, align_x: &GenericSizeAnchor, align_y: &GenericSizeAnchor| {
+                move |&p_calc_size: &Vector2<Precision>,&p_calc_origin:&Translation3<Precision>,&p_calc_align:&Translation3<Precision>, align_x: &GenericSizeAnchor, align_y: &GenericSizeAnchor| {
                     // let p_calc_size= *p_calc_size;
 
 
 
-                    let p_calc_size = *p_calc_size;
-                    let p_calc_origin = *p_calc_origin;
-                    let p_calc_align = *p_calc_align;
 
                     let _enter = trace_span!(
                         "-> [ calculated_align ] recalculation..(&p_calculated.size, &layout.align.watch()).map ",
                         ).entered();
                     (&**align_x ,&**align_y).map(move|ax:&GenericSize,ay:&GenericSize|{
-                        calculation_align(&p_calc_size,&p_calc_origin,&p_calc_align, ax,ay)
+                        calculation_align(p_calc_size,p_calc_origin,p_calc_align, ax,ay)
 
                     }).into()
                 },
@@ -508,7 +495,7 @@ where
         world,
     }
 }
-fn calculation_w_logiclength(p_calc_size: &Vector2<Precision>, l: &LogicLength) -> Precision {
+fn calculation_w_logiclength(p_calc_size: Vector2<Precision>, l: &LogicLength) -> Precision {
     match l {
         LogicLength::Simplex(els) => {
             let v = els.value();
@@ -535,7 +522,7 @@ fn calculation_w_logiclength(p_calc_size: &Vector2<Precision>, l: &LogicLength) 
         },
     }
 }
-fn calculation_h_logiclength(p_calc_size: &Vector2<Precision>, l: &LogicLength) -> Precision {
+fn calculation_h_logiclength(p_calc_size: Vector2<Precision>, l: &LogicLength) -> Precision {
     match l {
         LogicLength::Simplex(els) => {
             let v = els.value();
@@ -562,7 +549,7 @@ fn calculation_h_logiclength(p_calc_size: &Vector2<Precision>, l: &LogicLength) 
         },
     }
 }
-fn calculation_w(p_calc_size: &Vector2<Precision>, w: &GenericSize) -> Precision {
+fn calculation_w(p_calc_size: Vector2<Precision>, w: &GenericSize) -> Precision {
     trace!("calculation_w");
     match w {
         GenericSize::None => 0.0,
@@ -591,7 +578,7 @@ fn calculation_w(p_calc_size: &Vector2<Precision>, w: &GenericSize) -> Precision
         },
     }
 }
-fn calculation_h(p_calc_size: &Vector2<Precision>, h: &GenericSize) -> Precision {
+fn calculation_h(p_calc_size: Vector2<Precision>, h: &GenericSize) -> Precision {
     trace!("calculation_h");
 
     match h {
@@ -620,9 +607,9 @@ fn calculation_h(p_calc_size: &Vector2<Precision>, h: &GenericSize) -> Precision
 }
 
 fn calculation_align(
-    p_calc_size: &Vector2<Precision>,
-    p_calc_origin: &Translation3<Precision>,
-    p_calc_align: &Translation3<Precision>,
+    p_calc_size: Vector2<Precision>,
+    p_calc_origin: Translation3<Precision>,
+    p_calc_align: Translation3<Precision>,
     align_x: &GenericSize,
     align_y: &GenericSize,
 ) -> Translation3<Precision> {
@@ -632,7 +619,7 @@ fn calculation_align(
         * calculation_align_y(p_calc_size, p_calc_origin, p_calc_align, align_y)
 }
 fn calculation_align_x_logiclength(
-    p_calc_size: &Vector2<Precision>,
+    p_calc_size: Vector2<Precision>,
     l: &LogicLength,
 ) -> Translation3<Precision> {
     match l {
@@ -666,7 +653,7 @@ fn calculation_align_x_logiclength(
 }
 
 fn calculation_align_y_logiclength(
-    p_calc_size: &Vector2<Precision>,
+    p_calc_size: Vector2<Precision>,
     l: &LogicLength,
 ) -> Translation3<Precision> {
     match l {
@@ -700,9 +687,9 @@ fn calculation_align_y_logiclength(
 }
 
 fn calculation_align_x(
-    p_calc_size: &Vector2<Precision>,
-    p_calc_origin: &Translation3<Precision>,
-    p_calc_align: &Translation3<Precision>,
+    p_calc_size: Vector2<Precision>,
+    p_calc_origin: Translation3<Precision>,
+    p_calc_align: Translation3<Precision>,
     align_x: &GenericSize,
 ) -> Translation3<Precision> {
     trace!("calculation_align");
@@ -738,15 +725,15 @@ fn calculation_align_x(
             match parent_val {
                 ParentCalculated::Number(v) => Translation3::<Precision>::new(v, 0., 0.),
                 ParentCalculated::V2(_) => unimplemented!("unsupported type"),
-                ParentCalculated::T3(t) => *t,
+                ParentCalculated::T3(t) => t,
             }
         }
     }
 }
 fn calculation_align_y(
-    p_calc_size: &Vector2<Precision>,
-    p_calc_origin: &Translation3<Precision>,
-    p_calc_align: &Translation3<Precision>,
+    p_calc_size: Vector2<Precision>,
+    p_calc_origin: Translation3<Precision>,
+    p_calc_align: Translation3<Precision>,
     align_y: &GenericSize,
 ) -> Translation3<Precision> {
     trace!("calculation_align");
@@ -779,17 +766,17 @@ fn calculation_align_y(
             match parent_val {
                 ParentCalculated::Number(v) => Translation3::<Precision>::new(0., v, 0.),
                 ParentCalculated::V2(_) => unimplemented!("unsupported type"),
-                ParentCalculated::T3(t) => *t,
+                ParentCalculated::T3(t) => t,
             }
         }
     }
 }
 
 pub fn calculation_origin(
-    p_calc_size: &Vector2<Precision>,
-    p_calc_origin: &Translation3<Precision>,
-    p_calc_align: &Translation3<Precision>,
-    calc_size: &Vector2<Precision>,
+    p_calc_size: Vector2<Precision>,
+    p_calc_origin: Translation3<Precision>,
+    p_calc_align: Translation3<Precision>,
+    calc_size: Vector2<Precision>,
     origin_x: &GenericSize,
     origin_y: &GenericSize,
 ) -> Translation3<Precision> {
@@ -810,7 +797,7 @@ pub fn calculation_origin(
 }
 
 fn calculation_origin_x_logiclength(
-    calc_size: &Vector2<Precision>,
+    calc_size: Vector2<Precision>,
     l: &LogicLength,
 ) -> Translation3<Precision> {
     match l {
@@ -846,7 +833,7 @@ fn calculation_origin_x_logiclength(
 }
 
 fn calculation_origin_y_logiclength(
-    calc_size: &Vector2<Precision>,
+    calc_size: Vector2<Precision>,
     l: &LogicLength,
 ) -> Translation3<Precision> {
     match l {
@@ -882,10 +869,10 @@ fn calculation_origin_y_logiclength(
 }
 
 pub fn calculation_origin_x(
-    p_calc_size: &Vector2<Precision>,
-    p_calc_origin: &Translation3<Precision>,
-    p_calc_align: &Translation3<Precision>,
-    calc_size: &Vector2<Precision>,
+    p_calc_size: Vector2<Precision>,
+    p_calc_origin: Translation3<Precision>,
+    p_calc_align: Translation3<Precision>,
+    calc_size: Vector2<Precision>,
     origin_x: &GenericSize,
 ) -> Translation3<Precision> {
     trace!("calculation_origin");
@@ -918,16 +905,16 @@ pub fn calculation_origin_x(
                 ParentCalculated::Number(v) => Translation3::<Precision>::new(v, 0., 0.),
                 ParentCalculated::V2(_) => unimplemented!("unsupported type"),
                 //TODO check is only use t.x
-                ParentCalculated::T3(t) => *t,
+                ParentCalculated::T3(t) => t,
             }
         }
     }
 }
 pub fn calculation_origin_y(
-    p_calc_size: &Vector2<Precision>,
-    p_calc_origin: &Translation3<Precision>,
-    p_calc_align: &Translation3<Precision>,
-    calc_size: &Vector2<Precision>,
+    p_calc_size: Vector2<Precision>,
+    p_calc_origin: Translation3<Precision>,
+    p_calc_align: Translation3<Precision>,
+    calc_size: Vector2<Precision>,
     origin_y: &GenericSize,
 ) -> Translation3<Precision> {
     trace!("calculation_origin");
@@ -962,24 +949,24 @@ pub fn calculation_origin_y(
                 ParentCalculated::Number(v) => Translation3::<Precision>::new(0., v, 0.),
                 ParentCalculated::V2(_) => unimplemented!("unsupported type"),
                 //TODO check is only use t.y
-                ParentCalculated::T3(t) => *t,
+                ParentCalculated::T3(t) => t,
             }
         }
     }
 }
 
 #[derive(Clone, Debug, From)]
-enum ParentCalculated<'a> {
+enum ParentCalculated {
     Number(Precision),
-    V2(&'a Vector2<Precision>),
-    T3(&'a Translation3<Precision>),
+    V2(Vector2<Precision>),
+    T3(Translation3<Precision>),
 }
-fn get_parent_calculated<'a>(
+fn get_parent_calculated(
     type_name: &TypeName,
-    p_calc_size: &Vector2<Precision>,
-    p_calc_origin: &'a Translation3<Precision>,
-    p_calc_align: &'a Translation3<Precision>,
-) -> ParentCalculated<'a> {
+    p_calc_size: Vector2<Precision>,
+    p_calc_origin: Translation3<Precision>,
+    p_calc_align: Translation3<Precision>,
+) -> ParentCalculated {
     match type_name.as_str() {
         "CssWidth" => p_calc_size.x.into(),
         "CssHeight" => p_calc_size.y.into(),

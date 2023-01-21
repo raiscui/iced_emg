@@ -20,7 +20,7 @@ use std::collections::VecDeque;
 // ────────────────────────────────────────────────────────────────────────────────
 // use emg_debuggable::dbg4;
 pub use emg_common;
-use emg_common::{animation::Tick, vector, SmallVec};
+use emg_common::{animation::Tick, im::vector, SmallVec};
 use emg_common::{
     num_traits::{cast, AsPrimitive, NumCast},
     Precision,
@@ -333,7 +333,7 @@ impl<T> fmt::Debug for Debuggable<T> {
 mod tests {
     use std::{collections::VecDeque, time::Duration};
 
-    use emg_common::{animation::Tick, smallvec, vector};
+    use emg_common::{animation::Tick, im::vector, smallvec};
 
     use crate::{
         extract_initial_wait, interrupt,

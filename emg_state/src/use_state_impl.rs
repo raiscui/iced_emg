@@ -1,14 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-01-19 16:52:51
+ * @LastEditTime: 2023-01-21 17:21:47
  * @LastEditors: Rais
  * @Description:
  */
 
-pub use anchors::collections::ord_map::Dict;
+pub use anchors::collections::ord_map_methods::Dict;
 pub use anchors::dict;
-
 pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::Engine;
 pub use anchors::singlethread::Var;
@@ -1301,13 +1300,18 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
     /// Dict 增加/更新 K V 会增量执行 function f , 用于更新 out,
     /// Dict 移除 K V 也会执行 remove f,
     #[track_caller]
-    pub fn reduction<F: FnMut(&mut T, &K, &V) -> bool + 'static, T: Clone + PartialEq + 'static>(
+    pub fn reduction<
+        F: FnMut(&mut T, &K, &V) -> bool + 'static,
+        Fu: FnMut(&mut T, (&K, &V), &K, &V) -> bool + 'static,
+        T: Clone + PartialEq + 'static,
+    >(
         &self,
         init: T,
-        add_or_update: F,
+        add: F,
+        update: Fu,
         remove: F,
     ) -> StateAnchor<T> {
-        self.0.reduction(init, add_or_update, remove).into()
+        self.0.reduction(init, add, update, remove).into()
     }
 }
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 11:27:18
- * @LastEditTime: 2022-07-25 11:48:32
+ * @LastEditTime: 2023-01-20 16:51:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -137,7 +137,7 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_common::vector![emg_layout::ccsa::CCSS::new(
+            emg_common::im::vector![emg_layout::ccsa::CCSS::new(
                 emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                     emg_layout::ccsa::ScopeViewVariable::new(
                         ::std::option::Option::None,
@@ -167,7 +167,7 @@ mod code_test {
                 )],
                 ::std::option::Option::None
             )],
-            emg_common::vector![
+            emg_common::im::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
@@ -204,7 +204,7 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_common::vector![emg_layout::ccsa::CCSS::new(
+            emg_common::im::vector![emg_layout::ccsa::CCSS::new(
                 emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                     emg_layout::ccsa::ScopeViewVariable::new(
                         ::std::option::Option::None,
@@ -234,7 +234,7 @@ mod code_test {
                 )],
                 ::std::option::Option::None
             )],
-            emg_common::vector![
+            emg_common::im::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
@@ -271,7 +271,7 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_common::vector![
+            emg_common::im::vector![
                 emg_layout::ccsa::CCSS::new(
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
@@ -445,7 +445,7 @@ mod code_test {
                     ))
                 )
             ],
-            emg_common::vector![
+            emg_common::im::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
@@ -504,7 +504,7 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_common::vector![
+            emg_common::im::vector![
                 emg_layout::ccsa::CCSS::new(
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
@@ -572,7 +572,7 @@ mod code_test {
                     ::std::option::Option::None
                 )
             ],
-            emg_common::vector![emg_layout::ccsa::ScopeViewVariable::new(
+            emg_common::im::vector![emg_layout::ccsa::ScopeViewVariable::new(
                 ::std::option::Option::None,
                 ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
                     emg_common::IdStr::new("sub")
@@ -601,7 +601,7 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_common::vector![
+            emg_common::im::vector![
                 emg_layout::ccsa::CCSS::new(
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
@@ -689,7 +689,7 @@ mod code_test {
                     ::std::option::Option::None
                 )
             ],
-            emg_common::vector![
+            emg_common::im::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(
@@ -734,7 +734,7 @@ mod code_test {
         let parsed = token_2_code_test(name, input);
 
         let (res, selector) = (
-            emg_common::vector![
+            emg_common::im::vector![
                 emg_layout::ccsa::CCSS::new(
                     emg_layout::ccsa::CCSSSvvOpSvvExpr::new(
                         emg_layout::ccsa::ScopeViewVariable::new(
@@ -818,7 +818,7 @@ mod code_test {
                     ::std::option::Option::None
                 )
             ],
-            emg_common::vector![
+            emg_common::im::vector![
                 emg_layout::ccsa::ScopeViewVariable::new(
                     ::std::option::Option::None,
                     ::std::option::Option::Some(emg_layout::ccsa::NameCharsOrNumber::Id(

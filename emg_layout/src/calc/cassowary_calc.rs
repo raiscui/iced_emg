@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-15 14:46:40
- * @LastEditTime: 2023-01-14 01:14:45
+ * @LastEditTime: 2023-01-20 15:21:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 use std::rc::Rc;
 
 use cassowary::Expression;
-use emg_common::GenericSize;
+use emg_common::{num_traits::cast, GenericSize};
 use seed_styles as styles;
 use seed_styles::LogicLength;
 
@@ -22,7 +22,7 @@ pub fn cassowary_calculation_logiclength(
 ) -> Expression {
     match l {
         LogicLength::Simplex(els) => {
-            let v = els.value() as f64;
+            let v: f64 = cast(els.value()).unwrap();
             match els.unit {
                 styles::Unit::Px | styles::Unit::Empty => v.into(),
                 styles::Unit::Rem

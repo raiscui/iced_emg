@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-01-15 23:09:24
+ * @LastEditTime: 2023-01-20 13:58:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ use crate::{
 };
 use emg::{edge_index_no_source, node_index, Edge, EdgeCollect, EdgeIndex, NodeIndex};
 use emg_common::GenericSize;
-use emg_common::{vector, IdStr};
+use emg_common::{im::vector, IdStr};
 use emg_hasher::CustomHasher;
 // use emg_common::{GenericSize, Vector};
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};

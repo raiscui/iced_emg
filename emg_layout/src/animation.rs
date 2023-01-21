@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-01-14 01:01:01
+ * @LastEditTime: 2023-01-20 14:24:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 mod define;
 mod func;
 
-use emg_common::{vector, Precision, SmallVec, Vector};
+use emg_common::{im::vector, Precision, SmallVec, Vector};
 use emg_state::{
     state_store, topo, use_state, use_state_impl::TopoKey, Anchor, CloneStateAnchor, CloneStateVar,
     StateAnchor, StateMultiAnchor, StateVar,
@@ -706,7 +706,7 @@ mod tests {
 
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
     use emg_animation::{interrupt, models::Property, opacity, style, to};
-    use emg_common::{animation::Tick, into_smvec, smallvec, vector, IdStr};
+    use emg_common::{animation::Tick, im::vector, into_smvec, smallvec, IdStr};
     use emg_state::{
         state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
     };

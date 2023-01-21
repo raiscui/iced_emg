@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2023-01-14 19:20:17
+ * @LastEditTime: 2023-01-20 15:21:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,7 +17,7 @@ use emg_animation::{
     opacity, replace, style, to, AmState,
 };
 use emg_common::{
-    animation::Tick, into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector,
+    animation::Tick, im::vector, into_smvec, into_vector, smallvec, IdStr, SmallVec, Vector,
 };
 use emg_layout::{global_clock, AnimationE};
 use emg_state::{topo, CloneStateVar};

@@ -10,7 +10,7 @@ pub use emg::EdgeIndex;
 pub use emg::Graph;
 pub use emg::NodeIndex;
 use emg::{edge_index_no_source, Node, Outgoing};
-use emg_common::vector;
+use emg_common::im::vector;
 use emg_common::IdStr;
 use emg_layout::{EPath, EmgEdgeItem, GraphEdgesDict};
 use emg_shaping::ShapeOfUse;

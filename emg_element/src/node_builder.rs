@@ -848,7 +848,7 @@ where
 #[cfg(all(test, target_arch = "wasm32"))]
 #[allow(unused)]
 mod node_builder_test {
-    use emg_common::vector;
+    use emg_common::im::vector;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;

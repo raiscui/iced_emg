@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2023-01-04 19:18:59
+ * @LastEditTime: 2023-01-20 21:37:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -374,13 +374,16 @@ where
             "AnimationE  Shaping EmgEdgeItem snapshot: \n{:#?}",
             illicit::Snapshot::get()
         );
-        if let Ok(path) = illicit::get::<EPath<Ix>>() {
-            debug!("effecting_edge_path in shaping");
-            let p = (*path).clone();
-            self.effecting_edge_path(&*edge, p);
-        } else {
-            panic!(" cannot get illicit env EPath for animationE::effecting_edge_path");
-        }
+        illicit::get::<EPath<Ix>>().map_or_else(
+            |e| {
+                panic!(" cannot get illicit env EPath for animationE::effecting_edge_path,e:{e:?}");
+            },
+            |path| {
+                debug!("effecting_edge_path in shaping");
+                let p = (*path).clone();
+                self.effecting_edge_path(&*edge, p);
+            },
+        );
     }
 }
 
@@ -390,7 +393,7 @@ mod refresh_test {
 
     use emg::{edge_index_no_source, node_index};
     use emg_animation::to;
-    use emg_common::{into_smvec, vector, IdStr};
+    use emg_common::{im::vector, into_smvec, IdStr};
     use emg_shaping::ShapeOfUse;
     use emg_state::{use_state, CloneStateVar, Dict, StateVar};
     use seed_styles as styles;

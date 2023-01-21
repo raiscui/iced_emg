@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-01-19 17:10:16
+ * @LastEditTime: 2023-01-20 16:50:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -1783,7 +1783,7 @@ impl ToTokens for VFLStatement {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ccsss = &self.ccsss;
         let selectors = &self.selectors;
-        quote! { (emg_bind::common::vector![ #( #ccsss ), * ],emg_bind::common::vector![ #( #selectors ), * ]) }
+        quote! { (emg_bind::common::im::vector![ #( #ccsss ), * ],emg_bind::common::im::vector![ #( #selectors ), * ]) }
             .to_tokens(tokens);
     }
 }

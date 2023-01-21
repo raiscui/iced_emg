@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-01-11 17:28:40
+ * @LastEditTime: 2023-01-20 13:58:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 use std::rc::Rc;
 
 use emg::{edge_index_no_source, NodeIndex, Outgoing};
-use emg_common::{vector, IdStr, Pos, Vector};
+use emg_common::{im::vector, IdStr, Pos, Vector};
 use emg_layout::EPath;
 use emg_native::{EventWithFlagType, PaintCtx, Widget};
 use emg_state::{Anchor, AnchorMultiAnchor, Dict, StateAnchor};

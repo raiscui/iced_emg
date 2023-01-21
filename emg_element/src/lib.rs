@@ -22,6 +22,7 @@ pub use g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn};
 pub use graph_program::GraphProgram;
 pub use node_builder::{EventCallback, EventMessage, EventNode, IntoOptionMs, NodeBuilderWidget};
 pub use widget::Widget;
+pub mod graph_edit;
 
 // ────────────────────────────────────────────────────────────────────────────────
 #[cfg(all(feature = "gpu"))]

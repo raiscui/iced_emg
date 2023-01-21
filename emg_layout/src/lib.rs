@@ -37,8 +37,13 @@ use derive_more::Display;
 use derive_more::From;
 use derive_more::Into;
 // use derive_more::TryInto;
-use emg::{Edge, EdgeIndex, NodeIndex};
-use emg_common::na::{Affine3, Matrix4, Rotation3, Translation3, Vector2, Vector3};
+use emg::{Edge, NodeIndex};
+
+use emg_common::{
+    im::vector,
+    na::{Affine3, Matrix4, Rotation3, Translation3, Vector2, Vector3},
+    num_traits::cast,
+};
 use emg_common::{
     im::{
         self,
@@ -46,7 +51,7 @@ use emg_common::{
         HashMap, HashSet, OrdSet,
     },
     num_traits::AsPrimitive,
-    vector, GenericSize, IdStr, LayoutOverride, NotNan, RectLTRB, TypeName, VectorDisp,
+    GenericSize, IdStr, LayoutOverride, NotNan, RectLTRB, TypeName, VectorDisp,
 };
 use emg_common::{Precision, Vector};
 use emg_shaping::{EqShapingWithDebug, Shaping};
@@ -75,10 +80,10 @@ pub mod add_values;
 pub mod animation;
 mod calc;
 mod impl_refresh;
-pub use animation::AnimationE;
-pub use emg_common;
-
 use crate::ccsa::svv_process::{eq_opt_sw_to_weighted_relation, svv_op_svvs_to_expr};
+pub use animation::AnimationE;
+pub use emg::{node_index, EdgeIndex};
+pub use emg_common;
 
 pub mod ccsa;
 
@@ -398,8 +403,6 @@ pub struct EdgeCtx {
     pub layout_end: StateAnchor<LayoutEndType>,
     pub world: StateAnchor<Translation3<Precision>>,
     pub children_layout_override: StateAnchor<Option<LayoutOverride>>,
-    //TODO temp keep here for future use
-    // _phantom_data: std::marker::PhantomData<RenderCtx>,
 }
 
 impl EdgeCtx {
@@ -630,6 +633,59 @@ where
 // pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(TinyVec<[EdgeIndex<Ix>;2]>);
 //TODO  loop check
 pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(Vector<EdgeIndex<Ix>>);
+
+#[macro_export]
+macro_rules! epath {
+
+
+
+    (@end $($e:expr),+ ; @source $s:expr; $t:expr ) => {
+        // println!("{}-{}|end",$s,$t);
+        $crate::EPath::new($crate::emg_common::im::vector![
+            $($e),+,$crate::EdgeIndex::new($crate::node_index($s), $crate::node_index($t))
+        ])
+
+    };
+
+    (@end $($e:expr),+ ; @source $s:expr; $t:expr => $($y:expr)=>+) => {
+
+
+        epath![@end $($e),+,$crate::EdgeIndex::new($crate::node_index($s), $crate::node_index($t)) ; @source $t; $($y)=>+]
+    };
+
+    ( $x:expr => $($y:expr)=>+) => {
+            // println!("start-{}",$x);
+
+        epath![@end $crate::EdgeIndex::new(None, $crate::node_index($x)) ; @source $x; $($y)=>+]
+    };
+    ( $root:expr ) => {
+        $crate::EPath::new($crate::emg_common::im::vector![
+            $crate::EdgeIndex::new(None, $crate::node_index($root))
+        ])
+    };
+
+}
+#[cfg(test)]
+mod test_epath {
+    use emg_common::{im::vector, IdStr};
+
+    use crate::EPath;
+
+    #[test]
+    fn test() {
+        let f = vector![1, 2];
+        let a: EPath<IdStr> = epath!["a"=>"b"=>"c"=>"d"=>"e"];
+        println!("{}", a);
+        let a: EPath<IdStr> = epath!["a"=>"b"=>"c"=>"d"];
+        println!("{}", a);
+        let a: EPath<IdStr> = epath!["a"=>"b"=>"c"];
+        println!("{}", a);
+        let a: EPath<IdStr> = epath!["a"=>"b"];
+        println!("{}", a);
+        let a: EPath<IdStr> = epath!["a"];
+        println!("{}", a);
+    }
+}
 
 impl<Ix: Clone + Hash + Eq + PartialEq + Default> std::ops::Deref for EPath<Ix> {
     type Target = Vector<EdgeIndex<Ix>>;
@@ -1311,7 +1367,8 @@ where
                             warn!("[constant_sets_sa] ccss_list:\n{}", VectorDisp(ccss_list.clone()));
 
                             let (constraint_sets_end,children_vars) = ccss_list.iter()
-                            .fold((OrdSet::<Constraint>::new(), HashSet::<Variable, BuildHasherDefault<CustomHasher>>::with_hasher(BuildHasherDefault::<CustomHasher>::default())),
+                            // .fold((OrdSet::<Constraint>::new(), HashSet::<Variable, BuildHasherDefault<CustomHasher>>::with_hasher(BuildHasherDefault::<CustomHasher>::default())),
+                            .fold((OrdSet::<Constraint>::new(), HashSet::<Variable, BuildHasherDefault<CustomHasher>>::default() ),
                             |(  constraint_sets,mut children_vars0),CCSS{ svv_op_svvs,  eq_exprs, opt_sw }|{
 
                                 if let (left_constraints,Some((left_expr,left_child_vars))) = svv_op_svvs_to_expr(svv_op_svvs,children_cass_maps,current_cassowary_inherited_generals){
@@ -1547,7 +1604,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                     ordmap::DiffItem::Add(&var, &v) => {
                                         warn!("path:{} , cass_solver add v:{}",&self_path6,&v);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
-                                        cass_solver.suggest_value(var, v as f64).unwrap();
+                                        cass_solver.suggest_value(var, v ).unwrap();
                                         general_top_vals_did_update = true;
 
                                     },
@@ -1555,7 +1612,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                         //TODO check, remove .
                                         assert_eq!(old_var,var);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
-                                        cass_solver.suggest_value(var, v as f64).unwrap();
+                                        cass_solver.suggest_value(var, v).unwrap();
                                         general_top_vals_did_update = true;
 
                                     },
@@ -1579,7 +1636,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                     ordmap::DiffItem::Add(&var, &v) => {
                                         warn!("path:{} , cass_solver add v:{}",&self_path6,&v);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
-                                        cass_solver.suggest_value(var, v as f64).unwrap();
+                                        cass_solver.suggest_value(var, v ).unwrap();
                                         general_inherited_vals_did_update = true;
 
                                     },
@@ -1587,7 +1644,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                         //TODO check, remove .
                                         assert_eq!(old_var,var);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
-                                        cass_solver.suggest_value(var, v as f64).unwrap();
+                                        cass_solver.suggest_value(var, v).unwrap();
                                         general_inherited_vals_did_update = true;
 
                                     },
@@ -1673,7 +1730,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                         if !changed_vars.is_empty() {
                             // warn!("[calculated_vars] changed_vars======== \n{:?}",&changed_vars);
 
-                            //TODO remove if release
+                            //TODO remove get id if release
                             for (var,v) in changed_vars.iter() {
                                 let id_prop_str =   children_cass_maps.iter().find_map(|(id,(cassowary_map ,..))|{
                                      cassowary_map.prop(var).map(|prop|{
@@ -1690,7 +1747,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                 warn!("[calculated_vars] changed  prop:{:?}  v:{}",&id_prop_str,&v);
 
 
-                                out.insert(*var,(NotNan::new(v.into_inner() as Precision).unwrap(),id_prop_str));
+                                out.insert(*var,(NotNan::new(cast(v.into_inner()).unwrap()).unwrap(),id_prop_str));
 
 
                             }
@@ -2123,7 +2180,7 @@ mod tests {
     extern crate test;
 
     use emg::{edge_index, edge_index_no_source, node_index};
-    use emg_common::vector;
+    use emg_common::{im::vector, num_traits::ToPrimitive};
     use emg_common::{parent, IdStr};
     use emg_shaping::ShapeOfUse;
     use emg_state::StateVar;
@@ -2134,6 +2191,27 @@ mod tests {
     use test::{black_box, Bencher};
     use tracing_flame::FlameLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+
+    use emg_common::num_traits::cast;
+
+    #[test]
+    fn f64_to_f32() {
+        // let val = 1452089033.7674935_f64;
+        let val = 12089033.7674935_f64;
+        let x: f32 = cast(val).unwrap();
+        println!("64- {val:?}");
+        println!("32- {x:?}");
+
+        let x: f32 = val.to_f32().unwrap();
+        println!("64- {val:?}");
+        println!("32- {x:?}");
+
+        let x: f32 = (f64::trunc(val * 100.0f64) / 100.0f64) as f32;
+        println!("64- {val:?}");
+        println!("32- {x:?}");
+
+        // let after = f64::trunc(before  * 100.0) / 100.0; // or f32::trunc
+    }
 
     fn setup_global_subscriber() -> impl Drop {
         std::env::set_var("RUST_LOG", "trace");
@@ -3107,14 +3185,11 @@ mod tests {
             trace!("---e1 {}", &e1);
 
             assert_eq!(
-                e1.edge_data(&EPath(vector![
-                    edge_index_no_source("root"),
-                    edge_index("root", "1")
-                ]))
-                .unwrap()
-                .calculated
-                .coordinates_trans
-                .get(),
+                e1.edge_data(&epath!("root"=>"1"))
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
                 Translation3::<Precision>::new(50.0, 50.0, 0.)
             );
 
@@ -3122,14 +3197,11 @@ mod tests {
             trace!("---new root2:e1 {}", &e1);
 
             assert_eq!(
-                e1.edge_data(&EPath(vector![
-                    edge_index_no_source("root2"),
-                    edge_index("root2", "1")
-                ]))
-                .unwrap()
-                .calculated
-                .coordinates_trans
-                .get(),
+                e1.edge_data(&epath!("root2"=>"1"))
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
                 Translation3::<Precision>::new(100., 100., 0.)
             );
             info!("..=========================================================");
@@ -3140,15 +3212,11 @@ mod tests {
             //local
             assert_eq!(e2.id.get(), edge_index("1", "2"));
             assert_eq!(
-                e2.edge_data(&EPath(vector![
-                    edge_index_no_source("root2"),
-                    edge_index("root2", "1"),
-                    edge_index("1", "2"),
-                ]))
-                .unwrap()
-                .calculated
-                .coordinates_trans
-                .get(),
+                e2.edge_data(&epath!("root2"=>"1"=>"2"))
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
                 Translation3::<Precision>::new(10.0, 00.0, 0.)
             );
             info!("================= e_dict_sv: {:#?}", &e_dict_sv);
@@ -3160,14 +3228,11 @@ mod tests {
             e2_source.set(Some(node_index("root")));
             assert_eq!(e2.id.get(), edge_index("root", "2"));
             assert_eq!(
-                e2.edge_data(&EPath(vector![
-                    edge_index_no_source("root"),
-                    edge_index("root", "2"),
-                ]))
-                .unwrap()
-                .calculated
-                .coordinates_trans
-                .get(),
+                e2.edge_data(&epath!("root"=>"2"))
+                    .unwrap()
+                    .calculated
+                    .coordinates_trans
+                    .get(),
                 Translation3::<Precision>::new(100.0, 0.0, 0.)
             );
             trace!("re new root:e2 {}", &e2);

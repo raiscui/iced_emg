@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-01-13 12:00:20
+ * @LastEditTime: 2023-01-20 21:25:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,11 @@ use std::{cell::RefCell, rc::Rc};
 // use cfg_if::cfg_if;
 use either::Either::{self, Left, Right};
 use emg::{EdgeCollect, EdgeIndex, Graph};
-use emg_common::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
+use emg_common::{
+    im::{ordmap::OrdMapPool, OrdSet},
+    im::{vector, OrdMap},
+    IdStr, Vector,
+};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_shaping::ShapingUse;
 use emg_state::{
@@ -110,7 +114,7 @@ where
                                         let vec_e_path_clone = vec_e_path.clone();
                                         vec_e_path_clone
                                             .into_iter()
-                                            .map(|(ep, v)| (ep.link_ref(nix2.clone().into()), v))
+                                            .map(|(ep, _)| (ep.link(nix2.clone().into()), ()))
                                             .collect::<PathDict<IdStr>>()
                                     })
                                     .get_anchor(),
@@ -129,7 +133,7 @@ where
                         // }
                         // ─────────────────────────────
 
-                        Anchor::constant(Dict::<EPath<IdStr>, _>::unit(
+                        Anchor::constant(PathDict::<IdStr>::unit(
                             EPath::new(vector![no_source_self_eix]),
                             (),
                         ))

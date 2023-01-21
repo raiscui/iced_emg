@@ -160,7 +160,7 @@ impl Sandbox for Counter {
                     info!(" on [debug_layer]----click cb ----");
                     Message::Empty
                 },
-                @=a1 @E=[
+                @E=[
                         {hgap==120,my_other_gap==28},
                         {@h |-(#a2)-|   },
                         origin_x(pc(0)),align_x(pc(0)),
@@ -169,7 +169,7 @@ impl Sandbox for Counter {
                         b_width(px(5)),
                         b_color(rgb(1,0,0))
                     ]
-                Layer [
+                @=a1 Layer [
                     @=a2 @E=[
                         // origin_x(px( 100)),
                         // align_x(px(100)),

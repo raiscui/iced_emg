@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2023-01-18 17:28:27
+ * @LastEditTime: 2023-01-20 15:00:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -343,7 +343,7 @@ impl GeneralVar {
     }
 }
 
-static VIRTUAL_PROPS: [&'static str; 6] = ["width", "height", "top", "left", "bottom", "right"];
+static VIRTUAL_PROPS: [&str; 6] = ["width", "height", "top", "left", "bottom", "right"];
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Virtual(pub IdStr, pub Vec<GeneralVar>);
 
@@ -500,10 +500,10 @@ impl CassowaryGeneralMap {
     }
 
     pub fn insert_with_suggest(&mut self, id: IdStr, v: f64) {
-        self.insert_with_var_and_suggest_opt(id, None, None, Some(v))
+        self.insert_with_var_and_suggest_opt(id, None, None, Some(v));
     }
     pub fn insert_with_var(&mut self, id: IdStr, top_var: Variable, var: Variable) {
-        self.insert_with_var_and_suggest_opt(id, Some(top_var), Some(var), None)
+        self.insert_with_var_and_suggest_opt(id, Some(top_var), Some(var), None);
     }
 
     pub fn insert_with_var_and_suggest(
@@ -513,7 +513,7 @@ impl CassowaryGeneralMap {
         var: Variable,
         v: f64,
     ) {
-        self.insert_with_var_and_suggest_opt(id, Some(top_var), Some(var), Some(v))
+        self.insert_with_var_and_suggest_opt(id, Some(top_var), Some(var), Some(v));
     }
 
     fn insert_with_var_and_suggest_opt(
@@ -687,6 +687,7 @@ impl CassowaryMap {
     }
 
     #[must_use]
+    #[allow(clippy::similar_names)]
     pub fn new() -> Self {
         let mut map = HashMap::<IdStr, Variable, BuildHasherDefault<CustomHasher>>::default();
         let mut v_k = HashMap::<Variable, IdStr, BuildHasherDefault<CustomHasher>>::default();

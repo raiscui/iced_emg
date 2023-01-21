@@ -25,8 +25,9 @@ pub use better_any;
 pub use compact_str as id_str;
 pub use compact_str::CompactString as IdStr;
 pub use dyn_partial_eq;
-pub use im::{vector, Vector};
-pub use im_rc as im;
+#[macro_use(vector)]
+pub extern crate im_rc as im;
+pub use im::Vector;
 pub use layout::*;
 pub use measures::*;
 pub use nalgebra as na;
