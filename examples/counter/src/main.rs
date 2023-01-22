@@ -24,6 +24,7 @@ fn tracing_init() -> Result<(), Report> {
         .with_targets(true)
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, _cx| {
+                tracing::debug!(target: "tracing", "metadata.level() = {:?}, metadata.is_span() = {:?}, metadata.name() = {:?}", metadata.level(), metadata.is_span(), metadata.name());
                 // if metadata.level() <= &tracing::Level::DEBUG{
                 //     // If this *is* "interesting_span", make sure to enable it.
                 //     if metadata.is_span() && metadata.name() == "LayoutOverride" {
@@ -45,7 +46,7 @@ fn tracing_init() -> Result<(), Report> {
                     && !metadata.target().contains("emg_state")
                     && !metadata.target().contains("cassowary")
                     && !metadata.target().contains("wgpu")
-                    && metadata.level() <= &tracing::Level::INFO
+                    && metadata.level() <= &tracing::Level::INFO // global tracing level
                 // && !metadata.target().contains("winit event")
                 // && !metadata.fields().field("event").map(|x|x.to_string())
                 // && !metadata.target().contains("winit event: DeviceEvent")
@@ -98,7 +99,6 @@ fn tracing_init() -> Result<(), Report> {
     tracing_subscriber::registry().with(out_layer).init();
     // ─────────────────────────────────────────────────────────────────────────────
 
-    // tracing_subscriber::Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
     color_eyre::install()
 }
 

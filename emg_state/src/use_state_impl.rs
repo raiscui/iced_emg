@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-01-21 17:21:47
+ * @LastEditTime: 2023-01-21 22:35:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,7 +16,7 @@ use anchors::{
     singlethread::MultiAnchor,
 };
 use emg_common::{TypeCheck, TypeName};
-use tracing::{debug, warn};
+use tracing::{debug, debug_span, warn};
 
 use std::{hash::BuildHasherDefault, panic::Location};
 // use im::HashMap;
@@ -1184,6 +1184,7 @@ impl<T> Eq for StateAnchor<T> {}
 
 impl<T> PartialEq for StateAnchor<T> {
     fn eq(&self, other: &Self) -> bool {
+        let _span = debug_span!("PartialEq for StateAnchor").entered();
         self.0 == other.0
     }
 }

@@ -60,7 +60,6 @@ use emg_state::{
     Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar,
 };
 use float_cmp::approx_eq;
-pub use seed_styles as styles;
 use styles::{px, s, CssTransform, CssValueTrait, Style, UpdateStyle};
 // use styles::Percent;
 // use styles::ExactLength;
@@ -70,29 +69,34 @@ use styles::{CssHeightTrait, CssTransformTrait, CssWidthTrait};
 //
 // ────────────────────────────────────────────────────────────────────────────────
 
+use crate::ccsa::svv_process::{eq_opt_sw_to_weighted_relation, svv_op_svvs_to_expr};
 use indented::indented;
 use tracing::{
     debug, debug_span, info, instrument, span, trace, trace_span, warn, warn_span, Level,
 };
-// ────────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+mod parser;
+mod calc;
+mod epath;
+mod impl_refresh;
+// ────────────────────────────────────────────────────────────────────────────────
+pub use epath::EPath;
+pub use seed_styles as styles;
 pub mod add_values;
 pub mod animation;
-mod calc;
-mod impl_refresh;
-use crate::ccsa::svv_process::{eq_opt_sw_to_weighted_relation, svv_op_svvs_to_expr};
+
 pub use animation::AnimationE;
 pub use emg::{node_index, EdgeIndex};
 pub use emg_common;
 
 pub mod ccsa;
+pub type LayoutEndType = (Translation3<Precision>, Precision, Precision);
 
 // ────────────────────────────────────────────────────────────────────────────────
 
 static CURRENT_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 1.5;
 static CHILD_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 0.9;
-
-pub type LayoutEndType = (Translation3<Precision>, Precision, Precision);
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -106,6 +110,8 @@ thread_local! {
 thread_local! {
     static G_AM_RUNING: StateAnchor<bool> = global_anima_running_build();
 }
+// ─────────────────────────────────────────────────────────────────────────────
+
 pub fn global_anima_running_add(running: &StateAnchor<bool>) {
     G_ANIMA_RUNNING_STORE.with(|sv| sv.update(|v| v.push_back(running.get_anchor())));
 }
@@ -628,135 +634,6 @@ where
     }
 }
 
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug, Default)]
-// pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(TinyVec<[EdgeIndex<Ix>;2]>);
-//TODO  loop check
-pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(Vector<EdgeIndex<Ix>>);
-
-#[macro_export]
-macro_rules! epath {
-
-
-
-    (@end $($e:expr),+ ; @source $s:expr; $t:expr ) => {
-        // println!("{}-{}|end",$s,$t);
-        $crate::EPath::new($crate::emg_common::im::vector![
-            $($e),+,$crate::EdgeIndex::new($crate::node_index($s), $crate::node_index($t))
-        ])
-
-    };
-
-    (@end $($e:expr),+ ; @source $s:expr; $t:expr => $($y:expr)=>+) => {
-
-
-        epath![@end $($e),+,$crate::EdgeIndex::new($crate::node_index($s), $crate::node_index($t)) ; @source $t; $($y)=>+]
-    };
-
-    ( $x:expr => $($y:expr)=>+) => {
-            // println!("start-{}",$x);
-
-        epath![@end $crate::EdgeIndex::new(None, $crate::node_index($x)) ; @source $x; $($y)=>+]
-    };
-    ( $root:expr ) => {
-        $crate::EPath::new($crate::emg_common::im::vector![
-            $crate::EdgeIndex::new(None, $crate::node_index($root))
-        ])
-    };
-
-}
-#[cfg(test)]
-mod test_epath {
-    use emg_common::{im::vector, IdStr};
-
-    use crate::EPath;
-
-    #[test]
-    fn test() {
-        let f = vector![1, 2];
-        let a: EPath<IdStr> = epath!["a"=>"b"=>"c"=>"d"=>"e"];
-        println!("{}", a);
-        let a: EPath<IdStr> = epath!["a"=>"b"=>"c"=>"d"];
-        println!("{}", a);
-        let a: EPath<IdStr> = epath!["a"=>"b"=>"c"];
-        println!("{}", a);
-        let a: EPath<IdStr> = epath!["a"=>"b"];
-        println!("{}", a);
-        let a: EPath<IdStr> = epath!["a"];
-        println!("{}", a);
-    }
-}
-
-impl<Ix: Clone + Hash + Eq + PartialEq + Default> std::ops::Deref for EPath<Ix> {
-    type Target = Vector<EdgeIndex<Ix>>;
-    // type Target = TinyVec<[EdgeIndex<Ix>;2]>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl<Ix: Clone + Hash + Eq + PartialEq + Default> std::ops::DerefMut for EPath<Ix> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
-    #[must_use]
-    pub const fn new(vec: Vector<EdgeIndex<Ix>>) -> Self {
-        Self(vec)
-    }
-
-    #[must_use]
-    pub fn last_target(&self) -> Option<&NodeIndex<Ix>> {
-        self.0.last().and_then(|e| e.target_nix().as_ref())
-    }
-    #[must_use]
-    ///除了 `other_added_tail` 的最后一个 nix, 其他全部匹配
-    pub fn except_tail_match(&self, other_added_tail: &Self) -> bool {
-        if self.0.len() - 1 != other_added_tail.0.len() {
-            return false;
-        }
-        for i in 0..self.0.len() - 1 {
-            if self.0[i] != other_added_tail.0[i] {
-                return false;
-            }
-        }
-        true
-    }
-
-    #[must_use]
-    pub fn link_ref(&self, target_nix: NodeIndex<Ix>) -> Self {
-        let last = self.last().and_then(|e| e.target_nix().as_ref()).cloned();
-        let mut new_e = self.clone();
-        new_e.push_back(EdgeIndex::new(last, target_nix));
-        new_e
-    }
-    #[must_use]
-    pub fn link(mut self, target_nix: NodeIndex<Ix>) -> Self {
-        let last = self.last().and_then(|e| e.target_nix().as_ref()).cloned();
-        self.push_back(EdgeIndex::new(last, target_nix));
-        self
-    }
-}
-
-impl<Ix> std::fmt::Display for EPath<Ix>
-where
-    Ix: Clone + Hash + Eq + PartialEq + Default + std::fmt::Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let sv: String = self
-            .0
-            .iter()
-            //TODO  textwrap
-            .map(|v| format!("{v}"))
-            .intersperse(String::from(","))
-            .fold(String::default(), |acc, v| format!("{acc}{v}"));
-
-        write!(f, "path [{}]", &sv)
-    }
-}
-
 pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
 // use ahash::AHasher as CustomHasher;
 // use rustc_hash::FxHasher as CustomHasher;
@@ -1182,7 +1059,7 @@ where
 
                             //TODO node 可以自带 self nix ,下游不必每个子节点都重算
 
-                            p_ep_add_self.0.push_back(eid_clone.clone());
+                            p_ep_add_self.push_back(eid_clone.clone());
                             (p_ep_add_self, p_ei_node_v.clone())
                         })
                         .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
