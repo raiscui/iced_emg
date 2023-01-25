@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:01:09
- * @LastEditTime: 2023-01-25 10:25:04
+ * @LastEditTime: 2023-01-25 20:42:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -47,7 +47,6 @@ where
     // incoming_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
     // outgoing_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
     paths_view_gel: StateAnchor<Dict<EPath<Ix>, GelType>>,
-    paths_view_gel_sa: StateAnchor<Dict<EPath<Ix>, StateAnchor<GelType>>>,
 }
 
 impl<NItem: Display, GelType: Display, Ix: Display> Display for EmgNodeItem<NItem, GelType, Ix>
@@ -84,7 +83,7 @@ where
             .field("gel_sa", &self.gel_sa)
             .field("paths_sa", &self.paths_sa)
             .field("paths_view_gel", &self.paths_view_gel)
-            .field("paths_view_gel_sa", &self.paths_view_gel_sa)
+            // .field("paths_view_gel_sa", &self.paths_view_gel_sa)
             .finish()
     }
 }
@@ -99,7 +98,6 @@ where
         Self {
             gel_sa: self.gel_sa.clone(),
             paths_sa: self.paths_sa.clone(),
-            paths_view_gel_sa: self.paths_view_gel_sa.clone(),
             paths_view_gel: self.paths_view_gel.clone(),
         }
     }

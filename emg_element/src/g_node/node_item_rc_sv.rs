@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-01-25 19:57:13
+ * @LastEditTime: 2023-01-25 22:00:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -171,51 +171,50 @@ where
         let children_ord_map_pool_0: OrdMapPool<EPath<IdStr>, StateAnchor<GelType<Message>>> =
             OrdMapPool::new(POOL_SIZE);
 
-        let children_view_gel_sv_sa: StateAnchor<
-            Dict<EPath<IdStr>, StateAnchor<GelType<Message>>>,
-        > = outgoing_eix_sa.then(move |outs| {
-            let children_ord_map_pool = children_ord_map_pool_0.clone();
-            outs.iter()
-                .filter_map(|out_eix| out_eix.target_nix().as_ref())
-                .filter_map(|out_target_nix| {
-                    graph_rc3
-                        .borrow()
-                        .get_node_use_ix(out_target_nix.index())
-                        .cloned()
-                })
-                .map(|child_node| {
-                    let nix4 = nix3.clone();
+        let children_view_gel_sa: StateAnchor<Dict<EPath<IdStr>, GelType<Message>>> =
+            outgoing_eix_sa.then(move |outs| {
+                let children_ord_map_pool = children_ord_map_pool_0.clone();
+                outs.iter()
+                    .filter_map(|out_eix| out_eix.target_nix().as_ref())
+                    .filter_map(|out_target_nix| {
+                        graph_rc3
+                            .borrow()
+                            .get_node_use_ix(out_target_nix.index())
+                            .cloned()
+                    })
+                    .map(|child_node| {
+                        let nix4 = nix3.clone();
 
-                    child_node
-                        .item
-                        .paths_view_gel_sa
-                        .filter(move |path, _gel| {
-                            path.last()
+                        child_node
+                            .item
+                            .paths_view_gel
+                            .filter(move |path, _gel| {
+                                path.last()
                                     .and_then(|p| p.source_nix().as_ref())
                                     .map(emg::NodeIndex::index)
                                     .unwrap()//child source nix
                                     == &nix4
-                        })
-                        .get_anchor()
-                })
-                // .map(|x| x.get_anchor())
-                .collect::<Anchor<Vector<_>>>() //each edge-child vec --<  diff paths dict
-                // .map(|v: &Vector<_>| Dict::unions(v.clone()))
-                .map(move |vd: &Vector<_>| {
-                    // cfg_if!{
-                    //     if #[cfg(feature = "pool")]{
-                    //         vd.clone().into_iter().fold(
-                    //             Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::with_pool(&children_ord_map_pool),
-                    //             Dict::union,
-                    //         )
+                            })
+                            .get_anchor()
+                    })
+                    // .map(|x| x.get_anchor())
+                    .collect::<Anchor<Vector<_>>>() //each edge-child vec --<  diff paths dict
+                    // .map(|v: &Vector<_>| Dict::unions(v.clone()))
+                    .map(move |vd: &Vector<_>| {
+                        // cfg_if!{
+                        //     if #[cfg(feature = "pool")]{
+                        //         vd.clone().into_iter().fold(
+                        //             Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::with_pool(&children_ord_map_pool),
+                        //             Dict::union,
+                        //         )
 
-                    //     }else{
-                    //         Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::unions(vd.clone())
-                    //     }
-                    // }
-                    Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::unions(vd.clone())
-                })
-        });
+                        //     }else{
+                        //         Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::unions(vd.clone())
+                        //     }
+                        // }
+                        Dict::<EPath<IdStr>, GelType<Message>>::unions(vd.clone())
+                    })
+            });
         // let children_count = children_view_gel_sa.map(Dict::len).get();
         // warn!("children count:{}", children_count);
 
@@ -235,94 +234,96 @@ where
             let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 
             let this_path_children_sa: StateAnchor<Dict<EdgeIndex<IdStr>, GElEither<Message>>> =
-                children_view_gel_sv_sa
-                    .filter_map(move |k_child_path, v_child_gel_sv_sa| {
+                children_view_gel_sa
+                    .filter_map(move |k_child_path, v_child_gel| {
                         let _span = info_span!("[this_path_children_sa] recalculation,( in [Dict] children_view_gel_sv_sa.filter_map => )",current_path = %current_path_clone2).entered();
 
                         let mut child_path_clone = k_child_path.clone();
                         //TODO check [current_child_ei] 唯一
-                        let current_child_ei = child_path_clone.pop_back().unwrap();
-                        let child_path_clone_popped = child_path_clone;
-                        if child_path_clone_popped == current_path_clone2 {
-                            //child path 匹配当前 path
-                            let current_path3 = current_path_clone2.clone();
-                            //
-                            let graph_rc5 = graph_rc4.clone();
-                            let v_child_gel_sa_clone = v_child_gel_sv_sa.clone();
-                            let gel_l_r: CurrentPathChildrenEixGElSA<Message> = v_child_gel_sv_sa
-                                // NOTE handle note_ref
-                                .then(move |gel| {
+                        let current_child_ei_no_self = child_path_clone.pop_back().unwrap();
+                        if child_path_clone == current_path_clone2 {
+                            //NOTE child path 匹配当前 path
 
-                                    debug_assert!(!gel.is_node_ref_());
 
-                                    if gel.is_node_ref_() {
-                                        //TODO remove this
+                            // ─────────────────────
 
-                                        let refs = gel.as_node_ref_().unwrap();
-                                        error!(
-                                            "child-- is node ref:{} path:{}",
-                                            refs, current_path3
-                                        );
-
-                                        gel.as_node_ref_()
-                                            .and_then(|str| {
-                                                graph_rc5.borrow().get_node_item_use_ix(str).map(
-                                                    |x| {
-                                                        x.gel_sa
-                                                            .watch()
-                                                            .get_anchor()
-                                                            .then(|aa| aa.clone().into())
-                                                    },
-                                                )
-                                            })
-                                            .expect("expect get node id")
-                                        // .map(move |g| g.clone())
-                                    } else {
-                                        v_child_gel_sa_clone.get_anchor()
-                                    }
-                                })
-                                .map(move |gel| {
-                                    if gel.is_event_() {
-                                        //NOTE : Left is  event
-                                        (current_child_ei.clone(), Left(gel.clone()))
-                                    } else {
-                                        (current_child_ei.clone(), Right(gel.clone()))
-                                    }
-
-                                });
-
+                            debug_assert!(!v_child_gel.is_node_ref_());
+                            let gel_l_r = {
+                                if v_child_gel.is_event_() {
+                                    //NOTE : Left is  event
+                                    (current_child_ei_no_self.clone(), Left(v_child_gel.clone()))
+                                } else {
+                                    (current_child_ei_no_self.clone(), Right(v_child_gel.clone()))
+                                }
+                            };
                             Some(gel_l_r)
+                            // ─────────────────────────────────────────────────────────────────────────────
+
+
+
+                            // let current_path3 = current_path_clone2.clone();
+
+                            // let graph_rc5 = graph_rc4.clone();
+                            // let v_child_gel_clone = v_child_gel.clone();
+
+                            // let gel_l_r: CurrentPathChildrenEixGElSA<Message> = v_child_gel
+                            //     // NOTE handle note_ref
+                            //     .then(move |gel| {
+
+                            //         debug_assert!(!gel.is_node_ref_());
+
+                            //         if gel.is_node_ref_() {
+                            //             //TODO remove this
+
+                            //             let refs = gel.as_node_ref_().unwrap();
+                            //             error!(
+                            //                 "child-- is node ref:{} path:{}",
+                            //                 refs, current_path3
+                            //             );
+
+                            //             gel.as_node_ref_()
+                            //                 .and_then(|str| {
+                            //                     graph_rc5.borrow().get_node_item_use_ix(str).map(
+                            //                         |x| {
+                            //                             x.gel_sa
+                            //                                 .watch()
+                            //                                 .get_anchor()
+                            //                                 .then(|aa| aa.clone().into())
+                            //                         },
+                            //                     )
+                            //                 })
+                            //                 .expect("expect get node id")
+                            //             // .map(move |g| g.clone())
+                            //         } else {
+                            //             v_child_gel_sa_clone.get_anchor()
+                            //         }
+                            //     })
+                            //     .map(move |gel| {
+                            //         if gel.is_event_() {
+                            //             //NOTE : Left is  event
+                            //             (current_child_ei.clone(), Left(gel.clone()))
+                            //         } else {
+                            //             (current_child_ei.clone(), Right(gel.clone()))
+                            //         }
+
+                            //     });
+
+                            // Some(gel_l_r)
                         } else {
                             None
                         }
                     })
-                    .then(move |children| {
-                        // .map(|children| {
-                        let children_either_ord_map_pool_2 = children_either_ord_map_pool_1.clone();
+                    .map(move |children| {
+                        // let children_either_ord_map_pool_2 = children_either_ord_map_pool_1.clone();
 
                         children
-                            .values()
-                            // .cloned()
-                            .map(emg_state::StateAnchor::get_anchor)
-                            .collect::<Anchor<Vector<_>>>()
-                            .map(move |v| {
-                                // cfg_if! {
-
-                                //     if #[cfg(feature = "pool")]{
-                                //         let mut dict = Dict::<EdgeIndex<IdStr>, GElement<Message>>::with_pool(
-                                //             &children_either_ord_map_pool_2
-                                //         );
-                                //         v.clone().into_iter().collect_into(&mut dict);
-                                //         dict
-                                //     }else{
-                                //         v.clone().into_iter().collect::<Dict<EdgeIndex<IdStr>, GElement<Message>>>()
-                                //     }
-
-                                // }
-                                v.clone()
-                                    .into_iter()
-                                    .collect::<Dict<EdgeIndex<IdStr>, GElEither<Message>>>()
-                            })
+                            .values().cloned()
+                            .collect::<Dict<EdgeIndex<IdStr>, GElEither<Message>>>()
+                            // .map(move |v| {
+                            //     v.clone()
+                            //         .into_iter()
+                            //         .collect::<Dict<EdgeIndex<IdStr>, GElEither<Message>>>()
+                            // })
                     });
 
             let path2 = current_path.clone();
@@ -368,13 +369,13 @@ where
                         graph_rc7
                             .borrow()
                             .get_node_item_use_ix(refs)
-                            .map(|x| x.gel_sa.watch().get_anchor().then(|aa| aa.clone().into()))
+                            .map(|x| x.gel_sa.watch().anchor().then(|aa| aa.clone().into_anchor()))
                             .unwrap()
                     } else {
-                        g_sa2.clone().into()
+                        g_sa2.clone().into_anchor()
                     }
                 })
-                .into()
+                .into_anchor()
 
                 // g_sa.clone().into()
             });
@@ -483,7 +484,6 @@ where
             // incoming_eix_sa,
             // outgoing_eix_sa,
             paths_view_gel: Self::gen_paths_view_gel(&paths_view_gel_sa),
-            paths_view_gel_sa,
         }
     }
 
@@ -506,8 +506,14 @@ where
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> StateAnchor<GelType<Message>> {
-        self.paths_view_gel_sa
-            .get_with(|x| x.get(eix).unwrap().clone())
+        //TODO make state_anchor eix ;使用 sa的 eix, 动态更新 gel
+        let eix_clone = eix.clone();
+        //  self.paths_view_gel.get_with(|x|x.get(eix).unwrap().clone());
+        self.paths_view_gel
+            // .filter(|ep, gel| ep == eix)
+            .map(move |x| x.get(&eix_clone).unwrap().clone())
+        // self.paths_view_gel_sa
+        //     .get_with(|x| x.get(eix).unwrap().clone())
     }
     pub fn set_gel_sa(&self, gel_sa: StateAnchor<GelType<Message>>) {
         self.gel_sa.set(gel_sa);

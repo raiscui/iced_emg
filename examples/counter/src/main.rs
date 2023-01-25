@@ -152,14 +152,15 @@ impl Sandbox for Counter {
         let ww = use_state(w(px(100)));
         let ff = use_state(fill(hsl(150, 100, 100)));
         gtree! {
-            @=debug_layer
-            Layer [
+            @=debug_layer Layer [
                 On:CLICK  ||{
                     let _span = debug_span!("LayoutOverride", "click cb")
                             .entered();
                     info!(" on [debug_layer]----click cb ----");
                     Message::Empty
                 },
+
+
                 @E=[
                         {hgap==120,my_other_gap==28},
                         {@h |-(#a2)-|   },
@@ -213,7 +214,16 @@ impl Sandbox for Counter {
                         b_color(rgb(1,0,1))
                     ]
                     Layer []
-                ]
+                ],
+                @E=[
+
+                        origin_x(pc(0)),align_x(pc(0)),
+                        w(pc(20)),h(pc(20)),
+                        fill(rgba(1, 0, 1, 1)),
+                        b_width(px(5)),
+                        b_color(rgb(1,1,0))
+                    ]
+                node_ref("a2")
             ]
         }
     }
