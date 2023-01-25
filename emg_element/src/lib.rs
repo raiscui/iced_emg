@@ -8,6 +8,7 @@
 //
 // ────────────────────────────────────────────────────────────────────────────────
 
+mod error;
 mod g_element;
 mod g_node;
 mod g_tree_builder;
@@ -23,7 +24,6 @@ pub use graph_program::GraphProgram;
 pub use node_builder::{EventCallback, EventMessage, EventNode, IntoOptionMs, NodeBuilderWidget};
 pub use widget::Widget;
 pub mod graph_edit;
-
 // ────────────────────────────────────────────────────────────────────────────────
 #[cfg(all(feature = "gpu"))]
 use emg_native::{renderer, PaintCtx};

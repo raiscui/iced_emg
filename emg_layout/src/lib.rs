@@ -20,9 +20,11 @@
 // #![feature(trivial_bounds)]
 // #![feature(negative_impls)]
 // #![feature(auto_traits)]
+
 use cassowary::{Constraint, Solver, Variable, WeightedRelation};
 use ccsa::{CCSSEqExpression, CassowaryGeneralMap, CassowaryMap, ScopeViewVariable, CCSS};
 use emg_hasher::CustomHasher;
+use std::fmt::Write;
 use std::{
     cell::RefCell,
     clone::Clone,
@@ -40,20 +42,16 @@ use derive_more::Into;
 use emg::{Edge, NodeIndex};
 
 use emg_common::{
-    im::vector,
-    na::{Affine3, Matrix4, Rotation3, Translation3, Vector2, Vector3},
-    num_traits::cast,
-};
-use emg_common::{
+    display::{DictDisplay, HashMapDisplay},
     im::{
         self,
         ordmap::{self, NodeDiffItem},
-        HashMap, HashSet, OrdSet,
+        vector, HashMap, HashSet, OrdSet,
     },
-    num_traits::AsPrimitive,
-    GenericSize, IdStr, LayoutOverride, NotNan, RectLTRB, TypeName, VectorDisp,
+    na::{Affine3, Matrix4, Rotation3, Translation3, Vector2, Vector3},
+    num_traits::{cast, AsPrimitive},
+    GenericSize, IdStr, LayoutOverride, NotNan, Precision, RectLTRB, TypeName, Vector, VectorDisp,
 };
-use emg_common::{Precision, Vector};
 use emg_shaping::{EqShapingWithDebug, Shaping};
 use emg_state::{
     state_store, topo, use_state, use_state_impl::Engine, Anchor, CloneStateAnchor, CloneStateVar,
@@ -76,10 +74,10 @@ use tracing::{
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-mod parser;
 mod calc;
 mod epath;
 mod impl_refresh;
+mod parser;
 // ────────────────────────────────────────────────────────────────────────────────
 pub use epath::EPath;
 pub use seed_styles as styles;
@@ -168,6 +166,12 @@ struct Mat4(Matrix4<Precision>);
 
 #[derive(Debug, Clone, PartialEq, Eq, Display)]
 pub struct GenericSizeAnchor(StateAnchor<GenericSize>);
+
+impl Default for GenericSizeAnchor {
+    fn default() -> Self {
+        Self(StateAnchor::constant(GenericSize::default()))
+    }
+}
 
 impl std::ops::Deref for GenericSizeAnchor {
     type Target = StateAnchor<GenericSize>;
@@ -338,42 +342,6 @@ impl std::fmt::Display for Layout {
     }
 }
 
-struct DictDisplay<K, V>(Dict<K, V>);
-impl<K, V> std::fmt::Display for DictDisplay<K, V>
-where
-    K: std::fmt::Display + Ord,
-    V: std::fmt::Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let sv: String = self
-            .0
-            .iter()
-            .map(|(k, v)| format!("{} :\n{}\n,\n", k, indented(v)))
-            .fold(String::default(), |acc, v| format!("{acc}{v}"));
-
-        write!(f, "Dict {{\n{}\n}}", indented(&sv))
-    }
-}
-struct PathVarMapDisplay<K, V>(PathVarMap<K, V>)
-where
-    K: std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default;
-
-impl<K, V> std::fmt::Display for PathVarMapDisplay<K, V>
-where
-    K: std::fmt::Display + Ord,
-    V: std::fmt::Display,
-    K: std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let sv: String = self
-            .0
-            .iter()
-            .map(|(k, v)| format!("{} :\n{}\n,\n", k, indented(v)))
-            .fold(String::default(), |acc, v| format!("{acc}{v}"));
-
-        write!(f, "PathVarMap {{\n{}\n}}", indented(&sv))
-    }
-}
 #[derive(Display, Debug, Clone, PartialEq, Eq)]
 #[display(
     fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},translation:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\nworld:\n{},\n}}",
@@ -735,11 +703,11 @@ where
         let x = format!(
             "id:{{\n{};\n}}\npaths:{{\n{};\n}}\nlayout:{{\n{};\n}}\npath_styles:{{\n{};\n}}\nother_styles:{{\n{};\n}}\nnode:{{\n{};\n}}",
             indented(&self.id),
-            indented(DictDisplay(self.paths.get())),
+            indented(DictDisplay("paths<Dict>",self.paths.get())),
             indented(&self.layout),
-            indented(PathVarMapDisplay(self.path_styles.get())),
+            indented(HashMapDisplay("path_styles<HashMap>",self.path_styles.get())),
             indented(&self.other_css_styles),
-            indented(DictDisplay(self.edge_nodes.get())),
+            indented(DictDisplay("edge_nodes<Dict>",self.edge_nodes.get())),
         );
         write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
     }
@@ -813,23 +781,12 @@ where
 
 impl<Ix> EmgEdgeItem<Ix>
 where
-    Ix: Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + Default
-        + std::fmt::Display
-        + std::borrow::Borrow<str>,
+    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::borrow::Borrow<str>,
 {
     pub fn build_path_layout(&self, func: impl FnOnce(Layout) -> (EPath<Ix>, Layout)) {
         let (path, layout) = func(self.layout);
-        self.path_layouts.set_with_once(move |pls_map| {
-            let mut new_pls_map = pls_map.clone();
-            new_pls_map.insert(path, layout);
-            new_pls_map
-        });
+        self.path_layouts
+            .set_with_once(move |pls_map| pls_map.update(path, layout));
     }
 
     #[topo::nested]
@@ -840,26 +797,27 @@ where
         edges: StateAnchor<GraphEdgesDict<Ix>>,
     ) -> Self
     where
-        Ix: std::fmt::Debug,
+        Ix: std::fmt::Debug + std::fmt::Display,
     {
         Self::new_in_topo(
             source_node_nix_sa,
             target_node_nix_sa,
             edges,
-            (GenericSize::default().into(), GenericSize::default().into()),
+            (GenericSize::default(), GenericSize::default()),
             (
-                GenericSize::default().into(),
-                GenericSize::default().into(),
-                GenericSize::default().into(),
+                GenericSize::default(),
+                GenericSize::default(),
+                GenericSize::default(),
             ),
             (
-                GenericSize::default().into(),
-                GenericSize::default().into(),
-                GenericSize::default().into(),
+                GenericSize::default(),
+                GenericSize::default(),
+                GenericSize::default(),
             ),
         )
     }
 
+    #[cfg(test)]
     #[topo::nested]
     #[instrument(skip(edges))]
     pub fn default_with_wh_in_topo<T: AsPrimitive<Precision> + std::fmt::Debug>(
@@ -876,16 +834,16 @@ where
             source_node_nix_sa,
             target_node_nix_sa,
             edges,
-            (px(w).into(), px(h).into()),
+            (px(w), px(h)),
             (
-                GenericSize::default().into(),
-                GenericSize::default().into(),
-                GenericSize::default().into(),
+                GenericSize::default(),
+                GenericSize::default(),
+                GenericSize::default(),
             ),
             (
-                GenericSize::default().into(),
-                GenericSize::default().into(),
-                GenericSize::default().into(),
+                GenericSize::default(),
+                GenericSize::default(),
+                GenericSize::default(),
             ),
         )
     }
@@ -895,12 +853,20 @@ where
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         edges: StateAnchor<GraphEdgesDict<Ix>>,
-        size: (GenericSizeAnchor, GenericSizeAnchor),
-        origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
-        align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
+        size: (impl Into<GenericSizeAnchor>, impl Into<GenericSizeAnchor>),
+        origin: (
+            impl Into<GenericSizeAnchor>,
+            impl Into<GenericSizeAnchor>,
+            impl Into<GenericSizeAnchor>,
+        ),
+        align: (
+            impl Into<GenericSizeAnchor>,
+            impl Into<GenericSizeAnchor>,
+            impl Into<GenericSizeAnchor>,
+        ),
     ) -> Self
     where
-        Ix: std::fmt::Debug,
+        Ix: std::fmt::Debug + std::fmt::Display,
         (IdStr, NotNan<Precision>): PartialEq,
     {
         let id_sa: StateAnchor<EdgeIndex<Ix>> =
@@ -914,19 +880,19 @@ where
                 EdgeIndex::new(s.clone(), t.clone())
             });
         let id_sv = use_state(id_sa);
-        let _child_span = trace_span!(" building new child ",id=%id_sv).entered();
+        let _child_span = trace_span!(" building new child ",id=?id_sv).entered();
         // ─────────────────────────────────────────────────────────────────
 
         let layout = Layout {
-            w: use_state(size.0),
-            h: use_state(size.1),
+            w: use_state(size.0.into()),
+            h: use_state(size.1.into()),
             z: use_state(StateAnchor::constant(0)),
-            origin_x: use_state(origin.0),
-            origin_y: use_state(origin.1),
-            origin_z: use_state(origin.2),
-            align_x: use_state(align.0),
-            align_y: use_state(align.1),
-            align_z: use_state(align.2),
+            origin_x: use_state(origin.0.into()),
+            origin_y: use_state(origin.1.into()),
+            origin_z: use_state(origin.2.into()),
+            align_x: use_state(align.0.into()),
+            align_y: use_state(align.1.into()),
+            align_z: use_state(align.2.into()),
             cassowary_constants: use_state(StateAnchor::constant(vector![])),
             cassowary_selectors: use_state(vector![]),
             cassowary_generals: use_state(CassowaryGeneralMap::new()),
@@ -944,7 +910,7 @@ where
 
             eid_sa_inner.map(|i:&EdgeIndex<Ix>|{
 
-                let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:eid_sa_inner change ",edge_index=%i).entered();
+                let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:eid_sa_inner change ",edge_index=?i).entered();
 
                 i.source_nix().clone()
             }).into()
@@ -1123,7 +1089,7 @@ where
                         let _span = debug_span!("LayoutOverride",step=0, func = "will except_tail_match")
                                     .entered();
                                     // debug!("self_path3:{}",&self_path3);
-                                    debug!("child_path:{}",&child_path);
+                                    debug!("child_path:{:?}",&child_path);
                                     // debug!("match?:{}",&child_path.except_tail_match(&self_path3));
 
                         //NOTE remove this if ,because never not match
@@ -1155,7 +1121,7 @@ where
                         {
                              debug_span!("LayoutOverride",step=2,func = "EdgeItem new_in_top",info="to_layout_override之后 ... debug..").in_scope(||{
                                 for (k,_) in x.iter(){
-                                    debug!("child path---------:{}",k,);
+                                    debug!("child path---------:{:?}",k,);
                                 }
                             });
 
@@ -1277,7 +1243,7 @@ where
                                 }
 
                             });
-                            warn!("[constant_sets_sa] \n {} \n constant_sets:\n{:#?}", &self_path7,&constraint_sets_end);
+                            warn!("[constant_sets_sa] \n {:#?} \n constant_sets:\n{:#?}", &self_path7,&constraint_sets_end);
 
 
                             // constraints_sa.into_iter().collect::<Anchor<Vector<Vec<Constraint>>>>()
@@ -2175,9 +2141,9 @@ mod tests {
                 e1_source.watch(),
                 e1_target.watch(),
                 e_dict_sv.watch(),
-                (px(50).into(), px(50).into()),
-                (pc(0).into(), pc(0).into(), pc(0).into()),
-                (pc(50).into(), pc(50).into(), pc(50).into()),
+                (px(50), px(50)),
+                (pc(0), pc(0), pc(0)),
+                (pc(50), pc(50), pc(50)),
             );
 
             e_dict_sv.set_with(|d| {
@@ -2195,9 +2161,9 @@ mod tests {
                 e2_source.watch(),
                 e2_target.watch(),
                 e_dict_sv.watch(),
-                (px(10).into(), px(10).into()),
-                (pc(100).into(), pc(100).into(), pc(100).into()),
-                (pc(100).into(), pc(100).into(), pc(100).into()),
+                (px(10), px(10)),
+                (pc(100), pc(100), pc(100)),
+                (pc(100), pc(100), pc(100)),
             );
             e_dict_sv.set_with(|d| {
                 let mut nd = d.clone();
@@ -2311,9 +2277,9 @@ mod tests {
             e1_source.watch(),
             e1_target.watch(),
             e_dict_sv.watch(),
-            (px(10).into(), px(10).into()),
-            (pc(100).into(), pc(100).into(), pc(100).into()),
-            (pc(50).into(), pc(20).into(), pc(20).into()),
+            (px(10), px(10)),
+            (pc(100), pc(100), pc(100)),
+            (pc(50), pc(20), pc(20)),
         );
         e_dict_sv.set_with(|d| {
             let mut nd = d.clone();
@@ -2330,9 +2296,9 @@ mod tests {
             e2_source.watch(),
             e2_target.watch(),
             e_dict_sv.watch(),
-            (px(10).into(), px(10).into()),
-            (pc(100).into(), pc(100).into(), pc(100).into()),
-            (pc(50).into(), pc(20).into(), pc(20).into()),
+            (px(10), px(10)),
+            (pc(100), pc(100), pc(100)),
+            (pc(50), pc(20), pc(20)),
         );
         e_dict_sv.set_with(|d| {
             let mut nd = d.clone();
@@ -2628,14 +2594,14 @@ mod tests {
                 e1_target.watch(),
                 e_dict_sv.watch(),
                 (
-                    (parent!(CssHeight) + pc(100)).into(),
-                    (parent!(CssHeight) + pc(100)).into(),
+                    (parent!(CssHeight) + pc(100)),
+                    (parent!(CssHeight) + pc(100)),
                 ),
-                (pc(100).into(), pc(100).into(), pc(100).into()),
+                (pc(100), pc(100), pc(100)),
                 (
-                    (parent!(CssWidth) * 0.5).into(),
-                    (parent!(CssHeight) * 0.2).into(),
-                    pc(20).into(),
+                    (parent!(CssWidth) * 0.5),
+                    (parent!(CssHeight) * 0.2),
+                    pc(20),
                 ),
             );
             e_dict_sv.set_with(|d| {
@@ -2653,9 +2619,9 @@ mod tests {
                 e2_source.watch(),
                 e2_target.watch(),
                 e_dict_sv.watch(),
-                (px(10).into(), px(10).into()),
-                (pc(100).into(), pc(100).into(), pc(100).into()),
-                (pc(50).into(), pc(20).into(), pc(20).into()),
+                (px(10), px(10)),
+                (pc(100), pc(100), pc(100)),
+                (pc(50), pc(20), pc(20)),
             );
             e_dict_sv.set_with(|d| {
                 let mut nd = d.clone();
@@ -3025,9 +2991,9 @@ mod tests {
                 e1_source.watch(),
                 e1_target.watch(),
                 e_dict_sv.watch(),
-                (px(10).into(), px(10).into()),
-                (pc(0).into(), pc(0).into(), pc(0).into()),
-                (pc(50).into(), pc(50).into(), pc(50).into()),
+                (px(10), pc(10)),
+                (pc(0), pc(0), pc(0)),
+                (pc(50), pc(50), pc(50)),
             );
             e_dict_sv.set_with(|d| {
                 let mut nd = d.clone();
@@ -3046,9 +3012,9 @@ mod tests {
                 e2_source.watch(),
                 e2_target.watch(),
                 e_dict_sv.watch(),
-                (px(10).into(), px(10).into()),
-                (pc(0).into(), pc(0).into(), pc(0).into()),
-                (pc(100).into(), pc(000).into(), pc(000).into()),
+                (px(10), px(10)),
+                (pc(0), pc(0), pc(0)),
+                (pc(100), pc(000), pc(000)),
             );
             e_dict_sv.set_with(|d| {
                 let mut nd = d.clone();

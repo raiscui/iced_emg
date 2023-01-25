@@ -40,7 +40,7 @@ emg_common = { path = "../emg_common" }
 emg_futures = { path = "../emg_futures" }
 emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }
 emg_animation = { path = "../emg_animation" }
-emg = { path = "../../emg" }
+emg = { path = "../emg" }
 emg_element = { path = "../emg_element" }
 emg_orders = { path = "../emg_orders" }
 #--------------

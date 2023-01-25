@@ -22,7 +22,7 @@ emg_shaping = { path = "../emg_shaping" }
 emg_layout = { path = "../emg_layout" }
 emg_hasher = { path = "../emg_hasher" }
 emg_orders = { path = "../emg_orders" }
-emg = { path = "../../emg" }
+emg = { path = "../emg" }
 #-----
 derive_more = "0.99"
 strum = { version = "0.24", features = ["derive"] }
@@ -32,6 +32,8 @@ match_any = "1.0.1"
 either = "1.8.0"
 indexmap = "1.9"
 illicit = "1.1.2"
+thiserror = "1.0"
+indented = "0.1.0"
 #------
 emg_native = { path = "../emg_native", optional = true }
 
@@ -40,3 +42,5 @@ emg_native = { path = "../emg_native", optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
 emg_vello = { path = "../emg_vello", optional = true }
+
+[dev-dependencies]

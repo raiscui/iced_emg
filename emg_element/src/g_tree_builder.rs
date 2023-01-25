@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-01-20 16:46:54
+ * @LastEditTime: 2023-01-23 22:52:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,6 +17,7 @@ use std::{
     rc::Rc,
 };
 
+pub use for_node_item_rc_sv::{GraphEdgeBuilder, GraphNodeBuilder};
 // type SaBuilderFn<T> = dyn Fn(&StateAnchor<Rc<T>>) -> StateAnchor<Rc<T>>;
 
 pub enum GTreeBuilderElement<Message, Ix = IdStr>
@@ -160,26 +161,6 @@ where
 
     fn graph(&self) -> Ref<Self::GraphType>;
     fn graph_mut(&mut self) -> RefMut<Self::GraphType>;
-
-    /// # Errors
-    ///
-    /// Will return `Err` if node insert `edge_index` falls
-    fn setup_edge_in_topo(
-        &self,
-        edge_index: EdgeIndex<Self::Ix>,
-        size: (GenericSizeAnchor, GenericSizeAnchor),
-        origin: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
-        align: (GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor),
-        //TODO right error type
-    ) -> Result<EmgEdgeItem<Self::Ix>, String>;
-
-    /// # Errors
-    ///
-    /// Will return `Err` if node insert `edge_index` falls
-    fn setup_default_edge_in_topo(
-        &self,
-        edge_index: EdgeIndex<Self::Ix>,
-    ) -> Result<EmgEdgeItem<Self::Ix>, String>;
 
     fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message>);
     fn handle_children_in_topo(

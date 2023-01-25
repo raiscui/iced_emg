@@ -1,17 +1,18 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-01-21 22:35:39
+ * @LastEditTime: 2023-01-25 18:59:47
  * @LastEditors: Rais
  * @Description:
  */
-
+mod collections;
 pub use anchors::collections::ord_map_methods::Dict;
 pub use anchors::dict;
 pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::Engine;
 pub use anchors::singlethread::Var;
 use anchors::{
+    collections::ord_map_collect::OrdMapCollect,
     expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
     singlethread::MultiAnchor,
 };
@@ -23,8 +24,8 @@ use std::{hash::BuildHasherDefault, panic::Location};
 use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
 // use delegate::delegate;
+// use anchors::collections::
 use slotmap::{DefaultKey, Key, SlotMap, SparseSecondaryMap};
-
 // ────────────────────────────────────────────────────────────────────────────────
 
 thread_local! {

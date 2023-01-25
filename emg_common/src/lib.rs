@@ -7,6 +7,7 @@ mod tools;
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod animation;
 pub mod any;
+pub mod display;
 pub mod keyboard;
 pub mod measures;
 pub mod mouse;

@@ -16,6 +16,9 @@ pool = ["im-rc/pool"]
 debug = []
 
 [dependencies]
+indented = "0.1.0"
+
+
 num-traits = "0.2.15"
 # bitflags = "2.0.0-rc.1"
 nalgebra = "0.32.1"

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "emg",
     "gtree_proc_macro",
     "gtree_macro",
     "gtree",

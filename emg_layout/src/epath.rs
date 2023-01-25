@@ -1,5 +1,3 @@
-use std::{hash::Hash, str::FromStr};
-
 use emg::{edge_index, edge_index_no_source, EdgeIndex, NodeIndex};
 use emg_common::Vector;
 use nom::{
@@ -7,50 +5,125 @@ use nom::{
     error::Error,
     Finish, IResult,
 };
+use std::fmt::Write;
+use std::{hash::Hash, str::FromStr};
 
 use crate::parser::parse_edge_ix_s;
 /*
  * @Author: Rais
  * @Date: 2023-01-22 14:02:47
- * @LastEditTime: 2023-01-22 16:44:29
+ * @LastEditTime: 2023-01-25 10:21:27
  * @LastEditors: Rais
  * @Description:
  */
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug, Default)]
-// pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(TinyVec<[EdgeIndex<Ix>;2]>);
 //TODO  loop check
-pub struct EPath<Ix: Clone + Hash + Eq + PartialEq + Default>(pub Vector<EdgeIndex<Ix>>);
+pub struct EPath<Ix: Clone>(pub Vector<EdgeIndex<Ix>>);
+// : Clone + Hash + Eq + PartialEq + Default
 
 #[macro_export]
 macro_rules! epath {
 
 
 
-    (@end $($e:expr),+ ; @source $s:expr; $t:expr ) => {
+
+    (<$type:ty> @end $($e:expr),+ ; @source $s:literal; $t:literal => $($y:expr)=>+) => {
+
+
+        epath![@end $($e),+,$crate::EdgeIndex::<$type>::new($crate::node_index::<$type>($s), $crate::node_index::<$type>($t)) ; @source $t; $($y)=>+]
+    };
+
+    (<$type:ty> @end $($e:expr),+ ; @source $s:literal; $t:literal ) => {
         // println!("{}-{}|end",$s,$t);
-        $crate::EPath::new($crate::emg_common::im::vector![
-            $($e),+,$crate::EdgeIndex::new($crate::node_index($s), $crate::node_index($t))
+        $crate::EPath::<$type>::new($crate::emg_common::im::vector![
+            $($e),+,$crate::EdgeIndex::<$type>::new($crate::node_index::<$type>($s), $crate::node_index::<$type>($t))
         ])
 
     };
 
-    (@end $($e:expr),+ ; @source $s:expr; $t:expr => $($y:expr)=>+) => {
-
-
-        epath![@end $($e),+,$crate::EdgeIndex::new($crate::node_index($s), $crate::node_index($t)) ; @source $t; $($y)=>+]
-    };
-
-    ( $x:expr => $($y:expr)=>+) => {
+    (<$type:ty> $x:literal => $($y:expr)=>+) => {
             // println!("start-{}",$x);
 
-        epath![@end $crate::EdgeIndex::new(None, $crate::node_index($x)) ; @source $x; $($y)=>+]
+        epath![@end $crate::EdgeIndex::<$type>::new(None, $crate::node_index::<$type>($x)) ; @source $x; $($y)=>+]
     };
-    ( $root:expr ) => {
-        $crate::EPath::new($crate::emg_common::im::vector![
-            $crate::EdgeIndex::new(None, $crate::node_index($root))
+
+
+
+    (<$type:ty> $root:literal ) => {
+        $crate::EPath::<$type>::new($crate::emg_common::im::vector![
+            $crate::EdgeIndex::<$type>::new(None, $crate::node_index::<$type>($root))
         ])
     };
+    // ─────────────────────────────────────────────────────────────────────
+    // with ident/expr now
+    // ─────────────────────────────────────────────────────────────────────────────
+
+
+    (<$type:ty> @end $($e:expr),+ ; @source $s:literal; $t:expr => $($y:expr)=>+) => {
+
+
+        epath![@end $($e),+,$crate::EdgeIndex::<$type>::new($crate::node_index::<$type>($s), Some($t .clone())) ; @source $t; $($y)=>+]
+    };
+    (<$type:ty> @end $($e:expr),+ ; @source $s:expr; $t:literal => $($y:expr)=>+) => {
+
+
+        epath![@end $($e),+,$crate::EdgeIndex::<$type>::new(Some($s .clone()), $crate::node_index::<$type>($t)) ; @source $t; $($y)=>+]
+    };
+    (<$type:ty> @end $($e:expr),+ ; @source $s:expr; $t:expr => $($y:expr)=>+) => {
+
+
+        epath![@end $($e),+,$crate::EdgeIndex::<$type>::new(Some($s .clone()), Some($t .clone())) ; @source $t; $($y)=>+]
+    };
+    // ─────────────────────────────────────────────────────────────────────
+
+    (<$type:ty> @end $($e:expr),+ ; @source $s:literal; $t:expr ) => {
+        // println!("{}-{}|end",$s,$t);
+        $crate::EPath::<$type>::new($crate::emg_common::im::vector![
+            $($e),+,$crate::EdgeIndex::<$type>::new($crate::node_index::<$type>($s), Some($t .clone()))
+        ])
+
+    };
+    (<$type:ty> @end $($e:expr),+ ; @source $s:expr; $t:literal ) => {
+        // println!("{}-{}|end",$s,$t);
+        $crate::EPath::<$type>::new($crate::emg_common::im::vector![
+            $($e),+,$crate::EdgeIndex::<$type>::new(Some($s .clone()), $crate::node_index::<$type>($t))
+        ])
+
+    };
+    (<$type:ty> @end $($e:expr),+ ; @source $s:expr; $t:expr ) => {
+        // println!("{}-{}|end",$s,$t);
+        $crate::EPath::<$type>::new($crate::emg_common::im::vector![
+            $($e),+,$crate::EdgeIndex::<$type>::new(Some($s .clone()), Some($t .clone()))
+        ])
+
+    };
+    // ─────────────────────────────────────────────────────────────────────
+
+
+
+
+    (<$type:ty> $x:expr => $($y:expr)=>+) => {
+            // println!("start-{}",$x);
+
+        epath![<$type> @end $crate::EdgeIndex::<$type>::new(None, Some($x .clone())) ; @source $x; $($y)=>+]
+    };
+
+    (<$type:ty> $root:expr ) => {
+        $crate::EPath::<$type>::new($crate::emg_common::im::vector![
+            $crate::EdgeIndex::<$type>::new(None, $root .clone())
+        ])
+    };
+
+    // ─────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+
+    ($($rest:tt)*) =>{
+        $crate::epath![<_>$($rest)*]
+    };
+
 
 }
 
@@ -69,8 +142,12 @@ impl<Ix: Clone + Hash + Eq + PartialEq + Default> std::ops::DerefMut for EPath<I
 }
 
 impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
+    /// # Panics
+    ///
+    /// Will panic if 'vec' is empty, or if the first element's source_nix is not None.
     #[must_use]
-    pub const fn new(vec: Vector<EdgeIndex<Ix>>) -> Self {
+    pub fn new(vec: Vector<EdgeIndex<Ix>>) -> Self {
+        assert!(vec.front().unwrap().source_nix().is_none());
         Self(vec)
     }
 
@@ -109,18 +186,27 @@ impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
 
 impl<Ix> std::fmt::Display for EPath<Ix>
 where
-    Ix: Clone + Hash + Eq + PartialEq + Default + std::fmt::Display,
+    Ix: Clone + std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let sv: String = self
-            .0
-            .iter()
-            //TODO  textwrap
-            .map(|v| format!("{v}"))
-            .intersperse(String::from(","))
-            .fold(String::default(), |acc, v| format!("{acc}{v}"));
+        // let sv: String = self
+        //     .0
+        //     .iter()
+        //     //TODO  textwrap
+        //     .map(|v| format!("{v}"))
+        //     .intersperse(String::from(","))
+        //     .fold(String::default(), |acc, v| format!("{acc}{v}"));
+        // write!(f, "ep-[{}]", &sv)
 
-        write!(f, "path [{}]", &sv)
+        let mut path = String::new();
+        let first = self.0.front().unwrap().target_nix().as_ref().unwrap();
+        write!(path, "⚬-{first}")?;
+        for e in self.0.iter().skip(1) {
+            if let Some(t) = e.target_nix() {
+                write!(path, " => {t}")?;
+            }
+        }
+        write!(f, "[{}]", &path)
     }
 }
 
@@ -172,14 +258,93 @@ where
 
 #[cfg(test)]
 mod test_epath {
-    use emg::{edge_index, edge_index_no_source};
+    use emg::{edge_index, edge_index_no_source, node_index, NodeIndex};
     use emg_common::{im::vector, IdStr};
 
     use crate::EPath;
 
     #[test]
-    fn test_macro() {
-        let a: EPath<IdStr> = epath!["a"=>"b"=>"c"=>"d"=>"e"];
+    fn test_macro_var() {
+        let a: NodeIndex<IdStr> = node_index("a");
+        let b: NodeIndex<IdStr> = node_index("b");
+        let c: NodeIndex<IdStr> = node_index("c");
+        let d: NodeIndex<IdStr> = node_index("d");
+        let e: NodeIndex<IdStr> = node_index("e");
+
+        // let xx = EPath::new({
+        //     let mut l = vector::Vector::new();
+        //     l.push_back((EdgeIndex::new(None, Some(a))));
+        //     l.push_back((EdgeIndex::new(Some(a), Some(b))));
+        //     l.push_back((EdgeIndex::new(Some(b), Some(c))));
+        //     l.push_back((EdgeIndex::new(Some(c), Some(d))));
+        //     l.push_back((EdgeIndex::new(Some(d), Some(e))));
+        //     l
+        // });
+
+        let ep: EPath<IdStr> = epath![a=>b=>c=>d=>e];
+        println!("{}", ep);
+        assert_eq!(
+            ep,
+            EPath(vector![
+                edge_index_no_source("a"),
+                edge_index("a", "b"),
+                edge_index("b", "c"),
+                edge_index("c", "d"),
+                edge_index("d", "e"),
+            ])
+        );
+        let ep: EPath<IdStr> = epath![a =>"b"=>c=>"d"];
+        println!("{}", ep);
+        assert_eq!(
+            ep,
+            EPath(vector![
+                edge_index_no_source("a"),
+                edge_index("a", "b"),
+                edge_index("b", "c"),
+                edge_index("c", "d"),
+            ])
+        );
+        let ep: EPath<IdStr> = epath!["a" =>b=>"c"];
+        println!("{}", ep);
+        assert_eq!(
+            ep,
+            EPath(vector![
+                edge_index_no_source("a"),
+                edge_index("a", "b"),
+                edge_index("b", "c"),
+                // edge_index("c", "d"),
+                // edge_index("d", "e"),
+            ])
+        );
+        let ep: EPath<IdStr> = epath![" a x "=>"b"];
+        println!("{}", ep);
+        assert_eq!(
+            ep,
+            EPath(vector![
+                edge_index_no_source(" a x "),
+                edge_index(" a x ", "b"),
+                // edge_index("b", "c"),
+                // edge_index("c", "d"),
+                // edge_index("d", "e"),
+            ])
+        );
+        let ep: EPath<IdStr> = epath!["a"];
+        println!("{}", ep);
+        assert_eq!(
+            ep,
+            EPath(vector![
+                edge_index_no_source("a"),
+                // edge_index("a", "b"),
+                // edge_index("b", "c"),
+                // edge_index("c", "d"),
+                // edge_index("d", "e"),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_macro_literal() {
+        let a = epath![<IdStr>"a"=>"b"=>"c"=>"d"=>"e"];
         println!("{}", a);
         assert_eq!(
             a,

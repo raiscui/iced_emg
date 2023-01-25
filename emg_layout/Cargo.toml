@@ -25,7 +25,7 @@ bench = false
 [dependencies]
 emg_shaping = { path = "../emg_shaping" }
 emg_state = { path = "../emg_state" }
-emg = { path = "../../emg" }
+emg = { path = "../emg" }
 emg_animation = { path = "../emg_animation" }
 emg_common = { path = "../emg_common" }
 emg_hasher = { path = "../emg_hasher" }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-01-20 21:25:21
+ * @LastEditTime: 2023-01-25 19:57:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -46,12 +46,14 @@ pub type NItem<Message> = StateVar<StateAnchor<GelType<Message>>>;
 pub type N<Message, Ix> = EmgNodeItem<NItem<Message>, GelType<Message>, Ix>;
 pub type E<Ix> = EmgEdgeItem<Ix>;
 pub type GraphType<Message, Ix = IdStr> = Graph<N<Message, Ix>, E<Ix>, Ix>;
+// ─────────────────────────────────────────────────────────────────────────────
+
+pub type EventMatchsSa<Message> = StateAnchor<EventMatchsDict<Message>>;
+
 // ────────────────────────────────────────────────────────────────────────────────
 type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
 
 type CurrentPathChildrenEixGElSA<Message> = StateAnchor<(EdgeIndex<IdStr>, GElEither<Message>)>;
-
-pub type EventMatchsSa<Message> = StateAnchor<EventMatchsDict<Message>>;
 
 impl<Message> EmgNodeItem<NItem<Message>, GelType<Message>>
 where
@@ -488,17 +490,17 @@ where
     fn gen_paths_view_gel(
         paths_view_gel_sa: &StateAnchor<Dict<EPath<IdStr>, StateAnchor<GelType<Message>>>>,
     ) -> StateAnchor<Dict<EPath<IdStr>, GelType<Message>>> {
+        //NOTE newest version convert sa
         paths_view_gel_sa.then(|dict| {
-            dict.iter()
-                .map(|(k, v)| {
-                    let k_c = k.clone();
-                    v.map(move |vv| (k_c.clone(), vv.clone())).into_anchor()
-                })
-                .collect::<Anchor<Vector<(EPath<IdStr>, Rc<GElement<Message>>)>>>()
-                .map(|x| -> Dict<EPath<IdStr>, Rc<GElement<Message>>> {
-                    x.clone().into_iter().collect()
-                })
+            dict.into_iter()
+                .collect::<StateAnchor<Dict<EPath<IdStr>, GelType<Message>>>>()
+                .into_anchor()
         })
+        // paths_view_gel_sa.map_(|k, v| v.anchor()).then(|dict| {
+        //     dict.into_iter()
+        //         .collect::<Anchor<Dict<EPath<IdStr>, GelType<Message>>>>()
+        //         .into_anchor()
+        // })
     }
 
     #[must_use]

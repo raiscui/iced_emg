@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-01-20 14:24:20
+ * @LastEditTime: 2023-01-23 22:46:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -270,6 +270,7 @@ where
             (for_path, l)
         });
     }
+
     // pub fn effecting_path(self, for_path: EPath<Ix>) -> Result<Self, String> {
     //     self.edge
     //         .as_ref()
@@ -1509,9 +1510,9 @@ mod tests {
                     e1_source.watch(),
                     e1_target.watch(),
                 e_dict_sv.watch(),
-                (px(50).into(), px(50).into()),
-                 (pc(0).into(), pc(0).into(), pc(0).into()),
-                  (pc(50).into(), pc(50).into(), pc(50).into()),
+                (px(50), px(50)),
+                 (pc(0), pc(0), pc(0)),
+                  (pc(50), pc(50), pc(50)),
             );
 
             e_dict_sv.set_with(|d|{

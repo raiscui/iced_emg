@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-21 10:50:01
- * @LastEditTime: 2023-01-18 17:31:54
+ * @LastEditTime: 2023-01-24 17:51:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -66,7 +66,7 @@ where
         + PartialOrd
         + Ord
         + Default
-        + std::fmt::Display
+        // + std::fmt::Display
         + std::borrow::Borrow<str>,
 {
     let CCSSSvvOpSvvExpr {
@@ -148,7 +148,7 @@ where
         + PartialOrd
         + Ord
         + Default
-        + std::fmt::Display
+        // + std::fmt::Display
         + std::borrow::Borrow<str>,
 {
     let ScopeViewVariable {
