@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:01:09
- * @LastEditTime: 2023-01-25 20:42:24
+ * @LastEditTime: 2023-01-25 22:27:16
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 // mod index;
 use std::fmt::Write;
 mod node_item_rc_sv;
-use indented::indented;
+use indented::{indented, indented_with};
 pub use node_item_rc_sv::GraphMethods;
 pub use node_item_rc_sv::{EventMatchsSa, GelType, GraphType, NItem, E, N};
 use std::fmt::Display;
@@ -52,6 +52,7 @@ where
 impl<NItem: Display, GelType: Display, Ix: Display> Display for EmgNodeItem<NItem, GelType, Ix>
 where
     Ix: std::clone::Clone + Ord + 'static,
+    GelType: 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut members = String::new();
@@ -64,10 +65,20 @@ where
             write!(paths, "{k},").unwrap();
         });
 
-        write!(members, "paths_sa: {}", &paths)?;
+        writeln!(members, "paths_sa: {}", &paths)?;
+        // paths_view_gel ─────────────────────────────────────────────────────────────
+        {
+            let ep_gels = self.paths_view_gel.get();
+            let paths_view_gel = DictDisplay("paths_view_gel", ep_gels);
+            writeln!(members, "{}", &paths_view_gel)?;
+        }
         // ─────────────────────────────────────────────────────────────
 
-        write!(f, "EmgNodeItem {{\n{}\n}}", indented(members))
+        write!(
+            f,
+            "EmgNodeItem {{\n{}\n}}",
+            indented_with(members, " ".repeat("EmgNodeItem {".len()).as_str())
+        )
     }
 }
 

@@ -44,3 +44,4 @@ emg_native = { path = "../emg_native", optional = true }
 emg_vello = { path = "../emg_vello", optional = true }
 
 [dev-dependencies]
+insta = "1"

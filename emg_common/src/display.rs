@@ -1,13 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-24 22:46:22
- * @LastEditTime: 2023-01-24 23:08:34
+ * @LastEditTime: 2023-01-25 22:56:44
  * @LastEditors: Rais
  * @Description:
  */
 use im::{HashMap, OrdMap};
-use indented::indented;
-use std::fmt::Write;
+use indented::{indented, indented_with};
+use std::fmt::{format, Write};
 // pub struct MapDisplay<'a, K, V>(pub &'a str, pub OrdMap<K, V>);
 // impl<'a, K, V> std::fmt::Display for MapDisplay<'a, K, V>
 // where
@@ -30,6 +30,7 @@ use std::fmt::Write;
 //     }
 // }
 pub struct DictDisplay<'a, K, V>(pub &'a str, pub OrdMap<K, V>);
+
 impl<'a, K, V> std::fmt::Display for DictDisplay<'a, K, V>
 where
     K: std::fmt::Display + Ord,
@@ -44,10 +45,23 @@ where
 
         let mut members = String::new();
         self.1.iter().for_each(|(k, v)| {
-            writeln!(members, "{} :\n{}\n,", k, indented(v)).unwrap();
+            let k_str = k.to_string();
+            writeln!(
+                members,
+                "{} : {}",
+                k_str,
+                // indented_with(v, " ".repeat(k_str.len()).as_str())
+                v
+            )
+            .unwrap();
         });
 
-        write!(f, "{} {{\n{}\n}}", self.0, indented(&members))
+        write!(
+            f,
+            "{} {{\n{}}}",
+            self.0,
+            indented_with(&members, " ".repeat(self.0.len() + 1).as_str())
+        )
     }
 }
 
