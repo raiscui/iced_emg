@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-19 17:43:32
- * @LastEditTime: 2023-01-23 01:31:43
+ * @LastEditTime: 2023-01-27 15:47:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,50 +16,51 @@ use emg::EdgeIndex;
 pub struct EdgeMode<I = ()>(PhantomData<I>);
 
 trait Mode {
-    type FromIndex<Ix>;
-    type ToIndex<Ix>;
-    fn move_to<Ix, G>(g: &G, who: &Self::FromIndex<Ix>, to: Self::ToIndex<Ix>)
+    type Interface<'a, Ix>
     where
-        G: GraphEditManyMethod<Ix> + ?Sized;
+        Ix: 'a;
+
+    fn interface<'a, Ix, G>(g: &'a mut G) -> Self::Interface<'a, Ix>
+    where
+        G: GraphEditManyMethod<Ix>;
 }
 
 impl Mode for EdgeMode {
-    type FromIndex<Ix> = EdgeIndex<Ix>;
-    type ToIndex<Ix> = Ix;
-    fn move_to<Ix, G>(g: &G, who: &Self::FromIndex<Ix>, to: Self::ToIndex<Ix>)
+    type Interface<'a, Ix> = EdittingGraphEdge<'a, Ix, Self> where Ix:'a;
+
+    fn interface<'a, Ix, G>(g: &'a mut G) -> Self::Interface<'a, Ix>
     where
-        G: GraphEditManyMethod<Ix> + ?Sized,
+        G: GraphEditManyMethod<Ix>,
     {
-        g.edge_change_source(who, to);
+        EdittingGraphEdge {
+            inner: g,
+            phantom_data: PhantomData,
+        }
     }
 }
 
-trait ModeInterface<Ix> {
-    type FromIndex;
-    type ToIndex;
-    fn move_to<T: Into<Self::ToIndex>>(&self, who: &Self::FromIndex, to: T);
-}
-
-struct EdittingGraph<'a, Ix, M> {
+struct EdittingGraphEdge<'a, Ix, M> {
     inner: &'a mut dyn GraphEditManyMethod<Ix>,
     phantom_data: PhantomData<M>,
 }
 
-impl<'a, Ix, M> ModeInterface<Ix> for EdittingGraph<'a, Ix, M>
-where
-    M: Mode,
-{
-    type FromIndex = M::FromIndex<Ix>;
-
-    type ToIndex = M::ToIndex<Ix>;
-
-    fn move_to<T: Into<M::ToIndex<Ix>>>(&self, who: &M::FromIndex<Ix>, to: T) {
-        M::move_to(self.inner, who, to.into());
+impl<'a, Ix, M> EdittingGraphEdge<'a, Ix, M> {
+    fn move_to(&self, who: &EdgeIndex<Ix>, to: Ix) {
+        self.inner.edge_change_source(who, to);
     }
 }
 
 trait GraphEdit<Ix> {
-    fn edit<M: Mode>(&mut self) -> EdittingGraph<Ix, M>;
+    fn edit<M: Mode>(&mut self) -> M::Interface<'_, Ix>;
+}
+impl<'a, T> GraphEdit<Ix> for T
+where
+    T: GraphEditManyMethod<Ix>,
+    Ix: std::hash::Hash + std::clone::Clone + std::cmp::Ord + std::default::Default,
+{
+    fn edit<M: Mode>(&mut self) -> M::Interface<'_, Ix> {
+        M::interface(self)
+    }
 }
 
 trait GraphEditManyMethod<Ix> {

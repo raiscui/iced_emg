@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-01-25 23:17:25
+ * @LastEditTime: 2023-01-27 15:28:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,7 +12,7 @@ use emg::{EdgeIndex, Incoming};
 
 use crate::GraphType;
 
-use super::{EdittingGraph, GraphEdit, GraphEditManyMethod, Mode};
+use super::{EdittingGraphEdge, GraphEdit, GraphEditManyMethod, Mode};
 
 impl<Message, Ix> GraphEditManyMethod<Ix> for GraphType<Message, Ix>
 where
@@ -30,19 +30,6 @@ where
 
     fn edge_path_node_change_edge(&mut self) {
         todo!("edge_path_node_change_edge")
-    }
-}
-
-impl<Message, Ix> GraphEdit<Ix> for GraphType<Message, Ix>
-where
-    Self: GraphEditManyMethod<Ix>,
-    Ix: std::hash::Hash + std::clone::Clone + std::cmp::Ord + std::default::Default,
-{
-    fn edit<M: Mode>(&mut self) -> EdittingGraph<Ix, M> {
-        EdittingGraph {
-            inner: self,
-            phantom_data: PhantomData,
-        }
     }
 }
 
