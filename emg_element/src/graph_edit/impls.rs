@@ -1,20 +1,18 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-01-27 15:28:43
+ * @LastEditTime: 2023-01-27 16:36:01
  * @LastEditors: Rais
  * @Description:
  */
 
-use std::marker::PhantomData;
-
-use emg::{EdgeIndex, Incoming};
+use emg::{Direction, EdgeIndex};
 
 use crate::GraphType;
 
-use super::{EdittingGraphEdge, GraphEdit, GraphEditManyMethod, Mode};
+use super::GraphEditManyMethod;
 
-impl<Message, Ix> GraphEditManyMethod<Ix> for GraphType<Message, Ix>
+impl<Message, Ix> GraphEditManyMethod for GraphType<Message, Ix>
 where
     Ix: std::hash::Hash
         + std::clone::Clone
@@ -22,10 +20,9 @@ where
         + std::default::Default
         + std::fmt::Debug,
 {
-    fn edge_change_source(&self, who: &EdgeIndex<Ix>, to: Ix) {
-        // let source = self.edge_source(who);
-        // source.set(Some(to.into()));
-        self.edge_plug_edit(who, Incoming, to);
+    type Ix = Ix;
+    fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) {
+        self.edge_plug_edit(who, dir, to);
     }
 
     fn edge_path_node_change_edge(&mut self) {
@@ -36,20 +33,19 @@ where
 //test
 
 #[cfg(test)]
-#[allow(unused)]
+// #[allow(unused)]
 mod test {
-    use std::{cell::RefCell, hash::BuildHasherDefault, path::Path, rc::Rc};
+    use std::{cell::RefCell, path::Path, rc::Rc};
 
-    use emg::{edge_index, edge_index_no_source, node_index};
-    use emg_common::{im::vector, IdStr};
-    use emg_hasher::CustomHasher;
-    use emg_layout::{epath, global_height, global_width, EPath};
+    use emg::{edge_index, edge_index_no_source, Direction::Incoming};
+    use emg_common::IdStr;
+
+    use emg_layout::{global_height, global_width};
     use emg_state::{use_state, StateAnchor};
-    use indexmap::IndexSet;
 
     use crate::{
         g_tree_builder::{GraphEdgeBuilder, GraphNodeBuilder},
-        graph_edit::{EdgeMode, ModeInterface},
+        graph_edit::{EdgeMode, GraphEdit},
         widget::Layer,
     };
 
@@ -79,7 +75,7 @@ mod test {
              .build_in_topo(&emg_graph_rc_refcell);
          // edge ─────────────────────────────────────────────────────
 
-         let mut root_ei = GraphEdgeBuilder::new(root_edge_ix.clone())
+         let  root_ei = GraphEdgeBuilder::new(root_edge_ix.clone())
              .with_size((global_width(), global_height()))
              .build_in_topo(&emg_graph_rc_refcell)
              .unwrap();
@@ -153,7 +149,7 @@ mod test {
          emg_graph_rc_refcell
              .borrow_mut()
              .edit::<EdgeMode>()
-             .move_to(&a_c, "b");
+             .move_to(&a_c,Incoming, "b");
          }
          // ─────────────────────────────────────────────────────
 
