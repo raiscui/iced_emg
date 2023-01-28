@@ -58,7 +58,7 @@ use emg_state::{
     Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar,
 };
 use float_cmp::approx_eq;
-use styles::{px, s, CssTransform, CssValueTrait, Style, UpdateStyle};
+use styles::{px, s, w, CssTransform, CssValueTrait, Style, UpdateStyle};
 // use styles::Percent;
 // use styles::ExactLength;
 // use styles::CssWidth;
@@ -326,36 +326,27 @@ impl Copy for Layout {}
 
 impl std::fmt::Display for Layout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x = format!(
-            "size:{{\nw:{},h:{};\n}}\norigin:{{\nx:{},y:{},z:{};\n}}\nalign:{{\nx:{},y:{},z:{}}}",
-            indented(&self.w),
-            indented(&self.h),
-            indented(&self.origin_x),
-            indented(&self.origin_y),
-            indented(&self.origin_z),
-            indented(&self.align_x),
-            indented(&self.align_y),
-            indented(&self.align_z),
-            //
-        );
-        write!(f, "Layout {{\n{}\n}}", indented(&x))
+        let mut members = String::new();
+        let mut wh = String::new();
+        writeln!(wh, "w:{}", self.w)?;
+        writeln!(wh, "h:{}", self.h)?;
+        writeln!(members, "size:{{\n{}\n}}", indented(wh))?;
+        let mut origin = String::new();
+        writeln!(origin, "x:{}", self.origin_x)?;
+        writeln!(origin, "y:{}", self.origin_y)?;
+        writeln!(origin, "z:{}", self.origin_z)?;
+        writeln!(members, "origin:{{\n{}\n}}", indented(origin))?;
+        let mut align = String::new();
+        writeln!(align, "x:{}", self.align_x)?;
+        writeln!(align, "y:{}", self.align_y)?;
+        writeln!(align, "z:{}", self.align_z)?;
+        writeln!(members, "align:{{\n{}\n}}", indented(align))?;
+
+        write!(f, "Layout {{\n{}\n}}", indented(members))
     }
 }
 
-#[derive(Display, Debug, Clone, PartialEq, Eq)]
-#[display(
-    fmt = "{{\ncass_or_calc_size:\n{},\norigin:\n{},\nalign:\n{},translation:\n{},\ncoordinates_trans:\n{},\ncass_trans:\n{},\nmatrix:\n{},\nloc_styles:\n{},\nworld:\n{},\n}}",
-    // "indented(suggest_size)",
-    "indented(cass_or_calc_size)",
-    "indented(origin)",
-    "indented(align)",
-    "indented(translation)",
-    "indented(coordinates_trans)",
-    "indented(cass_trans)",
-    "indented(matrix)",
-    "indented(loc_styles)",
-    "indented(world)",
-)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LayoutCalculated {
     // suggest_size: StateAnchor<Vector2<f64>>,
     size_constraints: StateAnchor<Vec<Constraint>>,
@@ -370,6 +361,23 @@ pub struct LayoutCalculated {
     loc_styles: StateAnchor<Style>,
     //TODO what different with EdgeCtx:world?
     world: StateAnchor<Translation3<Precision>>,
+}
+
+impl std::fmt::Display for LayoutCalculated {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut members = String::new();
+        writeln!(members, "cass_or_calc_size: {}", self.cass_or_calc_size)?;
+        writeln!(members, "origin: {}", self.origin)?;
+        writeln!(members, "align: {}", self.align)?;
+        writeln!(members, "translation: {}", self.translation)?;
+        writeln!(members, "coordinates_trans: {}", self.coordinates_trans)?;
+        writeln!(members, "cass_trans: {}", self.cass_trans)?;
+        writeln!(members, "matrix: {}", self.matrix)?;
+        writeln!(members, "loc_styles: {}", self.loc_styles)?;
+        writeln!(members, "world: {}", self.world)?;
+
+        write!(f, "LayoutCalculated {{\n{}}}", indented(members))
+    }
 }
 
 pub struct EdgeCtx {
@@ -557,15 +565,19 @@ impl EdgeData {
     }
 }
 
-//TODO re impl because add RenderCtx,layout_end,styles_end
 impl std::fmt::Display for EdgeData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x = format!(
-            "calculated:{{\n{};\nstyles_string:{{\n{};\n}}\n}}",
-            indented(&self.calculated),
+        let mut members = String::new();
+        writeln!(members, "calculated: {}", &self.calculated)?;
+        writeln!(
+            members,
+            "styles_string: String {{\n{}\n}}",
             indented(&self.styles_string)
-        );
-        write!(f, "EdgeData {{\n{}\n}}", indented(&x))
+        )?;
+        //TODO full this members
+        writeln!(members, "more... ")?;
+
+        write!(f, "EdgeData {{\n{}\n}}", indented(members))
     }
 }
 
@@ -631,6 +643,54 @@ where
     store: Rc<RefCell<GStateStore>>,
 }
 
+impl<Ix> std::fmt::Display for EmgEdgeItem<Ix>
+where
+    Ix: 'static
+        + Clone
+        + Hash
+        + Eq
+        + PartialEq
+        + PartialOrd
+        + Ord
+        + std::default::Default
+        + std::fmt::Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut members = String::new();
+
+        writeln!(members, "id: {}", self.id)?;
+
+        writeln!(
+            members,
+            "paths: {}",
+            DictDisplay("⚓<Dict>", self.paths.get())
+        )?;
+        writeln!(members, "layout: {}", self.layout)?;
+        writeln!(members, "styles: ⚓{:?}", self.styles.get())?;
+
+        writeln!(
+            members,
+            "path_styles: {}",
+            HashMapDisplay("\u{2726}<HashMap>", self.path_styles.get())
+        )?;
+        writeln!(
+            members,
+            "path_layouts: {}",
+            HashMapDisplay("\u{2726}<HashMap>", self.path_layouts.get())
+        )?;
+
+        writeln!(members, "other_css_styles:{}", self.other_css_styles,)?;
+
+        writeln!(
+            members,
+            "edge_nodes: {}",
+            DictDisplay("⚓<Dict>", self.edge_nodes.get())
+        )?;
+
+        write!(f, "EmgEdgeItem {{\n{}\n}}", indented(members))
+    }
+}
+
 impl<Ix> Clone for EmgEdgeItem<Ix>
 where
     // Ix: Clone + Hash + Eq + Ord + 'static + Default,
@@ -687,31 +747,7 @@ where
             && self.edge_nodes == other.edge_nodes
     }
 }
-impl<Ix> std::fmt::Display for EmgEdgeItem<Ix>
-where
-    Ix: 'static
-        + Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + std::default::Default
-        + std::fmt::Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x = format!(
-            "id:{{\n{};\n}}\npaths:{{\n{};\n}}\nlayout:{{\n{};\n}}\npath_styles:{{\n{};\n}}\nother_styles:{{\n{};\n}}\nnode:{{\n{};\n}}",
-            indented(&self.id),
-            indented(DictDisplay("paths<Dict>",self.paths.get())),
-            indented(&self.layout),
-            indented(HashMapDisplay("path_styles<HashMap>",self.path_styles.get())),
-            indented(&self.other_css_styles),
-            indented(DictDisplay("edge_nodes<Dict>",self.edge_nodes.get())),
-        );
-        write!(f, "EdgeDataWithParent {{\n{}\n}}", indented(&x))
-    }
-}
+
 pub type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>; //NOTE: EdgeData or something
 
 impl<Ix> EmgEdgeItem<Ix>
@@ -866,7 +902,7 @@ where
         ),
     ) -> Self
     where
-        Ix: std::fmt::Debug + std::fmt::Display,
+        Ix: std::fmt::Debug,
         (IdStr, NotNan<Precision>): PartialEq,
     {
         let id_sa: StateAnchor<EdgeIndex<Ix>> =
@@ -1368,7 +1404,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 
 
                             let _debug_span_ = warn_span!( "->[ calculated_changed_vars_sa calc map_mut ] ").entered();
-                            warn!("[calculated_changed_vars_sa] path:{} newest_current_prop_vals :{:?}",&self_path5,&newest_current_prop_vals);
+                            warn!("[calculated_changed_vars_sa] path:{:?} newest_current_prop_vals :{:?}",&self_path5,&newest_current_prop_vals);
 
                             let mut children_for_current_constants_did_update = false;
 
@@ -1445,7 +1481,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 
                                 match diff_item {
                                     ordmap::DiffItem::Add(&var, &v) => {
-                                        warn!("path:{} , cass_solver add v:{}",&self_path6,&v);
+                                        warn!("path:{:?} , cass_solver add v:{}",&self_path6,&v);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
                                         cass_solver.suggest_value(var, v ).unwrap();
                                         general_top_vals_did_update = true;
@@ -1477,7 +1513,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 
                                 match diff_item {
                                     ordmap::DiffItem::Add(&var, &v) => {
-                                        warn!("path:{} , cass_solver add v:{}",&self_path6,&v);
+                                        warn!("path:{:?} , cass_solver add v:{}",&self_path6,&v);
                                         cass_solver.add_edit_variable(var, cassowary::strength::STRONG*1000.0).ok();
                                         cass_solver.suggest_value(var, v ).unwrap();
                                         general_inherited_vals_did_update = true;
@@ -1577,12 +1613,12 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                             for (var,v) in changed_vars.iter() {
                                 let id_prop_str =   children_cass_maps.iter().find_map(|(id,(cassowary_map ,..))|{
                                      cassowary_map.prop(var).map(|prop|{
-                                        let vv:IdStr = format!("{} |=> #{}[{}]",&self_path4, &id,&prop).into();
+                                        let vv:IdStr = format!("{:?} |=> #{:?}[{}]",&self_path4, &id,&prop).into();
                                         vv
                                      })
                                 }).or_else(||{
                                     current_cassowary_map3.prop(var).map(|prop|{
-                                        let vv:IdStr = format!("{}[{}] ",&self_path4,&prop).into();
+                                        let vv:IdStr = format!("{:?}[{}] ",&self_path4,&prop).into();
                                         vv
                                     })
                                 }).unwrap_or_default();//TODO add genal vals
@@ -1722,7 +1758,6 @@ where
         + std::hash::Hash
         + std::default::Default
         + std::cmp::Ord
-        + std::fmt::Display
         + 'static
         + std::fmt::Debug,
 {

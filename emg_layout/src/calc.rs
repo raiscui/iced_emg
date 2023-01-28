@@ -3,7 +3,7 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2023-01-20 15:19:16
+ * @LastEditTime: 2023-01-28 19:46:33
  * @LastEditors: Rais
 * @Description:
 */
@@ -46,8 +46,7 @@ where
         + std::hash::Hash
         + std::cmp::Eq
         + std::default::Default
-        + std::cmp::Ord
-        + std::fmt::Display,
+        + std::cmp::Ord,
 {
     let _span_ = trace_span!("->[ layout_calculating ] ").entered();
     let _debug_span_ = debug_span!("->[ layout_calculating ] ").entered();

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-24 22:46:22
- * @LastEditTime: 2023-01-25 22:56:44
+ * @LastEditTime: 2023-01-28 20:58:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -45,22 +45,15 @@ where
 
         let mut members = String::new();
         self.1.iter().for_each(|(k, v)| {
-            let k_str = k.to_string();
-            writeln!(
-                members,
-                "{} : {}",
-                k_str,
-                // indented_with(v, " ".repeat(k_str.len()).as_str())
-                v
-            )
-            .unwrap();
+            writeln!(members, "{k} : {v}").unwrap();
         });
 
         write!(
             f,
             "{} {{\n{}}}",
             self.0,
-            indented_with(&members, " ".repeat(self.0.len() + 1).as_str())
+            // indented_with(&members, " ".repeat(self.0.len() + 2).as_str())
+            indented(&members)
         )
     }
 }
@@ -84,9 +77,14 @@ where
 
         let mut members = String::new();
         self.1.iter().for_each(|(k, v)| {
-            writeln!(members, "{} :\n{}\n,", k, indented(v)).unwrap();
+            writeln!(members, "{k} : {v} ,").unwrap();
         });
 
-        write!(f, "{} {{\n{}\n}}", self.0, indented(&members))
+        write!(
+            f,
+            "{} {{\n{}}}",
+            self.0,
+            indented_with(&members, " ".repeat(self.0.len() + 1).as_str())
+        )
     }
 }

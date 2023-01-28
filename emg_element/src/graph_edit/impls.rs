@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-01-27 16:36:01
+ * @LastEditTime: 2023-01-28 23:08:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -38,9 +38,8 @@ mod test {
     use std::{cell::RefCell, path::Path, rc::Rc};
 
     use emg::{edge_index, edge_index_no_source, Direction::Incoming};
-    use emg_common::IdStr;
+    use emg_common::{px, IdStr};
 
-    use emg_layout::{global_height, global_width};
     use emg_state::{use_state, StateAnchor};
 
     use crate::{
@@ -76,7 +75,7 @@ mod test {
          // edge ─────────────────────────────────────────────────────
 
          let  root_ei = GraphEdgeBuilder::new(root_edge_ix.clone())
-             .with_size((global_width(), global_height()))
+             .with_size((px(1000), px(1000)))
              .build_in_topo(&emg_graph_rc_refcell)
              .unwrap();
 
@@ -96,6 +95,7 @@ mod test {
          // edge ─────────────────────────────────────────────────────
 
          let e_item = GraphEdgeBuilder::new(edge_ix.clone())
+         .with_size((px(100), px(100)))
              .build_in_topo(&emg_graph_rc_refcell)
              .unwrap();
          // ─────────────────────────────────────────────────────────────────────────────
@@ -116,6 +116,7 @@ mod test {
          // edge ─────────────────────────────────────────────────────
 
          let e_item = GraphEdgeBuilder::new(edge_ix.clone())
+         .with_size((px(200), px(200)))
              .build_in_topo(&emg_graph_rc_refcell)
              .unwrap();
          // ─────────────────────────────────────────────────────────────────────────────
@@ -136,6 +137,7 @@ mod test {
          // edge ─────────────────────────────────────────────────────
 
          let e_item = GraphEdgeBuilder::new(edge_ix.clone())
+         .with_size((px(30), px(30)))
              .build_in_topo(&emg_graph_rc_refcell)
              .unwrap();
          // ─────────────────────────────────────────────────────────────────────────────

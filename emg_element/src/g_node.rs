@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:01:09
- * @LastEditTime: 2023-01-25 22:27:16
+ * @LastEditTime: 2023-01-28 20:56:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -74,11 +74,7 @@ where
         }
         // ─────────────────────────────────────────────────────────────
 
-        write!(
-            f,
-            "EmgNodeItem {{\n{}\n}}",
-            indented_with(members, " ".repeat("EmgNodeItem {".len()).as_str())
-        )
+        write!(f, "EmgNodeItem {{\n{}\n}}", indented(members))
     }
 }
 

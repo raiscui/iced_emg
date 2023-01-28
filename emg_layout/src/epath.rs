@@ -1,21 +1,19 @@
+/*
+ * @Author: Rais
+ * @Date: 2023-01-22 14:02:47
+ * @LastEditTime: 2023-01-28 20:01:06
+ * @LastEditors: Rais
+ * @Description:
+ */
+
 use emg::{edge_index, edge_index_no_source, EdgeIndex, NodeIndex};
 use emg_common::Vector;
-use nom::{
-    bytes::complete::{tag, take_while},
-    error::Error,
-    Finish, IResult,
-};
+use nom::{error::Error, Finish};
 use std::fmt::Write;
 use std::{hash::Hash, str::FromStr};
 
 use crate::parser::parse_edge_ix_s;
-/*
- * @Author: Rais
- * @Date: 2023-01-22 14:02:47
- * @LastEditTime: 2023-01-25 10:21:27
- * @LastEditors: Rais
- * @Description:
- */
+
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug, Default)]
 //TODO  loop check
@@ -199,8 +197,14 @@ where
         // write!(f, "ep-[{}]", &sv)
 
         let mut path = String::new();
-        let first = self.0.front().unwrap().target_nix().as_ref().unwrap();
-        write!(path, "⚬-{first}")?;
+        let front = self.0.front();
+        if let Some(e) = front {
+            let first_target = e.target_nix().as_ref().unwrap();
+            write!(path, "⚬-{first_target}")?;
+        } else {
+            write!(path, "EMPTY!!!!!!!!!!!")?;
+        }
+
         for e in self.0.iter().skip(1) {
             if let Some(t) = e.target_nix() {
                 write!(path, " => {t}")?;
