@@ -1,0 +1,26 @@
+---
+source: emg/src/graph.rs
+expression: g1
+---
+Graph {
+    nodes:{
+           xx:
+               Node {
+                   item: xx_item
+                   incoming:[
+                   ]
+                   outgoing:[
+                   ]
+
+               }
+
+           ,
+
+    }
+    edges:{
+            {
+           }}
+
+
+}
+
