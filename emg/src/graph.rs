@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-01-29 12:38:18
+ * @LastEditTime: 2023-01-29 14:58:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -1235,28 +1235,30 @@ where
             outgoing_eix_set: outgoing,
             item,
             ..
-        } = self.nodes.get(n.index())?.clone();
+        }
+        // = self.nodes.get(&n)?.clone();
+        =self.nodes.remove(&n)?;
 
         // 断开 node 进出 连接
         // TODO: Rc - ENGINE in graph
         for n_in_e_ix in incoming.get_rc().iter() {
-            let n_in_e_source_n_ix = self.edges.store_get_rc(&self.store())[n_in_e_ix]
-                .source_nix()
-                .store_get_rc(&self.store());
+            // let n_in_e_source_n_ix = self.edges.store_get_rc(&self.store())[n_in_e_ix]
+            //     .source_nix()
+            //     .store_get_rc(&self.store());
 
-            self.disconnect_plug_in_node_with_dir(&*n_in_e_source_n_ix, Outgoing, n_in_e_ix);
+            self.disconnect_plug_in_node_with_dir(n_in_e_ix.source_nix(), Outgoing, n_in_e_ix);
             self.just_remove_edge_in_edges(n_in_e_ix);
         }
         // TODO: Rc - ENGINE in graph
         for n_out_e_ix in outgoing.get_rc().iter() {
-            let n_out_e_target_n_ix = self.edges.store_get_rc(&self.store())[n_out_e_ix]
-                .source_nix()
-                .store_get_rc(&self.store());
+            // let n_out_e_target_n_ix = self.edges.store_get_rc(&self.store())[n_out_e_ix]
+            //     .target_nix()
+            //     .store_get_rc(&self.store());
 
-            self.disconnect_plug_in_node_with_dir(&*n_out_e_target_n_ix, Incoming, n_out_e_ix);
+            self.disconnect_plug_in_node_with_dir(n_out_e_ix.target_nix(), Incoming, n_out_e_ix);
             self.just_remove_edge_in_edges(n_out_e_ix);
         }
-        self.nodes.remove(n.index());
+        // self.nodes.remove(&n);
 
         Some(item)
     }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-01-28 23:08:23
+ * @LastEditTime: 2023-01-29 15:00:12
  * @LastEditors: Rais
  * @Description:
  */
@@ -55,7 +55,7 @@ mod test {
 
     #[test]
     fn test_edge_path_change_source() {
-        insta::with_settings!({snapshot_path => Path::new("./graph")},{
+        insta::with_settings!({snapshot_path => Path::new("./insta")},{
          //TODO work here 添加边 节点 等 使测试正常
          let emg_graph = GraphType::<Message>::default();
          let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
