@@ -226,7 +226,7 @@ Graph {
                      target_nix: ▣ root ,
 
                }
-               ├─ ▣ a => ▣ c  : Edge {
+               ├─ ▣ b => ▣ c  : Edge {
                      item: EmgEdgeItem {
                          id: ✦ (⚓ (├─ ▣ b => ▣ c ))
                          paths: ⚓<Dict> {

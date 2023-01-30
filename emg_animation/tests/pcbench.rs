@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-17 11:30:44
- * @LastEditTime: 2023-01-13 16:59:49
+ * @LastEditTime: 2023-01-30 09:40:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -47,7 +47,7 @@ mod pc_bench {
         },
         to, PROP_SIZE,
     };
-    use emg_common::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
+    use emg_common::{im::vector, into_smvec, into_vector, smallvec, IdStr, SmallVec, Vector};
     use seed_styles::{height, px, width, Unit};
 
     #[test]

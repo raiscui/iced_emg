@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:01:09
- * @LastEditTime: 2023-01-28 20:56:27
+ * @LastEditTime: 2023-01-30 13:48:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 // mod index;
 use std::fmt::Write;
 mod node_item_rc_sv;
-use indented::{indented, indented_with};
+use indented::indented;
 pub use node_item_rc_sv::GraphMethods;
 pub use node_item_rc_sv::{EventMatchsSa, GelType, GraphType, NItem, E, N};
 use std::fmt::Display;

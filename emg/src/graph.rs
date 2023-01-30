@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-01-30 09:36:06
+ * @LastEditTime: 2023-01-30 13:41:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,9 +12,12 @@ mod edges;
 mod iter_format;
 mod neighbors;
 
-use crate::im::{
-    hashmap::{self, Entry},
-    HashMap,
+use crate::{
+    error::Error,
+    im::{
+        hashmap::{self, Entry},
+        HashMap,
+    },
 };
 pub use edges::NodeEdgesIter;
 use emg_common::display::DictDisplay;
@@ -1110,16 +1113,29 @@ where
     }
 
     pub fn edge_plug_edit(&self, eix: &EdgeIndex<Ix>, dir: Direction, change_to: impl Into<Ix>) {
-        let edge = &self.edges.store_get_rc(&self.store())[eix];
         match dir {
             Outgoing => {
                 //TODO finish this like incoming
-                edge.target_nix.set(Some(node_index(change_to)))
+                // edge.target_nix.set(Some(node_index(change_to)))
+                todo!()
             }
             Incoming => {
                 let new_incoming_nix = Some(node_index(change_to));
-                // add in edges
-                edge.source_nix.set(new_incoming_nix.clone());
+                let new_eix = eix.clone().with_incoming(new_incoming_nix.clone().into());
+
+                self.just_remove_plug_in_nodes(eix);
+
+                // add in nodes ─────────────────────────────────────────────
+                self.nodes_connect_eix(&new_eix);
+
+                //edges ─────────────────────────────────────────────────────────────────────────────
+
+                self.edges.store_update(&self.store(), |edges| {
+                    //TODO 当前在 FnOnce中 无法 返回 result , 暂时只能 unwrap
+                    let edge = edges.remove(eix).ok_or(Error::CanNotGetEdge).unwrap();
+                    edge.source_nix.set(new_incoming_nix);
+                    edges.insert(new_eix, edge);
+                });
                 // ─────────────────────────────────────────────
                 // //old source node remove eix a->c change to  a!=>c
                 // self.disconnect_plug_in_node_with_dir(eix.source_nix(), Outgoing, eix);
@@ -1132,11 +1148,6 @@ where
                 // new_incoming_eix.set_incoming(new_incoming_nix.into());
                 // self.nodes_connect_eix(&new_incoming_eix);
                 // remove edge in node ─────────────────────────────────────────────
-                self.just_remove_plug_in_nodes(eix);
-                let mut new_incoming_eix = eix.clone();
-                new_incoming_eix.set_incoming(new_incoming_nix.into());
-                // add in nodes ─────────────────────────────────────────────
-                self.nodes_connect_eix(&new_incoming_eix);
             }
         }
     }

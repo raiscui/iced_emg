@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-25 18:39:47
- * @LastEditTime: 2023-01-25 19:45:06
+ * @LastEditTime: 2023-01-30 13:49:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -157,6 +157,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(unused)]
 mod test {
 
     use crate::{dict, use_state, CloneStateAnchor, CloneStateVar, StateAnchor};

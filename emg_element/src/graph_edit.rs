@@ -68,7 +68,7 @@ struct EdittingGraphEdge<'a, Ix, M> {
 }
 
 impl<'a, Ix, M> EdittingGraphEdge<'a, Ix, M> {
-    fn move_to(&self, who: &EdgeIndex<Ix>, dir: Direction, to: impl Into<Ix>) {
+    fn moving(&self, who: &EdgeIndex<Ix>, dir: Direction, to: impl Into<Ix>) {
         self.inner.edge_plug_edit(who, dir, to.into());
     }
 

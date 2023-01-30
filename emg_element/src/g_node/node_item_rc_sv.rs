@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-01-25 22:00:06
+ * @LastEditTime: 2023-01-30 13:47:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,15 +21,12 @@ use std::{cell::RefCell, rc::Rc};
 use either::Either::{self, Left, Right};
 use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_common::{
-    im::{ordmap::OrdMapPool, OrdSet},
-    im::{vector, OrdMap},
+    im::{ordmap::OrdMapPool, vector},
     IdStr, Vector,
 };
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_shaping::ShapingUse;
-use emg_state::{
-    Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar,
-};
+use emg_state::{Anchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar};
 use tracing::{debug, error, info, info_span, trace, trace_span, warn};
 // use vec_string::VecString;
 
@@ -229,7 +226,7 @@ where
             let _span = info_span!("----[paths_view_gel_sa] recalculation,( in [Dict] paths_sa.map_ ===========>)",%current_path).entered();
 
             let current_path_clone2 = current_path.clone();
-            let graph_rc4 = graph_rc3.clone();
+            // let graph_rc4 = graph_rc3.clone();
 
             let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 

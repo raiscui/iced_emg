@@ -1,16 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2023-01-16 01:26:18
+ * @LastEditTime: 2023-01-30 13:48:26
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg_common::{Pos, Vector};
-use emg_native::{event::EventWithFlagType, renderer::Renderer, Program, Widget};
-use emg_orders::Orders;
+use emg_native::{event::EventWithFlagType, renderer::Renderer, Program};
 use emg_state::StateAnchor;
-use std::{ops::Deref, rc::Rc};
+use std::rc::Rc;
 
 pub trait GraphProgram: Program {
     // type Renderer: Renderer<SceneCtx = <Self as Program>::WhoImplSceneCtx>;

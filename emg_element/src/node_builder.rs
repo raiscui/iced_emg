@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-14 01:20:45
+ * @LastEditTime: 2023-01-30 13:48:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,7 @@
 mod event_builder;
 use derive_more::From;
 
-use emg_common::{mouse, IdStr, Pos, Precision, TypeName, Vector};
+use emg_common::{mouse, IdStr, Pos, TypeName, Vector};
 use emg_layout::EdgeCtx;
 use emg_native::{event::EventFlag, renderer::Rect, Event, WidgetState};
 use emg_shaping::EqShapingWithDebug;

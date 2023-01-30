@@ -1,3 +1,4 @@
+mod error;
 mod graph;
 mod macros;
 pub use graph::edge_index;

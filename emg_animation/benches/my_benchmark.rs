@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2023-01-13 16:57:28
+ * @LastEditTime: 2023-01-30 09:39:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,7 +22,7 @@ use emg_animation::{
     },
     to, PROP_SIZE,
 };
-use emg_common::{into_smvec, into_vector, smallvec, vector, IdStr, SmallVec, Vector};
+use emg_common::{into_smvec, smallvec, IdStr, SmallVec};
 use seed_styles::{height, px, width, Unit};
 use std::{collections::VecDeque, time::Duration};
 

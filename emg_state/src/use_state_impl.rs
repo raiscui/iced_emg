@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-01-25 20:47:23
+ * @LastEditTime: 2023-01-30 13:50:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,7 +12,6 @@ pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::Engine;
 pub use anchors::singlethread::Var;
 use anchors::{
-    collections::ord_map_collect::OrdMapCollect,
     expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
     singlethread::MultiAnchor,
 };
@@ -620,7 +619,7 @@ type SynCallBeforeFnsMap<T> = HashMap<StorageKey, BoxSynCallBeforeFn<T>>;
 fn before_fns_run<T: 'static>(
     // store: &GStateStore,
     current_id: &StorageKey,
-    current_data: &Option<Rc<T>>,
+    current_data: &Option<Rc<T>>, //TODO 是否需要 opt? 看上去好像不需要
     data: &T,
     opt_fns: Option<&SynCallBeforeFnsMap<T>>,
 ) -> RefCell<Vec<StorageKey>> {
@@ -661,13 +660,13 @@ fn start_set_var_and_run_before_after<T: Clone + 'static>(
     // store: &GStateStore,
     current_id: &StorageKey,
     var: &anchors::expert::Var<T, Engine>,
+    current: Rc<T>,
     data: T,
     before_fns: Option<&SynCallBeforeFnsMap<T>>,
     after_fns: Option<&SynCallAfterFnsMap<T>>,
 ) {
     //NOTE staring first callback call
-    let current = Some(var.get());
-    let skip = before_fns_run(current_id, &current, &data, before_fns);
+    let skip = before_fns_run(current_id, &Some(current), &data, before_fns);
     trace!("start_set_var_and_before_after:: before_fns_runned,now set new v");
 
     var.set(data.clone());
@@ -950,7 +949,8 @@ where
     fn store_set(&self, store: &GStateStore, value: T) {
         let s_key = StorageKey::TopoKey(self.id);
         let (var, before_fns, after_fns) = store.get_var_b_a_fn_collect::<T>(&s_key);
-        start_set_var_and_run_before_after(&s_key, var, value, before_fns, after_fns);
+        let current = var.get();
+        start_set_var_and_run_before_after(&s_key, var, current, value, before_fns, after_fns);
     }
     fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
         let (var, before_fns, after_fns) = store
@@ -958,12 +958,14 @@ where
             // .cloned()
             .expect("You are trying to get a var state that doesn't exist in this context!");
 
-        let data = func(var.get().as_ref());
+        let current = var.get();
+        let data = func(&current);
 
         start_set_var_and_run_before_after(
             // store,
             &StorageKey::TopoKey(self.id),
             var,
+            current,
             data,
             before_fns,
             after_fns,
@@ -974,11 +976,13 @@ where
         read_var_b_a_with_topo_id::<_, T, ()>(
             self.id,
             |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
-                let data = func(var.get().as_ref());
+                let current = var.get();
+                let data = func(&current);
                 start_set_var_and_run_before_after(
                     // store,
                     &StorageKey::TopoKey(self.id),
                     var,
+                    current,
                     data,
                     before_fns,
                     after_fns,
@@ -990,12 +994,14 @@ where
         read_var_b_a_with_topo_id::<_, T, ()>(
             self.id,
             |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
-                let opt_data = func_once(var.get().as_ref());
+                let current = var.get();
+                let opt_data = func_once(&current);
                 if let Some(data) = opt_data {
                     start_set_var_and_run_before_after(
                         // store,
                         &StorageKey::TopoKey(self.id),
                         var,
+                        current,
                         data,
                         before_fns,
                         after_fns,
@@ -1008,12 +1014,14 @@ where
         read_var_b_a_with_topo_id::<_, T, ()>(
             self.id,
             |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
-                let data = func_once(var.get().as_ref());
+                let current = var.get();
+                let data = func_once(&current);
 
                 start_set_var_and_run_before_after(
                     // store,
                     &StorageKey::TopoKey(self.id),
                     var,
+                    current,
                     data,
                     before_fns,
                     after_fns,
@@ -1028,12 +1036,14 @@ where
             .expect(
             "fn store_set_with: You are trying to get a var state that doesn't exist in this context!",
         );
-        let data = func_once(var.get().as_ref());
+        let current = var.get();
+        let data = func_once(&current);
 
         start_set_var_and_run_before_after(
             // store,
             &StorageKey::TopoKey(self.id),
             var,
+            current,
             data,
             before_fns,
             after_fns,
@@ -1643,7 +1653,8 @@ fn set_state_and_run_cb_with_topo_id<T: 'static + std::clone::Clone>(data: T, cu
             .opt_get_var_and_bf_af_use_id::<T>(&s_key)
             .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 
-        start_set_var_and_run_before_after(&s_key, var, data, before_fns, after_fns);
+        let current = var.get();
+        start_set_var_and_run_before_after(&s_key, var, current, data, before_fns, after_fns);
     });
 
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));

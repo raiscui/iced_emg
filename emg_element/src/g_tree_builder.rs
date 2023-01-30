@@ -1,15 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-01-23 22:52:40
+ * @LastEditTime: 2023-01-30 13:48:38
  * @LastEditors: Rais
  * @Description:
  */
 mod for_node_item_rc_sv;
 use crate::{EventNode, GElement};
-use emg::EdgeIndex;
 use emg_common::IdStr;
-use emg_layout::{EmgEdgeItem, GenericSizeAnchor};
+use emg_layout::EmgEdgeItem;
 use emg_shaping::{EqShaping, Shaping};
 use emg_state::{Dict, StateVar};
 use std::{
