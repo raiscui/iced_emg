@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-01-30 18:38:35
+ * @LastEditTime: 2023-01-30 23:42:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,6 +10,7 @@ use crate::{
     error::Error,
     g_node::{EmgNodeItem, GelType, GraphType, NItem},
     g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn},
+    graph_edit::GraphEditor,
     widget::Layer,
     GElement,
 };
@@ -195,18 +196,19 @@ impl GraphEdgeBuilder {
     }
 }
 
-//TODO make trait use GraphNodeBuilder GraphNodeBuilder for Rc<RefCell<GraphType<Message>>> and GraphType<Message> for easy use in update
+//TODO make trait use GraphNodeBuilder GraphNodeBuilder for Rc<RefCell<GraphType<Message>>> and GraphType<Message> for easy use in update fn
 
 impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
-// where
-//     Message: std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug,
+where
+    Message: 'static,
+    //     Message: std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug,
 {
     type Ix = IdStr;
     type GraphType = GraphType<Message>;
-    type RcRefCellGraphType = Self;
+    type GraphEditor = GraphEditor<Message>;
 
-    fn rc_refcell_self(&self) -> Self::RcRefCellGraphType {
-        self.clone()
+    fn editor(&self) -> Self::GraphEditor {
+        GraphEditor(self.clone())
     }
 
     fn graph(&self) -> Ref<GraphType<Message>> {

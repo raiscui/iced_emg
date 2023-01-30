@@ -131,12 +131,7 @@ enum Message {
 impl Sandbox for Counter {
     type Message = Message;
 
-    fn update(
-        &mut self,
-        graph: &mut Self::GraphType,
-        orders: &Self::Orders,
-        message: Self::Message,
-    ) {
+    fn update(&mut self, graph: Self::GraphEditor, orders: &Self::Orders, message: Self::Message) {
         match message {
             Message::IncrementPressed => {
                 self.value += 1;

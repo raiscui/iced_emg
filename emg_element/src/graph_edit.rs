@@ -1,17 +1,65 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-19 17:43:32
- * @LastEditTime: 2023-01-30 18:17:31
+ * @LastEditTime: 2023-01-30 23:47:55
  * @LastEditors: Rais
  * @Description:
  */
 
 mod impls;
-use std::marker::PhantomData;
+use std::{cell::RefCell, fmt::Display, marker::PhantomData, ops::Deref, rc::Rc};
 
 use emg::{Direction, EdgeIndex};
+use emg_common::IdStr;
+pub use impls::*;
+
+use crate::GraphType;
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+pub trait GraphEdit {
+    type Ix;
+    fn edit<M: Mode>(&self) -> M::Interface<'_, Self::Ix>;
+}
+impl<'a, T> GraphEdit for T
+where
+    T: GraphEditManyMethod,
+{
+    type Ix = T::Ix;
+    fn edit<M: Mode>(&self) -> M::Interface<'_, Self::Ix> {
+        M::interface(self)
+    }
+}
+
+pub trait GraphEditManyMethod {
+    type Ix;
+    //实例连源枝移动( 某 path edge 原 edge 更改 source node) ,枝上其他node 不动(clone edge?)
+    fn edge_plug_edit(&self, who: &EdgeIndex<Self::Ix>, dir: Direction, to: Self::Ix);
+
+    //实例嫁接(实例不连源枝移动 , 某 path node 原 edge 断开, xin edge 接上)
+    fn edge_path_node_change_edge(&mut self);
+}
+
+// Editor ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub struct GraphEditor<Message, Ix = IdStr>(pub(crate) Rc<RefCell<GraphType<Message, Ix>>>)
+where
+    Ix: std::hash::Hash + Clone + Ord + Default + 'static,
+    Message: 'static; //for Debug derive
+
+impl<Message, Ix> Deref for GraphEditor<Message, Ix>
+where
+    Ix: std::hash::Hash + Clone + Ord + Default + 'static,
+{
+    type Target = Rc<RefCell<GraphType<Message, Ix>>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+// EdgeMode ─────────────────────────────────────────────────────────────────────────────
 // I :实例?
 pub struct EdgeMode<I = ()>(PhantomData<I>);
 
@@ -41,29 +89,6 @@ impl Mode for EdgeMode {
     }
 }
 
-pub trait GraphEdit {
-    type Ix;
-    fn edit<M: Mode>(&self) -> M::Interface<'_, Self::Ix>;
-}
-impl<'a, T> GraphEdit for T
-where
-    T: GraphEditManyMethod,
-{
-    type Ix = T::Ix;
-    fn edit<M: Mode>(&self) -> M::Interface<'_, Self::Ix> {
-        M::interface(self)
-    }
-}
-
-pub trait GraphEditManyMethod {
-    type Ix;
-    //实例连源枝移动( 某 path edge 原 edge 更改 source node) ,枝上其他node 不动(clone edge?)
-    fn edge_plug_edit(&self, who: &EdgeIndex<Self::Ix>, dir: Direction, to: Self::Ix);
-
-    //实例嫁接(实例不连源枝移动 , 某 path node 原 edge 断开, xin edge 接上)
-    fn edge_path_node_change_edge(&mut self);
-}
-
 pub struct EdittingGraphEdge<'a, Ix, M> {
     inner: &'a dyn GraphEditManyMethod<Ix = Ix>,
     phantom_data: PhantomData<M>,
@@ -76,3 +101,5 @@ impl<'a, Ix, M> EdittingGraphEdge<'a, Ix, M> {
 
     //TODO fn edit to edit other eg. node
 }
+
+// ─────────────────────────────────────────────────────────────────────────────

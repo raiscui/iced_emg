@@ -638,8 +638,7 @@ pub fn update<A: Application, E: Executor>(
         debug.log_message(&message);
 
         debug.update_started();
-        let command =
-            future_runtime.enter(|| application.update(graph.rc_refcell_self(), orders, message));
+        let command = future_runtime.enter(|| application.update(graph.editor(), orders, message));
         debug.update_finished();
 
         run_command(

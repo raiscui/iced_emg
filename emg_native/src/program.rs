@@ -18,7 +18,7 @@ pub trait Program: Sized {
     type Message: std::fmt::Debug + Send;
     type GraphType;
     type Orders;
-    type RcRefCellGraphType;
+    type GraphEditor;
 
     // type GElement: Widget<Self::Message, Self::ImplRenderContext>;
 
@@ -32,7 +32,7 @@ pub trait Program: Sized {
     /// background by shells.
     fn update(
         &mut self,
-        graph: Self::RcRefCellGraphType,
+        graph: Self::GraphEditor,
         orders: &Self::Orders,
         message: Self::Message,
     ) -> Command<Self::Message>;

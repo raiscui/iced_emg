@@ -1,43 +1,38 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-01-30 17:56:10
+ * @LastEditTime: 2023-01-30 23:20:16
  * @LastEditors: Rais
  * @Description:
  */
-
-use std::{cell::RefCell, rc::Rc};
 
 use emg::{Direction, EdgeIndex};
 
 use crate::GraphType;
 
-use super::GraphEditManyMethod;
+use super::{GraphEditManyMethod, GraphEditor};
 
-impl<Message, Ix> GraphEditManyMethod for GraphType<Message, Ix>
-where
-    Ix: std::hash::Hash
-        + std::clone::Clone
-        + std::cmp::Ord
-        + std::default::Default
-        + std::fmt::Debug,
-{
-    type Ix = Ix;
-    fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) {
-        self.edge_plug_edit(who, dir, to);
-    }
+// impl<Message, Ix> GraphEditManyMethod for GraphType<Message, Ix>
+// where
+//     Ix: std::hash::Hash
+//         + std::clone::Clone
+//         + std::cmp::Ord
+//         + std::default::Default
+//         + std::fmt::Debug,
+// {
+//     type Ix = Ix;
+//     fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) {
+//         self.edge_plug_edit(who, dir, to);
+//     }
 
-    fn edge_path_node_change_edge(&mut self) {
-        todo!("edge_path_node_change_edge")
-    }
-}
-impl<Message, Ix> GraphEditManyMethod for Rc<RefCell<GraphType<Message, Ix>>>
+//     fn edge_path_node_change_edge(&mut self) {
+//         todo!("edge_path_node_change_edge")
+//     }
+// }
+
+impl<Message, Ix> GraphEditManyMethod for GraphEditor<Message, Ix>
 where
-    Ix: std::hash::Hash
-        + std::clone::Clone
-        + std::cmp::Ord
-        + std::default::Default
-        + std::fmt::Debug,
+    Ix: std::hash::Hash + Clone + Ord + Default + std::fmt::Debug,
 {
     type Ix = Ix;
     fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) {
@@ -65,6 +60,7 @@ mod test {
         g_tree_builder::{GraphEdgeBuilder, GraphNodeBuilder},
         graph_edit::{EdgeMode, GraphEdit},
         widget::Layer,
+        GTreeBuilderFn, GraphType,
     };
 
     use super::*;
@@ -167,8 +163,7 @@ mod test {
          {
             //NOTE a->c to b->c
 
-         emg_graph_rc_refcell
-            //  .borrow_mut()
+            emg_graph_rc_refcell.editor()
              .edit::<EdgeMode>()
              .moving(edge_index("a", "c"),Incoming, "b");
          }

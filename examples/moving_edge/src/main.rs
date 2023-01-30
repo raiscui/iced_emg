@@ -3,12 +3,13 @@ use emg_bind::{
     better_any::TidAble,
     common::mouse::CLICK,
     common::px,
-    element::*,
+    element::{self, *},
     emg::{edge_index, Direction::Incoming},
     emg_msg,
-    graph_edit::{EdgeMode, EdittingGraphEdge, GraphEdit, GraphEditManyMethod, Mode},
+    graph_edit::*,
     gtree,
     layout::styles::{fill, hsl, w},
+    runtime::OrdersContainer,
     state::use_state,
     Error, Orders, Sandbox, Settings,
 };
@@ -137,8 +138,10 @@ impl Sandbox for Counter {
 
     fn update(
         &mut self,
-        graph: Rc<RefCell<crate::GraphType<Self::Message>>>,
-        orders: &Self::Orders,
+        // graph: Self::GraphEditor,
+        graph: GraphEditor<Self::Message>,
+        // orders: &Self::Orders,
+        orders: &OrdersContainer<Self::Message>,
         message: Self::Message,
     ) {
         match message {
@@ -152,7 +155,7 @@ impl Sandbox for Counter {
                 let a = graph.clone();
                 // insta::assert_display_snapshot!("graph_def", a.borrow());
 
-                (graph)
+                graph
                     .edit::<EdgeMode>()
                     .moving(edge_index("a", "b"), Incoming, "w");
                 // let b = graph.clone();

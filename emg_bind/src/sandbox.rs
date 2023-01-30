@@ -1,23 +1,21 @@
 use std::{cell::RefCell, rc::Rc};
 
 use emg_element::{
-    graph_edit::{GraphEdit, GraphEditManyMethod},
+    graph_edit::{GraphEdit, GraphEditManyMethod, GraphEditor},
     GraphMethods,
 };
 use emg_orders::Orders;
 
 use crate::{application::Instance, element, Application, Command, Settings};
 
-pub trait Sandbox: std::default::Default
-// Self::RcRefCellGraphType: GraphEdit + GraphEditManyMethod,
-// Rc<RefCell<Self::GraphType>>: GraphEdit + GraphEditManyMethod,
-{
+pub trait Sandbox: std::default::Default {
     /// The type of __messages__ your [`Sandbox`] will produce.
-    type Message: std::fmt::Debug + Send;
+    type Message: std::fmt::Debug + Send + 'static;
     type GraphType = element::GraphType<Self::Message>;
     // type GraphType: GraphMethods<Self::Message> + Default;
     type Orders = crate::runtime::OrdersContainer<Self::Message>;
-    type RcRefCellGraphType = Rc<RefCell<Self::GraphType>>;
+    type GraphEditor = GraphEditor<Self::Message>;
+
     // type Orders: Orders<Self::Message>;
 
     /// Initializes the [`Sandbox`].
@@ -39,13 +37,7 @@ pub trait Sandbox: std::default::Default
     ///
     /// This is where you define your __update logic__. All the __messages__,
     /// produced by user interactions, will be handled by this method.
-    fn update(
-        &mut self,
-        _graph: Self::RcRefCellGraphType,
-        _orders: &Self::Orders,
-        _message: Self::Message,
-    ) {
-    }
+    fn update(&mut self, graph: Self::GraphEditor, orders: &Self::Orders, message: Self::Message);
 
     /// Returns the widgets to display in the [`Sandbox`].
     ///
@@ -126,12 +118,11 @@ pub trait Sandbox: std::default::Default
 
 impl<SB> Application for SB
 where
-    Rc<RefCell<SB::GraphType>>: GraphEdit + GraphEditManyMethod,
     SB: Sandbox,
     <SB as Sandbox>::Message: 'static,
     <SB as Sandbox>::GraphType: GraphMethods<<SB as Sandbox>::Message> + Default,
     <SB as Sandbox>::Orders: Orders<<SB as Sandbox>::Message>,
-    <SB as Sandbox>::RcRefCellGraphType: GraphEdit + GraphEditManyMethod, // <SB as Sandbox>::RcRefCellGraphType: GraphEdit + GraphEditManyMethod,
+    <SB as Sandbox>::GraphEditor: GraphEdit + GraphEditManyMethod, // <SB as Sandbox>::RcRefCellGraphType: GraphEdit + GraphEditManyMethod,
 {
     //TODO use cargo.toml choose emg_futures backend
     // type Executor = emg_futures::backend::null::Executor;
@@ -143,7 +134,7 @@ where
 
     type GraphType = SB::GraphType;
     type Orders = SB::Orders;
-    type RcRefCellGraphType = SB::RcRefCellGraphType;
+    type GraphEditor = SB::GraphEditor;
 
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         (SB::new(), Command::none())
@@ -155,7 +146,7 @@ where
 
     fn update(
         &mut self,
-        graph: Self::RcRefCellGraphType,
+        graph: Self::GraphEditor,
         orders: &Self::Orders,
         message: Self::Message,
     ) -> Command<Self::Message> {

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-01-30 19:05:43
+ * @LastEditTime: 2023-01-30 22:17:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -40,9 +40,8 @@ pub trait Application: Sized {
     type Flags;
 
     type GraphType: GraphMethods<Self::Message> + Default;
-    type RcRefCellGraphType: GraphEdit + GraphEditManyMethod;
+    type GraphEditor: GraphEdit + GraphEditManyMethod;
     type Orders: Orders<Self::Message>;
-    // type GTreeWithBuilder = Rc<RefCell<Self::GraphType>>;
 
     /// Initializes the [`Application`] with the flags provided to
     /// [`run`] as part of the [`Settings`].
@@ -71,7 +70,7 @@ pub trait Application: Sized {
     /// Any [`Command`] returned will be executed immediately in the background.
     fn update(
         &mut self,
-        graph: Self::RcRefCellGraphType,
+        graph: Self::GraphEditor,
         orders: &Self::Orders,
         message: Self::Message,
     ) -> Command<Self::Message>;
@@ -206,16 +205,16 @@ where
     type Message = A::Message;
     type GraphType = A::GraphType;
     type Orders = A::Orders;
-    type RcRefCellGraphType = A::RcRefCellGraphType;
+    type GraphEditor = A::GraphEditor;
 
     fn update(
         &mut self,
-        graph: Self::RcRefCellGraphType,
+        graph: Self::GraphEditor,
         orders: &Self::Orders,
         message: Self::Message,
     ) -> Command<Self::Message>
     where
-        Self::RcRefCellGraphType: GraphEdit + GraphEditManyMethod,
+        Self::GraphEditor: GraphEdit + GraphEditManyMethod,
     {
         self.0.update(graph, orders, message)
     }
@@ -236,7 +235,7 @@ where
     Rc<RefCell<<A as Application>::GraphType>>: GTreeBuilderFn<
         <A as Application>::Message,
         GraphType = <A as Application>::GraphType,
-        RcRefCellGraphType = <A as Application>::RcRefCellGraphType,
+        GraphEditor = <A as Application>::GraphEditor,
     >,
     // ─────────────────────────────────────────────────────────────────────
 {
@@ -297,7 +296,7 @@ where
     Rc<RefCell<<A as Application>::GraphType>>: GTreeBuilderFn<
         <A as Application>::Message,
         GraphType = <A as Application>::GraphType,
-        RcRefCellGraphType = <A as Application>::RcRefCellGraphType,
+        GraphEditor = <A as Application>::GraphEditor,
     >,
 {
     type Flags = A::Flags;

@@ -18,7 +18,7 @@ pub trait GraphProgram: Program {
     type GTreeWithBuilder: crate::GTreeBuilderFn<
             Self::Message,
             GraphType = Self::GraphType,
-            RcRefCellGraphType = Self::RcRefCellGraphType,
+            GraphEditor = Self::GraphEditor,
         > + Clone;
     // type GElementType: Widget;
     // type RefedGelType: Deref<Target = Self::GElementType>;

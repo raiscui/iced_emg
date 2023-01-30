@@ -1,11 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-01-30 18:37:39
+ * @LastEditTime: 2023-01-30 23:43:21
  * @LastEditors: Rais
  * @Description:
  */
-mod for_node_item_rc_sv;
+mod impl_for_node_item_rc_sv;
 use crate::{
     graph_edit::{GraphEdit, GraphEditManyMethod},
     EventNode, GElement,
@@ -19,7 +19,7 @@ use std::{
     rc::Rc,
 };
 
-pub use for_node_item_rc_sv::{GraphEdgeBuilder, GraphNodeBuilder};
+pub use impl_for_node_item_rc_sv::{GraphEdgeBuilder, GraphNodeBuilder};
 // type SaBuilderFn<T> = dyn Fn(&StateAnchor<Rc<T>>) -> StateAnchor<Rc<T>>;
 
 pub enum GTreeBuilderElement<Message, Ix = IdStr>
@@ -160,9 +160,9 @@ where
 {
     type Ix;
     type GraphType;
-    type RcRefCellGraphType: GraphEdit + GraphEditManyMethod;
+    type GraphEditor: GraphEdit + GraphEditManyMethod;
 
-    fn rc_refcell_self(&self) -> Self::RcRefCellGraphType;
+    fn editor(&self) -> Self::GraphEditor;
 
     fn graph(&self) -> Ref<Self::GraphType>;
     fn graph_mut(&mut self) -> RefMut<Self::GraphType>;
