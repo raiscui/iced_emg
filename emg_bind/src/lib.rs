@@ -30,6 +30,7 @@ mod window;
 pub mod element;
 pub mod executor;
 pub mod settings;
+pub use emg_element::graph_edit;
 
 // ────────────────────────────────────────────────────────────────────────────────
 

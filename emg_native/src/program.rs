@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-12 14:43:52
- * @LastEditTime: 2023-01-16 17:43:13
+ * @LastEditTime: 2023-01-30 18:40:53
  * @LastEditors: Rais
  * @Description:
  */
@@ -18,6 +18,7 @@ pub trait Program: Sized {
     type Message: std::fmt::Debug + Send;
     type GraphType;
     type Orders;
+    type RcRefCellGraphType;
 
     // type GElement: Widget<Self::Message, Self::ImplRenderContext>;
 
@@ -31,7 +32,7 @@ pub trait Program: Sized {
     /// background by shells.
     fn update(
         &mut self,
-        graph: &mut Self::GraphType,
+        graph: Self::RcRefCellGraphType,
         orders: &Self::Orders,
         message: Self::Message,
     ) -> Command<Self::Message>;

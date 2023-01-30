@@ -1,18 +1,21 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-01-30 13:48:38
+ * @LastEditTime: 2023-01-30 18:37:39
  * @LastEditors: Rais
  * @Description:
  */
 mod for_node_item_rc_sv;
-use crate::{EventNode, GElement};
+use crate::{
+    graph_edit::{GraphEdit, GraphEditManyMethod},
+    EventNode, GElement,
+};
 use emg_common::IdStr;
 use emg_layout::EmgEdgeItem;
 use emg_shaping::{EqShaping, Shaping};
 use emg_state::{Dict, StateVar};
 use std::{
-    cell::{Ref, RefMut},
+    cell::{Ref, RefCell, RefMut},
     rc::Rc,
 };
 
@@ -157,6 +160,9 @@ where
 {
     type Ix;
     type GraphType;
+    type RcRefCellGraphType: GraphEdit + GraphEditManyMethod;
+
+    fn rc_refcell_self(&self) -> Self::RcRefCellGraphType;
 
     fn graph(&self) -> Ref<Self::GraphType>;
     fn graph_mut(&mut self) -> RefMut<Self::GraphType>;

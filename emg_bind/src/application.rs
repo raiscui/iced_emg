@@ -1,14 +1,17 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-01-16 18:24:34
+ * @LastEditTime: 2023-01-30 19:05:43
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive cross-platform applications.
 
 use emg_common::{IdStr, Pos, Vector};
-use emg_element::{GTreeBuilderFn, GraphMethods};
+use emg_element::{
+    graph_edit::{GraphEdit, GraphEditManyMethod},
+    GTreeBuilderFn, GraphMethods,
+};
 use emg_orders::Orders;
 use emg_state::StateAnchor;
 use tracing::instrument;
@@ -37,6 +40,7 @@ pub trait Application: Sized {
     type Flags;
 
     type GraphType: GraphMethods<Self::Message> + Default;
+    type RcRefCellGraphType: GraphEdit + GraphEditManyMethod;
     type Orders: Orders<Self::Message>;
     // type GTreeWithBuilder = Rc<RefCell<Self::GraphType>>;
 
@@ -67,7 +71,7 @@ pub trait Application: Sized {
     /// Any [`Command`] returned will be executed immediately in the background.
     fn update(
         &mut self,
-        graph: &mut Self::GraphType,
+        graph: Self::RcRefCellGraphType,
         orders: &Self::Orders,
         message: Self::Message,
     ) -> Command<Self::Message>;
@@ -202,13 +206,17 @@ where
     type Message = A::Message;
     type GraphType = A::GraphType;
     type Orders = A::Orders;
+    type RcRefCellGraphType = A::RcRefCellGraphType;
 
     fn update(
         &mut self,
-        graph: &mut Self::GraphType,
+        graph: Self::RcRefCellGraphType,
         orders: &Self::Orders,
         message: Self::Message,
-    ) -> Command<Self::Message> {
+    ) -> Command<Self::Message>
+    where
+        Self::RcRefCellGraphType: GraphEdit + GraphEditManyMethod,
+    {
         self.0.update(graph, orders, message)
     }
 }
@@ -225,8 +233,11 @@ where
     // ─────────────────────────────────────────────────────────────────────
     <A as Application>::Message: 'static,
     // ─────────────────────────────────────────────────────────────────────
-    Rc<RefCell<<A as Application>::GraphType>>:
-        GTreeBuilderFn<<A as Application>::Message, GraphType = <A as Application>::GraphType>,
+    Rc<RefCell<<A as Application>::GraphType>>: GTreeBuilderFn<
+        <A as Application>::Message,
+        GraphType = <A as Application>::GraphType,
+        RcRefCellGraphType = <A as Application>::RcRefCellGraphType,
+    >,
     // ─────────────────────────────────────────────────────────────────────
 {
     type Renderer = crate::Renderer;
@@ -282,8 +293,12 @@ where
         <A as Application>::Message,
         SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
     >,
-    Rc<RefCell<<A as Application>::GraphType>>:
-        GTreeBuilderFn<<A as Application>::Message, GraphType = <A as Application>::GraphType>,
+
+    Rc<RefCell<<A as Application>::GraphType>>: GTreeBuilderFn<
+        <A as Application>::Message,
+        GraphType = <A as Application>::GraphType,
+        RcRefCellGraphType = <A as Application>::RcRefCellGraphType,
+    >,
 {
     type Flags = A::Flags;
 

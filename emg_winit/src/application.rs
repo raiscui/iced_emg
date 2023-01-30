@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-01-17 00:01:12
+ * @LastEditTime: 2023-01-30 18:54:53
  * @LastEditors: Rais
  * @Description:
  */
@@ -289,7 +289,7 @@ async fn run_instance<A, E, C>(
     init_command: Command<A::Message>,
     window: winit::window::Window,
     exit_on_close_request: bool,
-    mut g: A::GTreeWithBuilder,
+    g: A::GTreeWithBuilder,
     orders: A::Orders,
 ) where
     A: Application + 'static,
@@ -393,7 +393,7 @@ async fn run_instance<A, E, C>(
                         &mut debug,
                         &mut messages,
                         &window,
-                        &mut g.graph_mut(),
+                        &g,
                         &orders,
                         || compositor.fetch_information(),
                     );
@@ -630,7 +630,7 @@ pub fn update<A: Application, E: Executor>(
     debug: &mut Debug,
     messages: &mut Vec<A::Message>,
     window: &winit::window::Window,
-    graph: &mut A::GraphType,
+    graph: &A::GTreeWithBuilder,
     orders: &A::Orders,
     graphics_info: impl FnOnce() -> compositor::Information + Copy,
 ) {
@@ -638,7 +638,8 @@ pub fn update<A: Application, E: Executor>(
         debug.log_message(&message);
 
         debug.update_started();
-        let command = future_runtime.enter(|| application.update(graph, orders, message));
+        let command =
+            future_runtime.enter(|| application.update(graph.rc_refcell_self(), orders, message));
         debug.update_finished();
 
         run_command(

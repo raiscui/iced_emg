@@ -1,14 +1,23 @@
-use emg_element::GraphMethods;
+use std::{cell::RefCell, rc::Rc};
+
+use emg_element::{
+    graph_edit::{GraphEdit, GraphEditManyMethod},
+    GraphMethods,
+};
 use emg_orders::Orders;
 
 use crate::{application::Instance, element, Application, Command, Settings};
 
-pub trait Sandbox: std::default::Default {
+pub trait Sandbox: std::default::Default
+// Self::RcRefCellGraphType: GraphEdit + GraphEditManyMethod,
+// Rc<RefCell<Self::GraphType>>: GraphEdit + GraphEditManyMethod,
+{
     /// The type of __messages__ your [`Sandbox`] will produce.
     type Message: std::fmt::Debug + Send;
     type GraphType = element::GraphType<Self::Message>;
     // type GraphType: GraphMethods<Self::Message> + Default;
     type Orders = crate::runtime::OrdersContainer<Self::Message>;
+    type RcRefCellGraphType = Rc<RefCell<Self::GraphType>>;
     // type Orders: Orders<Self::Message>;
 
     /// Initializes the [`Sandbox`].
@@ -32,7 +41,7 @@ pub trait Sandbox: std::default::Default {
     /// produced by user interactions, will be handled by this method.
     fn update(
         &mut self,
-        _graph: &mut Self::GraphType,
+        _graph: Self::RcRefCellGraphType,
         _orders: &Self::Orders,
         _message: Self::Message,
     ) {
@@ -117,10 +126,12 @@ pub trait Sandbox: std::default::Default {
 
 impl<SB> Application for SB
 where
+    Rc<RefCell<SB::GraphType>>: GraphEdit + GraphEditManyMethod,
     SB: Sandbox,
     <SB as Sandbox>::Message: 'static,
     <SB as Sandbox>::GraphType: GraphMethods<<SB as Sandbox>::Message> + Default,
     <SB as Sandbox>::Orders: Orders<<SB as Sandbox>::Message>,
+    <SB as Sandbox>::RcRefCellGraphType: GraphEdit + GraphEditManyMethod, // <SB as Sandbox>::RcRefCellGraphType: GraphEdit + GraphEditManyMethod,
 {
     //TODO use cargo.toml choose emg_futures backend
     // type Executor = emg_futures::backend::null::Executor;
@@ -132,6 +143,7 @@ where
 
     type GraphType = SB::GraphType;
     type Orders = SB::Orders;
+    type RcRefCellGraphType = SB::RcRefCellGraphType;
 
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         (SB::new(), Command::none())
@@ -143,7 +155,7 @@ where
 
     fn update(
         &mut self,
-        graph: &mut Self::GraphType,
+        graph: Self::RcRefCellGraphType,
         orders: &Self::Orders,
         message: Self::Message,
     ) -> Command<Self::Message> {

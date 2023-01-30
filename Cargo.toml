@@ -27,6 +27,7 @@ members = [
     "emg_graphics_backend",
     "tests",
     "examples/counter",
+    "examples/moving_edge",
 ]
 # exclude = [""]
 [patch.crates-io]

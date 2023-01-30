@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2023-01-30 13:48:26
+ * @LastEditTime: 2023-01-30 19:06:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,11 @@ pub trait GraphProgram: Program {
     // type Renderer: Renderer<SceneCtx = <Self as Program>::WhoImplSceneCtx>;
     type Renderer: Renderer;
 
-    type GTreeWithBuilder: crate::GTreeBuilderFn<Self::Message, GraphType = Self::GraphType> + Clone;
+    type GTreeWithBuilder: crate::GTreeBuilderFn<
+            Self::Message,
+            GraphType = Self::GraphType,
+            RcRefCellGraphType = Self::RcRefCellGraphType,
+        > + Clone;
     // type GElementType: Widget;
     // type RefedGelType: Deref<Target = Self::GElementType>;
 

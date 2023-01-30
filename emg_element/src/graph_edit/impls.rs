@@ -1,10 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-01-30 09:47:28
+ * @LastEditTime: 2023-01-30 17:56:10
  * @LastEditors: Rais
  * @Description:
  */
+
+use std::{cell::RefCell, rc::Rc};
 
 use emg::{Direction, EdgeIndex};
 
@@ -23,6 +25,23 @@ where
     type Ix = Ix;
     fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) {
         self.edge_plug_edit(who, dir, to);
+    }
+
+    fn edge_path_node_change_edge(&mut self) {
+        todo!("edge_path_node_change_edge")
+    }
+}
+impl<Message, Ix> GraphEditManyMethod for Rc<RefCell<GraphType<Message, Ix>>>
+where
+    Ix: std::hash::Hash
+        + std::clone::Clone
+        + std::cmp::Ord
+        + std::default::Default
+        + std::fmt::Debug,
+{
+    type Ix = Ix;
+    fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) {
+        self.borrow().edge_plug_edit(who, dir, to)
     }
 
     fn edge_path_node_change_edge(&mut self) {
@@ -147,11 +166,11 @@ mod test {
         }
          {
             //NOTE a->c to b->c
-         let a_c = edge_index("a", "c");
+
          emg_graph_rc_refcell
-             .borrow_mut()
+            //  .borrow_mut()
              .edit::<EdgeMode>()
-             .moving(&a_c,Incoming, "b");
+             .moving(edge_index("a", "c"),Incoming, "b");
          }
          // ─────────────────────────────────────────────────────
 

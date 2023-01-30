@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-01-30 13:49:01
+ * @LastEditTime: 2023-01-30 18:38:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -203,6 +203,11 @@ impl<Message> GTreeBuilderFn<Message> for Rc<RefCell<GraphType<Message>>>
 {
     type Ix = IdStr;
     type GraphType = GraphType<Message>;
+    type RcRefCellGraphType = Self;
+
+    fn rc_refcell_self(&self) -> Self::RcRefCellGraphType {
+        self.clone()
+    }
 
     fn graph(&self) -> Ref<GraphType<Message>> {
         self.borrow()

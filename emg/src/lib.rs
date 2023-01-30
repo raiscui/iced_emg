@@ -1,3 +1,6 @@
+#![feature(specialization)]
+#![feature(negative_impls)]
+#![feature(auto_traits)]
 mod error;
 mod graph;
 mod macros;

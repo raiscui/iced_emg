@@ -1,0 +1,4 @@
+behavior:
+  force_update: true
+  force_pass: true
+  update: "always"

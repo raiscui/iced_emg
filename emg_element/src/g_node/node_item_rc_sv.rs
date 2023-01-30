@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-01-30 13:47:32
+ * @LastEditTime: 2023-01-30 16:35:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -216,7 +216,6 @@ where
         // warn!("children count:{}", children_count);
 
         // @────────────────────────────────────────────────────────────────────────────────
-        let graph_rc3 = graph_rc.clone();
         let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
 
         let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex<IdStr>, GElEither<Message>> =
