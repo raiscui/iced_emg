@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-01-30 23:43:21
+ * @LastEditTime: 2023-01-31 21:24:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,7 @@ use emg_layout::EmgEdgeItem;
 use emg_shaping::{EqShaping, Shaping};
 use emg_state::{Dict, StateVar};
 use std::{
-    cell::{Ref, RefCell, RefMut},
+    cell::{Ref, RefMut},
     rc::Rc,
 };
 

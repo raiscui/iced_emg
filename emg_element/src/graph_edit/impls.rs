@@ -1,14 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-01-30 23:20:16
+ * @LastEditTime: 2023-01-31 21:22:04
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg::{Direction, EdgeIndex};
-
-use crate::GraphType;
 
 use super::{GraphEditManyMethod, GraphEditor};
 
@@ -62,8 +60,6 @@ mod test {
         widget::Layer,
         GTreeBuilderFn, GraphType,
     };
-
-    use super::*;
 
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     enum Message {}

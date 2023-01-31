@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-01-20 16:50:10
+ * @LastEditTime: 2023-01-31 21:26:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -964,7 +964,7 @@ enum Scope {
 impl Parse for Scope {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         debug!("in Scope");
-        let mut span = input.span();
+        let span = input.span();
 
         if input.parse::<Token![&]>().is_ok() {
             return Ok(Self::Local(span));

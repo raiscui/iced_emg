@@ -171,6 +171,16 @@ impl Sandbox for Counter {
                         b_color(rgb(1,0,0))
                     ]
                 @=a1 Layer [
+                    @E=[
+                        origin_x(px( 0)),align_x(px(250)),
+                        origin_y(px(0)),align_y(px(250)),
+                        w(px(30)),h(px(30)),
+                        fill(rgba(1., 1.,1., 1)),
+                        // b_width(px(1)),
+                        // b_color(rgb(1,0,0))
+                    ]
+                    Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[ ],
+
                     @=a2 @E=[
                         // origin_x(px( 100)),
                         // align_x(px(100)),

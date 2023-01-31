@@ -1,4 +1,3 @@
-use futures::stream::StreamExt;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use vello::{
     util::{DeviceHandle, RenderContext as VelloRenderContext, RenderSurface},
@@ -9,7 +8,7 @@ use emg_graphics_backend::{window::compositor as compositor_arch, Error};
 use emg_native::{futures, DPR};
 use tracing::{info, instrument};
 
-use crate::{Backend, Renderer, SceneFrag, Settings, NUM_FRAMES};
+use crate::{Backend, Renderer, SceneFrag, Settings};
 // ────────────────────────────────────────────────────────────────────────────────
 
 /// A window graphics backend for  `vello`.

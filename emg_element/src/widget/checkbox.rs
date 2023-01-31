@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2022-09-14 18:12:37
+ * @LastEditTime: 2023-01-31 21:22:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,12 +14,13 @@ use emg_common::{
     IdStr, LogicLength, TypeCheckObjectSafe, TypeName,
 };
 use emg_shaping::{Shaping, ShapingUse, TryShapingUse};
-use tracing::{error, trace, warn};
+use emg_state::StateAnchor;
+use tracing::{error, info, trace, warn, Span};
 
-use std::{any::Any, ops::Deref, rc::Rc};
+use std::{any::Any, rc::Rc};
 
 #[allow(missing_debug_implementations)]
-#[derive(Clone, Tid)]
+#[derive(Tid)]
 pub struct Checkbox<Message>
 // where
 //     dyn std::ops::Fn(bool) -> Message + 'static: std::cmp::PartialEq,
@@ -34,6 +35,20 @@ pub struct Checkbox<Message>
     // style: Box<dyn StyleSheet>,
 }
 
+impl<Message> Eq for Checkbox<Message> {}
+
+impl<Message> Clone for Checkbox<Message> {
+    fn clone(&self) -> Self {
+        Self {
+            is_checked: self.is_checked.clone(),
+            on_toggle: self.on_toggle.clone(),
+            label: self.label.clone(),
+            id: self.id.clone(),
+            width: self.width.clone(),
+        }
+    }
+}
+
 impl<Message> std::fmt::Debug for Checkbox<Message> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Checkbox")
@@ -45,8 +60,8 @@ impl<Message> std::fmt::Debug for Checkbox<Message> {
     }
 }
 impl<Message> PartialEq for Checkbox<Message>
-where
-    Message: PartialEq,
+// where
+// Message: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         self.is_checked == other.is_checked
@@ -114,6 +129,73 @@ impl<Message> Checkbox<Message>
     }
 }
 
+#[cfg(all(feature = "gpu"))]
+use crate::renderer::*;
+#[cfg(all(feature = "gpu"))]
+impl<Message> crate::Widget for Checkbox<Message>
+where
+    Message: 'static,
+{
+    type SceneCtxType = crate::SceneFrag;
+    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
+        let span = illicit::expect::<Span>();
+
+        ctx.map(move |incoming_ctx| {
+            let mut sc = Self::SceneCtxType::new(incoming_ctx.get_translation());
+            let mut builder = sc.gen_builder();
+
+            let rect = incoming_ctx.size().to_rect();
+            //fill
+            if let Some(fill) = incoming_ctx.get_fill_color() {
+                info!(parent: &*span,"fill color: {:?}", &fill);
+                builder.fill(Fill::NonZero, Affine::IDENTITY, fill, None, &rect);
+            }
+            // checkbox
+            let origin = (rect.height() - 14. * incoming_ctx.dpr()) * 0.5;
+
+            let box_rect = Rect {
+                x0: 0.,
+                y0: 0.,
+                x1: 14. * incoming_ctx.dpr(),
+                y1: 14. * incoming_ctx.dpr(),
+            }
+            .with_origin((origin, origin))
+            .to_rounded_rect(3.);
+
+            builder.stroke(
+                &Stroke::new(1. * incoming_ctx.dpr() as f32),
+                Affine::IDENTITY,
+                Color::BLACK,
+                None,
+                &box_rect,
+            );
+
+            // border
+            if let Some(bw) = incoming_ctx.get_border_width() {
+                if let Some(bc) = incoming_ctx.get_border_color() {
+                    info!(parent: &*span,"border width: {:?} color: {:?}", &bw, &bc);
+
+                    builder.stroke(&Stroke::new(bw), Affine::IDENTITY, bc, None, &rect);
+                } else {
+                    // has border width but no border color
+                    builder.stroke(
+                        &Stroke::new(bw),
+                        Affine::IDENTITY,
+                        Color::BLACK,
+                        None,
+                        &rect.inset(-(bw as f64) / 2. - 0.), //TODO 检查,这是临时设置
+                    );
+                }
+            }
+
+            // ─────────────────────────────────────────────
+
+            builder.finish();
+            Rc::new(sc)
+        })
+    }
+}
+
 impl<'a, Message> Shaping<Self> for Checkbox<Message>
 where
     Message: 'static + Clone + MessageTid<'a>,
@@ -146,18 +228,15 @@ where
                 unimplemented!();
             }
             Self::Builder_(builder) => {
-                builder.widget().unwrap().deref().shaping(who_checkbox);
+                builder.widget().shaping(who_checkbox);
             }
-            Self::Text_(t) => {
-                who_checkbox.label = t.get_content(); //TODO text.get_content directly return IdStr
-            }
-            Self::Button_(_) => {
-                unimplemented!();
-            }
-            Self::Refresher_(_shaper) => {
-                // NOTE this is shaping GElement , not Checkbox
-                unimplemented!();
-            }
+            //TODO enable this
+            // Self::Text_(t) => {
+            //     who_checkbox.label = t.get_content(); //TODO text.get_content directly return IdStr
+            // }
+            // Self::Button_(_) => {
+            //     unimplemented!();
+            // }
             Self::Event_(_) => {
                 todo!();
             }
@@ -172,6 +251,8 @@ where
             Self::SaNode_(_) => todo!(),
 
             Self::EvolutionaryFactor(_) => todo!(),
+
+            GElement::Shaper_(_) => todo!(),
         };
     }
 }
@@ -188,16 +269,12 @@ where
                 l.push(self.clone().into());
             }
             GElement::Builder_(builder) => {
-                if let Some(box gel) = builder.widget_mut() {
-                    self.shaping(gel);
-                } else {
-                    panic!("builder not has widget, in [Shaping<GElement<Message>> for Checkbox<Message>] ")
-                }
+                self.shaping(builder.widget_mut());
             }
-            GElement::Text_(_)
-            | GElement::Button_(_)
-            | GElement::Refresher_(_)
-            | GElement::Event_(_) => {
+            // GElement::Text_(_)
+            // | GElement::Button_(_)
+            // |
+            GElement::Shaper_(_) | GElement::Event_(_) => {
                 unimplemented!();
             }
             GElement::Generic_(g_who) => {

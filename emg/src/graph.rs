@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-01-30 17:05:34
+ * @LastEditTime: 2023-01-31 21:25:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -1581,13 +1581,14 @@ where
 // @ test ────────────────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(unused)]
 mod graph_test_mod {
     use crate::graph::Graph;
     use crate::im::Vector;
     use emg_state::use_state;
     use indexmap::IndexSet;
     use std::{iter::FromIterator, path::Path};
-    use tracing::{debug, trace};
+    use tracing::debug;
 
     use std::clone::Clone;
 
@@ -1599,7 +1600,7 @@ mod graph_test_mod {
     use std::mem;
     use std::rc::Rc;
 
-    use color_eyre::{eyre::Report, eyre::WrapErr};
+    use color_eyre::eyre::Report;
     use tracing_subscriber::EnvFilter;
 
     fn tracing_init(level: tracing::Level) -> Result<(), Report> {

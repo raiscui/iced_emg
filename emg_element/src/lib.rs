@@ -15,7 +15,7 @@ mod g_tree_builder;
 mod graph_program;
 mod impl_refresh;
 mod node_builder;
-mod widget;
+pub mod widget;
 // ────────────────────────────────────────────────────────────────────────────────
 pub use g_element::{node_ref, GElement};
 pub use g_node::{EventMatchsSa, GelType, GraphMethods, GraphType, NItem, E, N};

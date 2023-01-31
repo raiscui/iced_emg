@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2023-01-14 01:19:48
+ * @LastEditTime: 2023-01-31 18:15:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -59,6 +59,9 @@ pub struct PaintCtx {
 }
 
 impl PaintCtx {
+    pub fn dpr(&self) -> f64 {
+        DPR
+    }
     pub fn size(&self) -> Size {
         //TODO move DPR to const T
         self.widget_state.size() * DPR

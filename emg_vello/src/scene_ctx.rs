@@ -1,12 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2022-12-22 16:18:38
- * @LastEditTime: 2023-01-09 11:32:02
+ * @LastEditTime: 2023-01-31 21:27:12
  * @LastEditors: Rais
  * @Description:
  */
 
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use emg_native::renderer::{Affine, BlendMode, BrushRef, Fill, Shape, Stroke};
 use vello::{Scene, SceneBuilder as VelloSceneBuilder, SceneFragment as VelloSceneFragment};

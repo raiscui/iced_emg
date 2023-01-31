@@ -11,8 +11,6 @@ pub use scene_ctx::SceneFrag;
 pub use settings::Settings;
 // ────────────────────────────────────────────────────────────────────────────────
 
-const NUM_FRAMES: usize = 2;
-
 pub type Renderer = emg_graphics_backend::Renderer<Backend>;
 
 // ────────────────────────────────────────────────────────────────────────────────

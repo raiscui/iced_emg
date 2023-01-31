@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-30 13:48:14
+ * @LastEditTime: 2023-01-31 18:45:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -534,7 +534,6 @@ where
     }
 
     #[must_use]
-    #[allow(clippy::borrowed_box)]
     pub const fn widget(&self) -> &GElement<Message> {
         //TODO use cow/beef
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-01-13 11:58:59
+ * @LastEditTime: 2023-01-31 18:47:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -106,7 +106,7 @@ pub enum GElement<Message> {
     //NOTE internal
     Generic_(Box<dyn DynGElement<Message>>), //范型 //TODO check batter when use rc?
     #[from(ignore)]
-    NodeRef_(IdStr),     // IntoE(Rc<dyn Into<Element< Message>>>),
+    NodeRef_(IdStr),      // IntoE(Rc<dyn Into<Element< Message>>>),
     // #[from(ignore)]
     // InsideDirectUseSa_(StateAnchor<Rc<Self>>),
     //NOTE generate by tree builder use into()
