@@ -20,7 +20,6 @@ emg_bind = { path = "../../emg_bind" }
 
 
 tracing = "0.1"
-tracing-wasm = { version = "0.2.1" }
 # tracing-wasm = { version = "0.2.1", features = [
 #     "mark-with-rayon-thread-index",
 # ] }

@@ -1,9 +1,11 @@
+# cargo-features = ["per-package-target"]
 [package]
 name = "tests"
 version = "0.1.0"
 authors = ["崔路明 <cuiluming@chaoway.net>"]
 edition = "2021"
 publish = false
+# forced-target = "wasm32-unknown-unknown"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [profile.bench]
@@ -28,7 +30,6 @@ anchors = { path = "../../anchors" }
 
 tracing = "0.1"
 
-tracing-wasm = "0.2"
 console_error_panic_hook = "0.1"
 # im-rc = "15.0.0"
 # serde = "1.0.130"
@@ -36,7 +37,6 @@ console_error_panic_hook = "0.1"
 gtree_proc_macro = { path = "../gtree_proc_macro" }
 
 # [target.'cfg(target_arch = "wasm32")'.dependencies]
-dodrio = { path = "../../dodrio" }
 
 
 [dev-dependencies]
@@ -47,6 +47,8 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 easybench-wasm = "0.2"
+dodrio = { path = "../../dodrio" }
+# tracing-wasm = { version = "0.2", artifact = "cdylib", lib = true, target = "wasm32-unknown-unknown" }
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]

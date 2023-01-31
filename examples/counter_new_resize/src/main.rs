@@ -39,7 +39,7 @@ fn setup_tracing() {
     // #[cfg(debug_assertions)]
     console_error_panic_hook::set_once();
 
-    #[cfg(debug_assertions)]
+    #[cfg(debug_assertions, target_arch = "wasm32")]
     {
         let mut config = tracing_wasm::WASMLayerConfigBuilder::default();
         config.set_max_level(tracing::Level::WARN);

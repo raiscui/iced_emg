@@ -3,7 +3,7 @@ use std::sync::Once;
 /*
  * @Author: Rais
  * @Date: 2021-05-22 08:44:52
- * @LastEditTime: 2021-05-22 09:06:15
+ * @LastEditTime: 2023-01-31 12:49:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,11 +15,7 @@ static TEST_INIT: Once = Once::new();
 pub fn setup_tracing() {
     TEST_INIT.call_once(|| {
         console_error_panic_hook::set_once();
-        cfg_if::cfg_if! {
-            if #[cfg(target_arch = "wasm32")]{
-                tracing_wasm::set_as_global_default();
-
-            }
-        }
+        #[cfg(target_arch = "wasm32")]
+        tracing_wasm::set_as_global_default();
     });
 }

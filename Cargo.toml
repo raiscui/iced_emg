@@ -1,3 +1,4 @@
+
 [workspace]
 resolver = "2"
 members = [
@@ -17,15 +18,14 @@ members = [
     "emg_msg_macro",
     "emg_msg_impl",
     "emg_hasher",
-    # "emg_web",
+    "emg_web",
     "emg_futures",
     "emg_native",
     "emg_winit",
-    # "emg_piet_gpu",
     "emg_vello",
     "emg_renderer",
     "emg_graphics_backend",
-    "tests",
+    # "tests",
     "examples/counter",
     "examples/moving_edge",
 ]
@@ -34,3 +34,6 @@ members = [
 # Required for metal support to work on wgpu
 # TODO: remove when wgpu is upgraded to 0.15
 naga = { git = "https://github.com/gfx-rs/naga", rev = "ddcd5d3121150b2b1beee6e54e9125ff31aaa9a2" }
+
+[profile.dev]
+split-debuginfo = "unpacked"
