@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:01:09
- * @LastEditTime: 2023-01-30 13:48:45
+ * @LastEditTime: 2023-01-31 10:12:16
  * @LastEditors: Rais
  * @Description:
  */
@@ -26,7 +26,7 @@ const POOL_SIZE: usize = 1;
 // pub type E<Ix> = EmgEdgeItem<Ix>;
 // pub type GraphType<Message, Ix = IdStr> = Graph<N<Message, Ix>, E<Ix>, Ix>;
 
-type PathDict<Ix> = Dict<EPath<Ix>, ()>;
+type PathDictAsSets<Ix> = Dict<EPath<Ix>, ()>;
 
 // type CurrentPathChildrenEixGElSA<Message> =
 // StateAnchor<(EdgeIndex<IdStr>, Either<GelType<Message>, GelType<Message>>)>;
@@ -43,7 +43,7 @@ where
     gel_sa: NItem,
     //TODO maybe indexSet
     // paths_sa: StateAnchor<Vector<EPath<Ix>>>, //NOTE: has self
-    paths_sa: StateAnchor<PathDict<Ix>>, //NOTE: has self
+    paths_sa: StateAnchor<PathDictAsSets<Ix>>, //NOTE: has self
     // incoming_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
     // outgoing_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
     paths_view_gel: StateAnchor<Dict<EPath<Ix>, GelType>>,
@@ -65,11 +65,11 @@ where
             write!(paths, "{k},").unwrap();
         });
 
-        writeln!(members, "paths_sa: {}", &paths)?;
+        writeln!(members, "paths_sa: \u{2693} {}", &paths)?;
         // paths_view_gel ─────────────────────────────────────────────────────────────
         {
             let ep_gels = self.paths_view_gel.get();
-            let paths_view_gel = DictDisplay("paths_view_gel", ep_gels);
+            let paths_view_gel = DictDisplay("paths_view_gel \u{2693}", ep_gels);
             writeln!(members, "{}", &paths_view_gel)?;
         }
         // ─────────────────────────────────────────────────────────────

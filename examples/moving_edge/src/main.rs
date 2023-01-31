@@ -152,15 +152,13 @@ impl Sandbox for Counter {
                 self.value -= 1;
             }
             Message::Empty => {
-                let a = graph.clone();
-                insta::assert_display_snapshot!("graph_def", a.borrow());
+                insta::assert_display_snapshot!("graph_def", graph.borrow());
 
                 graph
                     .edit::<EdgeMode>()
-                    .moving(edge_index("a", "b"), Incoming, "w");
-                // let b = graph.clone();
+                    .moving(edge_index("a", "b"), Incoming, "m");
 
-                insta::assert_display_snapshot!("graph_moved", a.borrow());
+                insta::assert_display_snapshot!("graph_moved", graph.borrow());
             }
         }
     }
@@ -183,7 +181,7 @@ impl Sandbox for Counter {
                 fill(rgba(0, 0, 1, 1))
                 ]
                 @=y Layer [
-                    node_ref("b")
+                    // node_ref("b")
                 ],
                 // ─────────────────────────────────────────────
 
@@ -199,7 +197,7 @@ impl Sandbox for Counter {
                 @=x Layer [
 
                     @=x_click On:CLICK  ||{
-                        let _span = debug_span!("Moving", "on [x] click, moving a->b to w->b")
+                        let _span = debug_span!("Moving", "on [x] click, moving a->b to m->b")
                                 .entered();
                         Message::Empty
                     },
@@ -251,16 +249,16 @@ impl Sandbox for Counter {
                         fill(rgba(0, 0, 0.5, 1))
                     ]
                     @=w Layer [
-                        @E=[
-                            origin_x(pc(100)),
-                            origin_y(pc(50)),
-                            align_x(pc(100)),
-                            align_y(pc(50)),
-                            w(pc(50)),
-                            h(pc(15)),
-                            fill(rgba(0, 1, 0, 1))
-                        ]
-                        node_ref("x")
+                        // @E=[
+                        //     origin_x(pc(100)),
+                        //     origin_y(pc(50)),
+                        //     align_x(pc(100)),
+                        //     align_y(pc(50)),
+                        //     w(pc(50)),
+                        //     h(pc(15)),
+                        //     fill(rgba(0, 1, 0, 1))
+                        // ]
+                        @=ref_x_click node_ref("x_click")
                     ],
                 ],
 

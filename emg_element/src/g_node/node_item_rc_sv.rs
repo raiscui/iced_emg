@@ -32,7 +32,7 @@ use tracing::{debug, error, info, info_span, trace, trace_span, warn};
 
 use crate::{node_builder::EventMatchsDict, GElement, NodeBuilderWidget};
 
-use super::{EmgNodeItem, PathDict};
+use super::{EmgNodeItem, PathDictAsSets};
 
 const POOL_SIZE: usize = 1;
 // ────────────────────────────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ where
                                         vec_e_path_clone
                                             .into_iter()
                                             .map(|(ep, _)| (ep.link(nix2.clone().into()), ()))
-                                            .collect::<PathDict<IdStr>>()
+                                            .collect::<PathDictAsSets<IdStr>>()
                                     })
                                     .get_anchor(),
                             )
@@ -132,7 +132,7 @@ where
                         // }
                         // ─────────────────────────────
 
-                        Anchor::constant(PathDict::<IdStr>::unit(
+                        Anchor::constant(PathDictAsSets::<IdStr>::unit(
                             EPath::new(vector![no_source_self_eix]),
                             (),
                         ))
@@ -158,7 +158,7 @@ where
                     //         PathDict::<IdStr>::unions(vd.clone())
                     //     }
                     // }
-                    PathDict::<IdStr>::unions(vd.clone())
+                    PathDictAsSets::<IdStr>::unions(vd.clone())
                 })
         });
 
