@@ -1,5 +1,5 @@
 moving_edge:
-	cargo run --package moving_edge --bin moving_edge --features gpu
+	INSTA_FORCE_PASS=1 cargo run --package moving_edge --bin moving_edge --features gpu
 counter:
 	cargo run --package counter --bin counter --features gpu
 counter-debug:

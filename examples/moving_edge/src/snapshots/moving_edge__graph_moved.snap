@@ -1,6 +1,6 @@
 ---
 source: examples/moving_edge/src/main.rs
-assertion_line: 161
+assertion_line: 163
 expression: a.borrow()
 ---
 Graph {
@@ -26,6 +26,25 @@ Graph {
                }
 
            ,
+           GEl-lDG9yixX:
+               Node {
+                   item: EmgNodeItem {
+                       gel: ✦ (⚓ (NodeRef_)) ,
+                       paths_sa: [⚬-▣ root => ▣ y => ▣ GEl-lDG9yixX],
+                       paths_view_gel {
+                           [⚬-▣ root => ▣ y => ▣ GEl-lDG9yixX] : Builder_
+                       }
+
+                   }
+                   incoming:[
+                             ├─ ▣ y => ▣ GEl-lDG9yixX 
+                   ]
+                   outgoing:[
+                   ]
+
+               }
+
+           ,
            x_click:
                Node {
                    item: EmgNodeItem {
@@ -38,6 +57,25 @@ Graph {
                    }
                    incoming:[
                              ├─ ▣ x => ▣ x_click 
+                   ]
+                   outgoing:[
+                   ]
+
+               }
+
+           ,
+           GEl-zX7Rrk0W:
+               Node {
+                   item: EmgNodeItem {
+                       gel: ✦ (⚓ (NodeRef_)) ,
+                       paths_sa: [⚬-▣ root => ▣ x => ▣ w => ▣ GEl-zX7Rrk0W],
+                       paths_view_gel {
+                           [⚬-▣ root => ▣ x => ▣ w => ▣ GEl-zX7Rrk0W] : Builder_
+                       }
+
+                   }
+                   incoming:[
+                             ├─ ▣ w => ▣ GEl-zX7Rrk0W 
                    ]
                    outgoing:[
                    ]
@@ -87,44 +125,6 @@ Graph {
                }
 
            ,
-           GEl-Pne6MMxH:
-               Node {
-                   item: EmgNodeItem {
-                       gel: ✦ (⚓ (NodeRef_)) ,
-                       paths_sa: [⚬-▣ root => ▣ y => ▣ GEl-Pne6MMxH],
-                       paths_view_gel {
-                           [⚬-▣ root => ▣ y => ▣ GEl-Pne6MMxH] : Builder_
-                       }
-
-                   }
-                   incoming:[
-                             ├─ ▣ y => ▣ GEl-Pne6MMxH 
-                   ]
-                   outgoing:[
-                   ]
-
-               }
-
-           ,
-           GEl-P4ABqLuX:
-               Node {
-                   item: EmgNodeItem {
-                       gel: ✦ (⚓ (NodeRef_)) ,
-                       paths_sa: [⚬-▣ root => ▣ x => ▣ w => ▣ GEl-P4ABqLuX],
-                       paths_view_gel {
-                           [⚬-▣ root => ▣ x => ▣ w => ▣ GEl-P4ABqLuX] : Builder_
-                       }
-
-                   }
-                   incoming:[
-                             ├─ ▣ w => ▣ GEl-P4ABqLuX 
-                   ]
-                   outgoing:[
-                   ]
-
-               }
-
-           ,
            y:
                Node {
                    item: EmgNodeItem {
@@ -139,7 +139,7 @@ Graph {
                              ├─ ▣ root => ▣ y 
                    ]
                    outgoing:[
-                             ├─ ▣ y => ▣ GEl-Pne6MMxH 
+                             ├─ ▣ y => ▣ GEl-lDG9yixX 
                    ]
 
                }
@@ -178,7 +178,7 @@ Graph {
                              ├─ ▣ x => ▣ w 
                    ]
                    outgoing:[
-                             ├─ ▣ w => ▣ GEl-P4ABqLuX 
+                             ├─ ▣ w => ▣ GEl-zX7Rrk0W 
                              ├─ ▣ w => ▣ b 
                    ]
 
@@ -804,9 +804,9 @@ Graph {
                      target_nix: ▣ y ,
 
                }
-               ├─ ▣ w => ▣ GEl-P4ABqLuX  : Edge {
+               ├─ ▣ w => ▣ GEl-zX7Rrk0W  : Edge {
                      item: EmgEdgeItem {
-                         id: ✦ (⚓ (├─ ▣ w => ▣ GEl-P4ABqLuX ))
+                         id: ✦ (⚓ (├─ ▣ w => ▣ GEl-zX7Rrk0W ))
                          paths: ⚓<Dict> {
                              [⚬-▣ root => ▣ x => ▣ w] : EdgeData {
                                  calculated: LayoutCalculated {
@@ -930,7 +930,7 @@ Graph {
 
                          };)
                          edge_nodes: ⚓<Dict> {
-                             [⚬-▣ root => ▣ x => ▣ w => ▣ GEl-P4ABqLuX] : EdgeData {
+                             [⚬-▣ root => ▣ x => ▣ w => ▣ GEl-zX7Rrk0W] : EdgeData {
                                  calculated: LayoutCalculated {
                                      cass_or_calc_size: ⚓ (
                                        ┌        ┐
@@ -1026,7 +1026,7 @@ Graph {
 
                      } ,
                      source_nix: ▣ w ,
-                     target_nix: ▣ GEl-P4ABqLuX ,
+                     target_nix: ▣ GEl-zX7Rrk0W ,
 
                }
                ├─ ▣ w => ▣ b  : Edge {
@@ -2154,9 +2154,9 @@ Graph {
                      target_nix: ▣ x_click ,
 
                }
-               ├─ ▣ y => ▣ GEl-Pne6MMxH  : Edge {
+               ├─ ▣ y => ▣ GEl-lDG9yixX  : Edge {
                      item: EmgEdgeItem {
-                         id: ✦ (⚓ (├─ ▣ y => ▣ GEl-Pne6MMxH ))
+                         id: ✦ (⚓ (├─ ▣ y => ▣ GEl-lDG9yixX ))
                          paths: ⚓<Dict> {
                              [⚬-▣ root => ▣ y] : EdgeData {
                                  calculated: LayoutCalculated {
@@ -2280,7 +2280,7 @@ Graph {
 
                          };)
                          edge_nodes: ⚓<Dict> {
-                             [⚬-▣ root => ▣ y => ▣ GEl-Pne6MMxH] : EdgeData {
+                             [⚬-▣ root => ▣ y => ▣ GEl-lDG9yixX] : EdgeData {
                                  calculated: LayoutCalculated {
                                      cass_or_calc_size: ⚓ (
                                        ┌   ┐
@@ -2376,7 +2376,7 @@ Graph {
 
                      } ,
                      source_nix: ▣ y ,
-                     target_nix: ▣ GEl-Pne6MMxH ,
+                     target_nix: ▣ GEl-lDG9yixX ,
 
                }
            }}

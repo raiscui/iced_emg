@@ -14,7 +14,7 @@ pub trait Sandbox: std::default::Default {
     type GraphType = element::GraphType<Self::Message>;
     // type GraphType: GraphMethods<Self::Message> + Default;
     type Orders = crate::runtime::OrdersContainer<Self::Message>;
-    type GraphEditor = GraphEditor<Self::Message>;
+    type GraphEditor: GraphEdit + GraphEditManyMethod = GraphEditor<Self::Message>;
 
     // type Orders: Orders<Self::Message>;
 

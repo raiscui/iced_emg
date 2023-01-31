@@ -90,7 +90,7 @@ fn tracing_init() -> Result<(), Report> {
         .with_targets(true)
         .with_filter(EnvFilter::new(
             // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
-            "emg_layout[build]",
+            "[Moving]",
         ));
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -153,14 +153,14 @@ impl Sandbox for Counter {
             }
             Message::Empty => {
                 let a = graph.clone();
-                // insta::assert_display_snapshot!("graph_def", a.borrow());
+                insta::assert_display_snapshot!("graph_def", a.borrow());
 
                 graph
                     .edit::<EdgeMode>()
                     .moving(edge_index("a", "b"), Incoming, "w");
                 // let b = graph.clone();
 
-                // insta::assert_display_snapshot!("graph_moved", a.borrow());
+                insta::assert_display_snapshot!("graph_moved", a.borrow());
             }
         }
     }
@@ -199,9 +199,8 @@ impl Sandbox for Counter {
                 @=x Layer [
 
                     @=x_click On:CLICK  ||{
-                        let _span = debug_span!("Moving", "click moving a->b to w->b")
+                        let _span = debug_span!("Moving", "on [x] click, moving a->b to w->b")
                                 .entered();
-                        info!(" on [x]----click cb ----");
                         Message::Empty
                     },
 
