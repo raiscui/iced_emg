@@ -1,12 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2023-01-12 15:37:52
+ * @LastEditTime: 2023-01-31 11:30:40
  * @LastEditors: Rais
  * @Description:
  */
-use vello::{util::DeviceHandle, Scene};
 use vello::{util::RenderSurface as VelloRenderSurface, Renderer as VelloRenderer};
+use vello::{
+    util::{block_on_wgpu, DeviceHandle},
+    Scene,
+};
 
 use emg_graphics_backend::Error;
 
@@ -43,7 +46,36 @@ impl Backend {
             .get_current_texture()
             .expect("failed to get surface texture");
 
-        self.renderer
+        // self.renderer
+        //     .render_to_surface(
+        //         &device_handle.device,
+        //         &device_handle.queue,
+        //         scene,
+        //         &surface_texture,
+        //         surface.config.width,
+        //         surface.config.height,
+        //     )
+        //     .expect("failed to render to surface");
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            block_on_wgpu(
+                &device_handle.device,
+                self.renderer.render_to_surface_async(
+                    &device_handle.device,
+                    &device_handle.queue,
+                    scene,
+                    &surface_texture,
+                    surface.config.width,
+                    surface.config.height,
+                ),
+            )
+            .expect("failed to render to surface");
+        }
+        // Note: in the wasm case, we're currently not running the robust
+        // pipeline, as it requires more async wiring for the readback.
+        #[cfg(target_arch = "wasm32")]
+        renderer
             .render_to_surface(
                 &device_handle.device,
                 &device_handle.queue,
@@ -56,7 +88,7 @@ impl Backend {
 
         surface_texture.present();
 
-        device_handle.device.poll(wgpu::Maintain::Wait);
+        device_handle.device.poll(wgpu::Maintain::Poll);
     }
 }
 
