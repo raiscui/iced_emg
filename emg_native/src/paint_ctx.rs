@@ -266,11 +266,12 @@ impl Default for WidgetState {
         }
     }
 }
+//TODO 修改为 map结构,首先 如果新子节点的属性为 none ,那么 继承就会断(终止),要确保继承能延续,但是当前值没有声明Inherit ,就等于不用继承值
 macro_rules! css_merge {
     ($self:ident,$other:ident,$css:ident,$v:ident) => {
         match &$other.$v {
             Some(val) => match val {
-                $css::Inherit => (),
+                $css::Inherit => (),//keep self v
                 other_val => $self.$v = Some(other_val.clone()),
             },
             None => $self.$v = None,

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-31 18:45:43
+ * @LastEditTime: 2023-02-01 17:46:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -705,8 +705,11 @@ where
     // Message: PartialEq + 'static + std::clone::Clone,
 {
     type SceneCtxType = crate::SceneFrag;
-    #[instrument(skip(self, ctx), name = "NodeBuilderWidget paint")]
-    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
+    #[instrument(skip(self, painter), name = "NodeBuilderWidget paint")]
+    fn paint_sa(
+        &self,
+        painter: &StateAnchor<crate::PaintCtx>,
+    ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id1 = self.id.clone();
         let opt_span = illicit::get::<Span>().ok();
 
@@ -716,8 +719,8 @@ where
         );
         let span3 = span1.clone();
 
-        let current_ctx =
-            (ctx, &self.widget_state).map(move |incoming_ctx, current_widget_state| {
+        let current_painter =
+            (painter, &self.widget_state).map(move |incoming_painter, current_widget_state| {
                 // let id = id.clone();
                 let _span = span1.clone().entered();
                 info!(
@@ -725,20 +728,20 @@ where
                     "NodeBuilderWidget::paint-> (&ctx, &self.widget_state).map -> recalculating [{}]",
                     &id1
                 );
-                let mut incoming_ctx_mut = incoming_ctx.clone();
+                let mut incoming_painter_mut = incoming_painter.clone();
                 // incoming_ctx_mut.save_assert(&ctx_id);
-                incoming_ctx_mut.merge_widget_state(current_widget_state);
+                incoming_painter_mut.merge_widget_state(current_widget_state);
 
 
                 // incoming_ctx_mut.transform(crate::renderer::Affine::translate((
                 //     current_widget_state.translation.x * DPR,
                 //     current_widget_state.translation.y * DPR,
                 // )));
-                incoming_ctx_mut
+                incoming_painter_mut
             });
         illicit::Layer::new()
             .offer(span3)
-            .enter(|| self.widget.paint_sa(&current_ctx))
+            .enter(|| self.widget.paint_sa(&current_painter))
         // .map(move |out_scene| {
         //     info!(
         //         parent: &span2,

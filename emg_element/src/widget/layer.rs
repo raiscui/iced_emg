@@ -110,10 +110,11 @@ where
         let children_sc_list_sa: StateAnchor<Vec<Rc<crate::SceneFrag>>> = self
             .children
             .iter()
-            .map(|child| child.paint_sa(&ctx).into_anchor())
+            .map(|child| child.paint_sa(ctx).into_anchor())
             .collect::<Anchor<Vec<_>>>()
             .into();
 
+        //TODO 分离 ctx, &children_sc_list_sa
         (ctx, &children_sc_list_sa).map(move |incoming_ctx, children_sc_list| {
             let mut sc = Self::SceneCtxType::new(incoming_ctx.get_translation());
             let mut builder = sc.gen_builder();
