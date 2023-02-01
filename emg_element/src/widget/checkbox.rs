@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-01-31 21:22:31
+ * @LastEditTime: 2023-02-01 15:40:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,7 +15,7 @@ use emg_common::{
 };
 use emg_shaping::{Shaping, ShapingUse, TryShapingUse};
 use emg_state::StateAnchor;
-use tracing::{error, info, trace, warn, Span};
+use tracing::{debug_span, error, info, trace, warn, Span};
 
 use std::{any::Any, rc::Rc};
 
@@ -137,33 +137,41 @@ where
     Message: 'static,
 {
     type SceneCtxType = crate::SceneFrag;
-    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
+    fn paint_sa(
+        &self,
+        painter: &StateAnchor<crate::PaintCtx>,
+    ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let span = illicit::expect::<Span>();
 
-        ctx.map(move |incoming_ctx| {
-            let mut sc = Self::SceneCtxType::new(incoming_ctx.get_translation());
+        painter.map(move |incoming_painter| {
+            let dpr = incoming_painter.dpr();
+            debug_span!("window_size", at = "checkbox paint_sa", dpr).in_scope(|| {});
+
+            let mut sc = Self::SceneCtxType::new(incoming_painter.get_translation());
             let mut builder = sc.gen_builder();
 
-            let rect = incoming_ctx.size().to_rect();
+            let rect = incoming_painter.size().to_rect();
             //fill
-            if let Some(fill) = incoming_ctx.get_fill_color() {
+            if let Some(fill) = incoming_painter.get_fill_color() {
                 info!(parent: &*span,"fill color: {:?}", &fill);
                 builder.fill(Fill::NonZero, Affine::IDENTITY, fill, None, &rect);
             }
-            // checkbox
-            let origin = (rect.height() - 14. * incoming_ctx.dpr()) * 0.5;
+            // check_zone
+            let check_zone_w_h = 14. * dpr;
+            let origin = ((rect.height() - check_zone_w_h) * 0.5).trunc();
 
             let box_rect = Rect {
                 x0: 0.,
                 y0: 0.,
-                x1: 14. * incoming_ctx.dpr(),
-                y1: 14. * incoming_ctx.dpr(),
+                x1: check_zone_w_h,
+                y1: check_zone_w_h, //
             }
-            .with_origin((origin, origin))
-            .to_rounded_rect(3.);
+            .with_origin((origin, origin));
+            // .to_rounded_rect(2. * dpr);
 
             builder.stroke(
-                &Stroke::new(1. * incoming_ctx.dpr() as f32),
+                // &Stroke::new(1. * dpr as f32),
+                &Stroke::new(1.),
                 Affine::IDENTITY,
                 Color::BLACK,
                 None,
@@ -171,8 +179,8 @@ where
             );
 
             // border
-            if let Some(bw) = incoming_ctx.get_border_width() {
-                if let Some(bc) = incoming_ctx.get_border_color() {
+            if let Some(bw) = incoming_painter.get_border_width() {
+                if let Some(bc) = incoming_painter.get_border_color() {
                     info!(parent: &*span,"border width: {:?} color: {:?}", &bw, &bc);
 
                     builder.stroke(&Stroke::new(bw), Affine::IDENTITY, bc, None, &rect);

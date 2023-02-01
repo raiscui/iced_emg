@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 17:56:11
- * @LastEditTime: 2023-01-16 22:51:00
+ * @LastEditTime: 2023-02-01 14:38:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -90,15 +90,21 @@ impl Window {
         title: &str,
         mode: Mode,
         primary_monitor: Option<MonitorHandle>,
+        user_scale_factor: f64,
         _id: Option<String>,
     ) -> WindowBuilder {
         let mut window_builder = WindowBuilder::new();
 
         let (width, height) = self.size;
+        let user_width = width as f64 * user_scale_factor;
+        let user_height = height as f64 * user_scale_factor;
 
         window_builder = window_builder
             .with_title(title)
-            .with_inner_size(winit::dpi::LogicalSize { width, height })
+            .with_inner_size(winit::dpi::LogicalSize {
+                width: user_width,
+                height: user_height,
+            })
             .with_resizable(self.resizable)
             .with_decorations(self.decorations)
             .with_transparent(self.transparent)
@@ -106,20 +112,27 @@ impl Window {
             .with_always_on_top(self.always_on_top)
             .with_visible(conversion::visible(mode));
 
-        if let Some(position) =
-            conversion::position(primary_monitor.as_ref(), self.size, self.position)
-        {
+        if let Some(position) = conversion::position(
+            primary_monitor.as_ref(),
+            self.size,
+            self.position,
+            user_scale_factor,
+        ) {
             window_builder = window_builder.with_position(position);
         }
 
         if let Some((width, height)) = self.min_size {
-            window_builder =
-                window_builder.with_min_inner_size(winit::dpi::LogicalSize { width, height });
+            window_builder = window_builder.with_min_inner_size(winit::dpi::LogicalSize {
+                width: width as f64 * user_scale_factor,
+                height: height as f64 * user_scale_factor,
+            });
         }
 
         if let Some((width, height)) = self.max_size {
-            window_builder =
-                window_builder.with_max_inner_size(winit::dpi::LogicalSize { width, height });
+            window_builder = window_builder.with_max_inner_size(winit::dpi::LogicalSize {
+                width: width as f64 * user_scale_factor,
+                height: height as f64 * user_scale_factor,
+            });
         }
 
         #[cfg(any(

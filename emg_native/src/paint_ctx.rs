@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2023-01-31 18:15:26
+ * @LastEditTime: 2023-02-01 15:24:12
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,7 +17,7 @@ use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
 
 //TODO use app state viewport dpr
 //TODO use  window.scale_factor()
-pub const DPR: f64 = 2.0;
+// pub const DPR: f64 = 2.0;
 
 /// used for check restore right
 #[derive(Clone)]
@@ -43,8 +43,10 @@ impl CtxIndex {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PaintCtx {
+    // user_scale_factor
+    dpr: f64,
     // pub(crate) state: &'a mut ContextState<'b>,
     widget_state: WidgetState,
     /// The render context for actually painting.
@@ -58,13 +60,31 @@ pub struct PaintCtx {
     // pub(crate) depth: u32,
 }
 
+// impl Default for PaintCtx {
+//     fn default() -> Self {
+//         Self {
+//             dpr: DPR,
+//             widget_state: Default::default(),
+//             widget_state_stack: Default::default(),
+//         }
+//     }
+// }
+
 impl PaintCtx {
+    pub fn new(dpr: f64) -> Self {
+        Self {
+            dpr,
+            widget_state: Default::default(),
+            widget_state_stack: Default::default(),
+        }
+    }
+
     pub fn dpr(&self) -> f64 {
-        DPR
+        self.dpr
     }
     pub fn size(&self) -> Size {
         //TODO move DPR to const T
-        self.widget_state.size() * DPR
+        self.widget_state.size() * self.dpr
     }
     pub fn get_translation(&self) -> Option<Affine> {
         let t = self.widget_state.translation;
@@ -72,8 +92,8 @@ impl PaintCtx {
             None
         } else {
             Some(crate::renderer::Affine::translate((
-                t.x as f64 * DPR,
-                t.y as f64 * DPR,
+                t.x as f64 * self.dpr,
+                t.y as f64 * self.dpr,
             )))
         }
     }

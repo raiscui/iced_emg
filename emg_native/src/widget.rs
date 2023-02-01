@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 16:05:02
- * @LastEditTime: 2023-01-13 12:16:47
+ * @LastEditTime: 2023-02-01 00:09:12
  * @LastEditors: Rais
  * @Description:
  */
@@ -35,7 +35,10 @@ pub trait Widget: DynClone + DynPartialEq {
     // fn xx(&self, _bus: &Bus<Message>) {}
     // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
     // fn paint(&self, ctx: &mut crate::PaintCtx<RenderContext>);
-    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>>;
+    fn paint_sa(
+        &self,
+        painter: &StateAnchor<crate::PaintCtx>,
+    ) -> StateAnchor<Rc<Self::SceneCtxType>>;
 }
 
 impl<SceneCtx> core::cmp::Eq for dyn Widget<SceneCtxType = SceneCtx> + '_ {}

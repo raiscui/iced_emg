@@ -85,7 +85,7 @@ fn tracing_init() -> Result<(), Report> {
         .with_targets(true)
         .with_filter(EnvFilter::new(
             // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
-            "emg_layout[build inherited cassowary_generals_map]",
+            "[onWindowEvent]=debug,[window_size]=debug",
         ));
     // ─────────────────────────────────────────────────────────────────────────────
 

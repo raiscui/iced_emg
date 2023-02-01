@@ -39,7 +39,7 @@ pub use future_runtime::FutureRuntime;
 // pub use hasher::Hasher;
 // pub use layout::Layout;
 // pub use overlay::Overlay;
-pub use paint_ctx::{PaintCtx, WidgetState, DPR};
+pub use paint_ctx::{PaintCtx, WidgetState};
 pub use program::Program;
 // pub use renderer::*;
 // pub use shell::Shell;

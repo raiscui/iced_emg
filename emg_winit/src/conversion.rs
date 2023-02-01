@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2023-01-13 12:49:42
+ * @LastEditTime: 2023-02-01 14:41:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -216,17 +216,19 @@ pub fn window_event(
 /// Converts a [`Position`] to a [`winit`] logical position for a given monitor.
 ///
 /// [`winit`]: https://github.com/rust-windowing/winit
+///logical_size
 pub fn position(
     monitor: Option<&winit::monitor::MonitorHandle>,
     (width, height): (u32, u32),
     position: SemanticPosition,
+    user_scale_factor: f64,
 ) -> Option<winit::dpi::Position> {
     match position {
         SemanticPosition::Default => None,
         SemanticPosition::Specific(x, y) => {
             Some(winit::dpi::Position::Logical(winit::dpi::LogicalPosition {
-                x: f64::from(x),
-                y: f64::from(y),
+                x: f64::from(x) * user_scale_factor,
+                y: f64::from(y) * user_scale_factor,
             }))
         }
         SemanticPosition::Centered => {
@@ -237,8 +239,8 @@ pub fn position(
                     monitor.size().to_logical(monitor.scale_factor());
 
                 let centered: winit::dpi::PhysicalPosition<i32> = winit::dpi::LogicalPosition {
-                    x: (resolution.width - f64::from(width)) / 2.0,
-                    y: (resolution.height - f64::from(height)) / 2.0,
+                    x: (resolution.width - f64::from(width) * user_scale_factor) / 2.0,
+                    y: (resolution.height - f64::from(height) * user_scale_factor) / 2.0,
                 }
                 .to_physical(monitor.scale_factor());
 

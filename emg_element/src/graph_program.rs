@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2023-01-30 19:06:29
+ * @LastEditTime: 2023-02-01 00:06:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -31,9 +31,10 @@ pub trait GraphProgram: Program {
 
     // fn view(&self, g: &Self::GraphType) -> Self::RefedGelType;
     fn root_id(&self) -> &str;
-    fn ctx(
+    fn build_ctx(
         &self,
         g: &Self::GraphType,
+        paint: &StateAnchor<crate::PaintCtx>,
         events: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (

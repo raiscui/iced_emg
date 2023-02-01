@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 16:06:48
- * @LastEditTime: 2023-01-12 15:13:39
+ * @LastEditTime: 2023-02-01 15:13:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,10 +14,14 @@ use thiserror::Error as TError;
 
 use crate::Error;
 
+pub trait CompositorSetting {
+    fn set_vp_scale_factor(&mut self, scale_factor: f64);
+}
+
 /// A graphics compositor that can draw to windows.
 pub trait Compositor: Sized {
     /// The settings of the backend.
-    type Settings: Default;
+    type Settings: CompositorSetting + Default;
 
     /// The iced renderer of the backend.
     type Renderer: Renderer;

@@ -564,9 +564,7 @@ where
         (events_sa, &self.widget_state).then(move |events, state| {
             let _span = debug_span!("event_matching...", ?id).entered();
 
-            // if events.is_empty() {
-            //     return Anchor::constant(Dict::default());
-            // }
+
             let size = state.size();
 
             //TODO don't do this many times

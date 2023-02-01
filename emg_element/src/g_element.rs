@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-01-31 18:47:56
+ * @LastEditTime: 2023-02-01 00:08:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -475,11 +475,11 @@ where
     // }
     type SceneCtxType = crate::SceneFrag;
 
-    #[instrument(skip(self, ctx), name = "GElement paint",fields(self = %self))]
+    #[instrument(skip(self, painter), name = "GElement paint",fields(self = %self))]
     #[inline]
     fn paint_sa(
         &self,
-        ctx: &StateAnchor<emg_native::PaintCtx>,
+        painter: &StateAnchor<emg_native::PaintCtx>,
     ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         // match self {
         //     GElement::Builder_(b) => b.paint_sa(ctx),
@@ -493,12 +493,12 @@ where
         match_any!(self,
 
             // Builder_( x)| Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
-            Builder_( x)| Layer_(x) => x.paint_sa(ctx),
+            Builder_( x)| Layer_(x) => x.paint_sa(painter),
             // Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Shaper_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Generic_(x) => {
                 warn!("Generic_:: Generic_ paint_sa");
-                (x.as_ref() as &dyn Widget<SceneCtxType = Self::SceneCtxType>).paint_sa(ctx)
+                (x.as_ref() as &dyn Widget<SceneCtxType = Self::SceneCtxType>).paint_sa(painter)
 
                 // panic!("Generic_ should be Builder here");
                 },

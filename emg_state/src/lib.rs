@@ -6,6 +6,7 @@
 #![feature(auto_traits)]
 #![feature(negative_impls)]
 #![feature(is_some_and)]
+#![feature(closure_track_caller)]
 // ────────────────────────────────────────────────────────────────────────────────
 
 // #![feature(specialization)]

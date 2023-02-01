@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-01-31 10:11:09
+ * @LastEditTime: 2023-02-01 17:02:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -1233,6 +1233,7 @@ impl<T> From<T> for StateAnchor<T>
 where
     T: 'static,
 {
+    #[track_caller]
     fn from(v: T) -> Self {
         Self::constant(v)
     }
@@ -1332,8 +1333,10 @@ impl<T> StateAnchor<T>
 where
     T: 'static,
 {
+    #[track_caller]
     pub fn constant(val: T) -> Self {
-        G_STATE_STORE.with(|_g_state_store_refcell| Self(Anchor::constant(val)))
+        G_STATE_STORE.with(|_g_state_store_refcell| {});
+        Self(Anchor::constant(val))
     }
 
     #[must_use]

@@ -5,8 +5,8 @@ use vello::{
 };
 
 use emg_graphics_backend::{window::compositor as compositor_arch, Error};
-use emg_native::{futures, DPR};
-use tracing::{info, instrument};
+use emg_native::futures;
+use tracing::{debug_span, info, instrument};
 
 use crate::{Backend, Renderer, SceneFrag, Settings};
 // ────────────────────────────────────────────────────────────────────────────────
@@ -35,17 +35,25 @@ impl Compositor {
 
         let scene = Scene::new();
 
-        info!(
-            "======== create_surface settings size: {} {}",
-            settings.width, settings.height
-        );
+        let vp_scale_factor = settings.vp_scale_factor.unwrap();
+
+        debug_span!(
+            "window_size",
+            "======== create_surface settings size: {} {} ,size * vp_scale_factor= {} {}",
+            settings.width,
+            settings.height,
+            (settings.width as f64 * vp_scale_factor).round() as u32,
+            (settings.height as f64 * vp_scale_factor).round() as u32,
+        )
+        .in_scope(|| {});
 
         let surface = render_cx
             .create_surface(
-                &window,
-                //NOTE 物理尺寸
-                (settings.width as f64 * DPR) as u32,
-                (settings.height as f64 * DPR) as u32,
+                &window, //NOTE 物理尺寸
+                (settings.width as f64 * vp_scale_factor).round() as u32,
+                (settings.height as f64 * vp_scale_factor).round() as u32,
+                // (settings.width as f64) as u32,
+                // (settings.height as f64) as u32,
             )
             .await;
 
@@ -95,9 +103,17 @@ impl compositor_arch::Compositor for Compositor {
     }
 
     fn configure_surface(&mut self, _surface: &mut Self::Surface, width: u32, height: u32) {
+        debug_span!(
+            "window_size",
+            "======== resize_surface size: {} {}",
+            width,
+            height
+        )
+        .in_scope(|| {});
+
         self.render_cx
             .resize_surface(&mut self.surface, width, height);
-        // window.request_redraw();
+        //NOTE no need request_redraw because it will Redraw immediately
     }
 
     fn fetch_information(&self) -> compositor_arch::Information {
