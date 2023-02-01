@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2023-02-01 15:24:12
+ * @LastEditTime: 2023-02-01 21:04:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,12 +12,7 @@ use std::{cell::Cell, rc::Rc};
 use crate::renderer::{Affine, Color, Size};
 use emg_common::{na::Translation3, num_traits::AsPrimitive, LayoutOverride, Precision, Vector};
 use emg_shaping::ShapingWhoNoWarper;
-use emg_state::StateAnchor;
 use seed_styles::{CssBorderColor, CssBorderWidth, CssFill};
-
-//TODO use app state viewport dpr
-//TODO use  window.scale_factor()
-// pub const DPR: f64 = 2.0;
 
 /// used for check restore right
 #[derive(Clone)]
@@ -187,10 +182,11 @@ impl PaintCtx {
 impl ShapingWhoNoWarper for WidgetState {}
 #[derive(Clone, PartialEq, Debug)]
 pub struct WidgetState {
-    pub children_layout_override: StateAnchor<Option<LayoutOverride>>,
+    // pub children_layout_override: StateAnchor<Option<LayoutOverride>>,
+    pub children_layout_override: Rc<Option<LayoutOverride>>,
     size: Size,
     pub translation: Translation3<Precision>,
-    pub world: StateAnchor<Translation3<Precision>>,
+    pub world: Rc<Translation3<Precision>>,
     // pub background_color: CssBackgroundColor,
     pub fill: Option<CssFill>,
     pub border_width: Option<CssBorderWidth>,
@@ -256,10 +252,11 @@ pub struct WidgetState {
 impl Default for WidgetState {
     fn default() -> Self {
         Self {
-            children_layout_override: StateAnchor::constant(None),
+            children_layout_override: Rc::new(None),
             size: Default::default(),
             translation: Default::default(),
-            world: StateAnchor::constant(Translation3::default()),
+
+            world: Rc::new(Translation3::default()),
             fill: Default::default(),
             border_width: Default::default(),
             border_color: Default::default(),
@@ -271,7 +268,7 @@ macro_rules! css_merge {
     ($self:ident,$other:ident,$css:ident,$v:ident) => {
         match &$other.$v {
             Some(val) => match val {
-                $css::Inherit => (),//keep self v
+                $css::Inherit => (), //keep self v
                 other_val => $self.$v = Some(other_val.clone()),
             },
             None => $self.$v = None,
@@ -284,8 +281,8 @@ impl WidgetState {
     pub fn new(
         size: (Precision, Precision),
         trans: Translation3<Precision>,
-        world: StateAnchor<Translation3<Precision>>,
-        children_layout_override: StateAnchor<Option<LayoutOverride>>,
+        world: Rc<Translation3<Precision>>,
+        children_layout_override: Rc<Option<LayoutOverride>>,
     ) -> WidgetState {
         WidgetState {
             // id,
