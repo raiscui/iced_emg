@@ -24,6 +24,7 @@ dyn_partial_eq = { path = "../../dyn_partial_eq" }
 
 tracing = "0.1"
 
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # console_log = { version = "0.2", features = ["color"] }
 

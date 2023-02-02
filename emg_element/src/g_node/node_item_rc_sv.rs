@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-01-30 16:35:26
+ * @LastEditTime: 2023-02-02 11:24:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -361,7 +361,7 @@ where
                 g_sa.then(move |gel| {
                     if gel.is_node_ref_() {
                         let refs = gel.as_node_ref_().unwrap();
-                        error!("self is node ref:{} ", refs);
+                        error!("self is node_ref:{} ", refs);
                         graph_rc7
                             .borrow()
                             .get_node_item_use_ix(refs)

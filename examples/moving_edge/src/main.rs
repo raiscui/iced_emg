@@ -90,7 +90,7 @@ fn tracing_init() -> Result<(), Report> {
         .with_targets(true)
         .with_filter(EnvFilter::new(
             // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
-            "[Moving]",
+            "[GElement-shaping]=debug",
         ));
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -152,13 +152,13 @@ impl Sandbox for Counter {
                 self.value -= 1;
             }
             Message::Empty => {
-                insta::assert_display_snapshot!("graph_def", graph.borrow());
+                // insta::assert_display_snapshot!("graph_def", graph.borrow());
 
                 graph
                     .edit::<EdgeMode>()
                     .moving(edge_index("a", "b"), Incoming, "m");
 
-                insta::assert_display_snapshot!("graph_moved", graph.borrow());
+                // insta::assert_display_snapshot!("graph_moved", graph.borrow());
             }
         }
     }

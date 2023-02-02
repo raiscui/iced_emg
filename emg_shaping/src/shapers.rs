@@ -1,12 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2023-01-13 12:04:42
+ * @LastEditTime: 2023-02-02 17:30:20
  * @LastEditors: Rais
  * @Description:
  */
-use emg_common::dyn_partial_eq::DynPartialEq;
-use std::{any::Any, rc::Rc};
+use emg_common::{
+    better_any::{impl_tid, Tid, TidAble},
+    dyn_partial_eq::DynPartialEq,
+};
+use std::rc::Rc;
 use tracing::error;
 
 use crate::ShapingWhoNoWarper;
@@ -98,7 +101,7 @@ impl<'a, Who> ShaperFor<'a, Who> {
 // }
 
 pub trait TryShapingUse {
-    fn try_shaping_use(&mut self, u_s_e: Box<dyn Any>);
+    fn try_shaping_use(&mut self, u_s_e: &dyn Tid);
 }
 // impl
 //     TryShapingUse for Rc<Use>
@@ -122,10 +125,19 @@ pub trait TryShapingUse {
 pub trait Shaping<Who> {
     fn shaping(&self, who: &mut Who);
 }
+#[impl_tid]
+impl<'a, Who> TidAble<'a> for Box<dyn Shaping<Who> + 'a> {}
 
-#[cfg(all(not(feature = "no_default_shaping")))]
+//TODO make Result
+#[cfg(not(feature = "no_default_shaping"))]
 impl<Who, Use> Shaping<Who> for Use {
     default fn shaping(&self, _el: &mut Who) {
+        println!(
+            "this is un implemented yet use ->\n{} \n shaping ->\n{}",
+            std::any::type_name::<Use>(),
+            std::any::type_name::<Who>()
+        );
+
         error!(
             "this is un implemented yet use ->\n{} \n shaping ->\n{}",
             std::any::type_name::<Use>(),

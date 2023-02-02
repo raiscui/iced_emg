@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2023-02-01 21:04:35
+ * @LastEditTime: 2023-02-01 21:15:17
  * @LastEditors: Rais
  * @Description:
  */
@@ -255,7 +255,6 @@ impl Default for WidgetState {
             children_layout_override: Rc::new(None),
             size: Default::default(),
             translation: Default::default(),
-
             world: Rc::new(Translation3::default()),
             fill: Default::default(),
             border_width: Default::default(),

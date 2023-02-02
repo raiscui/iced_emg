@@ -85,7 +85,8 @@ fn tracing_init() -> Result<(), Report> {
         .with_targets(true)
         .with_filter(EnvFilter::new(
             // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
-            "[onWindowEvent]=debug,[window_size]=debug",
+            // "[onWindowEvent]=debug,[window_size]=debug",
+            "error,[better_any_shaping]=debug,[GElement-shaping]=debug",
         ));
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -139,11 +140,7 @@ impl Sandbox for Counter {
             Message::DecrementPressed => {
                 self.value -= 1;
             }
-            Message::Empty => {
-                graph
-                    .edit::<EdgeMode>()
-                    .moving(edge_index("a", "c"), Incoming, "b");
-            }
+            Message::Empty => {}
         }
     }
 
@@ -172,14 +169,16 @@ impl Sandbox for Counter {
                     ]
                 @=a1 Layer [
                     @E=[
-                        origin_x(px( 0)),align_x(px(250)),
+                        origin_x(px(0)),align_x(px(250)),
                         origin_y(px(0)),align_y(px(250)),
                         w(px(30)),h(px(30)),
                         fill(rgba(1., 1.,1., 1)),
                         // b_width(px(1)),
                         // b_color(rgb(1,0,0))
                     ]
-                    Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[ ],
+                    Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
+                        Checkbox::new(false,"abcd2",|_|Message::IncrementPressed)=>[ ],
+                    ],
 
                     @=a2 @E=[
                         // origin_x(px( 100)),
