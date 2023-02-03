@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-29 23:19:00
- * @LastEditTime: 2023-01-13 12:03:32
+ * @LastEditTime: 2023-02-03 18:20:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,11 +21,12 @@ where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
     EmgEdgeItem<Ix>: ShapingWhoNoWarper,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
         let type_name = Self::TYPE_NAME;
         who.styles.update(|s| {
             s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
         });
+        true
     }
 }
 
@@ -34,7 +35,7 @@ where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
     EmgEdgeItem<Ix>: ShapingWhoNoWarper,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
         let type_name = Self::INSIDE_TYPE_NAME;
         who.styles.update(|s| {
             let value = self
@@ -42,6 +43,7 @@ where
                 .map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
             s.insert(type_name, value);
         });
+        true
     }
 }
 impl<Ix> Shaping<EmgEdgeItem<Ix>> for StateAnchor<CssBackgroundAttachment>
@@ -49,12 +51,13 @@ where
     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
     EmgEdgeItem<Ix>: ShapingWhoNoWarper,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
         let type_name = Self::INSIDE_TYPE_NAME;
         who.styles.update(|s| {
             let value = self.map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
             s.insert(type_name, value);
         });
+        true
     }
 }
 
@@ -65,11 +68,12 @@ macro_rules! impl_css_native_refresh {
             Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
             EmgEdgeItem<Ix>: ShapingWhoNoWarper,
         {
-            fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+            fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
                 let type_name = Self::TYPE_NAME;
                 who.styles.update(|s| {
                     s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
                 });
+                true
             }
         }
 
@@ -78,7 +82,7 @@ macro_rules! impl_css_native_refresh {
             Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
             EmgEdgeItem<Ix>: ShapingWhoNoWarper,
         {
-            fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+            fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
                 let type_name = Self::INSIDE_TYPE_NAME;
                 who.styles.update(|s| {
                     let value = self
@@ -86,6 +90,7 @@ macro_rules! impl_css_native_refresh {
                         .map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
                     s.insert(type_name, value);
                 });
+                true
             }
         }
 
@@ -94,13 +99,14 @@ macro_rules! impl_css_native_refresh {
             Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
             EmgEdgeItem<Ix>: ShapingWhoNoWarper,
         {
-            fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+            fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
                 let type_name = Self::INSIDE_TYPE_NAME;
                 who.styles.update(|s| {
                     let value =
                         self.map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
                     s.insert(type_name, value);
                 });
+                true
             }
         }
     };

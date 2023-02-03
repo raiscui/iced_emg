@@ -234,6 +234,7 @@ where
     ///
     /// Will return `Err` if `self.edge` is None
     /// permission to read it.
+    //TODO return bool changed or not
     pub fn effecting_edge_path<Ix>(&self, edge: &EmgEdgeItem<Ix>, for_path: EPath<Ix>)
     where
         Ix: std::borrow::Borrow<str>
@@ -267,7 +268,7 @@ where
             });
             // • • • • •
 
-            (for_path, l)
+            (for_path, l) //TODO return bool changed or not
         });
     }
 

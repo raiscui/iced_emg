@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 18:16:47
- * @LastEditTime: 2023-01-18 17:26:14
+ * @LastEditTime: 2023-02-03 18:10:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,7 @@ where
     EmgEdgeItem<Ix>: ShapingWhoNoWarper,
 {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
         let (added_vec_ccss, added_vec_selector) = self.clone();
         let vec_ccss = who.layout.cassowary_constants.get_inner_anchor();
         let new_vec_ccss = vec_ccss.map(move |old| {
@@ -34,6 +34,8 @@ where
         who.layout
             .cassowary_selectors
             .update(|selectors| selectors.append(added_vec_selector));
+
+        true
     }
 }
 
@@ -47,7 +49,7 @@ where
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
         let Self(
             name,
             ScopeViewVariable {
@@ -64,10 +66,13 @@ where
                 NameCharsOrNumber::Class(_) => todo!(),
                 NameCharsOrNumber::Element(_) => todo!(),
                 NameCharsOrNumber::Virtual(_) => todo!(),
-                NameCharsOrNumber::Number(n) => who.layout.cassowary_generals.update(|x| {
-                    x.insert_with_suggest(name.clone(), n.into_inner());
-                    // warn!("cassowary_generals update \n{:?}", &x);
-                }),
+                NameCharsOrNumber::Number(n) => {
+                    who.layout.cassowary_generals.update(|x| {
+                        x.insert_with_suggest(name.clone(), n.into_inner());
+                        // warn!("cassowary_generals update \n{:?}", &x);
+                    });
+                    true
+                }
                 NameCharsOrNumber::Next(_) => todo!(),
                 NameCharsOrNumber::Last(_) => todo!(),
                 NameCharsOrNumber::First(_) => todo!(),
@@ -77,7 +82,7 @@ where
             (Some(_), None, Some(_)) => todo!(),
             (Some(_), Some(_), None) => todo!(),
             (Some(_), Some(_), Some(_)) => todo!(),
-        };
+        }
     }
 }
 
@@ -91,7 +96,7 @@ where
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
         let virtual_name = self.name();
         let (gvs_match_props, (top_constants, constants), not_match) = self.process();
 
@@ -149,6 +154,8 @@ where
                 });
             }
         }
+        //TODO 太复杂 当前直接返回 true
+        true
     }
 }
 
@@ -162,10 +169,10 @@ where
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
         match self {
             Self::General(gv) => gv.shaping(who),
             Self::Virtual(vv) => vv.shaping(who),
-        };
+        }
     }
 }

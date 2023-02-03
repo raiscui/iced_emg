@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-03 16:42:27
+ * @LastEditTime: 2023-02-03 18:52:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -209,13 +209,16 @@ impl<Message> Shaping<Self> for Checkbox<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a>,
 {
-    fn shaping(&self, who: &mut Self) {
+    fn shaping(&self, who: &mut Self) -> bool {
         debug!(
             "Generic: use Checkbox refresh for checkbox self:{} shaping-> who:{}",
             &self.label, &who.label
         );
-
-        *who = self.clone();
+        if *who != self.clone() {
+            *who = self.clone();
+            return true;
+        }
+        false
     }
 }
 // impl<'a, Message, T: Shaping<Checkbox<Message>>> AsRefreshFor<Checkbox<Message>> for T {
@@ -229,6 +232,7 @@ where
 // NOTE 当前 走 先 被下游更新,  如果 自身无法找到下游对自己的更新规则(下级未知), 则询问下游的向上更新方法
 //NOTE 性能上, 上游先判断 一直call 同一个函数 应该会快一点 ,但是 一般情况 新建元素都是属于下级.更多的是下级未知.
 //NOTE 如果 先下级向上更新,会downcast很多次上级, 想取消 下级的默认向上更新,可以 warp 此下级,比较好实现, 关键是下级在构建过程中会不可知,很难调取到自身的 shaping
+//NOTE     而且下游 很难知道上游的具体类型
 //NOTE 如果 先自己被下级更新, 想取消 自己针对此下级的更新规则,可以 warp 此下级,让自己不认识.
 // @ 下游 GElement 更新  Checkbox ------------------------------------
 impl<Message> Shaping<Checkbox<Message>> for GElement<Message>
@@ -236,7 +240,7 @@ where
     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
     #[allow(clippy::match_same_arms)]
-    fn shaping(&self, who_checkbox: &mut Checkbox<Message>) {
+    fn shaping(&self, who_checkbox: &mut Checkbox<Message>) -> bool {
         match self {
             Self::Layer_(_l) => {
                 todo!("使用 layer里一堆东西 更新 CheckBox");
@@ -248,7 +252,7 @@ where
                 let _span =
                     debug_span!("better_any_shaping", "Builder_ shaping-> Checkbox").entered();
 
-                builder.widget().shaping(who_checkbox);
+                builder.widget().shaping(who_checkbox)
             }
             //TODO enable this
             // Self::Text_(t) => {
@@ -284,7 +288,14 @@ where
                 // } else {
                 //     debug!("失败 downcast to Self");
                 // }
-                who_checkbox.shaping_use_any((g_self).into());
+                let is_changed = who_checkbox.shaping_use_any((g_self).into());
+                if !is_changed {
+                    debug!("===================== 向上更新");
+                    g_self.shaping(who_checkbox)
+                } else {
+                    false
+                }
+
                 //TODO shaping 反馈 bool, 失败后, 启用 下级的 向上更新
                 // todo!("此上为实验性代码");
 
@@ -298,27 +309,34 @@ where
             Self::EvolutionaryFactor(_) => todo!(),
 
             GElement::Shaper_(_) => todo!(),
-        };
+        }
     }
 }
-
+//NOTE 当前无法触发 更新到 GElement
 // @ 向上更新, ---- 下游 Checkbox 用于更新 who -GElement ------------------------------------
 impl<Message> Shaping<GElement<Message>> for Checkbox<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
 {
     #[allow(clippy::match_same_arms)]
-    fn shaping(&self, who: &mut GElement<Message>) {
+    fn shaping(&self, who: &mut GElement<Message>) -> bool {
+        let _span = debug_span!(
+            "GElement-shaping",
+            "向上更新 <Checkbox> shaping-> <GElement>"
+        )
+        .entered();
+
         match who {
             GElement::Layer_(l) => {
                 let _span = debug_span!("GElement-shaping", "Checkbox shaping-> Layer").entered();
                 l.push(self.clone().into());
+                true
             }
             GElement::Builder_(builder) => {
                 let _span =
                     debug_span!("GElement-shaping", "Checkbox shaping-> Builder_").entered();
 
-                self.shaping(builder.widget_mut());
+                self.shaping(builder.widget_mut())
             }
             // GElement::Text_(_)
             // | GElement::Button_(_)
@@ -342,14 +360,16 @@ where
                 // todo!("此上为实验性代码");
 
                 if let Some(checkbox) = dyn_who.downcast_mut::<Self>() {
-                    self.shaping(checkbox);
+                    self.shaping(checkbox)
+                } else {
+                    false
                 }
             }
             GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
             GElement::EmptyNeverUse => panic!("EmptyNeverUse never here"),
             GElement::SaNode_(_) => todo!(),
             GElement::EvolutionaryFactor(_) => todo!(),
-        };
+        }
     }
 }
 
@@ -384,13 +404,18 @@ impl<Message> Shaping<Checkbox<Message>> for i32
 where
     Message: 'static + Clone + for<'a> MessageTid<'a>,
 {
-    fn shaping(&self, who: &mut Checkbox<Message>) {
+    fn shaping(&self, who: &mut Checkbox<Message>) -> bool {
         warn!(
             "[checkbox] use i32 refresh for checkbox self:{:?}-who:{}",
             &who, &self
         );
 
-        who.label = format!("checkbox i32: {}", self).into();
+        let into = format!("checkbox i32: {}", self).into();
+        if who.label != into {
+            who.label = into;
+            return true;
+        }
+        false
     }
 }
 // impl<Message, Use: Sized + Clone + std::fmt::Debug + 'static> TryRefreshFor<Checkbox<Message>>
@@ -416,7 +441,7 @@ impl<Message> ShapingUseAny for Checkbox<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a>,
 {
-    fn shaping_use_any(&mut self, any: &dyn Tid) {
+    fn shaping_use_any(&mut self, any: &dyn Tid) -> bool {
         let _span = debug_span!(
             "better_any_shaping",
             at = "ShapingUseAny",
@@ -435,9 +460,10 @@ where
             // self.shaping_use(x);
             if let Some(x2) = (&**x).downcast_ref::<Self>() {
                 debug!("1 ** 成功 downcast to Self");
-                self.shaping_use(x2);
+                return self.shaping_use(x2);
             }
         }
+        false
 
         // test code ─────────────────────────────────────────────────────────────
 

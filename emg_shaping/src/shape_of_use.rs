@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2023-02-03 11:04:56
+ * @LastEditTime: 2023-02-03 17:29:36
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,15 +28,17 @@ use crate::Shaping;
 // ────────────────────────────────────────────────────────────────────────────────
 #[allow(clippy::module_name_repetitions)]
 pub trait ShapingUseDyn<Use> {
-    fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Use>);
+    #[must_use]
+    fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Use>) -> bool;
 }
 // ────────────────────────────────────────────────────────────────────────────────
 // @ impl ShapeOfUse ────────────────────────────────────────────────────────────────────────────────
 
 impl<Who> ShapingUseDyn<Self> for Who {
     // #[inline]
-    default fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Self>) {
-        updater.shaping(self);
+    #[must_use]
+    default fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Self>) -> bool {
+        updater.shaping(self)
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────

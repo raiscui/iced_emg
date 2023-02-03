@@ -110,7 +110,7 @@ fn tracing_init() -> Result<(), Report> {
 #[instrument]
 pub fn main() -> Result<(), Report> {
     // pub fn main() -> Result<(), Error> {
-    // #[cfg(debug_assertions)]
+    #[cfg(debug_assertions)]
     tracing_init()?;
     Counter::run(Settings::default()).wrap_err("saw a downstream error")
 }

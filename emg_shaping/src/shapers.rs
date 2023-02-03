@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2023-02-03 14:16:29
+ * @LastEditTime: 2023-02-03 18:01:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -46,14 +46,14 @@ impl<Use> PartialEq for Shaper<Use> {
 // }
 
 #[derive(Clone)]
-pub struct ShaperFor<'a, Who>(Rc<dyn Fn(&mut Who) + 'a>);
+pub struct ShaperFor<'a, Who>(Rc<dyn Fn(&mut Who) -> bool + 'a>);
 
 impl<'a, Who> ShaperFor<'a, Who> {
-    pub fn new<F: Fn(&mut Who) + 'a>(f: F) -> Self {
+    pub fn new<F: Fn(&mut Who) -> bool + 'a>(f: F) -> Self {
         ShaperFor(Rc::new(f))
     }
     #[must_use]
-    pub fn get(&self) -> Rc<dyn Fn(&mut Who) + 'a> {
+    pub fn get(&self) -> Rc<dyn Fn(&mut Who) -> bool + 'a> {
         Rc::clone(&self.0)
     }
 }
@@ -101,10 +101,12 @@ impl<'a, Who> ShaperFor<'a, Who> {
 // }
 
 pub trait ShapingUseAny {
-    fn shaping_use_any(&mut self, any: &dyn Tid);
+    #[must_use]
+    fn shaping_use_any(&mut self, any: &dyn Tid) -> bool;
 }
 impl<Who: for<'a> Tid<'a>> ShapingUseAny for Who {
-    default fn shaping_use_any(&mut self, any: &dyn Tid) {
+    #[must_use]
+    default fn shaping_use_any(&mut self, any: &dyn Tid) -> bool {
         warn!(
             "Self:{} , use default impl [ShapingUseAny]  try downcast",
             std::any::type_name::<Self>()
@@ -112,10 +114,13 @@ impl<Who: for<'a> Tid<'a>> ShapingUseAny for Who {
 
         if let Some(same_type_as_self) = any.downcast_any_ref::<Self>() {
             debug!("default impl 成功 downcast to any Self");
-            self.shaping_use(same_type_as_self);
-        } else {
-            warn!("default impl downcast to any Self 失败");
+            return self.shaping_use(same_type_as_self);
         }
+        // ─────────────────────────────────────────────────────────────
+
+        warn!("default impl downcast to any Self 失败");
+
+        false
     }
 }
 // impl
@@ -137,8 +142,12 @@ impl<Who: for<'a> Tid<'a>> ShapingUseAny for Who {
 //     }
 // }
 // refresh
+
 pub trait Shaping<Who> {
-    fn shaping(&self, who: &mut Who);
+    ///return : changed or not
+    #[must_use]
+    //TODO maybe change to Option<bool>  Some(true)->changed Some(false)->not changed  None->not impl
+    fn shaping(&self, who: &mut Who) -> bool;
 }
 #[impl_tid]
 impl<'a, Who> TidAble<'a> for Box<dyn Shaping<Who> + 'a> {}
@@ -149,14 +158,26 @@ impl<Who, Use> Shaping<Who> for Use
 // where
 // Use:Sized
 {
-    default fn shaping(&self, _el: &mut Who) {
-        println!(
-            "this is un implemented yet use ->\n{} \n shaping ->\n{}",
-            std::any::type_name::<Use>(),
-            std::any::type_name::<Who>()
-        );
+    #[must_use]
+    default fn shaping(&self, _el: &mut Who) -> bool {
+        // println!(
+        //     "this is un implemented yet use ->\n{} \n shaping ->\n{}",
+        //     std::any::type_name::<Use>(),
+        //     std::any::type_name::<Who>()
+        // );
 
-        error!(
+        #[cfg(not(feature = "default_shaping_make_panic"))]
+        {
+            error!(
+                "this is un implemented yet use ->\n{} \n shaping ->\n{}",
+                std::any::type_name::<Use>(),
+                std::any::type_name::<Who>()
+            );
+            false //not changed
+        }
+
+        #[cfg(feature = "default_shaping_make_panic")]
+        panic!(
             "this is un implemented yet use ->\n{} \n shaping ->\n{}",
             std::any::type_name::<Use>(),
             std::any::type_name::<Who>()
@@ -341,8 +362,14 @@ mod updater_test {
 
         let mut f = String::from("ccc");
 
-        let a = ShaperFor(Rc::new(|xx: &mut String| xx.push_str("ddd")));
-        let add = ShaperFor::new(|xx: &mut String| xx.push_str("ddd"));
+        let a = ShaperFor(Rc::new(|xx: &mut String| {
+            xx.push_str("ddd");
+            true
+        }));
+        let add = ShaperFor::new(|xx: &mut String| {
+            xx.push_str("ddd");
+            true
+        });
         a.shaping(&mut f);
         a.shaping(&mut f);
         info!("{}", &f);

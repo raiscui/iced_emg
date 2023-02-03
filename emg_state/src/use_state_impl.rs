@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-01 17:02:46
+ * @LastEditTime: 2023-02-03 18:43:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -870,7 +870,7 @@ where
     fn store_set(&self, store: &GStateStore, value: T);
     fn set_with_opt_once<F: FnOnce(&T) -> Option<T>>(&self, func_once: F);
     fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F);
-    fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
+    // fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
     fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F);
     fn set_with<F: Fn(&T) -> T>(&self, func: F);
     // fn try_get(&self) -> Option<T>;
@@ -952,32 +952,54 @@ where
         let current = var.get();
         start_set_var_and_run_before_after(&s_key, var, current, value, before_fns, after_fns);
     }
-    fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
-        let (var, before_fns, after_fns) = store
-            .opt_get_var_and_bf_af_use_id::<T>(&StorageKey::TopoKey(self.id))
-            // .cloned()
-            .expect("You are trying to get a var state that doesn't exist in this context!");
+    //TODO remove this use set_with_opt_once
+    // fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
+    //     let (var, before_fns, after_fns) = store
+    //         .opt_get_var_and_bf_af_use_id::<T>(&StorageKey::TopoKey(self.id))
+    //         // .cloned()
+    //         .expect("You are trying to get a var state that doesn't exist in this context!");
 
-        let current = var.get();
-        let data = func(&current);
+    //     let current = var.get();
+    //     let data = func(&current);
 
-        start_set_var_and_run_before_after(
-            // store,
-            &StorageKey::TopoKey(self.id),
-            var,
-            current,
-            data,
-            before_fns,
-            after_fns,
-        );
-    }
+    //     start_set_var_and_run_before_after(
+    //         // store,
+    //         &StorageKey::TopoKey(self.id),
+    //         var,
+    //         current,
+    //         data,
+    //         before_fns,
+    //         after_fns,
+    //     );
+    // }
 
+    //TODO remove this use set_with_opt_once
     fn set_with<F: Fn(&T) -> T>(&self, func: F) {
         read_var_b_a_with_topo_id::<_, T, ()>(
             self.id,
             |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
                 let current = var.get();
                 let data = func(&current);
+                start_set_var_and_run_before_after(
+                    // store,
+                    &StorageKey::TopoKey(self.id),
+                    var,
+                    current,
+                    data,
+                    before_fns,
+                    after_fns,
+                );
+            },
+        );
+    }
+    //TODO remove this function use set_with_opt_once
+    fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
+        read_var_b_a_with_topo_id::<_, T, ()>(
+            self.id,
+            |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
+                let current = var.get();
+                let data = func_once(&current);
+
                 start_set_var_and_run_before_after(
                     // store,
                     &StorageKey::TopoKey(self.id),
@@ -1010,25 +1032,6 @@ where
             },
         );
     }
-    fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
-        read_var_b_a_with_topo_id::<_, T, ()>(
-            self.id,
-            |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
-                let current = var.get();
-                let data = func_once(&current);
-
-                start_set_var_and_run_before_after(
-                    // store,
-                    &StorageKey::TopoKey(self.id),
-                    var,
-                    current,
-                    data,
-                    before_fns,
-                    after_fns,
-                );
-            },
-        );
-    }
 
     fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F) {
         let (var,before_fns,after_fns) = store
@@ -1053,6 +1056,7 @@ where
     //     clone_state_with_topo_id::<T>(self.id).map(|v| (*v.get()).clone())
     // }
 
+    //TODO use bool(changed?) func
     fn update<F: FnOnce(&mut T)>(&self, func: F) {
         // read_var_with_topo_id::<_, T, ()>(self.id, |var| {
         //     let mut old = (*var.get()).clone();
@@ -1657,6 +1661,7 @@ fn set_state_and_run_cb_with_topo_id<T: 'static + std::clone::Clone>(data: T, cu
             .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 
         let current = var.get();
+
         start_set_var_and_run_before_after(&s_key, var, current, data, before_fns, after_fns);
     });
 

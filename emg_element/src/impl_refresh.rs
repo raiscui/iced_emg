@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2023-02-02 21:40:05
+ * @LastEditTime: 2023-02-03 18:54:59
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,7 @@ impl<Message> Shaping<Self> for GElement<Message>
 where
     Message: 'static,
 {
-    fn shaping(&self, who_el: &mut Self) {
+    fn shaping(&self, who_el: &mut Self) -> bool {
         use GElement::{Builder_, Generic_, Layer_, Shaper_};
         //TODO for who:builder?
         //CHECK allways check when add GElement number;
@@ -49,7 +49,7 @@ where
                 .entered();
                 // let mut dyn_ref = who.as_mut();
                 // use_something.shaping(who);
-                who.shaping_use(use_something);
+                who.shaping_use(use_something)
             }
             (who, Generic_(use_something)) => {
                 let _span = debug_span!(
@@ -60,7 +60,7 @@ where
                     who
                 )
                 .entered();
-                use_something.shaping(who);
+                use_something.shaping(who)
                 // let something = use_something.as_refresh_for();
                 // who.shaping_use(use_something);
             }
@@ -85,7 +85,7 @@ where
                 .entered();
 
                 trace!("{} refresh use shaper", gel);
-                gel.shaping_use_dyn(shaper.as_ref() as &dyn Shaping<Self>);
+                gel.shaping_use_dyn(shaper.as_ref() as &dyn Shaping<Self>)
             }
             // TODO: do not many clone event_callback
 
@@ -101,6 +101,7 @@ where
 
                 trace!("layer refresh use {} (do push)", any_not_shaper_event);
                 l.push(any_not_shaper_event.clone());
+                true
             }
             // shaper 不与任何不是 shaper 的 el 产生刷新动作
             (Shaper_(_who), any_not_shaper_event) => {
@@ -119,7 +120,7 @@ where
                     "Builder_ shaping-> GElement",
                 )
                 .entered();
-                builder.widget().shaping(who);
+                builder.widget().shaping(who)
             }
 
             // TODO : event_callbacks prosess
@@ -141,7 +142,7 @@ where
 // TODO : check no need? because already impl<Who, Use> EqShaping<Who> for Use
 impl<Message> EqShaping<GElement<Message>> for u32 {}
 impl<Message> Shaping<GElement<Message>> for u32 {
-    fn shaping(&self, el: &mut GElement<Message>) {
+    fn shaping(&self, el: &mut GElement<Message>) -> bool {
         // use GElement::Text_;
 
         match el {
@@ -151,6 +152,7 @@ impl<Message> Shaping<GElement<Message>> for u32 {
             // }
             other => {
                 warn!("====> {} refreshing use u32,no effect", other);
+                false
             }
         }
     }
@@ -161,7 +163,7 @@ where
     Message: 'static,
 {
     #[allow(clippy::match_same_arms)]
-    fn shaping(&self, el: &mut GElement<Message>) {
+    fn shaping(&self, el: &mut GElement<Message>) -> bool {
         match el {
             // Text_(text) => {
             //     trace!("==========Text update use i32");
@@ -177,7 +179,7 @@ where
 
                 // self.try_refresh_for(x);
                 // w.try_shaping_use(Box::new(*self));
-                (**w).shaping_use(self);
+                (**w).shaping_use(self)
 
                 // w.shape_of_use(self);
             }
@@ -193,7 +195,7 @@ where
 }
 
 impl<Message> Shaping<GElement<Message>> for f64 {
-    fn shaping(&self, el: &mut GElement<Message>) {
+    fn shaping(&self, el: &mut GElement<Message>) -> bool {
         match el {
             // Text_(text) => {
             //     trace!("==========Text update use f64");
@@ -201,6 +203,7 @@ impl<Message> Shaping<GElement<Message>> for f64 {
             // }
             other => {
                 warn!("not implemented ====> {} refreshing use f64", other);
+                false
             }
         }
     }
@@ -211,7 +214,7 @@ impl<Message> Shaping<NodeBuilderWidget<Message>> for GElement<Message>
 where
     Message: 'static,
 {
-    fn shaping(&self, node_builder_widget: &mut NodeBuilderWidget<Message>) {
+    fn shaping(&self, node_builder_widget: &mut NodeBuilderWidget<Message>) -> bool {
         let _span = debug_span!(
             "GElement-shaping",
             at = "Shaping<NodeBuilderWidget<Message>> for GElement<Message>",
@@ -227,6 +230,7 @@ where
             Self::Event_(event_callback) => {
                 trace!("node_builder_widget.add_event_callback(event_callback.clone()) ");
                 node_builder_widget.add_event_callback(event_callback.clone());
+                true
             }
             // ─────────────────────────────────────────────────────────────────
 
