@@ -19,7 +19,7 @@ use emg::{edge_index_no_source, node_index, Edge, EdgeCollect, EdgeIndex, NodeIn
 use emg_common::{im::vector, IdStr};
 use emg_hasher::CustomHasher;
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
-use emg_shaping::ShapeOfUse;
+use emg_shaping::ShapingUseDyn;
 use emg_state::{
     topo::{self, call_in_slot},
     use_state,
@@ -282,7 +282,7 @@ where
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path);
 
-                    root_ei.shape_of_use(edge_shapers);
+                    root_ei.shaping_use_dyn(edge_shapers);
 
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
                         assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix);
@@ -348,7 +348,7 @@ where
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                    new_def_ei.shape_of_use(edge_shapers);
+                    new_def_ei.shaping_use_dyn(edge_shapers);
 
                     // next
                     #[cfg(debug_assertions)]
@@ -451,7 +451,7 @@ where
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                    new_def_ei.shape_of_use(edge_shapers);
+                    new_def_ei.shaping_use_dyn(edge_shapers);
                     debug!("new_def_ei: {}", &new_def_ei);
 
                     //next

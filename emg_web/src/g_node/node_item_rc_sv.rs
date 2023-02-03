@@ -12,7 +12,7 @@ use either::Either::{self, Left, Right};
 use emg::{EdgeCollect, EdgeIndex, Graph};
 use emg_common::{im::ordmap::OrdMapPool, vector, IdStr, Vector};
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
-use emg_shaping::{ShapeOfUse, ShapingUse};
+use emg_shaping::{ShapingUse, ShapingUseDyn};
 use emg_state::{
     Anchor, CloneStateAnchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar,
 };
@@ -394,7 +394,7 @@ where
                                 if let Some(event_gel) =
                                     children.get(eix).and_then(|child| child.as_ref().left())
                                 {
-                                    node_builder_widget.shape_of_use(event_gel.as_ref());
+                                    node_builder_widget.shaping_use_dyn(event_gel.as_ref());
                                 }
                             }
 

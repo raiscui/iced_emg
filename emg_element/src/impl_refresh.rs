@@ -6,7 +6,7 @@
  * @Description:
  */
 use crate::{GElement, NodeBuilderWidget};
-use emg_shaping::{EqShaping, ShapeOfUse, Shaping, ShapingUseNoWarper, ShapingWhoNoWarper};
+use emg_shaping::{EqShaping, Shaping, ShapingUseDyn, ShapingUseNoWarper, ShapingWhoNoWarper};
 use tracing::{debug_span, trace, warn};
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ where
                 .entered();
 
                 trace!("{} refresh use shaper", gel);
-                gel.shape_of_use(shaper.as_ref() as &dyn Shaping<Self>);
+                gel.shaping_use_dyn(shaper.as_ref() as &dyn Shaping<Self>);
             }
             // TODO: do not many clone event_callback
 

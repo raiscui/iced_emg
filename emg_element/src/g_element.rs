@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-02-02 17:33:51
+ * @LastEditTime: 2023-02-03 14:27:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,11 +17,12 @@ use emg_state::{StateAnchor, StateMultiAnchor};
 use match_any::match_any;
 
 use emg_common::{
+    any::MessageTid,
     better_any::{impl_tid, Tid, TidAble},
     dyn_partial_eq::DynPartialEq,
     IdStr, TypeCheckObjectSafe,
 };
-use emg_shaping::{EqShaping, Shaping, ShapingUse, TryShapingUse};
+use emg_shaping::{EqShaping, Shaping, ShapingUse, ShapingUseAny};
 // extern crate derive_more;
 use derive_more::From;
 // use dyn_clonable::clonable;
@@ -32,7 +33,7 @@ use tracing::{instrument, warn};
 #[allow(clippy::module_name_repetitions)]
 // #[clonable]
 //NOTE 继承Tid:从这个转换 , TidAble: 可以转换成这个
-pub trait DynGElement<Message>:
+pub trait DynGElement<Message:for <'a> MessageTid<'a>>:
     // AsRefreshFor<GElement< Message>>
     for<'a> Tid<'a>
      +Shaping<GElement< Message>>
@@ -43,13 +44,15 @@ pub trait DynGElement<Message>:
     + DynPartialEq
     + DynClone
     + core::fmt::Debug
-    + TryShapingUse
+    + ShapingUseAny
     + ShapingUse<i32>
+
 
 {
 }
-// #[impl_tid]
-// impl<'a, Message> TidAble<'a> for Box<dyn DynGElement<Message> + 'a> {}
+
+#[impl_tid]
+impl<'a, Message> TidAble<'a> for Box<dyn DynGElement<Message> + 'a> {}
 
 dyn_clone::clone_trait_object!(<Message> DynGElement<Message>);
 

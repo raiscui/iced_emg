@@ -1,10 +1,11 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-02 18:46:21
+ * @LastEditTime: 2023-02-03 16:42:27
  * @LastEditors: Rais
  * @Description:
  */
+
 //! Show toggle controls using checkboxes.
 use crate::{g_element::DynGElement, GElement};
 
@@ -13,7 +14,7 @@ use emg_common::{
     better_any::{tid, Tid, TidAble, TidExt},
     IdStr, LogicLength, TypeCheckObjectSafe, TypeName,
 };
-use emg_shaping::{ShapeOfUse, Shaping, ShapingUse, TryShapingUse};
+use emg_shaping::{Shaping, ShapingUse, ShapingUseAny, ShapingUseDyn};
 use emg_state::StateAnchor;
 use tracing::{debug, debug_span, error, info, trace, warn, Span};
 
@@ -225,7 +226,10 @@ where
 
 // #[derive(Tid)]
 // struct MM<T>(T);
-
+// NOTE 当前 走 先 被下游更新,  如果 自身无法找到下游对自己的更新规则(下级未知), 则询问下游的向上更新方法
+//NOTE 性能上, 上游先判断 一直call 同一个函数 应该会快一点 ,但是 一般情况 新建元素都是属于下级.更多的是下级未知.
+//NOTE 如果 先下级向上更新,会downcast很多次上级, 想取消 下级的默认向上更新,可以 warp 此下级,比较好实现, 关键是下级在构建过程中会不可知,很难调取到自身的 shaping
+//NOTE 如果 先自己被下级更新, 想取消 自己针对此下级的更新规则,可以 warp 此下级,让自己不认识.
 // @ 下游 GElement 更新  Checkbox ------------------------------------
 impl<Message> Shaping<Checkbox<Message>> for GElement<Message>
 where
@@ -235,7 +239,7 @@ where
     fn shaping(&self, who_checkbox: &mut Checkbox<Message>) {
         match self {
             Self::Layer_(_l) => {
-                unimplemented!("使用 layer里一堆东西 更新 CheckBox");
+                todo!("使用 layer里一堆东西 更新 CheckBox");
             }
             Self::Builder_(builder) => {
                 let _span =
@@ -262,30 +266,26 @@ where
 
                 let _span1 =
                     debug_span!("better_any_shaping", "Generic shaping-> Checkbox").entered();
-                error!("use Generic({}) shaping Checkbox", g_self.type_name());
+                warn!("use Generic({}) shaping Checkbox", g_self.type_name());
                 debug!(
                     "Generic is Checkbox? {}",
-                    g_self.is::<Box<Checkbox<Message>>>()
+                    g_self.is::<Box<Checkbox<Message>>>() //is false
                 );
                 //TODO 使用值反射 不知道下级实际类型也能更新自己的值
 
-                if let Some(s) = (&**g_self).downcast_ref::<Checkbox<Message>>() {
-                    debug!("成功 downcast to Self");
-                    s.shaping(who_checkbox);
-                } else {
-                    debug!("失败 downcast to Self");
-                }
+                // if let Some(s) = (&**g_self).downcast_ref::<Checkbox<Message>>() {
+                //     debug!("成功 downcast to Self");
+                //     s.shaping(who_checkbox);
+                // } else {
+                //     debug!("失败 downcast to Self");
+                // }
                 // if let Some(_) = (&**g_self).as_any().downcast_ref::<Checkbox<Message>>() {
                 //     debug!("成功 downcast to Self");
                 // } else {
                 //     debug!("失败 downcast to Self");
                 // }
-
-                // debug!("who_checkbox.shape_of_use(g_self);");
-                // who_checkbox.shape_of_use(g_self);
-                // debug!("who_checkbox.shape_of_use(g_self);........end ");
-
-                // who_checkbox.try_shaping_use(&g_self as &dyn Tid);
+                who_checkbox.shaping_use_any((g_self).into());
+                //TODO shaping 反馈 bool, 失败后, 启用 下级的 向上更新
                 // todo!("此上为实验性代码");
 
                 //TODO 反射?
@@ -302,7 +302,7 @@ where
     }
 }
 
-// @ 下游 Checkbox 用于更新 who -GElement ------------------------------------
+// @ 向上更新, ---- 下游 Checkbox 用于更新 who -GElement ------------------------------------
 impl<Message> Shaping<GElement<Message>> for Checkbox<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
@@ -412,38 +412,94 @@ where
 //     }
 // }
 
-impl<Message> TryShapingUse for Checkbox<Message>
+impl<Message> ShapingUseAny for Checkbox<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a>,
 {
-    fn try_shaping_use(&mut self, any: &dyn Tid) {
-        let _span = debug_span!("better_any_shaping", "Checkbox try_shaping_use any").entered();
+    fn shaping_use_any(&mut self, any: &dyn Tid) {
+        let _span = debug_span!(
+            "better_any_shaping",
+            at = "ShapingUseAny",
+            "Checkbox shaping_use_any any"
+        )
+        .entered();
 
         warn!(
-            "[try_shaping_use]  try downcast to Box<dyn Shaping<{}>>",
+            "Self:{} , [try_shaping_use]  try downcast",
             std::any::type_name::<Self>()
         );
 
-        if let Some(x) = any.downcast_ref::<Box<dyn Shaping<Self>>>() {
-            debug!("成功 downcast to Box<dyn Shaping<Self>>");
-            self.shaping_use(x);
+        if let Some(x) = any.downcast_any_ref::<Box<dyn DynGElement<Message>>>() {
+            debug!("成功 downcast to any Box<dyn DynGElement<Message>>");
+
+            // self.shaping_use(x);
+            if let Some(x2) = (&**x).downcast_ref::<Self>() {
+                debug!("1 ** 成功 downcast to Self");
+                self.shaping_use(x2);
+            }
         }
-        // if let Some(x) = any.downcast_ref::<Rc<dyn Shaping<Self>>>() {
-        //     debug!("成功 downcast to Rc<dyn Shaping<Self>>");
+
+        // test code ─────────────────────────────────────────────────────────────
+
+        // if let Some(x2) = x.downcast_ref::<Box<dyn Shaping<Self>>>() {
+        //     debug!("0 ** 成功 downcast to  Box<dyn Shaping<Self>>");
+        //     // self.shaping_use(x2);
+        // }
+        // if let Some(x2) = (x.clone()).downcast_box::<Box<dyn Shaping<Self>>>().ok() {
+        //     debug!("0 ** 成功 downcast to  Box<dyn Shaping<Self>>");
+        //     // self.shaping_use(x2);
+        // }
+
+        // if let Some(x) = any.downcast_ref::<Box<dyn DynGElement<Message>>>() {
+        //     debug!("成功 downcast to Box<dyn DynGElement<Message>>");
         //     self.shaping_use(x);
         // }
-        if let Some(x) = any.downcast_ref::<Self>() {
-            debug!("成功 downcast to Self");
-            self.shaping_use(x);
-        }
-        if let Some(x) = any.downcast_ref::<Box<Self>>() {
-            debug!("成功 downcast to box Self");
-            self.shaping_use(x);
-        }
-        // if let Some(u_s_e_rf) = any.downcast_ref::<Rc<dyn Shaping<Self>>>() {
-        //     self.shape_of_use(&**u_s_e_rf);
-        // } else {
-        //     warn!("try_refresh failed: use {:?} for who:{:?}", &self, &any);
+        // if let Some(x) = any.downcast_ref::<Box<dyn Shaping<Self>>>() {
+        //     debug!("成功 downcast to Box<dyn Shaping<Self>>");
+        //     self.shaping_use(x);
+        // }
+
+        // if let Some(x) = any.downcast_ref::<Self>() {
+        //     debug!("成功 downcast to Self");
+        //     self.shaping_use(x);
+        // }
+        // if let Some(x) = any.downcast_ref::<Box<Self>>() {
+        //     debug!("成功 downcast to box Self");
+        //     self.shaping_use(x);
+        // }
+
+        // // ─────────────────────────────────────────────────────────────
+        // if let Some(x) = any.downcast_any_ref::<Box<dyn DynGElement<Message>>>() {
+        //     debug!("成功 downcast to any Box<dyn DynGElement<Message>>");
+
+        //     // self.shaping_use(x);
+        //     if let Some(x2) = (&**x).downcast_ref::<Self>() {
+        //         debug!("1 ** 成功 downcast to any Self");
+        //         self.shaping_use(x2);
+        //     }
+
+        //     if let Some(x2) = x.downcast_ref::<Self>() {
+        //         debug!("1成功 downcast to any Self");
+        //         self.shaping_use(x2);
+        //     }
+        //     if let Some(x2) = x.downcast_ref::<Box<Self>>() {
+        //         debug!("1成功 downcast to any box Self");
+        //         self.shaping_use(x2);
+        //     }
+        // }
+
+        // if let Some(x) = any.downcast_any_ref::<Box<dyn Shaping<Self>>>() {
+        //     debug!("成功 downcast to any Box<dyn Shaping<Self>>");
+        //     self.shaping_use(x);
+        // }
+
+        // if let Some(x) = any.downcast_any_ref::<Self>() {
+        //     debug!("成功 downcast to any Self");
+        //     self.shaping_use(x);
+        // }
+        // if let Some(x) = any.downcast_any_ref::<Box<Self>>() {
+        //     debug!("成功 downcast to any box Self");
+        //     self.shaping_use(x);
         // }
     }
 }
@@ -474,50 +530,44 @@ mod test {
     fn test_mode<T: Mode>(a: &T) -> T::Output {
         a.doit()
     }
+    // ─────────────────────────────────────────────────────────────────────────────
+    use bevy_reflect::{reflect_trait, Reflect};
 
-    trait Mode1<X> {
-        fn convert(self) -> Box<dyn Shaping<X>>;
-    }
-    impl<X> Mode1<X> for i32 {
-        fn convert(self) -> Box<dyn Shaping<X>> {
-            Box::new(self) as Box<dyn Shaping<X>>
-        }
-    }
-    trait Warp {
-        fn test_mode1<X>(&self) -> Box<dyn Shaping<X>>;
-        // {
-        //     self.convert()
-        // }
-    }
+    #[derive(Reflect)]
+    // #[reflect(Mode1)]
+    struct Wi32(i32);
 
-    impl Warp for i32 {
-        fn test_mode1<X>(&self) -> Box<dyn Shaping<X>> {
-            // self as &dyn Shaping<X>
-            todo!()
-        }
-    }
-
-    // fn test_mode1<'a, T: Mode1, X>(a: &'a T) -> T::Output<'a, X> {
-    //     a.convert()
+    // ─────────────────────────────────────────────────────────────────────
+    // #[reflect_trait]
+    // trait Mode1<X: Reflect> {
+    //     fn convert(&self) -> &dyn Shaping<X>;
     // }
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    // impl<X: 'static> Mode1<X> for Wi32 {
+    //     fn convert(&self) -> &dyn Shaping<X> {
+    //         self as &dyn Shaping<X>
+    //     }
+    // }
+    // impl<X> Mode1<X> for String {
+    //     fn convert(&self) -> &dyn Shaping<X> {
+    //         self as &dyn Shaping<X>
+    //     }
+    // }
+    // #[reflect_trait]
+    trait Mode2 {
+        type O;
+        // fn convert(&self) -> &dyn Shaping<Self>;
+        fn convert(&self) -> Self::O;
+    }
+
+    impl Mode2 for i32 {
+        type O = i32;
+        fn convert(&self) -> i32 {
+            *self
+        }
+    }
 
     #[test]
-    fn test() {
-        let a = 1i32;
-        let mut b = "ss".to_string();
-
-        let aa = test_mode(&a);
-        let bb = test_mode(&b);
-
-        let f = &a as &dyn Mode1<String>;
-        let f = &a as &dyn Mode<Output = i32>;
-
-        // let f = a.convert::<String>();
-        // let f1 = a.convert::<u32>();
-        // f.shaping(&mut b);
-        // println!("b= {b}");
-
-        // let aw = Box::new(a.clone()) as Box<dyn Warp>;
-        // let awf = aw.convert::<String>();
-    }
+    fn test() {}
 }

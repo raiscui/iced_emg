@@ -1,18 +1,18 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2023-02-02 17:30:20
+ * @LastEditTime: 2023-02-03 14:16:29
  * @LastEditors: Rais
  * @Description:
  */
 use emg_common::{
-    better_any::{impl_tid, Tid, TidAble},
+    better_any::{impl_tid, Tid, TidAble, TidExt},
     dyn_partial_eq::DynPartialEq,
 };
 use std::rc::Rc;
-use tracing::error;
+use tracing::{debug, error, warn};
 
-use crate::ShapingWhoNoWarper;
+use crate::{ShapingUse, ShapingWhoNoWarper};
 
 #[derive(Clone)]
 pub struct Shaper<Use>(Rc<dyn Fn() -> Use>);
@@ -100,8 +100,23 @@ impl<'a, Who> ShaperFor<'a, Who> {
 //     }
 // }
 
-pub trait TryShapingUse {
-    fn try_shaping_use(&mut self, u_s_e: &dyn Tid);
+pub trait ShapingUseAny {
+    fn shaping_use_any(&mut self, any: &dyn Tid);
+}
+impl<Who: for<'a> Tid<'a>> ShapingUseAny for Who {
+    default fn shaping_use_any(&mut self, any: &dyn Tid) {
+        warn!(
+            "Self:{} , use default impl [ShapingUseAny]  try downcast",
+            std::any::type_name::<Self>()
+        );
+
+        if let Some(same_type_as_self) = any.downcast_any_ref::<Self>() {
+            debug!("default impl 成功 downcast to any Self");
+            self.shaping_use(same_type_as_self);
+        } else {
+            warn!("default impl downcast to any Self 失败");
+        }
+    }
 }
 // impl
 //     TryShapingUse for Rc<Use>
@@ -130,7 +145,10 @@ impl<'a, Who> TidAble<'a> for Box<dyn Shaping<Who> + 'a> {}
 
 //TODO make Result
 #[cfg(not(feature = "no_default_shaping"))]
-impl<Who, Use> Shaping<Who> for Use {
+impl<Who, Use> Shaping<Who> for Use
+// where
+// Use:Sized
+{
     default fn shaping(&self, _el: &mut Who) {
         println!(
             "this is un implemented yet use ->\n{} \n shaping ->\n{}",
@@ -259,7 +277,7 @@ impl<Who: 'static> core::cmp::PartialEq<dyn EqShapingWithDebug<Who>>
 mod updater_test {
 
     // use crate::CloneState;
-    use crate::ShapeOfUse;
+    use crate::ShapingUseDyn;
     use crate::{test::setup_tracing, Shaping};
     use tracing::info;
     use wasm_bindgen_test::wasm_bindgen_test;
@@ -289,20 +307,20 @@ mod updater_test {
         let ff2 = use_state(2_i32);
         let ff_w = ff2.watch();
         let ffw_vec = vec![Box::new(ff_w.clone()), Box::new(ff_w.clone())];
-        ff.shape_of_use(&ff2);
-        ff.shape_of_use(&ff_w);
-        ff.shape_of_use(&ffw_vec);
+        ff.shaping_use_dyn(&ff2);
+        ff.shaping_use_dyn(&ff_w);
+        ff.shaping_use_dyn(&ffw_vec);
         ff2.shaping(&mut ff);
         info!("==== test_anchor: {}", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
-        s.shape_of_use(&ff2);
+        s.shaping_use_dyn(&ff2);
         ff2.shaping(&mut s);
         info!("==== test_anchor: {}", &s);
         assert_eq!("sss,2,2", &s);
         // ─────────────────────────────────────────────────────────────────
 
-        ff.shape_of_use(&n);
+        ff.shaping_use_dyn(&n);
         n.shaping(&mut ff);
         info!("==== test_anchor 2: {}", ff.get());
         assert_eq!("hello,2,2,2,2,2,99,99", ff.get());
@@ -310,7 +328,7 @@ mod updater_test {
 
         let a = use_state(4_i32);
 
-        ff.shape_of_use(&a);
+        ff.shaping_use_dyn(&a);
         a.shaping(&mut ff);
         info!("==== test_anchor 3: {}", ff.get());
 
