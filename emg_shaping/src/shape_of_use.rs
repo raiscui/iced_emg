@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2022-09-14 16:36:59
+ * @LastEditTime: 2023-02-03 11:04:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -27,15 +27,15 @@ use crate::Shaping;
 
 // ────────────────────────────────────────────────────────────────────────────────
 #[allow(clippy::module_name_repetitions)]
-pub trait ShapeOfUse<Who> {
-    fn shape_of_use(&mut self, updater: &dyn Shaping<Who>);
+pub trait ShapingUseDyn<Use> {
+    fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Use>);
 }
 // ────────────────────────────────────────────────────────────────────────────────
 // @ impl ShapeOfUse ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who> ShapeOfUse<Self> for Who {
+impl<Who> ShapingUseDyn<Self> for Who {
     // #[inline]
-    default fn shape_of_use(&mut self, updater: &dyn Shaping<Self>) {
+    default fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Self>) {
         updater.shaping(self);
     }
 }
@@ -84,15 +84,15 @@ mod updater_test1 {
         let rca = Rc::new(a.clone());
         let rc_b_string = Rc::new(b);
 
-        f.shape_of_use(&a);
-        f.shape_of_use(rca.as_ref());
-        f.shape_of_use(rca.as_ref());
-        f.shape_of_use(rc_b_string.as_ref());
+        f.shaping_use_dyn(&a);
+        f.shaping_use_dyn(rca.as_ref());
+        f.shaping_use_dyn(rca.as_ref());
+        f.shaping_use_dyn(rc_b_string.as_ref());
 
         let mut n = 0;
 
-        n.shape_of_use(&f);
-        f.shape_of_use(&n);
+        n.shaping_use_dyn(&f);
+        f.shaping_use_dyn(&n);
 
         // let xxx: i16 = 2;
 

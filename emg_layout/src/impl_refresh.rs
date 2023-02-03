@@ -7,7 +7,7 @@
  */
 mod native;
 
-use emg_shaping::{ShapeOfUse, Shaping, ShapingUseNoWarper, ShapingWhoNoWarper};
+use emg_shaping::{Shaping, ShapingUseDyn, ShapingUseNoWarper, ShapingWhoNoWarper};
 use std::{any::Any, panic::Location, rc::Rc};
 
 use emg_state::{CloneStateVar, StateAnchor, StateVar};
@@ -44,7 +44,7 @@ where
         )
         .entered();
         // let ii = i.as_ref();
-        who.shape_of_use(self.as_ref());
+        who.shaping_use_dyn(self.as_ref());
     }
 }
 
@@ -60,7 +60,7 @@ where
         )
         .entered();
         // let ii = i.as_ref();
-        who.shape_of_use(self.as_ref());
+        who.shaping_use_dyn(self.as_ref());
     }
 }
 
@@ -73,7 +73,7 @@ where
     default fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
         let rc_v = self.get_var_with(emg_state::Var::get);
         warn!("Edge [default!!] Refresh use StateVar current value !!!");
-        who.shape_of_use(&*rc_v);
+        who.shaping_use_dyn(&*rc_v);
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -175,13 +175,13 @@ where
     let any = &css.0 as &dyn Any;
     if let Some(css_width) = any.downcast_ref::<CssWidth>() {
         debug!("dyn match CssWidth {}", &css_width);
-        ei.shape_of_use(css_width);
+        ei.shaping_use_dyn(css_width);
         return;
     }
 
     if let Some(css_height) = any.downcast_ref::<CssHeight>() {
         debug!("dyn match CssHeight {}", &css_height);
-        ei.shape_of_use(css_height);
+        ei.shaping_use_dyn(css_height);
         return;
     }
 
@@ -394,7 +394,7 @@ mod refresh_test {
     use emg::{edge_index_no_source, node_index};
     use emg_animation::to;
     use emg_common::{im::vector, into_smvec, IdStr};
-    use emg_shaping::ShapeOfUse;
+    use emg_shaping::ShapingUseDyn;
     use emg_state::{use_state, CloneStateVar, Dict, StateVar};
     use seed_styles as styles;
     use seed_styles::CssWidth;
@@ -433,7 +433,7 @@ mod refresh_test {
         illicit::Layer::new()
             .offer(EPath::<IdStr>(vector![edge_index_no_source("root")]))
             .enter(|| {
-                root_e.shape_of_use(&a);
+                root_e.shaping_use_dyn(&a);
                 // root_e.shaping_use(&a);
             });
 

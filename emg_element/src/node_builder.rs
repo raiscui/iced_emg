@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-31 18:45:43
+ * @LastEditTime: 2023-02-01 21:11:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -418,12 +418,10 @@ where
             |EdgeCtx {
                  styles_end,
                  layout_end,
-                 world,
-                 children_layout_override,
+                 world: world_sa,
+                 children_layout_override: children_layout_override_sa,
                  ..
              }| {
-                let world_clone = world.clone();
-                let children_layout_override_clone = children_layout_override.clone();
                 let styles_sa = styles_end.map_(|_k, v| v.get_anchor()).then(|x| {
                     x.clone()
                         .into_iter()
@@ -432,13 +430,13 @@ where
                 });
 
                 //TODO 不要用 顺序pipe , 这样情况下 size trans改变 会 重新 进行全部 style 计算,使用 mut 保存 ws.
-                layout_end
-                    .map(move |&(trans, w, h)| {
+                (layout_end, children_layout_override_sa, world_sa)
+                    .map(move |&(trans, w, h), children_layout_override, world| {
                         WidgetState::new(
                             (w, h),
                             trans,
-                            world_clone.clone(),
-                            children_layout_override_clone.clone(),
+                            Rc::new(world.clone()),
+                            Rc::new(children_layout_override.clone()),
                         )
                     })
                     .then(move |ws| {
@@ -600,21 +598,20 @@ where
                     ev_id.contains(EventIdentify::from(mouse::EventFlag::CLICK))
                 });
 
-                let id2 = id.clone();
-                let cursor_position_clone2 = cursor_position_clone.clone();
-            // let click_group = cb_matchs.remove_with_key("click");
+                // let click_group = cb_matchs.remove_with_key("click");
             // let cursor_position_clone = cursor_position.clone();
+
             let clicked_a = click_group
                 .into_iter()
                 .map(|(cb_ev_id, (ev_, click_cb_vec))| {
 
-                    let id3 = id2.clone();
-                    (
-                        &cursor_position_clone2,
-                        &state.world,
-                        &state.children_layout_override,
-                    )
-                        .map(move |c_pos, world, opt_layout_override| {
+                    let id3 = id.clone();
+                    let opt_layout_override2 =state.children_layout_override.clone();
+                    let world =state.world.clone();
+
+
+                        cursor_position_clone
+                        .map(move |c_pos| {
 
                             let id = id3.clone();
 
@@ -642,7 +639,7 @@ where
                                     debug!("⭕️ rect contains pos");
 
 
-                                    if let Some(layout_override) = opt_layout_override {
+                                    if let Some(layout_override) = &*opt_layout_override2 {
                                         debug!("⭕️ rect has layout_override");
                                         debug!("layout_override --> {:#?}",layout_override);
 
@@ -705,8 +702,11 @@ where
     // Message: PartialEq + 'static + std::clone::Clone,
 {
     type SceneCtxType = crate::SceneFrag;
-    #[instrument(skip(self, ctx), name = "NodeBuilderWidget paint")]
-    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
+    #[instrument(skip(self, painter), name = "NodeBuilderWidget paint")]
+    fn paint_sa(
+        &self,
+        painter: &StateAnchor<crate::PaintCtx>,
+    ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id1 = self.id.clone();
         let opt_span = illicit::get::<Span>().ok();
 
@@ -716,8 +716,8 @@ where
         );
         let span3 = span1.clone();
 
-        let current_ctx =
-            (ctx, &self.widget_state).map(move |incoming_ctx, current_widget_state| {
+        let current_painter =
+            (painter, &self.widget_state).map(move |incoming_painter, current_widget_state| {
                 // let id = id.clone();
                 let _span = span1.clone().entered();
                 info!(
@@ -725,20 +725,20 @@ where
                     "NodeBuilderWidget::paint-> (&ctx, &self.widget_state).map -> recalculating [{}]",
                     &id1
                 );
-                let mut incoming_ctx_mut = incoming_ctx.clone();
+                let mut incoming_painter_mut = incoming_painter.clone();
                 // incoming_ctx_mut.save_assert(&ctx_id);
-                incoming_ctx_mut.merge_widget_state(current_widget_state);
+                incoming_painter_mut.merge_widget_state(current_widget_state);
 
 
                 // incoming_ctx_mut.transform(crate::renderer::Affine::translate((
                 //     current_widget_state.translation.x * DPR,
                 //     current_widget_state.translation.y * DPR,
                 // )));
-                incoming_ctx_mut
+                incoming_painter_mut
             });
         illicit::Layer::new()
             .offer(span3)
-            .enter(|| self.widget.paint_sa(&current_ctx))
+            .enter(|| self.widget.paint_sa(&current_painter))
         // .map(move |out_scene| {
         //     info!(
         //         parent: &span2,

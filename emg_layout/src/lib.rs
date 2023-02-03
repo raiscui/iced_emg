@@ -2060,7 +2060,7 @@ mod tests {
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_common::{im::vector, num_traits::ToPrimitive};
     use emg_common::{parent, IdStr};
-    use emg_shaping::ShapeOfUse;
+    use emg_shaping::ShapingUseDyn;
     use emg_state::StateVar;
 
     use styles::{bg_color, h, hsl, pc, width, CssBackgroundColorTrait, CssHeight, CssWidth};
@@ -2216,9 +2216,9 @@ mod tests {
             });
             info!("l2 =========================================================");
 
-            root_e.shape_of_use(&vec![css(css_width)]);
+            root_e.shaping_use_dyn(&vec![css(css_width)]);
             // root_e.shaping_use(&css(css_width.clone()));
-            root_e.shape_of_use(&Css(css_height));
+            root_e.shaping_use_dyn(&Css(css_height));
             assert_eq!(
                 e1.edge_data(&EPath(vector![
                     edge_index_no_source("root"),
@@ -2232,9 +2232,9 @@ mod tests {
             );
             info!("=========================================================");
 
-            e2.shape_of_use(&Css(CssWidth::from(px(20))));
-            e2.shape_of_use(&Css(CssHeight::from(px(20))));
-            e2.shape_of_use(&Css(bg_color(hsl(40, 70, 30))));
+            e2.shaping_use_dyn(&Css(CssWidth::from(px(20))));
+            e2.shaping_use_dyn(&Css(CssHeight::from(px(20))));
+            e2.shaping_use_dyn(&Css(bg_color(hsl(40, 70, 30))));
 
             trace!("shaping_use after {:#?}", &e2);
             info!("l3 =========================================================");
@@ -2369,41 +2369,41 @@ mod tests {
         let xx = vec![css_width];
         // let xx = vec![css(css_width)];
 
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
 
         // trace!("shaping_use after css_width {}", &root_e);
         trace!("shaping_use after css_width {}", &e1);
@@ -2411,7 +2411,7 @@ mod tests {
 
         // root_e.shaping_use(&Css(css_height.clone()));
         let tempcss = use_state(css_height);
-        root_e.shape_of_use(&tempcss);
+        root_e.shaping_use_dyn(&tempcss);
         assert_eq!(
             e1.edge_nodes
                 .get()
@@ -2460,36 +2460,36 @@ mod tests {
 
         info!("=========================================================");
 
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
         assert_eq!(
             e1.edge_nodes
                 .get()
@@ -2518,7 +2518,7 @@ mod tests {
 
         trace!("shaping_use after {}", &e2);
         info!("l1351 =========================================================");
-        e2.shape_of_use(&Css(CssHeight::from(px(50))));
+        e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
         assert_eq!(
             e2.edge_nodes
                 .get()
@@ -2560,7 +2560,7 @@ mod tests {
             trace!("shaping_use after2 {}", &e2);
         });
         info!("=========================================================");
-        e2.shape_of_use(&Css(CssHeight::from(px(150))));
+        e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
 
         trace!("shaping_use after {:#?}", &e2);
         info!("..=========================================================");
@@ -2717,7 +2717,7 @@ mod tests {
             let xx = vec![css_width];
             // let xx = vec![css(css_width)];
 
-            root_e.shape_of_use(&xx);
+            root_e.shaping_use_dyn(&xx);
 
             warn!("calculated 3 =========================================================");
             warn!(
@@ -2733,40 +2733,40 @@ mod tests {
                     .calculated
             );
 
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
 
             // trace!("shaping_use after css_width {}", &root_e);
             trace!("shaping_use after css_width {}", &e1);
@@ -2774,7 +2774,7 @@ mod tests {
 
             // root_e.shaping_use(&Css(css_height.clone()));
             let tempcss = use_state(css_height);
-            root_e.shape_of_use(&tempcss);
+            root_e.shaping_use_dyn(&tempcss);
 
             warn!("calculated 4 root h w 100 =========================================================");
             warn!(
@@ -2849,36 +2849,36 @@ mod tests {
 
             info!("=========================================================");
 
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
 
             assert_eq!(
                 e1.edge_nodes
@@ -2908,7 +2908,7 @@ mod tests {
 
             trace!("shaping_use after {}", &e2);
             info!("l1351 =========================================================");
-            e2.shape_of_use(&Css(CssHeight::from(px(50))));
+            e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
             assert_eq!(
                 e2.edge_nodes
                     .get()
@@ -2950,7 +2950,7 @@ mod tests {
                 trace!("shaping_use after2 {}", &e2);
             });
             info!("=========================================================");
-            e2.shape_of_use(&Css(CssHeight::from(px(150))));
+            e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
 
             trace!("shaping_use after {:#?}", &e2);
             info!("..=========================================================");

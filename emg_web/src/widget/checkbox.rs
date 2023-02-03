@@ -13,7 +13,7 @@ use emg_common::{
     better_any::{Tid, TidAble, TidExt},
     IdStr, LogicLength, TypeCheckObjectSafe, TypeName,
 };
-use emg_shaping::{Shaping, ShapingUse, TryShapingUse};
+use emg_shaping::{Shaping, ShapingUse, ShapingUseAny};
 use seed_styles::GlobalStyleSV;
 use tracing::{error, trace, warn};
 
@@ -372,11 +372,11 @@ where
 //     }
 // }
 
-impl<'a, Message> TryShapingUse for Checkbox<Message>
+impl<'a, Message> ShapingUseAny for Checkbox<Message>
 where
     Message: 'static + Clone + MessageTid<'a>,
 {
-    fn try_shaping_use(&mut self, any: Box<dyn Any>) {
+    fn shaping_use_any(&mut self, any: Box<dyn Any>) {
         warn!(
             "[try_shaping_use]  try downcast to Rc<dyn Shaping<{}>>",
             std::any::type_name::<Self>()

@@ -9,7 +9,7 @@ use std::{clone::Clone, rc::Rc};
  */
 use crate::{EqShaping, Shaping};
 
-use crate::{ShapeOfUse, Shaper, ShaperFor};
+use crate::{Shaper, ShaperFor, ShapingUseDyn};
 use dyn_partial_eq::DynPartialEq;
 use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
 use tracing::{debug, warn};
@@ -66,7 +66,7 @@ where
     default fn shaping(&self, who: &mut Who) {
         for i in self {
             let ii = i.as_ref();
-            who.shape_of_use(ii);
+            who.shaping_use_dyn(ii);
         }
     }
 }
@@ -76,7 +76,7 @@ where
 {
     default fn shaping(&self, who: &mut Who) {
         let r = self.as_ref();
-        who.shape_of_use(r);
+        who.shaping_use_dyn(r);
     }
 }
 // impl<Who> Shaping<Who> for Vector<Rc<dyn Shaping<Who>>>
@@ -97,7 +97,7 @@ where
     default fn shaping(&self, who: &mut Who) {
         for i in self {
             let ii = i.as_ref();
-            who.shape_of_use(ii);
+            who.shaping_use_dyn(ii);
         }
     }
 }
@@ -107,7 +107,7 @@ where
 {
     default fn shaping(&self, who: &mut Who) {
         let r = self.as_ref();
-        who.shape_of_use(r);
+        who.shaping_use_dyn(r);
     }
 }
 // impl ShapingUseNoWarper for Vec<u8> {}
@@ -119,7 +119,7 @@ where
 {
     default fn shaping(&self, who: &mut Who) {
         for i in self {
-            who.shape_of_use(i);
+            who.shaping_use_dyn(i);
         }
     }
 }
@@ -131,7 +131,7 @@ where
 {
     fn shaping(&self, who: &mut Who) {
         let u_s_e = self.as_ref();
-        who.shape_of_use(u_s_e);
+        who.shaping_use_dyn(u_s_e);
     }
 }
 impl<Who, Use> Shaping<Who> for Box<Use>
@@ -140,7 +140,7 @@ where
     Use: ShapingUseNoWarper + Shaping<Who>,
 {
     default fn shaping(&self, who: &mut Who) {
-        who.shape_of_use(self.as_ref());
+        who.shaping_use_dyn(self.as_ref());
     }
 }
 
@@ -152,7 +152,7 @@ where
     fn shaping(&self, who: &mut StateVar<Who>) {
         debug!("==========shaping StateVar");
         let mut w = who.get();
-        w.shape_of_use(self);
+        w.shaping_use_dyn(self);
         who.set(w);
     }
 }
@@ -176,7 +176,7 @@ where
             &std::any::type_name::<Use>()
         );
 
-        who.shape_of_use(&self.get());
+        who.shaping_use_dyn(&self.get());
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -188,7 +188,7 @@ where
 {
     fn shaping(&self, who: &mut StateVar<Who>) {
         let mut w = who.get();
-        w.shape_of_use(&self.get());
+        w.shaping_use_dyn(&self.get());
 
         who.set(w);
     }
@@ -216,7 +216,7 @@ where
 {
     fn shaping(&self, who: &mut Who) {
         // self.get()().shaping(who);
-        who.shape_of_use(&self.get());
+        who.shaping_use_dyn(&self.get());
     }
 }
 // impl<Who, Use> EqShaping<Who> for Shaper<Use>
@@ -236,7 +236,7 @@ where
     fn shaping(&self, who: &mut StateVar<Who>) {
         let u_s_e = self.get();
         let mut w = who.get();
-        w.shape_of_use(&u_s_e);
+        w.shaping_use_dyn(&u_s_e);
         who.set(w);
     }
 }
@@ -249,7 +249,7 @@ where
         for sa in self {
             let u_s_e = sa.get();
             let mut w = who.get();
-            w.shape_of_use(&u_s_e);
+            w.shaping_use_dyn(&u_s_e);
             who.set(w);
         }
     }
@@ -262,7 +262,7 @@ where
         for sa in self {
             let u_s_e = sa.as_ref();
             let mut w = who.get();
-            w.shape_of_use(u_s_e);
+            w.shaping_use_dyn(u_s_e);
             who.set(w);
         }
     }
@@ -276,7 +276,7 @@ where
         for sa in self {
             let u_s_e = sa.as_ref();
             let mut w = who.get();
-            w.shape_of_use(u_s_e);
+            w.shaping_use_dyn(u_s_e);
             who.set(w);
         }
     }
@@ -291,7 +291,7 @@ where
         for sa in self {
             let u_s_e = sa.get();
             let mut w = who.get();
-            w.shape_of_use(&u_s_e);
+            w.shaping_use_dyn(&u_s_e);
             who.set(w);
         }
     }
@@ -311,7 +311,7 @@ where
     default fn shaping(&self, who: &mut Who) {
         let u_s_e = self.get();
         // log::debug!(" ============ StateAnchor get:{:?}", &u_s_e);
-        who.shape_of_use(&u_s_e);
+        who.shaping_use_dyn(&u_s_e);
     }
 }
 impl<Who, Use> EqShaping<Who> for Use

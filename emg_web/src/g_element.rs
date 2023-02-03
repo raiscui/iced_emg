@@ -15,7 +15,7 @@ use emg_state::{StateAnchor, StateMultiAnchor};
 use match_any::match_any;
 
 use emg_common::{better_any::Tid, dyn_partial_eq::DynPartialEq, IdStr, TypeCheckObjectSafe};
-use emg_shaping::{EqShaping, Shaping, ShapingUse, TryShapingUse};
+use emg_shaping::{EqShaping, Shaping, ShapingUse, ShapingUseAny};
 // extern crate derive_more;
 use derive_more::From;
 // use dyn_clonable::clonable;
@@ -36,7 +36,7 @@ pub trait DynGElement<Message>:
     + DynPartialEq
     + DynClone
     + core::fmt::Debug
-    + TryShapingUse
+    + ShapingUseAny
     + ShapingUse<i32>
 {
 }
@@ -98,7 +98,7 @@ pub enum GElement<Message> {
     //internal
     Generic_(Box<dyn DynGElement<Message>>), //范型 //TODO check batter when use rc?
     #[from(ignore)]
-    NodeRef_(IdStr),     // IntoE(Rc<dyn Into<Element< Message>>>),
+    NodeRef_(IdStr),      // IntoE(Rc<dyn Into<Element< Message>>>),
     // #[from(ignore)]
     // InsideDirectUseSa_(StateAnchor<Rc<Self>>),//NOTE generate by tree builder use into()
     #[from(ignore)]
