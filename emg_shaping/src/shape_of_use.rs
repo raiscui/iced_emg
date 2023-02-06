@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2023-02-03 17:29:36
+ * @LastEditTime: 2023-02-04 00:57:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,16 +25,21 @@ use crate::Shaping;
 //     }
 // }
 
+pub trait ShapingUseOtherShaper<Use> {
+    #[must_use]
+    fn shaping_use_other_shaper(&mut self, updater: &dyn Shaping<Use>) -> bool;
+}
+
 // ────────────────────────────────────────────────────────────────────────────────
 #[allow(clippy::module_name_repetitions)]
-pub trait ShapingUseDyn<Use> {
+pub trait ShapingUseDyn {
     #[must_use]
-    fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Use>) -> bool;
+    fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Self>) -> bool;
 }
 // ────────────────────────────────────────────────────────────────────────────────
 // @ impl ShapeOfUse ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who> ShapingUseDyn<Self> for Who {
+impl<Who> ShapingUseDyn for Who {
     // #[inline]
     #[must_use]
     default fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Self>) -> bool {
@@ -64,16 +69,19 @@ mod updater_test1 {
     impl ShapingWhoNoWarper for String {}
     impl ShapingUseNoWarper for String {}
     impl Shaping<Self> for String {
-        fn shaping(&self, el: &mut Self) {
+        fn shaping(&self, el: &mut Self) -> bool {
             *el = format!("{},{}", el, self);
+            true
         }
     }
     impl Shaping<i32> for String {
-        fn shaping(&self, el: &mut i32) {
+        fn shaping(&self, el: &mut i32) -> bool {
             *el = i32::try_from(self.len()).unwrap();
+            true
         }
     }
 
+    #[test]
     #[wasm_bindgen_test]
     fn realtime_update() {
         setup_tracing();

@@ -6,9 +6,10 @@ use emg_bind::{
     element::*,
     emg::{edge_index, Direction::Incoming},
     emg_msg,
-    graph_edit::{EdgeMode, GraphEdit},
+    graph_edit::*,
     gtree,
     layout::styles::{fill, hsl, w},
+    runtime::OrdersContainer,
     state::use_state,
     Error, Orders, Sandbox, Settings,
 };
@@ -132,7 +133,12 @@ enum Message {
 impl Sandbox for Counter {
     type Message = Message;
 
-    fn update(&mut self, graph: Self::GraphEditor, orders: &Self::Orders, message: Self::Message) {
+    fn update(
+        &mut self,
+        graph: GraphEditor<Self::Message>,
+        orders: &OrdersContainer<Self::Message>,
+        message: Self::Message,
+    ) {
         match message {
             Message::IncrementPressed => {
                 self.value += 1;
@@ -140,7 +146,10 @@ impl Sandbox for Counter {
             Message::DecrementPressed => {
                 self.value -= 1;
             }
-            Message::Empty => {}
+            Message::Empty => {
+                // insta::assert_display_snapshot!("graph_def", graph.borrow());
+                insta::assert_debug_snapshot!("graph_debug_def", graph.borrow());
+            }
         }
     }
 

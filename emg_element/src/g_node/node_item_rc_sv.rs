@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-02-02 11:24:28
+ * @LastEditTime: 2023-02-06 10:19:16
  * @LastEditors: Rais
  * @Description:
  */
@@ -413,7 +413,7 @@ where
                             //     error!("child_gel is node ref:{} ",refs);
                             // }
 
-                            gel_clone.shaping_use(child_gel.as_ref());
+                            let _ = gel_clone.shaping_use(child_gel.as_ref());
                         }
                     }
 
@@ -452,7 +452,7 @@ where
                                 {
                                     info!("will shaping node builder : {:?}", event_gel);
                                      //TODO maybe just directly push event?
-                                    node_builder_widget.shaping_use(event_gel.as_ref());
+                                    let _  =node_builder_widget.shaping_use(event_gel.as_ref());
                                 }
                             }
 

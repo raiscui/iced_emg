@@ -1,24 +1,25 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-03 18:52:05
+ * @LastEditTime: 2023-02-05 23:11:07
  * @LastEditors: Rais
  * @Description:
  */
 
 //! Show toggle controls using checkboxes.
-use crate::{g_element::DynGElement, GElement};
+use crate::{g_element::DynGElement, node_builder::EventListener, GElement, NodeBuilderWidget};
 
 use emg_common::{
     any::MessageTid,
-    better_any::{tid, Tid, TidAble, TidExt},
-    IdStr, LogicLength, TypeCheckObjectSafe, TypeName,
+    better_any::{Tid, TidAble, TidExt},
+    IdStr, LogicLength, TypeCheckObjectSafe, TypeCheckObjectSafeTid, TypeName,
 };
-use emg_shaping::{Shaping, ShapingUse, ShapingUseAny, ShapingUseDyn};
+use emg_native::WidgetState;
+use emg_shaping::{Shaping, ShapingAny, ShapingUse, ShapingUseAny};
 use emg_state::StateAnchor;
-use tracing::{debug, debug_span, error, info, trace, warn, Span};
+use tracing::{debug, debug_span, info, warn, Span};
 
-use std::{any::Any, rc::Rc};
+use std::{panic::Location, rc::Rc};
 
 #[allow(missing_debug_implementations)]
 #[derive(Tid)]
@@ -288,10 +289,13 @@ where
                 // } else {
                 //     debug!("失败 downcast to Self");
                 // }
-                let is_changed = who_checkbox.shaping_use_any((g_self).into());
+
+                // let is_changed = who_checkbox.shaping_use_any(x as &dyn TypeCheckObjectSafeTid);
+                let is_changed = who_checkbox.shaping_use_any(g_self);
+
                 if !is_changed {
                     debug!("===================== 向上更新");
-                    g_self.shaping(who_checkbox)
+                    g_self.shaping_any(who_checkbox)
                 } else {
                     false
                 }
@@ -312,66 +316,66 @@ where
         }
     }
 }
-//NOTE 当前无法触发 更新到 GElement
-// @ 向上更新, ---- 下游 Checkbox 用于更新 who -GElement ------------------------------------
-impl<Message> Shaping<GElement<Message>> for Checkbox<Message>
-where
-    Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
-{
-    #[allow(clippy::match_same_arms)]
-    fn shaping(&self, who: &mut GElement<Message>) -> bool {
-        let _span = debug_span!(
-            "GElement-shaping",
-            "向上更新 <Checkbox> shaping-> <GElement>"
-        )
-        .entered();
+// //NOTE 当前无法触发 更新到 GElement
+// // @ 向上更新, ---- 下游 Checkbox 用于更新 who -GElement ------------------------------------
+// impl<Message> Shaping<GElement<Message>> for Checkbox<Message>
+// where
+//     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
+// {
+//     #[allow(clippy::match_same_arms)]
+//     fn shaping(&self, who: &mut GElement<Message>) -> bool {
+//         let _span = debug_span!(
+//             "GElement-shaping",
+//             "向上更新 <Checkbox> shaping-> <GElement>"
+//         )
+//         .entered();
 
-        match who {
-            GElement::Layer_(l) => {
-                let _span = debug_span!("GElement-shaping", "Checkbox shaping-> Layer").entered();
-                l.push(self.clone().into());
-                true
-            }
-            GElement::Builder_(builder) => {
-                let _span =
-                    debug_span!("GElement-shaping", "Checkbox shaping-> Builder_").entered();
+//         match who {
+//             GElement::Layer_(l) => {
+//                 let _span = debug_span!("GElement-shaping", "Checkbox shaping-> Layer").entered();
+//                 l.push(self.clone().into());
+//                 true
+//             }
+//             GElement::Builder_(builder) => {
+//                 let _span =
+//                     debug_span!("GElement-shaping", "Checkbox shaping-> Builder_").entered();
 
-                self.shaping(builder.widget_mut())
-            }
-            // GElement::Text_(_)
-            // | GElement::Button_(_)
-            // |
-            GElement::Shaper_(_) | GElement::Event_(_) => {
-                unimplemented!();
-            }
-            GElement::Generic_(g_who) => {
-                let _span = debug_span!("GElement-shaping", "Checkbox shaping-> Generic").entered();
+//                 self.shaping(builder.widget_mut())
+//             }
+//             // GElement::Text_(_)
+//             // | GElement::Button_(_)
+//             // |
+//             GElement::Shaper_(_) | GElement::Event_(_) => {
+//                 unimplemented!();
+//             }
+//             GElement::Generic_(g_who) => {
+//                 let _span = debug_span!("GElement-shaping", "Checkbox shaping-> Generic").entered();
 
-                let _span1 =
-                    debug_span!("better_any_shaping", "Checkbox shaping-> Generic").entered();
+//                 let _span1 =
+//                     debug_span!("better_any_shaping", "Checkbox shaping-> Generic").entered();
 
-                trace!("use Checkbox shaping-> Generic");
+//                 trace!("use Checkbox shaping-> Generic");
 
-                //TODO 使用值反射 不知道上级实际类型也能更新上级 struct 的值
+//                 //TODO 使用值反射 不知道上级实际类型也能更新上级 struct 的值
 
-                let mut dyn_who = g_who;
+//                 let mut dyn_who = g_who;
 
-                // dyn_who.shape_of_use(&self);
-                // todo!("此上为实验性代码");
+//                 // dyn_who.shape_of_use(&self);
+//                 // todo!("此上为实验性代码");
 
-                if let Some(checkbox) = dyn_who.downcast_mut::<Self>() {
-                    self.shaping(checkbox)
-                } else {
-                    false
-                }
-            }
-            GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
-            GElement::EmptyNeverUse => panic!("EmptyNeverUse never here"),
-            GElement::SaNode_(_) => todo!(),
-            GElement::EvolutionaryFactor(_) => todo!(),
-        }
-    }
-}
+//                 if let Some(checkbox) = dyn_who.downcast_mut::<Self>() {
+//                     self.shaping(checkbox)
+//                 } else {
+//                     false
+//                 }
+//             }
+//             GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
+//             GElement::EmptyNeverUse => panic!("EmptyNeverUse never here"),
+//             GElement::SaNode_(_) => todo!(),
+//             GElement::EvolutionaryFactor(_) => todo!(),
+//         }
+//     }
+// }
 
 //TODO use macro
 impl<Message> TypeCheckObjectSafe for Checkbox<Message> {
@@ -390,7 +394,16 @@ where
     Message: Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq + 'static,
 {
     fn from(checkbox: Checkbox<Message>) -> Self {
-        Self::Generic_(Box::new(checkbox))
+        // Self::Generic_(Box::new(checkbox))
+        let wb = NodeBuilderWidget {
+            id: checkbox.label.clone(),
+
+            widget: Box::new(Self::Generic_(Box::new(checkbox.clone()))),
+
+            event_listener: EventListener::new(),
+            widget_state: StateAnchor::constant(WidgetState::default()),
+        };
+        Self::Builder_(wb)
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -437,24 +450,50 @@ where
 //     }
 // }
 
+//@ 向上更新, ---- 处于下游的 self 向上更新 who - 具体上层类型 ------------------------------------
+impl<Message> ShapingAny for Checkbox<Message>
+where
+    Message: 'static + Clone + for<'a> MessageTid<'a>,
+{
+    #[track_caller]
+    fn shaping_any(&self, any: &mut dyn TypeCheckObjectSafeTid) -> bool {
+        let _span = debug_span!(
+            "better_any_shaping",
+            at = "ShapingAny",
+            note = "向上更新",
+            "Checkbox shaping ====> any"
+        )
+        .entered();
+
+        if let Some(who) = any.downcast_mut::<Checkbox<Message>>() {
+            debug!("who 成功 downcast to Self: Checkbox<Message>");
+            return self.shaping(who);
+        }
+
+        warn!(
+            "any - type_name: {}, not match any role,\nLocation:{}",
+            any.type_name(),
+            Location::caller(),
+        );
+        false
+    }
+}
+
+//@ 被下更新  下游 Box<dyn DynGElement<Message>> 更新 self
 impl<Message> ShapingUseAny for Checkbox<Message>
 where
     Message: 'static + Clone + for<'a> MessageTid<'a>,
 {
+    #[track_caller]
     fn shaping_use_any(&mut self, any: &dyn Tid) -> bool {
         let _span = debug_span!(
             "better_any_shaping",
             at = "ShapingUseAny",
-            "Checkbox shaping_use_any any"
+            "Checkbox <==== shaping_use_any"
         )
         .entered();
 
-        warn!(
-            "Self:{} , [try_shaping_use]  try downcast",
-            std::any::type_name::<Self>()
-        );
-
-        if let Some(x) = any.downcast_any_ref::<Box<dyn DynGElement<Message>>>() {
+        if let Some(x) = any.downcast_ref::<Box<dyn DynGElement<Message>>>() {
             debug!("成功 downcast to any Box<dyn DynGElement<Message>>");
 
             // self.shaping_use(x);
@@ -463,6 +502,13 @@ where
                 return self.shaping_use(x2);
             }
         }
+
+        warn!(
+            "Self:{} , [try_shaping_use]  try downcast,\nLocation:{}",
+            std::any::type_name::<Self>(),
+            Location::caller()
+        );
+
         false
 
         // test code ─────────────────────────────────────────────────────────────
@@ -532,7 +578,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use emg_shaping::Shaping;
 
     trait Mode {
         type Output;
@@ -553,9 +598,6 @@ mod test {
         }
     }
 
-    fn test_mode<T: Mode>(a: &T) -> T::Output {
-        a.doit()
-    }
     // ─────────────────────────────────────────────────────────────────────────────
     use bevy_reflect::{reflect_trait, Reflect};
 

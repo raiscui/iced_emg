@@ -2,6 +2,7 @@
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
 // ────────────────────────────────────────────────────────────────────────────────
+#![feature(trait_upcasting)]
 #![feature(specialization)]
 // #![feature(min_specialization)]
 #![feature(auto_traits)]
@@ -23,6 +24,8 @@ pub use shapers::EqShapingWithDebug;
 pub use shapers::Shaper;
 pub use shapers::ShaperFor;
 pub use shapers::Shaping;
+pub use shapers::ShapingAny;
+pub use shapers::ShapingDyn;
 pub use shapers::ShapingUseAny;
 pub use shapers::ShapingWithDebug;
 pub use shaping_use::ShapingUse;

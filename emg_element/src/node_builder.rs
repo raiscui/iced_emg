@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-02-01 21:11:27
+ * @LastEditTime: 2023-02-06 09:35:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,6 +10,8 @@
 #![allow(clippy::ptr_as_ptr)]
 #![allow(clippy::ptr_eq)]
 // ────────────────────────────────────────────────────────────────────────────────
+use indented::indented;
+use std::fmt::Write;
 mod event_builder;
 use derive_more::From;
 
@@ -21,9 +23,9 @@ use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, debug_span, info, info_span, instrument, Span};
 
 use crate::GElement;
-use std::{rc::Rc, string::String};
+use std::{fmt::Display, rc::Rc, string::String};
 
-use self::event_builder::EventListener;
+pub use self::event_builder::EventListener;
 
 /// EventIdentify(emg_native::event::EventFlag::X,X::EventFlag)
 /// EventIdentify(Level1,Level2)
@@ -309,16 +311,36 @@ impl<Message> std::fmt::Debug for EventNode<Message>
 
 #[allow(clippy::module_name_repetitions)]
 pub struct NodeBuilderWidget<Message> {
-    id: IdStr,
+    pub(crate) id: IdStr,
     //TODO : in areas heap
-    widget: Box<GElement<Message>>,
+    pub(crate) widget: Box<GElement<Message>>,
     //TODO use vec deque
     // event_callbacks: VecDeque<EventNode<Message>>,
-    event_listener: EventListener<Message>,
+    pub(crate) event_listener: EventListener<Message>,
     // event_callbacks: Vector<EventNode<Message>>,
     // layout_str: String,
     // layout_end: (Translation3<NotNan<f64>>, NotNan<f64>, NotNan<f64>),
-    widget_state: StateAnchor<WidgetState>,
+    pub(crate) widget_state: StateAnchor<WidgetState>,
+}
+
+impl<Message> Display for NodeBuilderWidget<Message> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // let mut events = String::new();
+        // for (i, m) in self.event_listener.event_callbacks.iter() {
+        //     writeln!(events, "{}: {}", i, m)?
+        // }
+
+        let mut members = String::new();
+
+        writeln!(members, "id: {}", self.id)?;
+
+        writeln!(members, "widget: {}", &*self.widget)?;
+
+        writeln!(members, "event_listener: {:?}", "no display")?;
+        writeln!(members, "widget_state: {:?}", "no widget_state")?;
+
+        write!(f, "NodeBuilderWidget {{\n{}}}", indented(members))
+    }
 }
 
 impl<Message> PartialEq for NodeBuilderWidget<Message> {
@@ -343,7 +365,7 @@ impl<Message> Clone for NodeBuilderWidget<Message> {
     }
 }
 
-impl<Message> std::fmt::Debug for NodeBuilderWidget<Message>
+impl<Message: 'static> std::fmt::Debug for NodeBuilderWidget<Message>
 // where
 //     Message: std::fmt::Debug,
 {
@@ -353,10 +375,11 @@ impl<Message> std::fmt::Debug for NodeBuilderWidget<Message>
         // } else {
         //     String::from("Option<Rc<dyn NodeBuilder<Message> + 'a>>")
         // };
-        let widget = String::from("GElement<Message>");
+        // let widget = String::from("GElement<Message>");
 
         f.debug_struct("NodeBuilderWidget")
-            .field("widget", &widget)
+            .field("id", &self.id)
+            .field("widget", &self.widget)
             .field("event_listener", &self.event_listener)
             .field("widget_state", &self.widget_state)
             .finish()
@@ -514,11 +537,9 @@ where
         edge_ctx: &StateAnchor<EdgeCtx>,
     ) -> Result<Self, GElement<Message>> {
         match gel {
-            // Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
             GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(ix, gel, edge_ctx)),
             GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
             GElement::Shaper_(_) | GElement::Event_(_) => Err(gel),
-            // GElement::Refresher_(_) => Err(gel),
             GElement::NodeRef_(_) => {
                 unreachable!("crate builder use NodeRef_ is should never happened")
             }
@@ -556,12 +577,12 @@ where
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> StateAnchor<EventMatchsDict<Message>> {
         let event_callbacks = self.event_listener.event_callbacks().clone();
+        //TODO move event_callbacks into sa map 不会变更, 是否考虑变更?
         let cursor_position_clone = cursor_position.clone();
         let id = self.id.clone();
 
         (events_sa, &self.widget_state).then(move |events, state| {
             let _span = debug_span!("event_matching...", ?id).entered();
-
 
             let size = state.size();
 

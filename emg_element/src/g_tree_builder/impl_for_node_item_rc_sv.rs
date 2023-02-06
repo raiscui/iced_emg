@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-01-30 23:42:46
+ * @LastEditTime: 2023-02-06 10:18:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,7 @@ use emg::{edge_index_no_source, node_index, Edge, EdgeCollect, EdgeIndex, NodeIn
 use emg_common::{im::vector, IdStr};
 use emg_hasher::CustomHasher;
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
-use emg_shaping::ShapingUseDyn;
+use emg_shaping::{ShapingUse, ShapingUseDyn};
 use emg_state::{
     topo::{self, call_in_slot},
     use_state,

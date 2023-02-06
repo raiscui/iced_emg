@@ -3,7 +3,7 @@ use crate::Shaping;
 /*
  * @Author: Rais
  * @Date: 2021-09-07 16:19:26
- * @LastEditTime: 2023-02-03 17:34:11
+ * @LastEditTime: 2023-02-04 21:15:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,7 +28,6 @@ where
     Use: Shaping<Who>,
 {
     #[inline]
-    #[must_use]
     fn shaping_use(&mut self, use_something: &Use) -> bool {
         use_something.shaping(self)
     }

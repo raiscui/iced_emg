@@ -1,15 +1,16 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2023-02-03 18:01:43
+ * @LastEditTime: 2023-02-04 21:11:07
  * @LastEditors: Rais
  * @Description:
  */
 use emg_common::{
     better_any::{impl_tid, Tid, TidAble, TidExt},
     dyn_partial_eq::DynPartialEq,
+    TypeCheckObjectSafeTid,
 };
-use std::rc::Rc;
+use std::{panic::Location, rc::Rc};
 use tracing::{debug, error, warn};
 
 use crate::{ShapingUse, ShapingWhoNoWarper};
@@ -106,19 +107,19 @@ pub trait ShapingUseAny {
 }
 impl<Who: for<'a> Tid<'a>> ShapingUseAny for Who {
     #[must_use]
+    #[track_caller]
     default fn shaping_use_any(&mut self, any: &dyn Tid) -> bool {
-        warn!(
-            "Self:{} , use default impl [ShapingUseAny]  try downcast",
-            std::any::type_name::<Self>()
-        );
-
         if let Some(same_type_as_self) = any.downcast_any_ref::<Self>() {
             debug!("default impl 成功 downcast to any Self");
             return self.shaping_use(same_type_as_self);
         }
         // ─────────────────────────────────────────────────────────────
 
-        warn!("default impl downcast to any Self 失败");
+        warn!(
+            "default impl downcast to any Self 失败, self: {},\nlocation:{}",
+            std::any::type_name::<Self>(),
+            Location::caller()
+        );
 
         false
     }
@@ -143,6 +144,14 @@ impl<Who: for<'a> Tid<'a>> ShapingUseAny for Who {
 // }
 // refresh
 
+pub trait ShapingAny {
+    fn shaping_any(&self, any: &mut dyn TypeCheckObjectSafeTid) -> bool;
+}
+
+pub trait ShapingDyn {
+    fn shaping_dyn(&self, who: &mut dyn ShapingUse<Self>) -> bool;
+}
+
 pub trait Shaping<Who> {
     ///return : changed or not
     #[must_use]
@@ -155,8 +164,8 @@ impl<'a, Who> TidAble<'a> for Box<dyn Shaping<Who> + 'a> {}
 //TODO make Result
 #[cfg(not(feature = "no_default_shaping"))]
 impl<Who, Use> Shaping<Who> for Use
-// where
-// Use:Sized
+where
+    Use: Sized,
 {
     #[must_use]
     default fn shaping(&self, _el: &mut Who) -> bool {
@@ -306,8 +315,9 @@ mod updater_test {
     use super::*;
 
     impl Shaping<String> for i32 {
-        fn shaping(&self, el: &mut String) {
+        fn shaping(&self, el: &mut String) -> bool {
             *el = format!("{},{}", el, self);
+            true
         }
     }
 

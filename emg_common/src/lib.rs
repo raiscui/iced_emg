@@ -23,6 +23,7 @@ pub type Precision = f32;
 pub use crate::SVec::{smallvec, SmallVec};
 pub use ::smallvec as SVec;
 pub use better_any;
+use better_any::Tid;
 pub use compact_str as id_str;
 pub use compact_str::CompactString as IdStr;
 pub use dyn_partial_eq;
@@ -53,6 +54,8 @@ pub trait TypeCheck {
 pub trait TypeCheckObjectSafe {
     fn type_name(&self) -> TypeName;
 }
+pub trait TypeCheckObjectSafeTid: for<'a> Tid<'a> + TypeCheckObjectSafe {}
+impl<T> TypeCheckObjectSafeTid for T where T: for<'a> Tid<'a> + TypeCheckObjectSafe {}
 
 // // use derive_more::Into;
 //TODO full this  "-,/" op

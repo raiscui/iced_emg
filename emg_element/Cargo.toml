@@ -38,6 +38,7 @@ indented = "0.1.0"
 emg_native = { path = "../emg_native", optional = true }
 
 #------------------
+bevy_reflect = "0.9.1"
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -46,4 +47,3 @@ emg_vello = { path = "../emg_vello", optional = true }
 
 [dev-dependencies]
 insta = "1"
-bevy_reflect = "0.9.1"

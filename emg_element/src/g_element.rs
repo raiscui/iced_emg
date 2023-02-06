@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-02-03 14:27:00
+ * @LastEditTime: 2023-02-05 21:29:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,9 +20,9 @@ use emg_common::{
     any::MessageTid,
     better_any::{impl_tid, Tid, TidAble},
     dyn_partial_eq::DynPartialEq,
-    IdStr, TypeCheckObjectSafe,
+    IdStr, TypeCheckObjectSafe, TypeCheckObjectSafeTid,
 };
-use emg_shaping::{EqShaping, Shaping, ShapingUse, ShapingUseAny};
+use emg_shaping::{EqShaping, Shaping, ShapingAny, ShapingDyn, ShapingUse, ShapingUseAny};
 // extern crate derive_more;
 use derive_more::From;
 // use dyn_clonable::clonable;
@@ -40,16 +40,15 @@ pub trait DynGElement<Message:for <'a> MessageTid<'a>>:
      +ShapingUse<GElement<Message>>
     // + GenerateElement<Message>
     + Widget<SceneCtxType = crate::SceneFrag>
+    + TypeCheckObjectSafeTid
     + TypeCheckObjectSafe
     + DynPartialEq
     + DynClone
     + core::fmt::Debug
     + ShapingUseAny
     + ShapingUse<i32>
-
-
-{
-}
+    + ShapingAny
+{ }
 
 #[impl_tid]
 impl<'a, Message> TidAble<'a> for Box<dyn DynGElement<Message> + 'a> {}
@@ -457,9 +456,7 @@ where
                 // } else {
                 //     f.debug_tuple("GElement::Builder_").field(&nbw).finish()
                 // }
-                f.debug_tuple("GElement::Builder_")
-                    .field(builder.widget())
-                    .finish()
+                f.debug_tuple("GElement::Builder_").field(builder).finish()
             }
             Event_(e) => f.debug_tuple("GElement::EventCallBack_").field(e).finish(),
             // Button_(_) => {
