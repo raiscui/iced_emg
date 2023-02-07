@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-05 23:11:07
+ * @LastEditTime: 2023-02-07 22:48:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -394,16 +394,7 @@ where
     Message: Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq + 'static,
 {
     fn from(checkbox: Checkbox<Message>) -> Self {
-        // Self::Generic_(Box::new(checkbox))
-        let wb = NodeBuilderWidget {
-            id: checkbox.label.clone(),
-
-            widget: Box::new(Self::Generic_(Box::new(checkbox.clone()))),
-
-            event_listener: EventListener::new(),
-            widget_state: StateAnchor::constant(WidgetState::default()),
-        };
-        Self::Builder_(wb)
+        Self::Generic_(Box::new(checkbox))
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────

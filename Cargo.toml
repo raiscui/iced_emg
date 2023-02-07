@@ -29,8 +29,10 @@ members = [
     "examples/counter",
     "examples/moving_edge",
 ]
-# exclude = [""]
-[patch.crates-io]
+
 
 [profile.dev]
 split-debuginfo = "unpacked"
+
+[patch.crates-io]
+window_clipboard = { path = "../window_clipboard" }

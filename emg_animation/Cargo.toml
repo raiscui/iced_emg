@@ -14,7 +14,7 @@ lto = true
 
 
 [lib]
-crate-type = ["rlib"]
+# crate-type = ["rlib"]
 bench = false
 
 [dependencies]

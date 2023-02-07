@@ -8,8 +8,8 @@ resolver = "2"
 
 [profile.dev]
 split-debuginfo = "unpacked"
-[lib]
-crate-type = ["rlib"]
+# [lib]
+# crate-type = ["rlib"]
 
 
 [dependencies]

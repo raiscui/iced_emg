@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 17:56:11
- * @LastEditTime: 2023-02-01 14:38:27
+ * @LastEditTime: 2023-02-07 12:32:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -109,7 +109,8 @@ impl Window {
             .with_decorations(self.decorations)
             .with_transparent(self.transparent)
             .with_window_icon(self.icon)
-            .with_always_on_top(self.always_on_top)
+            //TODO replace use window.set_window_level()
+            // .with_always_on_top(self.always_on_top)
             .with_visible(conversion::visible(mode));
 
         if let Some(position) = conversion::position(
