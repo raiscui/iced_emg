@@ -23,6 +23,8 @@ emg_layout = { path = "../emg_layout" }
 emg_hasher = { path = "../emg_hasher" }
 emg_orders = { path = "../emg_orders" }
 emg = { path = "../emg" }
+gtree = { path = "../gtree" }
+
 #-----
 derive_more = "0.99"
 strum = { version = "0.24", features = ["derive"] }
@@ -47,3 +49,4 @@ emg_vello = { path = "../emg_vello", optional = true }
 
 [dev-dependencies]
 insta = "1"
+emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }

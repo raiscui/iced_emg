@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-02-06 10:18:51
+ * @LastEditTime: 2023-02-10 17:55:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -221,6 +221,50 @@ where
     #[topo::nested]
     fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message>) {
         match tree_element {
+            GTreeBuilderElement::GElementTree(root_id, edge_shapers, gel, children_list) => {
+                let _span = trace_span!("=> handle_root [GElementTree] ",%root_id).entered();
+                let nix: NodeIndex<Self::Ix> = node_index(root_id.clone());
+
+                let edge_ix = edge_index_no_source(root_id.clone());
+                GraphNodeBuilder::new(root_id.clone())
+                    .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+                        Layer::<Message>::new(root_id.clone()).into(),
+                    ))))
+                    .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
+                    .with_outgoing_eix_set_with_default_capacity(5)
+                    .build_in_topo(self);
+
+                let width = global_width();
+                let height = global_height();
+
+                let mut root_ei = GraphEdgeBuilder::new(edge_ix.clone())
+                    .with_size((width, height))
+                    .build_in_topo(self)
+                    .unwrap();
+
+                debug_assert_eq!(
+                    self.borrow()
+                        .get_node_use_ix(edge_ix.target_nix().as_ref().unwrap().index())
+                        .unwrap()
+                        .incoming_len(),
+                    1
+                );
+                let path = EPath::<Self::Ix>::new(vector![edge_ix]);
+
+                illicit::Layer::new().offer(path.clone()).enter(|| {
+                    debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path);
+
+                    root_ei.shaping_use_dyn(edge_shapers);
+
+                    illicit::Layer::new().offer(nix.clone()).enter(|| {
+                        assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix);
+                        trace!("{:?}", *illicit::expect::<NodeIndex<Self::Ix>>());
+                        for child_layer in children_list.iter() {
+                            self.handle_children_in_topo(None, child_layer);
+                        }
+                    });
+                });
+            }
             GTreeBuilderElement::Layer(root_id, edge_shapers, children_list) => {
                 let _span = trace_span!("=> handle_root [layer] ",%root_id).entered();
                 trace!(
@@ -251,23 +295,6 @@ where
                     .build_in_topo(self)
                     .unwrap();
 
-                // let mut root_ei = self
-                //     .setup_edge_in_topo(
-                //         edge_ix.clone(),
-                //         (width.into(), height.into()),
-                //         (
-                //             GenericSize::default().into(),
-                //             GenericSize::default().into(),
-                //             GenericSize::default().into(),
-                //         ),
-                //         (
-                //             GenericSize::default().into(),
-                //             GenericSize::default().into(),
-                //             GenericSize::default().into(),
-                //         ),
-                //     )
-                //     // .setup_wh_edge_in_topo(edge_index_no_source(root_id.clone()), 1920, 1080)
-                //     .unwrap();
                 debug_assert_eq!(
                     self.borrow()
                         .get_node_use_ix(edge_ix.target_nix().as_ref().unwrap().index())

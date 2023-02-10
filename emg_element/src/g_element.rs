@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-02-05 21:29:19
+ * @LastEditTime: 2023-02-10 16:50:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@
 use crate::{
     node_builder::EventNode,
     widget::{Layer, Widget},
-    NodeBuilderWidget,
+    GTreeBuilderElement, GTreeInit, InitTree, NodeBuilderWidget,
 };
 use dyn_clone::DynClone;
 use emg_state::{StateAnchor, StateMultiAnchor};
@@ -48,6 +48,7 @@ pub trait DynGElement<Message:for <'a> MessageTid<'a>>:
     + ShapingUseAny
     + ShapingUse<i32>
     + ShapingAny
+
 { }
 
 #[impl_tid]
@@ -124,6 +125,18 @@ pub enum GElement<Message> {
     SaNode_(StateAnchor<Rc<Self>>),
     EvolutionaryFactor(Rc<dyn Evolution<StateAnchor<Rc<Self>>>>),
     EmptyNeverUse,
+}
+
+impl<Message> GTreeInit<Message> for GElement<Message> {
+    fn tree_init(
+        self,
+        _id: &IdStr,
+        _es: &Vec<Rc<dyn Shaping<emg_layout::EmgEdgeItem<IdStr>>>>,
+        _children: &Vec<GTreeBuilderElement<Message>>,
+        //TODO use either like <GTreeBuilderElement,GElement> for speed??
+    ) -> InitTree<Message> {
+        self.into()
+    }
 }
 
 impl<Message> Clone for GElement<Message> {

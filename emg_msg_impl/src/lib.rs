@@ -23,7 +23,7 @@ pub fn emg_msg(_attr: TokenStream, item: TokenStream) -> Result<TokenStream, syn
             }
             .unwrap();
 
-            let tid = syn::parse2::<Meta>(quote! {emg_bind::better_any::Tid}).unwrap();
+            let tid = syn::parse2::<Meta>(quote! {better_any::Tid}).unwrap();
             let mut has_tid = false;
             for nm in m.iter() {
                 has_tid = if let NestedMeta::Meta(mm) = nm {
@@ -34,7 +34,7 @@ pub fn emg_msg(_attr: TokenStream, item: TokenStream) -> Result<TokenStream, syn
             }
             if !has_tid {
                 m.push(NestedMeta::Meta(
-                    syn::parse2::<Meta>(quote! {emg_bind::better_any::Tid}).unwrap(),
+                    syn::parse2::<Meta>(quote! {better_any::Tid}).unwrap(),
                 ));
                 a.tokens = quote! {
                     (#(#m),*)
@@ -47,14 +47,18 @@ pub fn emg_msg(_attr: TokenStream, item: TokenStream) -> Result<TokenStream, syn
     let id = ast.ident.clone();
     let output = if has_derive {
         quote! {
+            use better_any::TidAble;
+
             #ast
-            impl<'a> emg_bind::any::MessageTid<'a> for #id {}
+            impl<'a> any::MessageTid<'a> for #id {}
         }
     } else {
         quote! {
+            use better_any::TidAble;
+
             #[derive(Debug, Copy, Clone, PartialEq,Tid)]
             #ast
-            impl<'a> emg_bind::any::MessageTid<'a> for #id {}
+            impl<'a> any::MessageTid<'a> for #id {}
         }
     };
     // println!("out::::\n{}", output);
@@ -84,6 +88,7 @@ mod tests {
         )
         .unwrap();
         println!("res===\n{}", res);
+        insta::assert_display_snapshot!(res);
         // assert!(res);
     }
 }

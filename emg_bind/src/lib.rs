@@ -72,13 +72,49 @@ pub use runtime::{futures, Command};
 pub use sandbox::Sandbox;
 pub use settings::Settings;
 
-// ────────────────────────────────────────────────────────────────────────────────
-#[test]
-fn xx() {
-    let f = mouse::CLICK;
-    println!("{f:?}");
-    return;
+// ─────────────────────────────────────────────────────────────────────────────
+
+pub mod gtree_macro_prelude {
+    pub use crate::{
+        common::{
+            better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
+            IdStr, TypeCheck,
+        },
+        element::*,
+        gtree,
+        layout::{add_values::*, css, styles::*, EmgEdgeItem},
+        shaping::{EqShaping, Shaper, Shaping, ShapingUse},
+        state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
+    };
 }
+pub mod emg_msg_macro_prelude {
+    pub use crate::emg_msg;
+    pub use crate::common::{any, better_any};
+}
+// ────────────────────────────────────────────────────────────────────────────────
+#[cfg(test)]
+mod test1 {
+    use emg_common::{mouse, IdStr};
+
+    fn aaaa(x: impl Into<IdStr>) {
+        let f = x.into();
+        println!("{f:?}");
+    }
+
+    #[test]
+
+    fn aa() {
+        let n = "xx";
+        aaaa(n);
+    }
+    #[test]
+    fn xx() {
+        let f = mouse::CLICK;
+        println!("{f:?}");
+        return;
+    }
+}
+
 // ────────────────────────────────────────────────────────────────────────────────
 
 // pub use sandbox::Sandbox;
@@ -99,27 +135,38 @@ const VEC_SMALL: usize = 4;
 // ────────────────────────────────────────────────────────────────────────────────
 #[cfg(all(test, feature = "gpu"))]
 mod tests {
+    use emg_msg_macro::emg_msg;
 
-    #[allow(unused)]
-    use crate::{
-        common::{
-            better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
-            IdStr, TypeCheck,
-        },
-        element::*,
-        layout::{add_values::*, css, styles::*, EmgEdgeItem},
-        shaping::{EqShaping, Shaper, Shaping, ShapingUse},
-        state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
-    };
+    use crate::element::GTreeBuilderElement;
+    use crate::emg_msg_macro_prelude::*;
+    use crate::gtree_macro_prelude::*;
 
-    #[allow(unused)]
-    use std::rc::Rc;
-    // #[allow(unused)]
-    // use GElement::*;
+    #[emg_msg]
+    enum M {
+        IncrementPressed,
+    }
+    fn tree_build() -> GTreeBuilderElement<M> {
+        gtree! {
+            @="a" Layer [
+                @="b" Checkbox::new(false,"abcd",|_|M::IncrementPressed) => [
+                    ]
+            ]
+        }
+    }
+
+    fn tree_build2() -> GTreeBuilderElement<M> {
+        gtree! {
+                @="a" Checkbox::new(false,"abcd",|_|M::IncrementPressed) => [
+                    ]
+        }
+    }
 
     #[test]
-    fn xx() {
-        // let f = node_ref();
+    fn tree_build_tests() {
+        let a = tree_build();
+        insta::assert_debug_snapshot!("tree-a", a);
+        let b = tree_build2();
+        insta::assert_debug_snapshot!("tree-b", b);
     }
 }
 #[cfg(all(test, target_arch = "wasm32"))]

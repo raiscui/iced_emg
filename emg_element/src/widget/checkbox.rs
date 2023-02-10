@@ -1,22 +1,27 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-07 22:48:54
+ * @LastEditTime: 2023-02-10 16:49:50
  * @LastEditors: Rais
  * @Description:
  */
+// ! Show toggle controls using checkboxes.
 
-//! Show toggle controls using checkboxes.
-use crate::{g_element::DynGElement, node_builder::EventListener, GElement, NodeBuilderWidget};
+use gtree::gtree;
+
+use crate::{
+    g_element::DynGElement, g_tree_builder::GTreeInit, GElement, GTreeBuilderElement, InitTree,
+};
 
 use emg_common::{
     any::MessageTid,
     better_any::{Tid, TidAble, TidExt},
+    mouse::CLICK,
     IdStr, LogicLength, TypeCheckObjectSafe, TypeCheckObjectSafeTid, TypeName,
 };
-use emg_native::WidgetState;
+use emg_layout::EmgEdgeItem;
 use emg_shaping::{Shaping, ShapingAny, ShapingUse, ShapingUseAny};
-use emg_state::StateAnchor;
+use emg_state::{topo, StateAnchor};
 use tracing::{debug, debug_span, info, warn, Span};
 
 use std::{panic::Location, rc::Rc};
@@ -316,66 +321,6 @@ where
         }
     }
 }
-// //NOTE 当前无法触发 更新到 GElement
-// // @ 向上更新, ---- 下游 Checkbox 用于更新 who -GElement ------------------------------------
-// impl<Message> Shaping<GElement<Message>> for Checkbox<Message>
-// where
-//     Message: 'static + Clone + for<'a> MessageTid<'a> + std::cmp::PartialEq,
-// {
-//     #[allow(clippy::match_same_arms)]
-//     fn shaping(&self, who: &mut GElement<Message>) -> bool {
-//         let _span = debug_span!(
-//             "GElement-shaping",
-//             "向上更新 <Checkbox> shaping-> <GElement>"
-//         )
-//         .entered();
-
-//         match who {
-//             GElement::Layer_(l) => {
-//                 let _span = debug_span!("GElement-shaping", "Checkbox shaping-> Layer").entered();
-//                 l.push(self.clone().into());
-//                 true
-//             }
-//             GElement::Builder_(builder) => {
-//                 let _span =
-//                     debug_span!("GElement-shaping", "Checkbox shaping-> Builder_").entered();
-
-//                 self.shaping(builder.widget_mut())
-//             }
-//             // GElement::Text_(_)
-//             // | GElement::Button_(_)
-//             // |
-//             GElement::Shaper_(_) | GElement::Event_(_) => {
-//                 unimplemented!();
-//             }
-//             GElement::Generic_(g_who) => {
-//                 let _span = debug_span!("GElement-shaping", "Checkbox shaping-> Generic").entered();
-
-//                 let _span1 =
-//                     debug_span!("better_any_shaping", "Checkbox shaping-> Generic").entered();
-
-//                 trace!("use Checkbox shaping-> Generic");
-
-//                 //TODO 使用值反射 不知道上级实际类型也能更新上级 struct 的值
-
-//                 let mut dyn_who = g_who;
-
-//                 // dyn_who.shape_of_use(&self);
-//                 // todo!("此上为实验性代码");
-
-//                 if let Some(checkbox) = dyn_who.downcast_mut::<Self>() {
-//                     self.shaping(checkbox)
-//                 } else {
-//                     false
-//                 }
-//             }
-//             GElement::NodeRef_(_) => panic!("GElement::NodeIndex_() should handle before."),
-//             GElement::EmptyNeverUse => panic!("EmptyNeverUse never here"),
-//             GElement::SaNode_(_) => todo!(),
-//             GElement::EvolutionaryFactor(_) => todo!(),
-//         }
-//     }
-// }
 
 //TODO use macro
 impl<Message> TypeCheckObjectSafe for Checkbox<Message> {
@@ -397,6 +342,38 @@ where
         Self::Generic_(Box::new(checkbox))
     }
 }
+
+impl<Message> GTreeInit<Message> for Checkbox<Message>
+where
+    Message: Clone + PartialEq + for<'a> emg_common::any::MessageTid<'a>,
+    // Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default,
+{
+    #[topo::nested]
+    fn tree_init(
+        self,
+        id: &IdStr,
+        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
+        _children: &Vec<GTreeBuilderElement<Message>>,
+    ) -> InitTree<Message> {
+        use crate::gtree_macro_prelude::*;
+        let on_toggle = self.on_toggle.clone();
+        // illicit::Layer::new().offer(self.clone()).enter(|| {});
+        gtree! {
+            @SkipInit self =>[
+                @=id.clone() + "|CLICK" On:CLICK  move||{
+                    let a = use_state(1);
+                    let av = a.get();
+                    println!("click CheckBox {}",av);
+                    a.set(av+1);
+
+                  (on_toggle)(true);
+                },
+            ]
+        }
+        .into()
+    }
+}
+
 // ────────────────────────────────────────────────────────────────────────────────
 // impl<Message> ShapingUse<i32> for Checkbox<Message> {
 //     fn shaping_use(&mut self, use_something: &i32) {
@@ -629,4 +606,37 @@ mod test {
 
     #[test]
     fn test() {}
+}
+
+#[cfg(test)]
+mod tests {
+    use emg_msg_macro::emg_msg;
+
+    use super::*;
+    use emg_common::{any, better_any};
+
+    #[emg_msg]
+    #[derive(Clone, PartialEq)]
+    enum Message {
+        A,
+    }
+    #[test]
+    fn test_eq() {
+        let ff = |_| Message::A;
+        let checkbox = Checkbox::new(false, "checkbox", ff);
+        let checkbox2 = Checkbox::new(false, "checkbox", ff);
+        let checkbox3 = checkbox.clone();
+        assert_ne!(checkbox, checkbox2);
+        assert_eq!(checkbox, checkbox3);
+    }
+
+    #[test]
+    fn test_gtree_macro() {
+        let checkbox = Checkbox::new(false, "checkbox", |_| Message::A);
+        let gtree = gtree! {
+            @="default_id" checkbox=>[]
+        };
+        println!("{:#?}", gtree);
+        insta::assert_debug_snapshot!("test_gtree_macro", gtree);
+    }
 }

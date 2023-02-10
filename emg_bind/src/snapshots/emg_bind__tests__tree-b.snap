@@ -1,0 +1,38 @@
+---
+source: emg_bind/src/lib.rs
+assertion_line: 180
+expression: b
+---
+GTreeBuilderElement::GElementTree(
+    "a",
+    "with Some Edge Vector...size:0",
+    GElement::Generic_(
+        Checkbox {
+            is_checked: false,
+            label: "abcd",
+            id: None,
+            width: Simplex(
+                ExactLengthSimplex {
+                    unit: Px,
+                    value: NotNan(
+                        0.0,
+                    ),
+                },
+            ),
+        },
+    ),
+    [
+        GTreeBuilderElement::Event(
+            "a|CLICK",
+            EventNode<Message>(
+                EventMessage(
+                    EventIdentify(
+                        2,
+                        19,
+                    ),
+                    "EventMessageFn<Message>",
+                ),
+            ),
+        ),
+    ],
+)

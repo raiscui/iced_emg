@@ -64,3 +64,6 @@ emg_vello = { path = "../emg_vello", optional = true }
 # bar = { version = "1.0", artifact = "cdylib", target = "wasm32-unknown-unknown" }
 # [dependencies]
 # bar = { artifact = "bin", version = "1.0", lib = true }
+
+[dev-dependencies]
+insta = "1"

@@ -1,13 +1,11 @@
 use color_eyre::{eyre::Report, eyre::WrapErr};
 use emg_bind::{
-    better_any::TidAble,
     common::mouse::CLICK,
     common::px,
     element::*,
     emg::{edge_index, Direction::Incoming},
-    emg_msg,
+    emg_msg_macro_prelude::*,
     graph_edit::*,
-    gtree,
     layout::styles::{fill, hsl, w},
     runtime::OrdersContainer,
     state::use_state,
@@ -154,11 +152,12 @@ impl Sandbox for Counter {
     }
 
     fn tree_build(&self, orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
+        use emg_bind::gtree_macro_prelude::*;
         let n = Rc::new(Cell::new(100));
         let ww = use_state(w(px(100)));
         let ff = use_state(fill(hsl(150, 100, 100)));
         gtree! {
-            @=debug_layer Layer [
+            @="debug_layer" Layer [
                 On:CLICK  ||{
                     let _span = debug_span!("LayoutOverride", "click cb")
                             .entered();
@@ -176,7 +175,7 @@ impl Sandbox for Counter {
                         b_width(px(5)),
                         b_color(rgb(1,0,0))
                     ]
-                @=a1 Layer [
+                @="a1" Layer [
                     @E=[
                         origin_x(px(0)),align_x(px(250)),
                         origin_y(px(0)),align_y(px(250)),
@@ -189,7 +188,7 @@ impl Sandbox for Counter {
                         Checkbox::new(false,"abcd2",|_|Message::IncrementPressed)=>[ ],
                     ],
 
-                    @=a2 @E=[
+                    @="a2" @E=[
                         // origin_x(px( 100)),
                         // align_x(px(100)),
                         // origin_y(px(0)),
@@ -212,7 +211,7 @@ impl Sandbox for Counter {
 
                         },
                     ],
-                    @=a3 @E=[
+                    @="a3" @E=[
                         origin_x(px( 0)),align_x(px(300)),
                         origin_y(px(0)),align_y(px(300)),
                         w(px(30)),h(px(30)),
@@ -221,7 +220,7 @@ impl Sandbox for Counter {
                         b_color(rgb(1,0,0))
                     ]
                     Layer [],
-                    @=a4 @E=[
+                    @="a4" @E=[
                         origin_x(px( 0)),align_x(px(400)),
                         origin_y(px(0)),align_y(px(400)),
                         ww,

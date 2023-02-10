@@ -1,0 +1,6 @@
+---
+source: gtree_macro/src/lib.rs
+assertion_line: 1264
+expression: ok.to_token_stream()
+---
+{ { let id = IdStr :: new_inline ("root") . into () ; let edges = vec ! [] ; let children = vec ! [] ; Checkbox :: new (false , "abcd" , | _ | Message :: IncrementPressed) . tree_init (& id , & edges , & children) . with_id_edge_children (id , Some (edges) , Some (children)) } }
