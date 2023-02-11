@@ -65,7 +65,6 @@ pub use emg_state as state;
 pub use emg_state::topo;
 pub use error::Error;
 pub use executor::Executor;
-pub use gtree::gtree;
 pub use renderer::Renderer;
 pub use result::Result;
 pub use runtime::{futures, Command};
@@ -75,21 +74,11 @@ pub use settings::Settings;
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub mod gtree_macro_prelude {
-    pub use crate::{
-        common::{
-            better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
-            IdStr, TypeCheck,
-        },
-        element::*,
-        gtree,
-        layout::{add_values::*, css, styles::*, EmgEdgeItem},
-        shaping::{EqShaping, Shaper, Shaping, ShapingUse},
-        state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
-    };
+    pub use crate::{common::mouse::CLICK, element::gtree_macro_prelude::*};
 }
 pub mod emg_msg_macro_prelude {
-    pub use crate::emg_msg;
     pub use crate::common::{any, better_any};
+    pub use crate::emg_msg;
 }
 // ────────────────────────────────────────────────────────────────────────────────
 #[cfg(test)]

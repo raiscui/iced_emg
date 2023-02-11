@@ -8,12 +8,14 @@ use emg_common::{
     num_traits::{AsPrimitive, ToPrimitive, Zero},
     smallvec, IdStr, SmallVec, TypeName, Vector,
 };
+use emg_hasher::CustomHasher;
 // use iter_fixed::IntoIteratorFixed;
 use crate::{Debuggable, Precision, MOTION_SIZE, PROP_SIZE};
 use derive_more::Display;
 use ordered_float::NotNan;
 use std::{
     collections::VecDeque,
+    hash::BuildHasherDefault,
     ops::{Deref, DerefMut},
     rc::Rc,
     time::Duration,
@@ -677,7 +679,8 @@ fn replace_props(
 ) {
     //TODO hash 优化
     // let replacement_names: SmallVec<[PropName; PROP_SIZE * 2]> =
-    let replacement_names: HashSet<PropName> = replacements.iter().map(Property::name).collect();
+    let replacement_names: HashSet<PropName, BuildHasherDefault<CustomHasher>> =
+        replacements.iter().map(Property::name).collect();
     // assert_eq!(
     //     replacement_names.len(),
     //     replacements.len(),

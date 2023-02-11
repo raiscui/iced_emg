@@ -41,6 +41,7 @@ pub mod gtree_macro_prelude {
     pub use crate::prelude::*;
     pub use gtree::gtree;
 
+    pub use crate::g_tree_builder::GtreeInitCall;
     pub use emg_common::{
         better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
         IdStr, TypeCheck,

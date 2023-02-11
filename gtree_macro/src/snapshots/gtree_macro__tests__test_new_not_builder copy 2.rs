@@ -11,7 +11,7 @@ fn xx() {
         let edges = vec![];
         let children = vec![];
         Checkbox::new(false, "abcd", |_| Message::IncrementPressed)
-            .tree_init(&id, &edges, &children)
+            .tree_init_calling(&id, &edges, &children)
             .with_id_edge_children(id, Some(edges), Some(children))
     }
 }

@@ -1,15 +1,7 @@
 use color_eyre::{eyre::Report, eyre::WrapErr};
 use emg_bind::{
-    common::mouse::CLICK,
-    common::px,
-    element::*,
-    emg::{edge_index, Direction::Incoming},
-    emg_msg_macro_prelude::*,
-    graph_edit::*,
-    layout::styles::{fill, hsl, w},
-    runtime::OrdersContainer,
-    state::use_state,
-    Error, Orders, Sandbox, Settings,
+    element::*, emg_msg_macro_prelude::*, graph_edit::*, runtime::OrdersContainer, Sandbox,
+    Settings,
 };
 use std::{cell::Cell, rc::Rc};
 use tracing::{debug_span, info, instrument};

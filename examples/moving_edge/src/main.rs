@@ -1,24 +1,15 @@
 use color_eyre::{eyre::Report, eyre::WrapErr};
 use emg_bind::{
-    better_any::TidAble,
-    common::mouse::CLICK,
-    common::px,
-    element::{self, *},
+    element::*,
     emg::{edge_index, Direction::Incoming},
     emg_msg,
+    emg_msg_macro_prelude::*,
     graph_edit::*,
-    gtree,
-    layout::styles::{fill, hsl, w},
     runtime::OrdersContainer,
-    state::use_state,
-    Error, Orders, Sandbox, Settings,
+    Sandbox, Settings,
 };
-use std::{
-    cell::{Cell, RefCell},
-    ops::DerefMut,
-    rc::Rc,
-};
-use tracing::{debug_span, info, instrument};
+use std::{cell::Cell, rc::Rc};
+use tracing::{debug_span, instrument};
 #[cfg(feature = "debug")]
 use tracing_subscriber::EnvFilter;
 fn tracing_init() -> Result<(), Report> {
@@ -164,11 +155,13 @@ impl Sandbox for Counter {
     }
 
     fn tree_build(&self, orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
+        use emg_bind::gtree_macro_prelude::*;
+
         let n = Rc::new(Cell::new(100));
         let ww = use_state(w(px(100)));
         let fill_var = use_state(fill(hsl(150, 100, 30)));
         gtree! {
-            @=root Layer [
+            @="root" Layer [
                 @E=[
 
                 origin_x(px(0)),
@@ -180,7 +173,7 @@ impl Sandbox for Counter {
                 b_color(rgb(0,0,1)),
                 fill(rgba(0, 0, 1, 1))
                 ]
-                @=y Layer [
+                @="y" Layer [
                     // node_ref("b")
                 ],
                 // ─────────────────────────────────────────────
@@ -194,9 +187,9 @@ impl Sandbox for Counter {
                         b_width(px(2)),
                         b_color(rgb(1,0,0))
                     ]
-                @=x Layer [
+                @="x" Layer [
 
-                    @=x_click On:CLICK  ||{
+                    @="x_click" On:CLICK  ||{
                         let _span = debug_span!("Moving", "on [x] click, moving a->b to m->b")
                                 .entered();
                         Message::Empty
@@ -211,7 +204,7 @@ impl Sandbox for Counter {
                         h(pc(25)),
                         fill(rgba(1, 0.5, 0, 1))
                     ]
-                    @=a Layer [
+                    @="a" Layer [
 
                         @E=[
                             origin_x(pc(50)),
@@ -222,7 +215,7 @@ impl Sandbox for Counter {
                             h(pc(75)),
                             fill(rgba(1, 0, 0, 1))
                         ]
-                        @=b Layer [
+                        @="b" Layer [
 
                         ],
                     ],
@@ -235,7 +228,7 @@ impl Sandbox for Counter {
                         h(pc(25)),
                         fill(rgba(0, 0.5, 0, 1))
                     ]
-                    @=m Layer [
+                    @="m" Layer [
                         // b will move here ─────────────────────────────
 
                     ],
@@ -248,7 +241,7 @@ impl Sandbox for Counter {
                         h(pc(25)),
                         fill(rgba(0, 0, 0.5, 1))
                     ]
-                    @=w Layer [
+                    @="w" Layer [
                         // @E=[
                         //     origin_x(pc(100)),
                         //     origin_y(pc(50)),
@@ -258,7 +251,7 @@ impl Sandbox for Counter {
                         //     h(pc(15)),
                         //     fill(rgba(0, 1, 0, 1))
                         // ]
-                        @=ref_x_click node_ref("x_click")
+                        @="ref_x_click" node_ref("x_click")
                     ],
                 ],
 

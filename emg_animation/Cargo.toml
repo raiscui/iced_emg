@@ -22,6 +22,8 @@ tracing = "0.1"
 # iter_fixed = "0.2.2"
 # emg_orders = { path = "../emg_orders"}
 # emg_debuggable = { path = "../emg_debuggable" }
+emg_hasher = { path = "../emg_hasher" }
+
 emg_state = { path = "../emg_state" }
 emg_common = { path = "../emg_common" }
 seed_styles = { path = "../../styles_hooks/seed_styles" }

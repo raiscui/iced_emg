@@ -680,7 +680,7 @@ impl ToTokens for GTreeSurface {
                             let edges = #edge_token;
                             let children = #children_token;
                             #expr
-                            .tree_init(&id,&edges,&children)
+                            .tree_init_calling(&id,&edges,&children)
                             .with_id_edge_children(id,Some(edges),Some(children))
                         }
                         )
@@ -1032,7 +1032,7 @@ impl ToTokens for GTreeLayerStruct {
                 let edges = #edge_token;
                 let children = #children_token;
                 #layer_token ::new(id.clone())
-                .tree_init(&id,&edges,&children)
+                .tree_init_calling(&id,&edges,&children)
                 .with_id_edge_children(id,Some(edges),Some(children))
             })
         } .to_tokens(tokens);

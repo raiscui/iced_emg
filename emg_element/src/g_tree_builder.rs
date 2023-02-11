@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-02-10 23:23:28
+ * @LastEditTime: 2023-02-11 23:31:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,12 +11,16 @@ use crate::{
     EventNode, GElement,
 };
 use derive_more::From;
-use emg_common::IdStr;
+use emg_common::{better_any::Tid, im::HashSet, IdStr};
+use emg_hasher::CustomHasher;
 use emg_layout::EmgEdgeItem;
 use emg_shaping::{EqShaping, Shaping};
 use emg_state::{Dict, StateVar};
 use std::{
+    any::{Any, TypeId},
     cell::{Ref, RefMut},
+    hash::BuildHasherDefault,
+    panic::Location,
     rc::Rc,
 };
 
@@ -101,6 +105,54 @@ pub trait GTreeInit<Message> {
         _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
         _children: &Vec<GTreeBuilderElement<Message>>,
     ) -> InitTree<Message>;
+}
+pub trait GtreeInitCall<Message> {
+    //NOTE for the loopback check
+    fn tree_init_calling(
+        self,
+        _id: &IdStr,
+        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
+        _children: &Vec<GTreeBuilderElement<Message>>,
+    ) -> InitTree<Message>;
+}
+
+type TypeIdSets = HashSet<TypeId, BuildHasherDefault<CustomHasher>>;
+
+impl<T, Message> GtreeInitCall<Message> for T
+where
+    // Message: Clone + PartialEq + for<'a> emg_common::any::MessageTid<'a>,
+    T: GTreeInit<Message> + for<'a> Tid<'a>,
+{
+    //NOTE for the loopback check
+    #[track_caller]
+    fn tree_init_calling(
+        self,
+        _id: &IdStr,
+        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
+        _children: &Vec<GTreeBuilderElement<Message>>,
+    ) -> InitTree<Message> {
+        let new_type_sets = if let Some(type_sets) = illicit::get::<TypeIdSets>().ok().as_deref() {
+            let self_id = self.self_id();
+
+            //  checking loopback
+            if !type_sets.contains(&self_id) {
+                type_sets.update(self_id)
+            } else {
+                panic!(
+                    "tree_init is loopback because type:{}  at: {}",
+                    std::any::type_name::<Self>(),
+                    Location::caller()
+                );
+            }
+        } else {
+            //first time
+            TypeIdSets::default()
+        };
+
+        illicit::Layer::new()
+            .offer(new_type_sets)
+            .enter(|| self.tree_init(_id, _es, _children))
+    }
 }
 
 pub enum GTreeBuilderElement<Message, Ix = IdStr>

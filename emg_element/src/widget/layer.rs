@@ -1,6 +1,9 @@
 use std::{clone::Clone, cmp::PartialEq, rc::Rc};
 
-use emg_common::{IdStr, Vector};
+use emg_common::{
+    better_any::{Tid, TidAble},
+    IdStr, Vector,
+};
 use emg_layout::EmgEdgeItem;
 use emg_shaping::Shaping;
 use emg_state::{Anchor, StateAnchor, StateMultiAnchor};
@@ -17,7 +20,7 @@ type LayerChildren<Message> = Vector<GElement<Message>>;
 /// A [`Layer`] will try to fill the horizontal space of its container.
 //TODO remove all missing_debug_implementations
 #[allow(missing_debug_implementations)]
-#[derive(Eq)]
+#[derive(Eq, Tid)]
 pub struct Layer<Message> {
     id: IdStr,
     //TODO vec?

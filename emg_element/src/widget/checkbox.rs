@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-10 23:09:46
+ * @LastEditTime: 2023-02-11 23:03:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -364,8 +364,9 @@ where
         _children: &Vec<GTreeBuilderElement<Message>>,
     ) -> InitTree<Message> {
         use crate::gtree_macro_prelude::*;
+
         let on_toggle = self.on_toggle.take().unwrap();
-        // illicit::Layer::new().offer(self.clone()).enter(|| {});
+
         gtree! {
             @SkipInit self =>[
                 @=id.clone() + "|CLICK" On:CLICK  move||{
@@ -640,6 +641,7 @@ mod tests {
 
     #[test]
     fn test_gtree_macro() {
+        use crate::gtree_macro_prelude::*;
         let checkbox = Checkbox::new(false, "checkbox", |_| Message::A);
         let gtree = gtree! {
             @="default_id" checkbox=>[]
