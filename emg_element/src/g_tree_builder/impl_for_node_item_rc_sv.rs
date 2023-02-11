@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-02-10 17:55:45
+ * @LastEditTime: 2023-02-10 23:24:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -259,69 +259,69 @@ where
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
                         assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix);
                         trace!("{:?}", *illicit::expect::<NodeIndex<Self::Ix>>());
-                        for child_layer in children_list.iter() {
-                            self.handle_children_in_topo(None, child_layer);
+                        for child in children_list.iter() {
+                            self.handle_children_in_topo(None, child);
                         }
                     });
                 });
             }
-            GTreeBuilderElement::Layer(root_id, edge_shapers, children_list) => {
-                let _span = trace_span!("=> handle_root [layer] ",%root_id).entered();
-                trace!(
-                    "handle_root_in_topo: {:?}==>{:#?}",
-                    &root_id,
-                    &children_list
-                );
-                info!("handle_root_in_topo: {:?}", &root_id);
+            // GTreeBuilderElement::Layer(root_id, edge_shapers, children_list) => {
+            //     let _span = trace_span!("=> handle_root [layer] ",%root_id).entered();
+            //     trace!(
+            //         "handle_root_in_topo: {:?}==>{:#?}",
+            //         &root_id,
+            //         &children_list
+            //     );
+            //     info!("handle_root_in_topo: {:?}", &root_id);
 
-                // ─────────────────────────────────────────────────────────────────
+            //     // ─────────────────────────────────────────────────────────────────
 
-                let nix: NodeIndex<Self::Ix> = node_index(root_id.clone());
+            //     let nix: NodeIndex<Self::Ix> = node_index(root_id.clone());
 
-                let edge_ix = edge_index_no_source(root_id.clone());
-                GraphNodeBuilder::new(root_id.clone())
-                    .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
-                        Layer::<Message>::new(root_id.clone()).into(),
-                    ))))
-                    .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
-                    .with_outgoing_eix_set_with_default_capacity(5)
-                    .build_in_topo(self);
+            //     let edge_ix = edge_index_no_source(root_id.clone());
+            //     GraphNodeBuilder::new(root_id.clone())
+            //         .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+            //             Layer::<Message>::new(root_id.clone()).into(),
+            //         ))))
+            //         .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
+            //         .with_outgoing_eix_set_with_default_capacity(5)
+            //         .build_in_topo(self);
 
-                let width = global_width();
-                let height = global_height();
+            //     let width = global_width();
+            //     let height = global_height();
 
-                let mut root_ei = GraphEdgeBuilder::new(edge_ix.clone())
-                    .with_size((width, height))
-                    .build_in_topo(self)
-                    .unwrap();
+            //     let mut root_ei = GraphEdgeBuilder::new(edge_ix.clone())
+            //         .with_size((width, height))
+            //         .build_in_topo(self)
+            //         .unwrap();
 
-                debug_assert_eq!(
-                    self.borrow()
-                        .get_node_use_ix(edge_ix.target_nix().as_ref().unwrap().index())
-                        .unwrap()
-                        .incoming_len(),
-                    1
-                );
+            //     debug_assert_eq!(
+            //         self.borrow()
+            //             .get_node_use_ix(edge_ix.target_nix().as_ref().unwrap().index())
+            //             .unwrap()
+            //             .incoming_len(),
+            //         1
+            //     );
 
-                let path = EPath::<Self::Ix>::new(vector![edge_ix]);
-                // • • • • •
+            //     let path = EPath::<Self::Ix>::new(vector![edge_ix]);
+            //     // • • • • •
 
-                illicit::Layer::new().offer(path.clone()).enter(|| {
-                    debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path);
+            //     illicit::Layer::new().offer(path.clone()).enter(|| {
+            //         debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path);
 
-                    root_ei.shaping_use_dyn(edge_shapers);
+            //         root_ei.shaping_use_dyn(edge_shapers);
 
-                    illicit::Layer::new().offer(nix.clone()).enter(|| {
-                        assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix);
-                        trace!("{:?}", *illicit::expect::<NodeIndex<Self::Ix>>());
-                        for child_layer in children_list.iter() {
-                            self.handle_children_in_topo(None, child_layer);
-                        }
-                    });
-                });
-            }
+            //         illicit::Layer::new().offer(nix.clone()).enter(|| {
+            //             assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix);
+            //             trace!("{:?}", *illicit::expect::<NodeIndex<Self::Ix>>());
+            //             for child_layer in children_list.iter() {
+            //                 self.handle_children_in_topo(None, child_layer);
+            //             }
+            //         });
+            //     });
+            // }
             _ => {
-                panic!("not allow this , first element must layer ");
+                panic!("not allow this , first element not match ");
             }
         }
     }
@@ -335,78 +335,70 @@ where
         tree_element: &'_ GTreeBuilderElement<Message>,
     ) {
         debug!("handle_children");
-        let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
+        let parent_nix = illicit::get::<NodeIndex<Self::Ix>>()
+            .ok()
+            .as_deref()
+            .cloned();
+        // let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
         match tree_element {
             //
-            GTreeBuilderElement::Layer(org_id, edge_shapers, children_list) => {
-                let id = replace_id.unwrap_or(org_id);
-                let _span = info_span!("-> [layer] ", ?org_id, ?id, ?parent_nix).entered();
+            // GTreeBuilderElement::Layer(org_id, edge_shapers, children_list) => {
+            //     let id = replace_id.unwrap_or(org_id);
+            //     let _span = info_span!("-> [layer] ", ?org_id, ?id, ?parent_nix).entered();
 
-                trace!("handle_children:\n{:?}==>{:#?}", &id, &children_list);
+            //     trace!("handle_children:\n{:?}==>{:#?}", &id, &children_list);
 
-                //NOTE current node 因为dyn 节点 插入新节点时候 没有删除原存在节点,所以会重复走 handle_children_in_topo, 当前这里处理是ID存在就全部跳过
+            //     //NOTE current node 因为dyn 节点 插入新节点时候 没有删除原存在节点,所以会重复走 handle_children_in_topo, 当前这里处理是ID存在就全部跳过
 
-                if self.borrow().nodes_contains_key(id) {
-                    warn!("children:Layer id:{} already exists , pass", id);
-                    return;
-                }
-                // node index
-                //TODO 检查重复插入节点时候 会出现什么问题,build_in_topo 没有使用 or_insert_node
+            //     if self.borrow().nodes_contains_key(id) {
+            //         warn!("children:Layer id:{} already exists , pass", id);
+            //         return;
+            //     }
+            //     // node index
+            //     //TODO 检查重复插入节点时候 会出现什么问题,build_in_topo 没有使用 or_insert_node
 
-                let nix: NodeIndex<Self::Ix> = node_index(id.clone());
-                let edge_ix = EdgeIndex::new(parent_nix, nix.clone());
-                GraphNodeBuilder::new(id.clone())
-                    .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
-                        Layer::<Message>::new(id.clone()).into(),
-                    ))))
-                    .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
-                    .with_outgoing_eix_set_with_default_capacity(2)
-                    .build_in_topo(self);
+            //     let nix: NodeIndex<Self::Ix> = node_index(id.clone());
+            //     let edge_ix = EdgeIndex::new(parent_nix, nix.clone());
+            //     GraphNodeBuilder::new(id.clone())
+            //         .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+            //             Layer::<Message>::new(id.clone()).into(),
+            //         ))))
+            //         .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
+            //         .with_outgoing_eix_set_with_default_capacity(2)
+            //         .build_in_topo(self);
 
-                trace!("\nhandle_children:\n inserted node: {:#?}", &nix);
+            //     trace!("\nhandle_children:\n inserted node: {:#?}", &nix);
 
-                // edge
-                let mut new_def_ei = GraphEdgeBuilder::new(edge_ix).build_in_topo(self).unwrap();
+            //     // let mut new_def_ei = self.setup_default_edge_in_topo(edge_ix).unwrap();
+            //     trace!("\nhandle_children:\n inserted edge: {:#?}", &nix);
 
-                // let mut new_def_ei = self.setup_default_edge_in_topo(edge_ix).unwrap();
-                trace!("\nhandle_children:\n inserted edge: {:#?}", &nix);
+            //     let path = match illicit::get::<EPath<Self::Ix>>().ok().as_deref() {
+            //         Some(path) => path.link_ref(nix.clone()),
+            //         None => EPath::<Self::Ix>::new(vector![edge_ix.clone()]),
+            //     };
 
-                let path = (*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
+            //     // edge
+            //     let mut new_def_ei = GraphEdgeBuilder::new(edge_ix).build_in_topo(self).unwrap();
 
-                illicit::Layer::new().offer(path.clone()).enter(|| {
-                    debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
-                    new_def_ei.shaping_use_dyn(edge_shapers);
+            //     illicit::Layer::new().offer(path.clone()).enter(|| {
+            //         debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path);
+            //         new_def_ei.shaping_use_dyn(edge_shapers);
 
-                    // next
-                    #[cfg(debug_assertions)]
-                    illicit::Layer::new().offer(nix.clone()).enter(|| {
-                        debug_assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
-                        children_list.iter().for_each(|child_layer| {
-                            self.handle_children_in_topo(None, child_layer)
-                        });
-                    });
-                    #[cfg(not(debug_assertions))]
-                    illicit::Layer::new().offer(nix).enter(|| {
-                        children_list.iter().for_each(|child_layer| {
-                            self.handle_children_in_topo(None, child_layer)
-                        });
-                    });
-                });
-            }
-
-            // GTreeBuilderElement::El(id, element) => {
-            //     let _span =
-            //         trace_span!("-> handle_children_in_topo [El] ", ?id, ?parent_nix).entered();
-
-            //     let nix = self.insert_node(id.clone(), element.clone().into());
-
-            //     //TODO string style nodes impl  or edge:empty
-            //     // let e = format!("{} -> {}", parent_nix.index(), nix.index()).into();
-            //     // trace!("{}", &e);
-            //     // self.insert_update_edge(&parent_nix, &nix, e);
-            //     let _ei = self
-            //         .setup_default_edge_in_topo(EdgeIndex::new(parent_nix.clone(), nix))
-            //         .unwrap();
+            //         // next
+            //         #[cfg(debug_assertions)]
+            //         illicit::Layer::new().offer(nix.clone()).enter(|| {
+            //             debug_assert_eq!(*illicit::expect::<NodeIndex<Self::Ix>>(), nix.clone());
+            //             children_list
+            //                 .iter()
+            //                 .for_each(|child| self.handle_children_in_topo(None, child));
+            //         });
+            //         #[cfg(not(debug_assertions))]
+            //         illicit::Layer::new().offer(nix).enter(|| {
+            //             children_list
+            //                 .iter()
+            //                 .for_each(|child| self.handle_children_in_topo(None, child));
+            //         });
+            //     });
             // }
             GTreeBuilderElement::GElementTree(org_id, edge_shapers, gel, children_list) => {
                 let id = replace_id.unwrap_or(org_id);
@@ -422,6 +414,7 @@ where
                 //node index
 
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
+
                 let edge_ix = EdgeIndex::new(parent_nix.clone(), nix.clone());
 
                 match gel{
@@ -436,11 +429,12 @@ where
                     },
                     GElement::EvolutionaryFactor(evo) => {
                         let mut g = self.borrow_mut();
-                        let parent_item = g.get_mut_node_item(&parent_nix).unwrap();
+                        let parent_item = g.get_mut_node_item(&parent_nix.expect("parent nix must have in EvolutionaryFactor builder")).unwrap();
                         let rc_sa_rc_parent = parent_item.get_gel_rc_sa();
                         warn!("---- parent anchor: {}",&rc_sa_rc_parent);
                         let gel_sa = evo.evolution(&*rc_sa_rc_parent);
                         warn!("---- before run evolution , anchor: {}",&rc_sa_rc_parent);
+                        //TODO 可能可以不在这里设置 parent, 在运行时设置? 这样可以变更parent 后,可以动态应用,这样做 需要check与 Dyn的区别
                         parent_item.set_gel_sa( gel_sa);
                         return
                     },
@@ -464,17 +458,13 @@ where
 
                 };
 
-                // .map_or_else(|| {
-
-                // }, |gel_sa| {
-
-                // });
+                let path = match illicit::get::<EPath<Self::Ix>>().ok().as_deref() {
+                    Some(path) => path.link_ref(nix.clone()),
+                    None => EPath::<Self::Ix>::new(vector![edge_ix.clone()]),
+                };
 
                 //edge
                 let mut new_def_ei = GraphEdgeBuilder::new(edge_ix).build_in_topo(self).unwrap();
-                // let mut new_def_ei = self.setup_default_edge_in_topo(edge_ix).unwrap();
-
-                let path = (*illicit::expect::<EPath<Self::Ix>>()).link_ref(nix.clone());
 
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath<Self::Ix>>(), path.clone());
@@ -526,6 +516,7 @@ where
                 let this = self.clone();
                 let this2 = self.clone();
 
+                //NOTE  not has self
                 let current_path = (*illicit::expect::<EPath<Self::Ix>>()).clone();
 
                 // let parent_nix = (*illicit::expect::<NodeIndex<Self::Ix>>()).clone();
@@ -562,15 +553,19 @@ where
                 // let update_id2 = TopoKey::new(topo::call(topo::CallId::current));
                 let gtbe_id = id.clone();
 
+                // let parent_nix_clone = parent_nix.cloned();
+
                 sa_dict_gbe
                     .insert_after_fn(
                         update_id,
                         move |_skip, value| {
                             debug!("builder::running after_fn");
+                            let cur_parent_nix = illicit::get::<NodeIndex<Self::Ix>>().ok().as_deref().cloned().unwrap();
+                            // .cloned().unwrap_or(parent_nix_clone.unwrap());
+                                // .map_or(parent_nix_clone.unwrap(), |p| (*p).clone());
 
-                            let cur_parent_nix = illicit::get::<NodeIndex<Self::Ix>>()
-                                .map_or(parent_nix.clone(), |p| (*p).clone());
 
+                                //NOTE: not with self ,use for illicit self ,not illicit children
                             let cur_path = illicit::get::<EPath<Self::Ix>>()
                                 .map_or(current_path.clone(), |p| (*p).clone());
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-10 16:49:50
+ * @LastEditTime: 2023-02-10 23:09:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -34,7 +34,7 @@ pub struct Checkbox<Message>
 {
     is_checked: bool,
     //FIXME use cow for Rc 防止 克隆对象和 原始对象使用同一个 callback
-    on_toggle: Rc<dyn Fn(bool) -> Message>,
+    on_toggle: Option<Rc<dyn Fn(bool) -> Message>>,
     label: IdStr,
     id: Option<IdStr>,
     width: LogicLength,
@@ -72,10 +72,18 @@ impl<Message> PartialEq for Checkbox<Message>
 {
     fn eq(&self, other: &Self) -> bool {
         self.is_checked == other.is_checked
-            && std::ptr::eq(
-                (std::ptr::addr_of!(*self.on_toggle)).cast::<u8>(),
-                (std::ptr::addr_of!(*other.on_toggle)).cast::<u8>(),
-            )
+        && if let (Some(s),Some(t))= ( &self.on_toggle ,&other.on_toggle){
+                std::ptr::eq(
+                    (std::ptr::addr_of!(**s)).cast::<u8>(),
+                    (std::ptr::addr_of!(**t)).cast::<u8>(),
+                )
+
+            }else{false}
+
+            // && std::ptr::eq(
+                // (std::ptr::addr_of!(*self.on_toggle)).cast::<u8>(),
+                // (std::ptr::addr_of!(*other.on_toggle)).cast::<u8>(),
+            // )´
             && self.label == other.label
             && self.id == other.id
             && self.width == other.width
@@ -100,7 +108,7 @@ impl<Message> Checkbox<Message>
     {
         Self {
             is_checked,
-            on_toggle: Rc::new(f),
+            on_toggle: Some(Rc::new(f)),
             label: label.into(),
             id: None,
             width: LogicLength::default(),
@@ -350,13 +358,13 @@ where
 {
     #[topo::nested]
     fn tree_init(
-        self,
+        mut self,
         id: &IdStr,
         _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
         _children: &Vec<GTreeBuilderElement<Message>>,
     ) -> InitTree<Message> {
         use crate::gtree_macro_prelude::*;
-        let on_toggle = self.on_toggle.clone();
+        let on_toggle = self.on_toggle.take().unwrap();
         // illicit::Layer::new().offer(self.clone()).enter(|| {});
         gtree! {
             @SkipInit self =>[

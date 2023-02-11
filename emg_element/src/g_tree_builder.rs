@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-02-10 16:40:59
+ * @LastEditTime: 2023-02-10 23:23:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -73,13 +73,13 @@ where
                 GTreeBuilderElement::GElementTree(id, opt_es.unwrap(), gel, opt_children.unwrap())
             }
             InitTree::Builder(b) => match b {
-                GTreeBuilderElement::Layer(_, o_es, o_children) => {
-                    unreachable!("deprecated");
-                    // let (new_es, new_children) =
-                    //     Self::merge_es_and_children(opt_es, o_es, opt_children, o_children);
+                // GTreeBuilderElement::Layer(_, o_es, o_children) => {
+                //     unreachable!("deprecated");
+                //     // let (new_es, new_children) =
+                //     //     Self::merge_es_and_children(opt_es, o_es, opt_children, o_children);
 
-                    // GTreeBuilderElement::Layer(id, new_es, new_children)
-                }
+                //     // GTreeBuilderElement::Layer(id, new_es, new_children)
+                // }
                 GTreeBuilderElement::GElementTree(_, o_es, gel, o_children) => {
                     let (new_es, new_children) =
                         Self::merge_es_and_children(opt_es, o_es, opt_children, o_children);
@@ -108,11 +108,11 @@ where
     Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
 {
-    Layer(
-        Ix,
-        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
-        Vec<GTreeBuilderElement<Message, Ix>>,
-    ),
+    // Layer(
+    //     Ix,
+    //     Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
+    //     Vec<GTreeBuilderElement<Message, Ix>>,
+    // ),
     // El(Ix, Element< Message>),
     GElementTree(
         Ix,
@@ -206,7 +206,7 @@ where
 {
     fn clone(&self) -> Self {
         match self {
-            Self::Layer(arg0, arg1, arg2) => Self::Layer(arg0.clone(), arg1.clone(), arg2.clone()),
+            // Self::Layer(arg0, arg1, arg2) => Self::Layer(arg0.clone(), arg1.clone(), arg2.clone()),
             Self::GElementTree(arg0, arg1, arg2, arg3) => {
                 Self::GElementTree(arg0.clone(), arg1.clone(), arg2.clone(), arg3.clone())
             }
@@ -235,20 +235,15 @@ impl<Message> std::fmt::Debug for GTreeBuilderElement<Message>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Layer(id, es, children_list) => {
-                let es_size = es.len();
+            // Self::Layer(id, es, children_list) => {
+            //     let es_size = es.len();
 
-                f.debug_tuple("GTreeBuilderElement::Layer")
-                    .field(id)
-                    .field(&format!("with Some Edge Vector...size:{es_size}"))
-                    .field(children_list)
-                    .finish()
-            }
-            // GTreeBuilderElement::El(id, el) => f
-            //     .debug_tuple("GTreeBuilderElement::El")
-            //     .field(id)
-            //     .field(el)
-            //     .finish(),
+            //     f.debug_tuple("GTreeBuilderElement::Layer")
+            //         .field(id)
+            //         .field(&format!("with Some Edge Vector...size:{es_size}"))
+            //         .field(children_list)
+            //         .finish()
+            // }
             Self::GElementTree(id, es, gel, updaters) => {
                 let es_size = es.len();
 
@@ -310,6 +305,7 @@ where
     fn graph(&self) -> Ref<Self::GraphType>;
     fn graph_mut(&mut self) -> RefMut<Self::GraphType>;
 
+    // #[deprecated = 直接使用handle_children_in_topo]
     fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message>);
     fn handle_children_in_topo(
         &self,

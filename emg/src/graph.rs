@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-01-31 21:25:28
+ * @LastEditTime: 2023-02-10 18:40:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -186,6 +186,11 @@ impl<Ix> From<Option<NodeIndex<Ix>>> for OptionNodeIndex<Ix> {
         Self(value)
     }
 }
+// impl<Ix: Clone> From<Option<&NodeIndex<Ix>>> for OptionNodeIndex<Ix> {
+//     fn from(value: Option<&NodeIndex<Ix>>) -> Self {
+//         Self(value.cloned())
+//     }
+// }
 
 impl<Ix> Deref for OptionNodeIndex<Ix> {
     type Target = Option<NodeIndex<Ix>>;
@@ -336,7 +341,7 @@ pub fn edge_index<Ix>(s: impl Into<Ix>, t: impl Into<Ix>) -> EdgeIndex<Ix> {
 }
 #[inline]
 pub fn edge_index_no_source<Ix>(t: impl Into<Ix>) -> EdgeIndex<Ix> {
-    EdgeIndex::new(None, node_index(t))
+    EdgeIndex::new(None::<NodeIndex<Ix>>, node_index(t))
 }
 
 // ────────────────────────────────────────────────────────────────────────────────

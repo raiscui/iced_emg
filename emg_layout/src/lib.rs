@@ -165,6 +165,7 @@ struct Mat4(Matrix4<Precision>);
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq, Display)]
+//TODO use StateVar<StateAnchor> for can change? note: 了解 最终 和 cassowary 如何共同影响 尺寸
 pub struct GenericSizeAnchor(StateAnchor<GenericSize>);
 
 impl Default for GenericSizeAnchor {
