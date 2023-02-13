@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-11 23:03:38
+ * @LastEditTime: 2023-02-13 12:49:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,7 +21,7 @@ use emg_common::{
 };
 use emg_layout::EmgEdgeItem;
 use emg_shaping::{Shaping, ShapingAny, ShapingUse, ShapingUseAny};
-use emg_state::{topo, StateAnchor};
+use emg_state::{topo, use_state, StateAnchor, StateMultiAnchor, StateVar};
 use tracing::{debug, debug_span, info, warn, Span};
 
 use std::{panic::Location, rc::Rc};
@@ -32,7 +32,7 @@ pub struct Checkbox<Message>
 // where
 //     dyn std::ops::Fn(bool) -> Message + 'static: std::cmp::PartialEq,
 {
-    is_checked: bool,
+    is_checked: StateVar<bool>,
     //FIXME use cow for Rc 防止 克隆对象和 原始对象使用同一个 callback
     on_toggle: Option<Rc<dyn Fn(bool) -> Message>>,
     label: IdStr,
@@ -47,7 +47,7 @@ impl<Message> Eq for Checkbox<Message> {}
 impl<Message> Clone for Checkbox<Message> {
     fn clone(&self) -> Self {
         Self {
-            is_checked: self.is_checked.clone(),
+            is_checked: self.is_checked,
             on_toggle: self.on_toggle.clone(),
             label: self.label.clone(),
             id: self.id.clone(),
@@ -98,12 +98,13 @@ impl<Message> Checkbox<Message>
     ///   * a function that will be called when the [`Checkbox`] is toggled. It
     ///     will receive the new state of the [`Checkbox`] and must produce a
     ///     `Message`.
+    #[topo::nested]
     pub fn new<F>(is_checked: bool, label: impl Into<IdStr>, f: F) -> Self
     where
         F: 'static + Fn(bool) -> Message,
     {
         Self {
-            is_checked,
+            is_checked: use_state(is_checked),
             on_toggle: Some(Rc::new(f)),
             label: label.into(),
             id: None,
@@ -140,6 +141,34 @@ impl<Message> Checkbox<Message>
     }
 }
 
+impl<Message> GTreeInit<Message> for Checkbox<Message>
+where
+    Message: Clone + PartialEq + for<'a> emg_common::any::MessageTid<'a>,
+    // Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default,
+{
+    #[topo::nested]
+    fn tree_init(
+        mut self,
+        id: &IdStr,
+        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
+        _children: &Vec<GTreeBuilderElement<Message>>,
+    ) -> InitTree<Message> {
+        use crate::gtree_macro_prelude::*;
+        let is_checked = self.is_checked;
+        let on_toggle = self.on_toggle.take().unwrap();
+
+        gtree! {
+            @SkipInit self =>[
+                @=id.clone() + "|CLICK" On:CLICK  move||{
+                    is_checked.set_with(|v| !*v);
+                    (on_toggle)(true);
+                },
+            ]
+        }
+        .into()
+    }
+}
+
 #[cfg(all(feature = "gpu"))]
 use crate::renderer::*;
 #[cfg(all(feature = "gpu"))]
@@ -154,7 +183,7 @@ where
     ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let span = illicit::expect::<Span>();
 
-        painter.map(move |incoming_painter| {
+        (painter, &self.is_checked.watch()).map(move |incoming_painter, &is_checked| {
             let dpr = incoming_painter.dpr();
             debug_span!("window_size", at = "checkbox paint_sa", dpr).in_scope(|| {});
 
@@ -163,6 +192,7 @@ where
 
             let rect = incoming_painter.size().to_rect();
             //fill
+
             if let Some(fill) = incoming_painter.get_fill_color() {
                 info!(parent: &*span,"fill color: {:?}", &fill);
                 builder.fill(Fill::NonZero, Affine::IDENTITY, fill, None, &rect);
@@ -179,6 +209,17 @@ where
             }
             .with_origin((origin, origin));
             // .to_rounded_rect(2. * dpr);
+
+            if is_checked {
+                // emg_layout::styles::seed_colors::Red;
+                builder.fill(
+                    Fill::NonZero,
+                    Affine::IDENTITY,
+                    Color::BLUE,
+                    None,
+                    &box_rect,
+                );
+            }
 
             builder.stroke(
                 // &Stroke::new(1. * dpr as f32),
@@ -344,38 +385,6 @@ where
 {
     fn from(checkbox: Checkbox<Message>) -> Self {
         Self::Generic_(Box::new(checkbox))
-    }
-}
-
-impl<Message> GTreeInit<Message> for Checkbox<Message>
-where
-    Message: Clone + PartialEq + for<'a> emg_common::any::MessageTid<'a>,
-    // Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default,
-{
-    #[topo::nested]
-    fn tree_init(
-        mut self,
-        id: &IdStr,
-        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
-        _children: &Vec<GTreeBuilderElement<Message>>,
-    ) -> InitTree<Message> {
-        use crate::gtree_macro_prelude::*;
-
-        let on_toggle = self.on_toggle.take().unwrap();
-
-        gtree! {
-            @SkipInit self =>[
-                @=id.clone() + "|CLICK" On:CLICK  move||{
-                    let a = use_state(1);
-                    let av = a.get();
-                    println!("click CheckBox {}",av);
-                    a.set(av+1);
-
-                  (on_toggle)(true);
-                },
-            ]
-        }
-        .into()
     }
 }
 

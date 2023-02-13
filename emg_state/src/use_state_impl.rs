@@ -1742,18 +1742,6 @@ fn global_engine_get_anchor_val_with<O: Clone + 'static, F: FnOnce(&O) -> R, R>(
         .with(|g_state_store_refcell| g_state_store_refcell.borrow().engine_get_with(anchor, func))
 }
 
-///
-///  Uses the current topological id to create a new state accessor
-///
-fn state_exists_for_topo_id<T: 'static>(id: TopoKey) -> bool {
-    G_STATE_STORE.with(|g_state_store_refcell| {
-        trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
-
-        g_state_store_refcell
-            .borrow()
-            .state_exists_with_id::<T>(StorageKey::TopoKey(id))
-    })
-}
 /// Sets the state of type T keyed to the given `TopoId`
 fn set_state_and_run_cb_with_topo_id<T: 'static + std::clone::Clone>(data: T, current_id: TopoKey) {
     G_STATE_STORE.with(|g_state_store_refcell| {
@@ -1790,6 +1778,20 @@ fn set_in_callback<T: 'static + std::fmt::Debug + std::clone::Clone>(
 
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
 }
+
+///
+///  Uses the current topological id to create a new state accessor
+///
+fn state_exists_for_topo_id<T: 'static>(id: TopoKey) -> bool {
+    G_STATE_STORE.with(|g_state_store_refcell| {
+        trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
+
+        g_state_store_refcell
+            .borrow()
+            .state_exists_with_id::<T>(StorageKey::TopoKey(id))
+    })
+}
+
 fn insert_var_with_topo_id<T: 'static>(var: Var<T>, current_id: TopoKey) {
     G_STATE_STORE.with(|g_state_store_refcell| {
         trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
