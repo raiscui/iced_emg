@@ -430,9 +430,9 @@ mod refresh_test {
 
     #[test]
     fn edge() {
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
-        let root_e_source = use_state(None);
-        let root_e_target = use_state(Some(node_index("root")));
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let root_e_source = use_state(|| None);
+        let root_e_target = use_state(|| Some(node_index("root")));
         let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
             root_e_source.watch(),
             root_e_target.watch(),
@@ -441,7 +441,7 @@ mod refresh_test {
             1080,
         );
 
-        let css_w: StateVar<CssWidth> = use_state(width(px(99)));
+        let css_w: StateVar<CssWidth> = use_state(|| width(px(99)));
         let a: AnimationE<Message> = anima![css_w];
         illicit::Layer::new()
             .offer(EPath::<IdStr>(vector![edge_index_no_source("root")]))

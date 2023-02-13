@@ -19,7 +19,8 @@ pub mod widget;
 // ────────────────────────────────────────────────────────────────────────────────
 pub use g_element::{node_ref, GElement};
 pub use g_node::{EventMatchsSa, GelType, GraphMethods, GraphType, NItem, E, N};
-pub use g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn};
+
+pub use g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn, GTreeInit, InitTree};
 pub use graph_program::GraphProgram;
 pub use node_builder::{EventCallback, EventMessage, EventNode, IntoOptionMs, NodeBuilderWidget};
 pub use widget::Widget;
@@ -30,6 +31,26 @@ use emg_native::{renderer, PaintCtx};
 #[cfg(all(feature = "gpu"))]
 use emg_vello::SceneFrag;
 // ────────────────────────────────────────────────────────────────────────────────
+pub mod prelude {
+    pub use crate::{
+        graph_edit, node_ref, widget::*, EventCallback, EventMessage, GElement,
+        GTreeBuilderElement, GelType, GraphType,
+    };
+}
+pub mod gtree_macro_prelude {
+    pub use crate::prelude::*;
+    pub use gtree::gtree;
+
+    pub use crate::g_tree_builder::GtreeInitCall;
+    pub use emg_common::{
+        better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
+        IdStr, TypeCheck,
+    };
+    pub use emg_layout::{add_values::*, css, styles::*, EmgEdgeItem};
+    pub use emg_shaping::{EqShaping, Shaper, Shaping, ShapingUse};
+    pub use emg_state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor};
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // #[macro_export]
 // macro_rules! map_fn_callback_return_to_option_ms {

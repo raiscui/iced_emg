@@ -32,7 +32,6 @@ no_default_shaping = ["emg_shaping/no_default_shaping"]
 
 
 [dependencies]
-gtree = { path = "../gtree" }
 emg_layout = { path = "../emg_layout" }
 emg_shaping = { path = "../emg_shaping" }
 emg_state = { path = "../emg_state" }
@@ -64,3 +63,6 @@ emg_vello = { path = "../emg_vello", optional = true }
 # bar = { version = "1.0", artifact = "cdylib", target = "wasm32-unknown-unknown" }
 # [dependencies]
 # bar = { artifact = "bin", version = "1.0", lib = true }
+
+[dev-dependencies]
+insta = "1"

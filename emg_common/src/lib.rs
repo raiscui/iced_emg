@@ -204,8 +204,11 @@ where
 impl GenericSize {
     #[must_use]
     pub fn get_length_value(&self) -> Precision {
-        self.try_get_length_value()
-            .expect("directly get length value failed, expected Length Px or None struct")
+        let msg = format!(
+            "directly get length value failed, expected Length Px or None struct, v:{:?}",
+            self
+        );
+        self.try_get_length_value().expect(&*msg)
     }
 
     /// # Errors

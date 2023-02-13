@@ -76,7 +76,7 @@ mod test {
          // node ────────────────────────────────────────────────────────────────────────────────
 
          GraphNodeBuilder::new(root_id.clone())
-             .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
                  Layer::<Message>::new(root_id.clone()).into(),
              ))))
              .with_incoming_eix_set([root_edge_ix.clone()].into_iter().collect())
@@ -96,7 +96,7 @@ mod test {
          // node ────────────────────────────────────────────────────────────────────────────────
 
          GraphNodeBuilder::new(id.clone())
-             .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
                  Layer::<Message>::new(id.clone()).into(),
              ))))
              .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
@@ -117,7 +117,7 @@ mod test {
          // node ────────────────────────────────────────────────────────────────────────────────
 
          GraphNodeBuilder::new(id.clone())
-             .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
                  Layer::<Message>::new(id.clone()).into(),
              ))))
              .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
@@ -138,7 +138,7 @@ mod test {
          // node ────────────────────────────────────────────────────────────────────────────────
 
          GraphNodeBuilder::new(id.clone())
-             .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
                  Layer::<Message>::new(id.clone()).into(),
              ))))
              .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())

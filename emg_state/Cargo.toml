@@ -5,7 +5,9 @@ authors = ["崔路明 <cuiluming@chaoway.net>"]
 edition = "2021"
 resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
+[features]
+default = ["engine-try-borrow-mut-no-panic"]
+engine-try-borrow-mut-no-panic = []
 
 # [lib]
 # crate-type = ["rlib"]
@@ -28,6 +30,9 @@ emg_common = { path = "../emg_common" }
 
 # ahash = "0.7.6"
 indexmap = "1.9"
+illicit = "1.1.2"
+thiserror = "1.0"
+
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

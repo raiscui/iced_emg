@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-25 18:39:47
- * @LastEditTime: 2023-01-30 13:49:48
+ * @LastEditTime: 2023-02-13 14:51:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -164,9 +164,9 @@ mod test {
     use anchors::{collections::ord_map_methods::Dict, singlethread::*};
     #[test]
     fn collect() {
-        let a = use_state(1);
-        let b = use_state(2);
-        let c = use_state(5);
+        let a = use_state(|| 1);
+        let b = use_state(|| 2);
+        let c = use_state(|| 5);
         let bcut = {
             let mut old_num_opt: Option<usize> = None;
             b.watch().cutoff(move |num| {

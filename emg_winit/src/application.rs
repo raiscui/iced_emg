@@ -331,7 +331,7 @@ async fn run_instance<A, E, C>(
 
     //view
 
-    // let native_events: StateVar<Vector<EventWithFlagType>> = use_state(Vector::new());
+    // let native_events: StateVar<Vector<EventWithFlagType>> = use_state(||Vector::new());
     let native_events: StateVarLit<Vector<EventWithFlagType>> = StateVarLit::new(Vector::new());
     let (event_matchs_sa, ctx_sa) = application.build_ctx(
         &g.graph(),

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-02-05 21:29:19
+ * @LastEditTime: 2023-02-10 23:20:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@
 use crate::{
     node_builder::EventNode,
     widget::{Layer, Widget},
-    NodeBuilderWidget,
+    GTreeBuilderElement, GTreeInit, InitTree, NodeBuilderWidget,
 };
 use dyn_clone::DynClone;
 use emg_state::{StateAnchor, StateMultiAnchor};
@@ -48,6 +48,7 @@ pub trait DynGElement<Message:for <'a> MessageTid<'a>>:
     + ShapingUseAny
     + ShapingUse<i32>
     + ShapingAny
+
 { }
 
 #[impl_tid]
@@ -92,7 +93,7 @@ mod tests {
         let _f = GElement::<Message>::Shaper_(
             Rc::new(Shaper::new(|| 1i32)) as Rc<dyn EqShaping<GElement<Message>>>
         );
-        let _a = use_state(2i32);
+        let _a = use_state(|| 2i32);
 
         let _f = GElement::<Message>::Shaper_(Rc::new(_a.watch()));
 
@@ -124,6 +125,18 @@ pub enum GElement<Message> {
     SaNode_(StateAnchor<Rc<Self>>),
     EvolutionaryFactor(Rc<dyn Evolution<StateAnchor<Rc<Self>>>>),
     EmptyNeverUse,
+}
+
+impl<Message> GTreeInit<Message> for GElement<Message> {
+    fn tree_init(
+        self,
+        _id: &IdStr,
+        _es: &Vec<Rc<dyn Shaping<emg_layout::EmgEdgeItem<IdStr>>>>,
+        _children: &Vec<GTreeBuilderElement<Message>>,
+        //TODO use either like <GTreeBuilderElement,GElement> for speed??
+    ) -> InitTree<Message> {
+        self.into()
+    }
 }
 
 impl<Message> Clone for GElement<Message> {
@@ -293,13 +306,13 @@ mod evolution_test {
 
     #[test]
     fn test() {
-        let a = use_state(1);
+        let a = use_state(|| 1);
         let f = SaWithMapFn {
             u_s_e: a.watch(),
             map_action: Rc::new(|p, _num| p.clone()),
         };
 
-        let ge = use_state(GElement::<Message>::EmptyNeverUse).watch();
+        let ge = use_state(|| GElement::<Message>::EmptyNeverUse).watch();
         let _x = GElement::<Message>::EvolutionaryFactor(Rc::new(f.clone()));
         let _xxx: GElement<Message> = f.into();
         let _x2 = GElement::<Message>::EvolutionaryFactor(

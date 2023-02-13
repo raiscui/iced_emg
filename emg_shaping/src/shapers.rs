@@ -334,8 +334,8 @@ mod updater_test {
 
         let n = 99_i32;
 
-        let mut ff = use_state(String::from("hello"));
-        let ff2 = use_state(2_i32);
+        let mut ff = use_state(|| String::from("hello"));
+        let ff2 = use_state(|| 2_i32);
         let ff_w = ff2.watch();
         let ffw_vec = vec![Box::new(ff_w.clone()), Box::new(ff_w.clone())];
         ff.shaping_use_dyn(&ff2);
@@ -357,7 +357,7 @@ mod updater_test {
         assert_eq!("hello,2,2,2,2,2,99,99", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
-        let a = use_state(4_i32);
+        let a = use_state(|| 4_i32);
 
         ff.shaping_use_dyn(&a);
         a.shaping(&mut ff);
