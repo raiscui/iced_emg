@@ -35,7 +35,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            size: (1000, 1000),
+            size: (600, 600),
             position: Position::default(),
             min_size: None,
             max_size: None,

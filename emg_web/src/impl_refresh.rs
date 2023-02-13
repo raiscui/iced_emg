@@ -9,7 +9,7 @@ use std::{any::Any, rc::Rc};
  */
 use crate::{GElement, NodeBuilderWidget};
 use emg_shaping::{
-    EqShaping, ShapeOfUse, Shaping, ShapingUse, ShapingUseNoWarper, ShapingWhoNoWarper,
+    EqShaping, Shaping, ShapingUse, ShapingUseDyn, ShapingUseNoWarper, ShapingWhoNoWarper,
 };
 use tracing::{trace, warn};
 
@@ -51,7 +51,7 @@ where
             //refreshing use any impl Shaping
             (gel, Refresher_(shaper)) => {
                 trace!("{} refresh use shaper", gel);
-                gel.shape_of_use(shaper.as_ref() as &dyn Shaping<Self>);
+                gel.shaping_use_dyn(shaper.as_ref() as &dyn Shaping<Self>);
             }
             // TODO: do not many clone event_callback
 

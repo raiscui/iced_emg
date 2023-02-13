@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [profile.dev]
 split-debuginfo = "unpacked"
-[lib]
-crate-type = ["rlib"]
+# [lib]
+# crate-type = ["rlib"]
 
 [features]
 default = ["gpu"]
@@ -23,6 +23,8 @@ emg_layout = { path = "../emg_layout" }
 emg_hasher = { path = "../emg_hasher" }
 emg_orders = { path = "../emg_orders" }
 emg = { path = "../emg" }
+gtree = { path = "../gtree" }
+
 #-----
 derive_more = "0.99"
 strum = { version = "0.24", features = ["derive"] }
@@ -38,6 +40,8 @@ indented = "0.1.0"
 emg_native = { path = "../emg_native", optional = true }
 
 #------------------
+bevy_reflect = "0.9.1"
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
@@ -45,3 +49,4 @@ emg_vello = { path = "../emg_vello", optional = true }
 
 [dev-dependencies]
 insta = "1"
+emg-msg-macro = { version = "=0.1.0", path = "../emg_msg_macro" }

@@ -6,9 +6,11 @@
 #![feature(auto_traits)]
 #![feature(negative_impls)]
 #![feature(is_some_and)]
+#![feature(closure_track_caller)]
 // ────────────────────────────────────────────────────────────────────────────────
 
 // #![feature(specialization)]
+pub mod error;
 pub mod state_lit;
 pub mod use_state_impl;
 pub use anchors::dict;
@@ -48,7 +50,7 @@ impl ::core::ops::Add for StateAnchor<GenericSize> {
 #[cfg(test)]
 mod tests {
     use crate::dict;
-    use std::rc::Rc;
+    use std::{panic::Location, rc::Rc};
 
     use crate::{state_store, use_state, CloneStateVar, StateAnchor, StateMultiAnchor, StateVar};
 
@@ -57,13 +59,82 @@ mod tests {
         b: StateVar<Vec<i32>>,
         c: StateVar<i32>,
     }
+
+    // #[track_caller]
+    #[topo::nested]
+    fn t1_in_topo() -> StateVar<i32> {
+        return use_state(|| 1);
+    }
+    // #[track_caller]
+    fn call_t1() -> StateVar<i32> {
+        t1_in_topo()
+    }
+
+    #[topo::nested(slot = "&i")]
+    fn t2_in_topo(i: i32) -> StateVar<i32> {
+        return use_state(|| 1);
+    }
+    #[allow(unused)]
+    fn call_t2(i: i32) -> StateVar<i32> {
+        t2_in_topo(i)
+    }
+
+    fn t3() -> StateVar<i32> {
+        return use_state(|| 1);
+    }
+
+    #[topo::nested]
+    fn call_t3_in_topo() -> StateVar<i32> {
+        println!("line:{}", Location::caller());
+
+        t3()
+    }
+    fn call_call_t3() -> StateVar<i32> {
+        call_t3_in_topo()
+    }
+
+    #[test]
+    fn loop_check() {}
+
+    #[test]
+    fn topo_test() {
+        let a = call_t1();
+        let b = call_t1();
+        println!("{:?}", a.id());
+        println!("{:?}", b.id());
+        assert_eq!(a, b);
+
+        let a = t2_in_topo(1);
+        let b = t2_in_topo(1);
+        println!("{:?}", a.id());
+        println!("{:?}", b.id());
+        assert_eq!(a, b);
+
+        let a = t3();
+        let b = t3();
+        println!("{:?}", a.id());
+        println!("{:?}", b.id());
+        assert_eq!(a, b);
+
+        let a = call_t3_in_topo();
+        let b = call_t3_in_topo();
+        println!("{:?}", a.id());
+        println!("{:?}", b.id());
+        assert_ne!(a, b);
+
+        let a = call_call_t3();
+        let b = call_call_t3();
+        println!("{:?}", a.id());
+        println!("{:?}", b.id());
+        assert_eq!(a, b);
+    }
     #[test]
     fn it_works() {
         let _f = dict! {1=>2};
         let x = Rc::new(X {
-            a: use_state(0),
-            b: use_state(vec![]),
-            c: use_state(0),
+            a: use_state(|| 0),
+            b: use_state(|| vec![]),
+            c: use_state(|| 0),
         });
 
         let new_b: StateAnchor<Vec<i32>> =

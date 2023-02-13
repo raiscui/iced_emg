@@ -1,14 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-01-30 23:20:16
+ * @LastEditTime: 2023-02-01 18:35:54
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg::{Direction, EdgeIndex};
-
-use crate::GraphType;
 
 use super::{GraphEditManyMethod, GraphEditor};
 
@@ -63,15 +61,12 @@ mod test {
         GTreeBuilderFn, GraphType,
     };
 
-    use super::*;
-
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     enum Message {}
 
     #[test]
     fn test_edge_path_change_source() {
         insta::with_settings!({snapshot_path => Path::new("./insta")},{
-         //TODO work here 添加边 节点 等 使测试正常
          let emg_graph = GraphType::<Message>::default();
          let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
 
@@ -81,7 +76,7 @@ mod test {
          // node ────────────────────────────────────────────────────────────────────────────────
 
          GraphNodeBuilder::new(root_id.clone())
-             .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
                  Layer::<Message>::new(root_id.clone()).into(),
              ))))
              .with_incoming_eix_set([root_edge_ix.clone()].into_iter().collect())
@@ -101,7 +96,7 @@ mod test {
          // node ────────────────────────────────────────────────────────────────────────────────
 
          GraphNodeBuilder::new(id.clone())
-             .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
                  Layer::<Message>::new(id.clone()).into(),
              ))))
              .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
@@ -122,7 +117,7 @@ mod test {
          // node ────────────────────────────────────────────────────────────────────────────────
 
          GraphNodeBuilder::new(id.clone())
-             .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
                  Layer::<Message>::new(id.clone()).into(),
              ))))
              .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
@@ -143,7 +138,7 @@ mod test {
          // node ────────────────────────────────────────────────────────────────────────────────
 
          GraphNodeBuilder::new(id.clone())
-             .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
                  Layer::<Message>::new(id.clone()).into(),
              ))))
              .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())

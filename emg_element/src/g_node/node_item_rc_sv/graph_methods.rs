@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-01-25 20:44:34
+ * @LastEditTime: 2023-02-01 20:56:52
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,7 +23,7 @@ pub trait GraphMethods<Message, Ix = IdStr> {
     fn runtime_prepare(
         &self,
         ix: &IdStr,
-        ctx: &StateAnchor<PaintCtx>,
+        painter: &StateAnchor<PaintCtx>,
         events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (EventMatchsSa<Message>, StateAnchor<Rc<Self::SceneCtx>>);
@@ -76,11 +76,11 @@ where
     //         .filter_map(move |_k, gel| gel.as_builder().map(|nb| nb.event_matchs(&events)));
     // }
 
-    #[tracing::instrument(skip(self, events_sa, ctx, cursor_position))]
+    #[tracing::instrument(skip(self, events_sa, painter, cursor_position))]
     fn runtime_prepare(
         &self,
         ix: &IdStr,
-        ctx: &StateAnchor<PaintCtx>,
+        painter: &StateAnchor<PaintCtx>,
         events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (EventMatchsSa<Message>, StateAnchor<Rc<Self::SceneCtx>>) {
@@ -135,9 +135,9 @@ where
                 })
                 .into();
 
-        let ctx_clone = ctx.clone();
+        let painter_clone = painter.clone();
 
-        let ctx_sa = gel_rc_sa.then(move |gel| gel.paint_sa(&ctx_clone).into_anchor());
+        let ctx_sa = gel_rc_sa.then(move |gel| gel.paint_sa(&painter_clone).into_anchor());
         debug!("runtime prepare end");
 
         (event_matchs, ctx_sa)

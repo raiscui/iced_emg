@@ -1,0 +1,38 @@
+---
+source: emg_element/src/widget/checkbox.rs
+assertion_line: 642
+expression: gtree
+---
+GTreeBuilderElement::GElementTree(
+    "default_id",
+    "with Some Edge Vector...size:0",
+    GElement::Generic_(
+        Checkbox {
+            is_checked: false,
+            label: "checkbox",
+            id: None,
+            width: Simplex(
+                ExactLengthSimplex {
+                    unit: Px,
+                    value: NotNan(
+                        0.0,
+                    ),
+                },
+            ),
+        },
+    ),
+    [
+        GTreeBuilderElement::Event(
+            "default_id|CLICK",
+            EventNode<Message>(
+                EventMessage(
+                    EventIdentify(
+                        2,
+                        19,
+                    ),
+                    "EventMessageFn<Message>",
+                ),
+            ),
+        ),
+    ],
+)

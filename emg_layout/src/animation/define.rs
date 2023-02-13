@@ -45,7 +45,7 @@ where
     fn from(v: T) -> Self {
         trace!("{} to StateVarProperty", &std::any::type_name::<T>());
 
-        Self(use_state(v.into()))
+        Self(use_state(|| v.into()))
     }
 }
 
@@ -54,11 +54,10 @@ impl From<StateVarProperty> for StateVar<GenericSizeAnchor> {
     fn from(sv: StateVarProperty) -> Self {
         trace!("StateVarProperty to StateVar<GenericSizeAnchor>");
 
-        use_state(
+        use_state(||
             //
             //TODO impl new_from
-            GenericSizeAnchor(sv.watch().map(|p| p.clone().into())),
-        )
+            GenericSizeAnchor(sv.watch().map(|p| p.clone().into())))
     }
 }
 impl std::ops::ShlAssign<&StateVarProperty> for StateVar<GenericSizeAnchor> {

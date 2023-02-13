@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-01-31 10:11:09
+ * @LastEditTime: 2023-02-13 14:59:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,9 +16,9 @@ use anchors::{
     singlethread::MultiAnchor,
 };
 use emg_common::{TypeCheck, TypeName};
-use tracing::{debug, debug_span, warn};
+use tracing::{debug, debug_span, error, error_span, warn};
 
-use std::{hash::BuildHasherDefault, panic::Location};
+use std::{hash::BuildHasherDefault, ops::Deref, panic::Location};
 // use im::HashMap;
 use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
@@ -41,6 +41,8 @@ use indexmap::IndexMap as HashMap;
 // use rustc_hash::FxHashMap as HashMap;
 // use rustc_hash::FxHasher as CustomHasher;
 use emg_hasher::CustomHasher;
+
+use crate::error::Error;
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(clippy::module_name_repetitions)]
@@ -92,16 +94,19 @@ impl GStateStore {
     /// # Panics
     ///
     /// Will panic if engine cannot `borrow_mut`
+    #[track_caller]
     fn engine_get<O: Clone + 'static>(&self, anchor: &Anchor<O>) -> O {
         trace!("engine_get: {}", &std::any::type_name::<O>());
         let _g = trace_span!("-> enging_get", "type: {}", &std::any::type_name::<O>()).entered();
 
         self.engine.try_borrow_mut().map_or_else(
             |err| {
+                let x = &*illicit::expect::<LocationEngineGet>();
                 panic!(
-                    "can't borrow_mut engine err: {} , for anchor type: {}",
+                    "can't borrow_mut engine err: {} , for anchor type: {},\n at:{}",
                     &err,
-                    &std::any::type_name::<O>()
+                    &std::any::type_name::<O>(),
+                    x.0
                 )
             },
             |mut e| {
@@ -116,6 +121,48 @@ impl GStateStore {
             },
         )
     }
+
+    /// # Panics
+    ///
+    /// Will panic if engine cannot `borrow_mut`
+    #[track_caller]
+    fn try_engine_get<O: Clone + 'static>(&self, anchor: &Anchor<O>) -> Result<O, Error> {
+        self.engine.try_borrow_mut().map_or_else(
+            |err| {
+                let x = *illicit::expect::<LocationEngineGet>().deref();
+
+                #[cfg(feature = "engine-try-borrow-mut-no-panic")]
+                {
+                    let e = format!(
+                        "can't borrow_mut engine err: {} , for anchor type: {}",
+                        &err,
+                        &std::any::type_name::<O>(),
+                    );
+                    Err(Error::EngineAlreadyMut(x, e))
+                }
+                #[cfg(not(feature = "engine-try-borrow-mut-no-panic"))]
+                {
+                    panic!(
+                        "can't borrow_mut engine err: {} , for anchor type: {},\n at:{}",
+                        &err,
+                        &std::any::type_name::<O>(),
+                        x.0
+                    )
+                }
+            },
+            |mut e| {
+                let _gg = trace_span!(
+                    "-> enging_get:engine borrow_muted , now getting.. ",
+                    "type: {}",
+                    &std::any::type_name::<O>()
+                )
+                .entered();
+
+                Ok(e.get(anchor))
+            },
+        )
+    }
+
     fn engine_get_with<O: Clone + 'static, F: FnOnce(&O) -> R, R>(
         &self,
         anchor: &Anchor<O>,
@@ -326,6 +373,60 @@ impl GStateStore {
             panic!("panic current using find why here 2");
         }
     }
+
+    #[track_caller]
+    fn or_insert_var_with_key<F: FnOnce() -> T, T: 'static + std::fmt::Debug>(
+        &mut self,
+        func: F,
+        current_id: &StorageKey,
+    ) {
+        //unwrap or default to keep borrow checker happy
+        trace!(
+            "use_state::or_insert_var_with_key::({})",
+            &std::any::type_name::<T>()
+        );
+
+        let key = self.id_to_key_map.get(current_id).copied();
+
+        match key {
+            Some(k) => {
+                #[cfg(debug_assertions)]
+                {
+                    let loc = Location::caller();
+
+                    let old = StateVar::<T>::new(*current_id.as_topo_key().unwrap());
+                    let old_v = old.get_rc();
+                    warn!( "this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {},\n old_v:{:?}",
+                        &std::any::type_name::<T>(),
+                        &loc,
+                        // id,
+                        &old_v
+                    );
+                }
+
+                if let Some(existing_secondary_map) = self.get_mut_secondarymap::<T>() {
+                    if !existing_secondary_map.contains_key(k) {
+                        existing_secondary_map.insert(k, Var::new(func()));
+                    }
+                } else {
+                    panic!("panic current using find why here 2");
+                }
+            }
+            None => {
+                let key = self.primary_slotmap.insert(*current_id);
+                self.id_to_key_map.insert(*current_id, key);
+                if let Some(sec_map) = self.get_mut_secondarymap::<T>() {
+                    //TODO  use (var,secondarymap) replace (var, HashMap::default())
+                    sec_map.insert(key, Var::new(func()));
+                } else {
+                    self.register_secondarymap::<T>();
+                    self.get_mut_secondarymap::<T>()
+                        .unwrap()
+                        .insert(key, Var::new(func()));
+                }
+            }
+        }
+    }
     // fn get_similar_map<T: Clone + 'static>(
     //     &mut self,
     //     id: &StorageKey,
@@ -473,79 +574,6 @@ impl GStateStore {
         debug!("fns: {:?}", &fns.keys());
         fns.remove(after_fn_id);
     }
-
-    // #[must_use]
-    // fn opt_get_var_and_bf_use_id<T: 'static>(
-    //     &self,
-    //     current_id: &StorageKey,
-    // ) -> (&Var<T>, Option<&SynCallBeforeFnsMap<T>>) {
-    //     match (
-    //         self.id_to_key_map.get(current_id),
-    //         self.get_secondarymap::<T>(),
-    //         self.get_before_secondarymap::<T>(),
-    //     ) {
-    //         (
-    //             Some(existing_key),
-    //             Some(existing_secondary_map),
-    //             Some(existing_before_secondary_map),
-    //         ) => {
-    //             let v = existing_secondary_map.get(*existing_key);
-    //             let b = existing_before_secondary_map.get(*existing_key);
-    //             trace!("v: {:?} b: {:?}", v.is_some(), b.is_some());
-
-    //             match v {
-    //                 Some(vv) => (vv, b),
-    //                 None => {
-    //                     panic!("can't get var , use existing_secondary_map, key:existing_key")
-    //                 }
-    //             }
-    //         }
-    //         (key, sec_map, before_sec_map) => {
-    //             panic!(
-    //                 "can't get existing_key or maybe other map-> key:{},sec_map:{},before_sec_map:{}",
-    //                 key.is_some(),
-    //                 sec_map.is_some(),
-    //                 before_sec_map.is_some()
-    //             );
-    //         }
-    //     }
-    // }
-    // #[must_use]
-    // fn opt_get_var_and_af_use_id<T: 'static>(
-    //     &self,
-    //     current_id: &StorageKey,
-    // ) -> (&Var<T>, Option<&SynCallAfterFnsMap<T>>) {
-    //     match (
-    //         self.id_to_key_map.get(current_id),
-    //         self.get_secondarymap::<T>(),
-    //         self.get_after_secondarymap::<T>(),
-    //     ) {
-    //         (
-    //             Some(existing_key),
-    //             Some(existing_secondary_map),
-    //             Some(existing_after_secondary_map),
-    //         ) => {
-    //             let v = existing_secondary_map.get(*existing_key);
-    //             let a = existing_after_secondary_map.get(*existing_key);
-    //             trace!("v: {:?} a: {:?}", v.is_some(), a.is_some());
-
-    //             match v {
-    //                 Some(vv) => (vv, a),
-    //                 None => {
-    //                     panic!("can't get var , use existing_secondary_map, key:existing_key")
-    //                 }
-    //             }
-    //         }
-    //         (key, sec_map, after_sec_map) => {
-    //             panic!(
-    //                 "can't get existing_key or maybe other map-> key:{},sec_map:{},after_sec_map:{}",
-    //                 key.is_some(),
-    //                 sec_map.is_some(),
-    //                 after_sec_map.is_some()
-    //             );
-    //         }
-    //     }
-    // }
 
     #[must_use]
     fn opt_get_var_and_bf_af_use_id<T: 'static>(
@@ -870,7 +898,7 @@ where
     fn store_set(&self, store: &GStateStore, value: T);
     fn set_with_opt_once<F: FnOnce(&T) -> Option<T>>(&self, func_once: F);
     fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F);
-    fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
+    // fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
     fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F);
     fn set_with<F: Fn(&T) -> T>(&self, func: F);
     // fn try_get(&self) -> Option<T>;
@@ -952,32 +980,54 @@ where
         let current = var.get();
         start_set_var_and_run_before_after(&s_key, var, current, value, before_fns, after_fns);
     }
-    fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
-        let (var, before_fns, after_fns) = store
-            .opt_get_var_and_bf_af_use_id::<T>(&StorageKey::TopoKey(self.id))
-            // .cloned()
-            .expect("You are trying to get a var state that doesn't exist in this context!");
+    //TODO remove this use set_with_opt_once
+    // fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
+    //     let (var, before_fns, after_fns) = store
+    //         .opt_get_var_and_bf_af_use_id::<T>(&StorageKey::TopoKey(self.id))
+    //         // .cloned()
+    //         .expect("You are trying to get a var state that doesn't exist in this context!");
 
-        let current = var.get();
-        let data = func(&current);
+    //     let current = var.get();
+    //     let data = func(&current);
 
-        start_set_var_and_run_before_after(
-            // store,
-            &StorageKey::TopoKey(self.id),
-            var,
-            current,
-            data,
-            before_fns,
-            after_fns,
-        );
-    }
+    //     start_set_var_and_run_before_after(
+    //         // store,
+    //         &StorageKey::TopoKey(self.id),
+    //         var,
+    //         current,
+    //         data,
+    //         before_fns,
+    //         after_fns,
+    //     );
+    // }
 
+    //TODO remove this use set_with_opt_once
     fn set_with<F: Fn(&T) -> T>(&self, func: F) {
         read_var_b_a_with_topo_id::<_, T, ()>(
             self.id,
             |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
                 let current = var.get();
                 let data = func(&current);
+                start_set_var_and_run_before_after(
+                    // store,
+                    &StorageKey::TopoKey(self.id),
+                    var,
+                    current,
+                    data,
+                    before_fns,
+                    after_fns,
+                );
+            },
+        );
+    }
+    //TODO remove this function use set_with_opt_once
+    fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
+        read_var_b_a_with_topo_id::<_, T, ()>(
+            self.id,
+            |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
+                let current = var.get();
+                let data = func_once(&current);
+
                 start_set_var_and_run_before_after(
                     // store,
                     &StorageKey::TopoKey(self.id),
@@ -1010,25 +1060,6 @@ where
             },
         );
     }
-    fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
-        read_var_b_a_with_topo_id::<_, T, ()>(
-            self.id,
-            |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
-                let current = var.get();
-                let data = func_once(&current);
-
-                start_set_var_and_run_before_after(
-                    // store,
-                    &StorageKey::TopoKey(self.id),
-                    var,
-                    current,
-                    data,
-                    before_fns,
-                    after_fns,
-                );
-            },
-        );
-    }
 
     fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F) {
         let (var,before_fns,after_fns) = store
@@ -1053,6 +1084,7 @@ where
     //     clone_state_with_topo_id::<T>(self.id).map(|v| (*v.get()).clone())
     // }
 
+    //TODO use bool(changed?) func
     fn update<F: FnOnce(&mut T)>(&self, func: F) {
         // read_var_with_topo_id::<_, T, ()>(self.id, |var| {
         //     let mut old = (*var.get()).clone();
@@ -1086,7 +1118,7 @@ where
     // where
     //     B: From<T> + Clone + 'static,
     // {
-    //     let b = use_state(self.get().into());
+    //     let b = use_state(||self.get().into());
     //     StateVarDi::new_use_into(*self, b)
     // }
     // #[topo::nested]
@@ -1095,7 +1127,7 @@ where
     //     B: From<T> + Clone + 'static,
     //     T: From<B> + 'static,
     // {
-    //     let b = use_state(self.get().into());
+    //     let b = use_state(||self.get().into());
     //     (
     //         StateVarDi::new_use_into(*self, b),
     //         StateVarDi::new_use_into(b, *self),
@@ -1138,7 +1170,7 @@ where
         &self,
     ) -> StateVar<B> {
         let v = self.get();
-        let b: StateVar<B> = use_state(v.into());
+        let b: StateVar<B> = use_state(|| v.into());
         insert_before_fn_common(
             self,
             &StorageKey::TopoKey(b.id),
@@ -1158,7 +1190,7 @@ where
         T: std::fmt::Debug,
     {
         let v = self.get();
-        let b: StateVar<B> = use_state(v.into());
+        let b: StateVar<B> = use_state(|| v.into());
 
         let this = *self;
 
@@ -1208,9 +1240,17 @@ impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateAnchor<T
 }
 
 impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateAnchor<T> {
+    #[track_caller]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let v = self.get();
-        f.debug_tuple("StateAnchor").field(&v).finish()
+        match self.try_get() {
+            Ok(v) => f.debug_tuple("StateAnchor").field(&v).finish(),
+            Err(e) => {
+                eprintln!("error:!!!!!!!!!!!! \n---- {}", e);
+                f.debug_tuple("StateAnchor")
+                    .field(&"_err_can_not_get_mut_engine_")
+                    .finish()
+            }
+        }
     }
 }
 impl<T> From<Anchor<T>> for StateAnchor<T>
@@ -1233,6 +1273,7 @@ impl<T> From<T> for StateAnchor<T>
 where
     T: 'static,
 {
+    #[track_caller]
     fn from(v: T) -> Self {
         Self::constant(v)
     }
@@ -1243,19 +1284,61 @@ where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
+    fn try_get(&self) -> Result<T, Error>;
     fn get_with<F: FnOnce(&T) -> R, R>(&self, func: F) -> R;
 
     fn store_get(&self, store: &GStateStore) -> T;
     fn store_get_with<F: FnOnce(&T) -> R, R>(&self, store: &GStateStore, func: F) -> R;
-    fn engine_get_with<F: FnOnce(&T) -> R, R>(&self, engine: &mut Engine, func: F) -> R;
 }
+
+#[derive(Copy, Clone, Debug)]
+pub struct LocationEngineGet(&'static Location<'static>);
+
+impl LocationEngineGet {
+    #[track_caller]
+    pub fn new() -> Self {
+        match illicit::get::<LocationEngineGet>().as_deref() {
+            Ok(x) => *x,
+            Err(_) => LocationEngineGet(Location::caller()),
+        }
+    }
+    #[track_caller]
+    pub fn reset_new() -> Self {
+        LocationEngineGet(Location::caller())
+    }
+}
+
+impl Deref for LocationEngineGet {
+    type Target = &'static Location<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl<T> CloneStateAnchor<T> for StateAnchor<T>
 where
     T: Clone + 'static,
 {
+    #[track_caller]
     fn get(&self) -> T {
+        // let loc = LocationEngineGet::reset_new();
+        // illicit::Layer::new().offer(loc).enter(|| {
+        let _span = debug_span!("StateAnchor::get").entered();
         global_engine_get_anchor_val(&self.0)
+        // })
     }
+
+    #[track_caller]
+    fn try_get(&self) -> Result<T, Error> {
+        let loc = LocationEngineGet::new();
+
+        illicit::Layer::new().offer(loc).enter(|| {
+            let _span = debug_span!("StateAnchor::get").entered();
+            try_global_engine_get_anchor_val(&self.0)
+        })
+    }
+
     fn get_with<F: FnOnce(&T) -> R, R>(&self, func: F) -> R {
         global_engine_get_anchor_val_with(&self.0, func)
     }
@@ -1264,9 +1347,6 @@ where
     }
     fn store_get_with<F: FnOnce(&T) -> R, R>(&self, store: &GStateStore, func: F) -> R {
         store.engine_get_with(&self.0, func)
-    }
-    fn engine_get_with<F: FnOnce(&T) -> R, R>(&self, engine: &mut Engine, func: F) -> R {
-        GStateStore::engine_get_with2(engine, &self.0, func)
     }
 }
 
@@ -1332,8 +1412,10 @@ impl<T> StateAnchor<T>
 where
     T: 'static,
 {
+    #[track_caller]
     pub fn constant(val: T) -> Self {
-        G_STATE_STORE.with(|_g_state_store_refcell| Self(Anchor::constant(val)))
+        G_STATE_STORE.with(|_g_state_store_refcell| {});
+        Self(Anchor::constant(val))
     }
 
     #[must_use]
@@ -1609,17 +1691,40 @@ pub enum StorageKey {
     TopoKey(TopoKey),
 }
 
+impl StorageKey {
+    #[must_use]
+    pub fn as_topo_key(&self) -> Option<&TopoKey> {
+        if let Self::TopoKey(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
 impl From<TopoKey> for StorageKey {
     fn from(v: TopoKey) -> Self {
         Self::TopoKey(v)
     }
 }
 
+#[track_caller]
+//TODO replace use global_engine_get_anchor_val_with - Clone
 fn global_engine_get_anchor_val<O: Clone + 'static>(anchor: &Anchor<O>) -> O {
     trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
 
     G_STATE_STORE.with(|g_state_store_refcell| g_state_store_refcell.borrow().engine_get(anchor))
 }
+
+#[track_caller]
+fn try_global_engine_get_anchor_val<O: Clone + 'static>(anchor: &Anchor<O>) -> Result<O, Error> {
+    trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
+
+    G_STATE_STORE
+        .with(|g_state_store_refcell| g_state_store_refcell.borrow().try_engine_get(anchor))
+}
+
+#[track_caller]
 fn global_engine_get_anchor_val_with<O: Clone + 'static, F: FnOnce(&O) -> R, R>(
     anchor: &Anchor<O>,
     func: F,
@@ -1630,18 +1735,6 @@ fn global_engine_get_anchor_val_with<O: Clone + 'static, F: FnOnce(&O) -> R, R>(
         .with(|g_state_store_refcell| g_state_store_refcell.borrow().engine_get_with(anchor, func))
 }
 
-///
-///  Uses the current topological id to create a new state accessor
-///
-fn state_exists_for_topo_id<T: 'static>(id: TopoKey) -> bool {
-    G_STATE_STORE.with(|g_state_store_refcell| {
-        trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
-
-        g_state_store_refcell
-            .borrow()
-            .state_exists_with_id::<T>(StorageKey::TopoKey(id))
-    })
-}
 /// Sets the state of type T keyed to the given `TopoId`
 fn set_state_and_run_cb_with_topo_id<T: 'static + std::clone::Clone>(data: T, current_id: TopoKey) {
     G_STATE_STORE.with(|g_state_store_refcell| {
@@ -1654,6 +1747,7 @@ fn set_state_and_run_cb_with_topo_id<T: 'static + std::clone::Clone>(data: T, cu
             .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 
         let current = var.get();
+
         start_set_var_and_run_before_after(&s_key, var, current, data, before_fns, after_fns);
     });
 
@@ -1677,6 +1771,20 @@ fn set_in_callback<T: 'static + std::fmt::Debug + std::clone::Clone>(
 
     // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
 }
+
+///
+///  Uses the current topological id to create a new state accessor
+///
+fn state_exists_for_topo_id<T: 'static>(id: TopoKey) -> bool {
+    G_STATE_STORE.with(|g_state_store_refcell| {
+        trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
+
+        g_state_store_refcell
+            .borrow()
+            .state_exists_with_id::<T>(StorageKey::TopoKey(id))
+    })
+}
+
 fn insert_var_with_topo_id<T: 'static>(var: Var<T>, current_id: TopoKey) {
     G_STATE_STORE.with(|g_state_store_refcell| {
         trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
@@ -1685,34 +1793,23 @@ fn insert_var_with_topo_id<T: 'static>(var: Var<T>, current_id: TopoKey) {
             .borrow_mut()
             .insert_var_with_key::<T>(var, &StorageKey::TopoKey(current_id));
     });
-
-    // execute_reaction_nodes(&StorageKey::TopoKey(current_id));
 }
-// fn clone_state_with_topo_id<T: 'static>(id: TopoKey) -> Option<Var<T>> {
-//     G_STATE_STORE.with(|g_state_store_refcell| {
-//         trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
 
-//         g_state_store_refcell
-//             .borrow_mut()
-//             .opt_get_state_and_bf_af_use_id::<T>(&StorageKey::TopoKey(id))
-//             .map(|v| &v.0)
-//             .cloned()
-//     })
-// }
+fn or_insert_var_with_topo_id<F: FnOnce() -> T, T: 'static + std::fmt::Debug>(
+    func: F,
+    current_id: TopoKey,
+) {
+    G_STATE_STORE.with(|g_state_store_refcell| {
+        trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
+
+        g_state_store_refcell
+            .borrow_mut()
+            .or_insert_var_with_key::<F, T>(func, &StorageKey::TopoKey(current_id));
+    });
+}
 
 #[inline]
 fn read_val_with_topo_id<F: FnOnce(&T) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
-    // G_STATE_STORE.with(|g_state_store_refcell| {
-    //     func(
-    //         g_state_store_refcell
-    //             .borrow_mut()
-    //             .get_state_with_id::<T>(&StorageKey::TopoKey(id))
-    //             .expect("You are trying to get a var state that doesn't exist in this context!")
-    //             .get()
-    //             .as_ref(),
-    //     )
-    // })
-
     read_var_with_topo_id::<_, T, R>(id, |var: &Var<T>| func(var.get().as_ref()))
 }
 
@@ -1741,13 +1838,6 @@ fn read_var_with_topo_id<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, fu
             .expect("You are trying to get a var state that doesn't exist in this context!");
 
         func(var)
-
-        // func(
-        //     // &store,
-        //     store
-        //         .get_state_and_bf_af_use_id::<T>(&StorageKey::TopoKey(id))
-        //         .expect("You are trying to get a var state that doesn't exist in this context!"),
-        // )
     })
 }
 fn read_var_b_a_with_topo_id<F: FnOnce(VarOptBAfnCollectRef<T>) -> R, T: 'static, R>(
@@ -1762,12 +1852,6 @@ fn read_var_b_a_with_topo_id<F: FnOnce(VarOptBAfnCollectRef<T>) -> R, T: 'static
             .opt_get_var_and_bf_af_use_id::<T>(&StorageKey::TopoKey(id))
             .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 
-        // func(
-        //     // &store,
-        //     store
-        //         .get_state_and_bf_af_use_id::<T>(&StorageKey::TopoKey(id))
-        //         .expect("You are trying to get a var state that doesn't exist in this context!"),
-        // )
         func(var_b_a)
     })
 }
@@ -1894,45 +1978,33 @@ pub fn get_caller_location2() {
 
 #[must_use]
 #[topo::nested]
-#[allow(clippy::if_not_else)]
-pub fn use_state<T>(data: T) -> StateVar<T>
+pub fn use_state<F: FnOnce() -> T, T>(func: F) -> StateVar<T>
 where
     T: 'static + std::fmt::Debug,
 {
-    // info!(
-    //     "use_state::({}) \n data: {:?}",
-    //     &std::any::type_name::<T>(),
-    //     &data
-    // );
-    trace!(
-        "use_state::({}) \n data: {:?}",
-        &std::any::type_name::<T>(),
-        &data
-    );
-    let loc = Location::caller();
-    trace!("use_state::at:\n{}", &loc);
+    trace!("use_state::({}) \n", &std::any::type_name::<T>(),);
 
     let id = topo::CallId::current();
     let id = TopoKey { id };
     trace!("use_state::TopoKey:\n{:#?}", &id);
 
-    if !state_exists_for_topo_id::<T>(id) {
-        insert_var_with_topo_id::<T>(Var::new(data), id);
-    } else if cfg!(debug_assertions) {
-        let old = StateVar::<T>::new(id);
-        let old_v = old.get_rc();
-        warn!(
-        "this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {}, \n v:{:?},\n old_v:{:?}",
-        &std::any::type_name::<T>(),
-        &loc,
-        // id,
-        &data,
-        &old_v
-
-
-        );
-    } else {
-    }
+    // if !state_exists_for_topo_id::<T>(id) {
+    //     insert_var_with_topo_id::<T>(Var::new(data), id);
+    // } else {
+    //     #[cfg(debug_assertions)]
+    //     {
+    //         let old = StateVar::<T>::new(id);
+    //         let old_v = old.get_rc();
+    //         warn!( "this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {}, \n v:{:?},\n old_v:{:?}",
+    //             &std::any::type_name::<T>(),
+    //             &loc,
+    //             // id,
+    //             &data,
+    //             &old_v
+    //         );
+    //     }
+    // }
+    or_insert_var_with_topo_id(func, id);
     StateVar::new(id)
 }
 
@@ -2037,7 +2109,7 @@ mod state_test {
     // #[wasm_bindgen_test]
     fn callback() {
         let _g = _init();
-        let a = use_state(1);
+        let a = use_state(|| 1);
         let b = a.build_similar_use_into_in_topo::<TT>();
         debug!("init: a:{:?} b:{:?}", &a, &b);
         a.set(2);
@@ -2061,8 +2133,8 @@ mod state_test {
     fn callback2_clone() {
         let _g = _init();
 
-        let a = use_state(1);
-        let a_2 = use_state(11);
+        let a = use_state(|| 1);
+        let a_2 = use_state(|| 11);
         let update_id_a_2 = TopoKey::new(topo::call(topo::CallId::current));
         trace!("update_id_a_2:{:#?}", &update_id_a_2);
         a_2.insert_before_fn(
@@ -2086,8 +2158,8 @@ mod state_test {
     fn callback2() {
         let _g = _init();
 
-        let a = use_state(1);
-        let a_2 = use_state(1);
+        let a = use_state(|| 1);
+        let a_2 = use_state(|| 1);
         let update_id_a_2 = TopoKey::new(topo::call(topo::CallId::current));
 
         a_2.insert_before_fn(
@@ -2137,7 +2209,7 @@ mod state_test {
             true,
         )
         .expect("");
-        let e = use_state(11);
+        let e = use_state(|| 11);
         c.insert_after_fn(
             e.id.into(),
             move |skip, v| {
@@ -2171,7 +2243,7 @@ mod state_test {
     #[test]
     // #[wasm_bindgen_test]
     fn update() {
-        let a = use_state(111);
+        let a = use_state(|| 111);
         a.update(|aa| *aa += 1);
         println!("{}", &a);
         assert_eq!(112, a.get());
@@ -2185,9 +2257,9 @@ mod state_test {
     #[wasm_bindgen_test]
 
     fn sa_in_sv() {
-        let x = use_state(1);
+        let x = use_state(|| 1);
         let xw = x.watch();
-        let a = use_state(xw);
+        let a = use_state(|| xw);
         println!("{}", a);
         println!("{}", a.get());
         assert_eq!(1, a.get());
@@ -2201,7 +2273,7 @@ mod state_test {
     #[test]
     #[wasm_bindgen_test]
     fn xx() {
-        let a = use_state(99);
+        let a = use_state(|| 99);
 
         let b = a.watch();
         let b2 = a.watch();
@@ -2238,10 +2310,10 @@ mod state_test {
     #[test]
     fn test_map_eq() {
         let mut dict = Dict::new();
-        let a = use_state(dict.clone());
-        let a_node1 = use_state(1);
-        let a_node2 = use_state(2);
-        let a_node0 = use_state(0);
+        let a = use_state(|| dict.clone());
+        let a_node1 = use_state(|| 1);
+        let a_node2 = use_state(|| 2);
+        let a_node0 = use_state(|| 0);
 
         let b = a.watch().map_(|_, x: &StateVar<i32>| {
             x.set(x.get() + 1);
@@ -2277,10 +2349,10 @@ mod state_test {
     #[test]
     fn test_map_anchor_eq() {
         let mut dict = Dict::new();
-        let a = use_state(dict.clone());
-        let a_node1 = use_state(1);
-        let a_node2 = use_state(2);
-        let a_node0 = use_state(0);
+        let a = use_state(|| dict.clone());
+        let a_node1 = use_state(|| 1);
+        let a_node2 = use_state(|| 2);
+        let a_node0 = use_state(|| 0);
 
         let b = a.watch().map_(|_, x: &StateAnchor<i32>| x.map(|xx| xx + 1));
 

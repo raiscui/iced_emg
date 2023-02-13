@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2022-09-14 16:36:59
+ * @LastEditTime: 2023-02-04 00:57:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,18 +25,25 @@ use crate::Shaping;
 //     }
 // }
 
+pub trait ShapingUseOtherShaper<Use> {
+    #[must_use]
+    fn shaping_use_other_shaper(&mut self, updater: &dyn Shaping<Use>) -> bool;
+}
+
 // ────────────────────────────────────────────────────────────────────────────────
 #[allow(clippy::module_name_repetitions)]
-pub trait ShapeOfUse<Who> {
-    fn shape_of_use(&mut self, updater: &dyn Shaping<Who>);
+pub trait ShapingUseDyn {
+    #[must_use]
+    fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Self>) -> bool;
 }
 // ────────────────────────────────────────────────────────────────────────────────
 // @ impl ShapeOfUse ────────────────────────────────────────────────────────────────────────────────
 
-impl<Who> ShapeOfUse<Self> for Who {
+impl<Who> ShapingUseDyn for Who {
     // #[inline]
-    default fn shape_of_use(&mut self, updater: &dyn Shaping<Self>) {
-        updater.shaping(self);
+    #[must_use]
+    default fn shaping_use_dyn(&mut self, updater: &dyn Shaping<Self>) -> bool {
+        updater.shaping(self)
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
@@ -62,16 +69,19 @@ mod updater_test1 {
     impl ShapingWhoNoWarper for String {}
     impl ShapingUseNoWarper for String {}
     impl Shaping<Self> for String {
-        fn shaping(&self, el: &mut Self) {
+        fn shaping(&self, el: &mut Self) -> bool {
             *el = format!("{},{}", el, self);
+            true
         }
     }
     impl Shaping<i32> for String {
-        fn shaping(&self, el: &mut i32) {
+        fn shaping(&self, el: &mut i32) -> bool {
             *el = i32::try_from(self.len()).unwrap();
+            true
         }
     }
 
+    #[test]
     #[wasm_bindgen_test]
     fn realtime_update() {
         setup_tracing();
@@ -84,15 +94,15 @@ mod updater_test1 {
         let rca = Rc::new(a.clone());
         let rc_b_string = Rc::new(b);
 
-        f.shape_of_use(&a);
-        f.shape_of_use(rca.as_ref());
-        f.shape_of_use(rca.as_ref());
-        f.shape_of_use(rc_b_string.as_ref());
+        f.shaping_use_dyn(&a);
+        f.shaping_use_dyn(rca.as_ref());
+        f.shaping_use_dyn(rca.as_ref());
+        f.shaping_use_dyn(rc_b_string.as_ref());
 
         let mut n = 0;
 
-        n.shape_of_use(&f);
-        f.shape_of_use(&n);
+        n.shaping_use_dyn(&f);
+        f.shaping_use_dyn(&n);
 
         // let xxx: i16 = 2;
 

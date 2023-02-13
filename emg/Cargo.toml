@@ -11,7 +11,7 @@ split-debuginfo = "unpacked"
 [lib]
 name = "emg"
 bench = false
-crate-type = ["cdylib", "rlib"]
+# crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []

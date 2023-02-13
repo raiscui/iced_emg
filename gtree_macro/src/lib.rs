@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(is_some_and)]
 // ────────────────────────────────────────────────────────────────────────────────
-
+use proc_macro_crate::{crate_name, FoundCrate};
 // use std::collections::HashSet as Set;
 
 // use trace_var::trace_var;
@@ -14,8 +14,11 @@ use cassowary::Cassowary;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
-use syn::parse::{discouraged::Speculative, Parse, ParseStream};
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
+use syn::{
+    parse::{discouraged::Speculative, Parse, ParseStream},
+    Expr,
+};
 
 use syn::{Ident, Token};
 // use uuid::Uuid;
@@ -36,6 +39,7 @@ pub mod kw {
     syn::custom_keyword!(Event);
     syn::custom_keyword!(E);
     syn::custom_keyword!(Mod);
+    syn::custom_keyword!(SkipInit);
     // syn::custom_keyword!(Dyn);
 
     // impl Debug for layer {
@@ -46,7 +50,7 @@ pub mod kw {
 }
 //@ ID ──────────────────────────────
 #[derive(Debug, Default)]
-struct ID(Option<Ident>);
+struct ID(Option<Expr>);
 
 impl ID {
     pub fn get(&self, def_name: &str) -> TokenStream {
@@ -63,14 +67,29 @@ impl ID {
                 }
             },
             |id| {
-                let id_string = id.to_string();
-                // println!("id:{}", &id_string);
+                // let id_string = id.to_string();
+                // if id_string.len() <= 12usize {
+                //     quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
+                // } else {
+                //     quote_spanned!(id.span()=>IdStr::new(#id_string))
+                // }
 
-                // quote_spanned!(id.span()=>String::from(#id_string))
-                if id_string.len() <= 12usize {
-                    quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
+                // quote_spanned!(id.span()=>#id)
+                // ─────────────────────────────────────────────
+
+                if let Expr::Lit(lit) = id {
+                    if let syn::Lit::Str(lit_str) = &lit.lit {
+                        let id_string = lit_str.value();
+                        if id_string.len() <= 12usize {
+                            quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
+                        } else {
+                            quote_spanned!(id.span()=>IdStr::new(#id_string))
+                        }
+                    } else {
+                        quote_spanned!(id.span()=>IdStr::from(#id))
+                    }
                 } else {
-                    quote_spanned!(id.span()=>IdStr::new(#id_string))
+                    quote_spanned!(id.span()=>IdStr::from(#id))
                 }
             },
         )
@@ -101,6 +120,7 @@ enum At {
     Id(ID),
     Edge(Edge),
     Mod,
+    SkipInit,
 }
 
 impl From<Edge> for At {
@@ -128,28 +148,20 @@ impl Parse for AtList {
             // println!("in at_list parse :{}", &input);
 
             if input.peek(Token![=]) {
-                assert!(
-                    input.peek2(Ident::peek_any),
-                    "emg-gtree_macro: should not use Rust keyword "
-                );
-                // println!("is id");
-
                 input.parse::<Token![=]>()?;
-                let id = input.parse::<Ident>()?;
+                let id = input.parse::<Expr>()?;
                 at_list.push(ID(Some(id)).into());
-            }
-            if input.peek(kw::E) {
-                // println!("is edge");
-
-                input.parse::<kw::E>()?;
+            } else if input.parse::<kw::E>().is_ok() {
                 input.parse::<Token![=]>()?;
                 at_list.push(input.parse::<Edge>()?.into());
-            }
-            if input.peek(kw::Mod) {
-                // println!("is edge");
-
-                input.parse::<kw::Mod>()?;
+            } else if input.parse::<kw::Mod>().is_ok() {
                 at_list.push(At::Mod);
+            } else if input.parse::<kw::SkipInit>().is_ok() {
+                at_list.push(At::SkipInit);
+            } else {
+                return Err(
+                    input.error(" '@' Keyword trailing content does not satisfy any matches")
+                );
             }
         }
         Ok(Self(at_list))
@@ -160,7 +172,7 @@ impl Parse for AtList {
 
 #[derive(Debug)]
 enum EdgeObject {
-    E(Box<syn::Expr>),
+    E(Box<Expr>),
     Cassowary(Box<Cassowary>),
 }
 impl ToTokens for EdgeObject {
@@ -226,7 +238,7 @@ impl ToTokens for Edge {
         let content_iter = content.iter();
         //NOTE use Rc because dyn
         quote_spanned!(
-            bracket_token.span=> vec![#(Rc::new(#content_iter) as Rc<dyn Shaping<EmgEdgeItem<_>>>),*]
+            bracket_token.span=> vec![#(std::rc::Rc::new(#content_iter) as std::rc::Rc<dyn Shaping<EmgEdgeItem<_>>>),*]
         )
         .to_tokens(tokens);
     }
@@ -259,6 +271,7 @@ impl AtSetup for GTreeClosure {
                     // panic!("closure can't be Mod");
                     return syn::Result::Err(syn::Error::new(self.span(), "closure can't be Mod"));
                 }
+                At::SkipInit => todo!(),
             }
         }
         syn::Result::Ok(())
@@ -315,6 +328,7 @@ impl AtSetup for GOnEvent {
                     return syn::Result::Err(syn::Error::new(self.span(), "On:Event can't be Mod"));
                     // panic!("On:Event can't be Mod");
                 }
+                At::SkipInit => todo!(),
             }
         }
         syn::Result::Ok(())
@@ -348,7 +362,7 @@ impl ToTokens for GOnEvent {
         let token = if closure.inputs.is_empty() {
             quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new((#event_name).into(), #closure ).into()) )
         } else if closure.inputs.len() == 3 {
-            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new((#event_name).into(),Rc::new(#closure)).into()) )
+            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new((#event_name).into(),std::rc::Rc::new(#closure)).into()) )
         } else {
             panic!("event callback argument size is must empty or three")
         };
@@ -359,16 +373,16 @@ impl ToTokens for GOnEvent {
 #[derive(Debug)]
 pub enum RefresherType {
     Callback(syn::ExprClosure),
-    Expr(syn::Expr),
+    Expr(Expr),
 }
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct GRefresher {
+pub struct GShapingUse {
     id: ID,
     kws: kw::ShapingUse,
     method: RefresherType,
 }
-impl AtSetup for GRefresher {
+impl AtSetup for GShapingUse {
     fn at_setup(&mut self, at_list: AtList) -> syn::Result<()> {
         for at in at_list.0 {
             match at {
@@ -389,13 +403,14 @@ impl AtSetup for GRefresher {
                     ));
                     // panic!("@ShapingUse can't be Mod");
                 }
+                At::SkipInit => todo!(),
             }
         }
         syn::Result::Ok(())
     }
 }
 
-impl Parse for GRefresher {
+impl Parse for GShapingUse {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let id = ID::default();
         let kws = input.parse::<kw::ShapingUse>()?;
@@ -409,7 +424,7 @@ impl Parse for GRefresher {
                 method: RefresherType::Callback(input.parse()?),
             })
         } else {
-            let expr = input.parse::<syn::Expr>()?;
+            let expr = input.parse::<Expr>()?;
             Ok(Self {
                 id,
                 kws,
@@ -419,25 +434,21 @@ impl Parse for GRefresher {
     }
 }
 
-impl ToTokens for GRefresher {
+impl ToTokens for GShapingUse {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let Self { id, kws, method } = self;
 
         let kw_token = match method {
             RefresherType::Callback(callback) => {
-                let closure_token = quote_spanned!(
-                    callback.span()=> #callback
-                );
-                let id_token = id.get("Refresh");
+                let closure_token = callback.into_token_stream();
+                let id_token = id.get("ShapingUseShaper");
 
-                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(Shaper::new(#closure_token)) as Rc<dyn EqShaping<GElement<Message>>>) )
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,std::rc::Rc::new(Shaper::new(#closure_token)) as std::rc::Rc<dyn EqShaping<GElement<Message>>>) )
             }
             RefresherType::Expr(expr) => {
-                let expr_token = quote_spanned!(
-                    expr.span()=> #expr
-                );
-                let id_token = id.get("Refresh");
-                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,Rc::new(#expr_token) as Rc<dyn EqShaping<GElement<Message>>>) )
+                let expr_token = expr.into_token_stream();
+                let id_token = id.get("ShapingUse");
+                quote_spanned! (kws.span()=>GTreeBuilderElement::#kws(#id_token,std::rc::Rc::new(#expr_token) as std::rc::Rc<dyn EqShaping<GElement<Message>>>) )
             }
         };
 
@@ -451,7 +462,7 @@ impl ToTokens for GRefresher {
 
 #[derive(Debug, Clone)]
 struct SaGel {
-    pub left: Box<syn::Expr>,
+    pub left: Box<Expr>,
     pub _map_fn_token: token::FatArrow,
     pub right: Box<syn::ExprClosure>,
 }
@@ -472,9 +483,10 @@ pub struct GTreeSurface {
     edge: Option<Edge>,
     id: ID,
     module: bool,
-    opt_expr: Option<syn::Expr>,
+    opt_expr: Option<Expr>,
     opt_sa_gel: Option<SaGel>,
     children: ChildrenType,
+    skip_init: bool,
 }
 
 impl AtSetup for GTreeSurface {
@@ -490,6 +502,9 @@ impl AtSetup for GTreeSurface {
                 }
                 At::Mod => {
                     self.module = true;
+                }
+                At::SkipInit => {
+                    self.skip_init = true;
                 }
             }
         }
@@ -515,7 +530,7 @@ impl Parse for GTreeSurface {
         );
 
         let opt_expr = if opt_sa_gel.is_none() {
-            Some(input.parse::<syn::Expr>()?)
+            Some(input.parse::<Expr>()?)
         } else {
             None
         };
@@ -544,6 +559,7 @@ impl Parse for GTreeSurface {
                     opt_expr,
                     opt_sa_gel,
                     children,
+                    skip_init: false,
                 })
             } else {
                 // panic!("还没有完成 直接 单一 无[] 的后缀.. {}",&f)
@@ -557,6 +573,7 @@ impl Parse for GTreeSurface {
                 opt_expr,
                 opt_sa_gel,
                 children: None,
+                skip_init: false,
             })
         }
     }
@@ -571,6 +588,7 @@ impl ToTokens for GTreeSurface {
             opt_expr,
             opt_sa_gel,
             children,
+            skip_init,
         } = self;
         // println!("expr===={:?}", self.expr);
         let edge_token = edge2token(edge);
@@ -647,10 +665,27 @@ impl ToTokens for GTreeSurface {
                 (None, None) | (Some(_), Some(_)) => unreachable!(),
                 (None, Some(expr)) => {
                     //NOTE Sa 不带后缀 也会转换 为 gel, = InsideUseSa_(StateAnchor<Self>),需要预处理掉
-                    quote_spanned! (expr.span() =>
-                    GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token)
-                    )
-                    .to_tokens(tokens);
+                    if *skip_init {
+                        quote_spanned! (expr.span() =>
+                            GTreeBuilderElement::GElementTree(#id_token,#edge_token,{#expr}.into(),#children_token)
+                        )
+                        .to_tokens(tokens);
+                    } else {
+                        //NOTE is builder (default case)
+                        //TODO 其他各个元素处理 skip_init
+
+                        quote_spanned! (expr.span() =>
+                        {
+                            let id = #id_token;
+                            let edges = #edge_token;
+                            let children = #children_token;
+                            #expr
+                            .tree_init_calling(&id,&edges,&children)
+                            .with_id_edge_children(id,Some(edges),Some(children))
+                        }
+                        )
+                        .to_tokens(tokens);
+                    }
                 }
                 (Some(sa_gel_func), None) => {
                     let sa_gel = &sa_gel_func.left;
@@ -658,8 +693,8 @@ impl ToTokens for GTreeSurface {
 
                     quote_spanned! (sa_gel.span() =>
 
-                            GTreeBuilderElement::GElementTree(#id_token,#edge_token,
-                                emg_bind::SaWithMapFn::new(#sa_gel,Rc::new(#sa_fn)).into()
+                            GTreeBuilderElement::GElementTree(#id_token.into(),#edge_token,
+                                emg_bind::SaWithMapFn::new(#sa_gel,std::rc::Rc::new(#sa_fn)).into()
                                 // Rc::new(move |parent_sa|{
                                 //     (parent_sa,&#sa_gel).map(#sa_fn)
                                 // })
@@ -820,7 +855,7 @@ impl ToTokens for GTreeSurface {
 enum GTreeMacroElement {
     GL(GTreeLayerStruct),
     GS(Box<GTreeSurface>),
-    RT(Box<GRefresher>),
+    RT(Box<GShapingUse>),
     GC(GTreeClosure),
     OnEvent(GOnEvent),
     // GT(Box<DynObjTree>) // OtherExpr(syn::Expr),
@@ -831,7 +866,6 @@ impl Parse for GTreeMacroElement {
         // println!("at list");
         let at_list = input.parse::<AtList>()?;
         // check id second
-        // println!("check kw");
 
         if input.peek(kw::Layer) {
             //@layer
@@ -847,7 +881,7 @@ impl Parse for GTreeMacroElement {
             //     Ok(Self::GT(Box::new(parsed)))
         } else if input.peek(kw::ShapingUse) {
             // @shaper
-            let mut parsed: GRefresher = input.parse()?;
+            let mut parsed: GShapingUse = input.parse()?;
             parsed.at_setup(at_list)?;
             Ok(Self::RT(Box::new(parsed)))
         } else if input.peek(token::Fn) && (input.peek2(Token![||]) || input.peek3(Token![||])) {
@@ -902,6 +936,7 @@ pub struct GTreeLayerStruct {
     layer: kw::Layer,
     id: ID,
     children: ChildrenType,
+    skip_init: bool,
 }
 
 impl AtSetup for GTreeLayerStruct {
@@ -917,6 +952,9 @@ impl AtSetup for GTreeLayerStruct {
                 At::Mod => {
                     return syn::Result::Err(syn::Error::new(self.span(), "layer can't be Mod"));
                     // panic!("layer can't be Mod");
+                }
+                At::SkipInit => {
+                    self.skip_init = true;
                 }
             }
         }
@@ -942,6 +980,7 @@ impl Parse for GTreeLayerStruct {
                 layer,
                 id,
                 children: None,
+                skip_init: false,
             });
         }
 
@@ -958,6 +997,7 @@ impl Parse for GTreeLayerStruct {
             layer,
             id,
             children,
+            skip_init: false,
         })
     }
 }
@@ -973,18 +1013,29 @@ impl ToTokens for GTreeLayerStruct {
             layer,
             id,
             children,
+            skip_init,
         } = self;
-        let edge_token = edge2token(edge);
-        let children_iter = children.iter();
-        let g_tree_builder_element_layer_token =
-            quote_spanned! {layer.span()=>GTreeBuilderElement::Layer};
 
         let id_token = id.get("L");
+        let edge_token = edge2token(edge);
+        let children_iter = children.iter();
         let children_token = quote_spanned! {children.span()=>vec![#(#children_iter),*]};
-        // let brace_op_token = quote_spanned! {children.span()=>vec![#children_token]};
+        let layer_token = quote_spanned! {layer.span()=>Layer};
 
-        quote!(#g_tree_builder_element_layer_token(#id_token,#edge_token,#children_token))
-            .to_tokens(tokens);
+        if *skip_init {
+             quote! (
+                GTreeBuilderElement::GElementTree(#id_token,#edge_token,#layer_token ::new(#id_token).into(),#children_token)
+            )
+        } else {
+            quote! ({
+                let id = #id_token;
+                let edges = #edge_token;
+                let children = #children_token;
+                #layer_token ::new(id.clone())
+                .tree_init_calling(&id,&edges,&children)
+                .with_id_edge_children(id,Some(edges),Some(children))
+            })
+        } .to_tokens(tokens);
         // quote!(GTreeBuilderElement::#layer(String::from(#id),vec![#(#children_iter),*])).to_tokens(tokens)
     }
 }
@@ -992,31 +1043,34 @@ impl ToTokens for GTreeLayerStruct {
 // @ Gtree ────────────────────────────────────────────────────────────────────────────────
 #[derive(Debug)]
 pub struct Gtree {
-    // emg_graph: Ident,
-    root: GTreeLayerStruct,
+    root: GTreeMacroElement,
 }
 
 impl Parse for Gtree {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // let emg_graph: Ident = input.parse()?;
-        // let _ = input.parse::<Token![=>]>()?;
-        let at_list = input.parse::<AtList>()?;
+        let root = input.parse::<GTreeMacroElement>()?;
 
-        let mut root = input.parse::<GTreeLayerStruct>()?;
-        for at in at_list.0 {
-            match at {
-                At::Id(id) => {
-                    root.id = id;
-                }
-                At::Edge(_) => {
-                    panic!("root layer can't have any Edge");
-                }
-                At::Mod => {
-                    panic!("root can't be Mod");
-                }
-            }
-        }
+        // for at in at_list.0 {
+        //     match at {
+        //         At::Id(id) => {
+        //             root.id = id;
+        //         }
+        //         At::Edge(_) => {
+        //             panic!("root layer can't have any Edge");
+        //         }
+        //         At::Mod => {
+        //             panic!("root can't be Mod");
+        //         }
+        //     }
+        // }
         // Ok(Gtree { emg_graph, root })
+
+        if !input.is_empty() {
+            let err = format!("input has unknown tokens not parsed: {} ", input,);
+
+            return Err(input.error(err));
+        }
+
         Ok(Self { root })
     }
 }
@@ -1027,31 +1081,7 @@ impl ToTokens for Gtree {
 
         let token = quote_spanned! {root.span()=> {
 
-            #[allow(unused)]
-            use emg_bind::{
-                common::{
-                    better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
-                    IdStr, TypeCheck,
-                },
-                element::*,
-                layout::{add_values::*, css, styles::*, EmgEdgeItem},
-                shaping::{EqShaping, Shaping, ShapingUse, Shaper},
-                state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
-            };
-
-            #[allow(unused)]
-            use std::rc::Rc;
-            // #[allow(unused)]
-            // use GElement::*;
-            // #[allow(unused)]
-            // pub use emg_bind::serde_closure;
-
-            // #[allow(unused)]
-            // use anchors::singlethread::*;
-            // ENGINE.with(|_e| {
-            //     log::info!("============= engine initd");
-            // });
-
+            // use crate::gtree_macro_prelude::*;
 
              #root
 
@@ -1202,10 +1232,61 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_new_skip_init() {
+        fn token_test(input: &str) {
+            let parse_str = syn::parse_str::<Gtree>(input);
+
+            match parse_str {
+                Ok(ok) => {
+                    insta::assert_display_snapshot!("test_new_skip_init", ok.to_token_stream());
+                    println!("===>{}", ok.to_token_stream())
+                }
+                Err(error) => println!("...{:?}", error),
+            }
+        }
+
+        println!();
+        let input = r#"
+        @="root"
+                @SkipInit Layer []
+        "#;
+
+        token_test(input);
+        println!();
+    }
+    #[test]
+    fn test_new_not_builder() {
+        fn token_test(input: &str) {
+            let parse_str = syn::parse_str::<Gtree>(input);
+
+            match parse_str {
+                Ok(ok) => {
+                    insta::assert_display_snapshot!("test_new_not_builder", ok.to_token_stream());
+                    println!("===>{}", ok.to_token_stream())
+                }
+                Err(error) => println!("...{:?}", error),
+            }
+        }
+
+        println!();
+        let input = r#"
+        @="root"
+            Checkbox::new(false,"abcd",|_|Message::IncrementPressed) => [
+            ]
+        "#;
+
+        token_test(input);
+        println!();
+    }
+
+    #[test]
     fn test_vfl_1() {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
-                Ok(ok) => println!("===>{}", ok.to_token_stream()),
+                Ok(ok) => {
+                    insta::assert_display_snapshot!("test_vfl_1", ok.to_token_stream());
+                    println!("===>{}", ok.to_token_stream())
+                }
                 Err(error) => println!("...{:?}", error),
             }
         }

@@ -7,7 +7,7 @@ edition = "2021"
 
 [profile.dev]
 split-debuginfo = "unpacked"
-[lib]
-crate-type = ["cdylib", "rlib"]
+# [lib]
+# crate-type = ["cdylib", "rlib"]
 
 [dependencies]

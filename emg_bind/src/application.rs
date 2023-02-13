@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-01-30 22:17:14
+ * @LastEditTime: 2023-02-01 12:39:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -185,6 +185,7 @@ pub trait Application: Sized {
             // },
             width: settings.window.size.0 as usize,
             height: settings.window.size.1 as usize,
+
             ..crate::renderer::Settings::from_env()
         };
 
@@ -267,19 +268,19 @@ where
     //build_runtime_sas
 
     #[instrument(skip(self, g, events, cursor_position))]
-    fn ctx(
+    fn build_ctx(
         &self,
         g: &Self::GraphType,
+        painter: &StateAnchor<crate::runtime::PaintCtx>,
         events: &StateAnchor<Vector<crate::runtime::EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (
         crate::runtime::EventMatchsSa<Self::Message>,
         StateAnchor<Rc<<Self::Renderer as crate::runtime::renderer::Renderer>::SceneCtx>>,
     ) {
-        let paint_ctx = StateAnchor::constant(crate::runtime::PaintCtx::default());
         let root_id = self.root_id();
 
-        g.runtime_prepare(&IdStr::new(root_id), &paint_ctx, events, cursor_position)
+        g.runtime_prepare(&IdStr::new(root_id), painter, events, cursor_position)
     }
 }
 

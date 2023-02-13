@@ -3,8 +3,9 @@ use crate::{Application, Debug, Mode, Viewport};
 use emg_common::{na, Pos};
 use emg_graphics_backend::window::Compositor;
 use emg_native::G_POS;
-use emg_state::{CloneStateVar, StateAnchor, StateMultiAnchor, StateVar};
+use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateMultiAnchor, StateVar};
 use std::{cell::Cell, marker::PhantomData, rc::Rc};
+use tracing::debug_span;
 use winit::event::{Touch, WindowEvent};
 use winit::window::Window;
 
@@ -13,7 +14,7 @@ use winit::window::Window;
 pub struct State<A: Application> {
     title: String,
     mode: Mode,
-    scale_factor: f64,
+    user_scale_factor: f64,
     viewport: Viewport,
     viewport_version: usize,
     cursor_position: StateAnchor<Option<Pos>>,
@@ -26,7 +27,7 @@ impl<A: Application> State<A> {
     pub fn new(application: &A, window: &Window) -> Self {
         let title = application.title();
         let mode = application.mode();
-        let scale_factor = application.scale_factor();
+        let user_scale_factor = application.scale_factor();
         // let theme = application.theme();
         // let appearance = theme.appearance(application.style());
 
@@ -35,23 +36,21 @@ impl<A: Application> State<A> {
 
             Viewport::new(
                 na::Vector2::<u32>::new(physical_size.width, physical_size.height),
-                window.scale_factor() * scale_factor,
+                window.scale_factor() * user_scale_factor,
             )
         };
         let cursor_position = {
-            let scale_factor_rc = viewport.scale_factor_rc();
-
-            G_POS.watch().map(move |opt_pos| {
+            (&G_POS.watch(), &viewport.vp_scale_factor_sa()).map(move |opt_pos, vp_scale_factor| {
                 opt_pos
                     .as_ref()
-                    .map(|pos| conversion::cursor_na_position(pos, scale_factor_rc.get()))
+                    .map(|pos| conversion::cursor_na_position(pos, *vp_scale_factor))
             })
         };
 
         Self {
             title,
             mode,
-            scale_factor,
+            user_scale_factor,
             viewport,
             viewport_version: 0,
             // TODO: Encode cursor availability in the type-system
@@ -82,13 +81,16 @@ impl<A: Application> State<A> {
     pub fn logical_size(&self) -> na::Vector2<f32> {
         self.viewport.logical_size()
     }
+    pub fn user_size(&self) -> na::Vector2<f64> {
+        self.viewport.logical_size().cast() * self.viewport.vp_scale_factor()
+    }
 
     /// Returns the current scale factor of the [`Viewport`] of the [`State`].
-    pub fn scale_factor(&self) -> f64 {
-        self.viewport.scale_factor()
+    pub fn vp_scale_factor(&self) -> f64 {
+        self.viewport.vp_scale_factor()
     }
-    pub fn scale_factor_rc(&self) -> Rc<Cell<f64>> {
-        self.viewport.scale_factor_rc()
+    pub fn vp_scale_factor_sa(&self) -> StateAnchor<f64> {
+        self.viewport.vp_scale_factor_sa()
     }
 
     // /// Returns the current cursor position of the [`State`].
@@ -121,11 +123,13 @@ impl<A: Application> State<A> {
     pub fn update(&mut self, window: &Window, event: &WindowEvent<'_>, _debug: &mut Debug) {
         match event {
             WindowEvent::Resized(new_size) => {
+                let _span = debug_span!("onWindowEvent",at="State", event = ?event).entered();
+
                 let size = na::Vector2::<u32>::new(new_size.width, new_size.height);
 
                 self.viewport = self
                     .viewport
-                    .with_physical_size(size, window.scale_factor() * self.scale_factor);
+                    .with_physical_size(size, window.scale_factor() * self.user_scale_factor);
 
                 self.viewport_version = self.viewport_version.wrapping_add(1);
             }
@@ -133,11 +137,13 @@ impl<A: Application> State<A> {
                 scale_factor: new_scale_factor,
                 new_inner_size,
             } => {
+                let _span = debug_span!("onWindowEvent",at="State", event = ?event).entered();
+
                 let size = na::Vector2::<u32>::new(new_inner_size.width, new_inner_size.height);
 
                 self.viewport = self
                     .viewport
-                    .with_physical_size(size, new_scale_factor * self.scale_factor);
+                    .with_physical_size(size, new_scale_factor * self.user_scale_factor);
 
                 self.viewport_version = self.viewport_version.wrapping_add(1);
             }
@@ -207,7 +213,7 @@ impl<A: Application> State<A> {
         // Update scale factor
         let new_scale_factor = application.scale_factor();
 
-        if self.scale_factor != new_scale_factor {
+        if self.user_scale_factor != new_scale_factor {
             let size = window.inner_size();
 
             self.viewport = self.viewport.with_physical_size(
@@ -215,7 +221,7 @@ impl<A: Application> State<A> {
                 window.scale_factor() * new_scale_factor,
             );
 
-            self.scale_factor = new_scale_factor;
+            self.user_scale_factor = new_scale_factor;
         }
 
         // Update theme and appearance

@@ -1,0 +1,6 @@
+---
+source: emg_msg_impl/src/lib.rs
+assertion_line: 91
+expression: res
+---
+use better_any :: TidAble ; # [derive (Debug , Copy , Clone , PartialEq , better_any :: Tid)] enum Message { IncrementPressed , DecrementPressed , Event (Event) , X , Y , } impl < 'a > any :: MessageTid < 'a > for Message { }

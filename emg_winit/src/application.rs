@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-01-30 18:54:53
+ * @LastEditTime: 2023-02-01 15:28:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,11 +25,14 @@ use crate::{Command, Debug, Executor, FutureRuntime, Mode, Proxy, Settings};
 use emg_element::{GTreeBuilderFn, GraphMethods, GraphProgram, GraphType};
 use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
-use emg_graphics_backend::window::{compositor, Compositor};
+use emg_graphics_backend::window::{
+    compositor::{self, CompositorSetting},
+    Compositor,
+};
 use emg_native::{event::EventWithFlagType, renderer::Renderer, Bus, Program};
-use emg_state::state_lit::StateVarLit;
 use emg_state::CloneStateAnchor;
-use tracing::{info, info_span, instrument};
+use emg_state::{state_lit::StateVarLit, topo};
+use tracing::{debug_span, info, info_span, instrument};
 
 // use emg_native::user_interface::{self, UserInterface};
 // ────────────────────────────────────────────────────────────────────────────────
@@ -131,7 +134,7 @@ pub trait Application: GraphProgram {
 // #[instrument(skip_all, name = "winit->run")]
 pub fn run<A, E, C>(
     settings: Settings<A::Flags>,
-    compositor_settings: C::Settings,
+    mut compositor_settings: C::Settings,
 ) -> Result<(), crate::Error>
 where
     A: Application<Orders = OrdersContainer<<A as Program>::Message>> + 'static,
@@ -183,6 +186,7 @@ where
         &application.title(),
         application.mode(),
         event_loop.primary_monitor(),
+        application.scale_factor(),
         settings.id,
     );
 
@@ -208,13 +212,12 @@ where
     }
     // ────────────────────────────────────────────────────────────────────────────────
 
-    // let dpr = window.scale_factor();
     // let size: (f64, f64) = window.inner_size().to_logical::<f64>(dpr).into();
     // info!("Window size: {:?} {:?}", size, dpr);
     // emg_layout::global_width().set(size.0);
     // emg_layout::global_height().set(size.1);
     // ────────────────────────────────────────────────────────────────────────────────
-
+    compositor_settings.set_vp_scale_factor(application.scale_factor() * window.scale_factor());
     let (compositor, renderer) = C::new(compositor_settings, &window)?;
 
     // future_runtime.track(subscription);
@@ -322,13 +325,20 @@ async fn run_instance<A, E, C>(
     //     &mut debug,
     // ));
 
-    // let ctx = renderer.new_paint_ctx();
+    let painter = state
+        .vp_scale_factor_sa()
+        .map(|sf| crate::PaintCtx::new(*sf));
+
     //view
 
-    // let native_events: StateVar<Vector<EventWithFlagType>> = use_state(Vector::new());
+    // let native_events: StateVar<Vector<EventWithFlagType>> = use_state(||Vector::new());
     let native_events: StateVarLit<Vector<EventWithFlagType>> = StateVarLit::new(Vector::new());
-    let (event_matchs_sa, ctx_sa) =
-        application.ctx(&g.graph(), &native_events.watch(), state.cursor_position());
+    let (event_matchs_sa, ctx_sa) = application.build_ctx(
+        &g.graph(),
+        &painter,
+        &native_events.watch(),
+        state.cursor_position(),
+    );
     let mut ctx = ctx_sa.get();
     // let mut element = application.view(&g.graph());
 
@@ -475,9 +485,11 @@ async fn run_instance<A, E, C>(
                 let current_viewport_version = state.viewport_version();
 
                 if viewport_version != current_viewport_version {
-                    let physical_size = state.physical_size();
-
-                    //     let logical_size = state.logical_size();
+                    // let physical_size = state.physical_size();
+                    let user_size = state.user_size();
+                    // .try_cast::<u32>()
+                    // .ok_or("user_size f64 cast to u32 cast error")
+                    // .unwrap();
 
                     //     debug.layout_started();
                     //     user_interface = ManuallyDrop::new(
@@ -503,8 +515,18 @@ async fn run_instance<A, E, C>(
                     //         mouse_interaction = new_mouse_interaction;
                     //     }
                     //     debug.draw_finished();
+                    debug_span!(
+                        "window_size",
+                        vp_scale_factor = state.vp_scale_factor(),
+                        "will configure_surface use user_size"
+                    )
+                    .in_scope(|| {});
 
-                    compositor.configure_surface(&mut surface, physical_size.x, physical_size.y);
+                    compositor.configure_surface(
+                        &mut surface,
+                        user_size.x.round() as u32,
+                        user_size.y.round() as u32,
+                    );
 
                     viewport_version = current_viewport_version;
                 }
@@ -556,9 +578,11 @@ async fn run_instance<A, E, C>(
 
                 state.update(&window, &window_event, &mut debug);
 
-                if let Some(event_with_flag) =
-                    conversion::window_event(&window_event, state.scale_factor(), state.modifiers())
-                {
+                if let Some(event_with_flag) = conversion::window_event(
+                    &window_event,
+                    state.vp_scale_factor(),
+                    state.modifiers(),
+                ) {
                     // native_events.push(event);
                     native_events.update(|ev| ev.push_back(event_with_flag));
                 }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-01-30 13:48:14
+ * @LastEditTime: 2023-02-13 14:18:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,6 +10,8 @@
 #![allow(clippy::ptr_as_ptr)]
 #![allow(clippy::ptr_eq)]
 // ────────────────────────────────────────────────────────────────────────────────
+use indented::indented;
+use std::fmt::Write;
 mod event_builder;
 use derive_more::From;
 
@@ -21,9 +23,9 @@ use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, debug_span, info, info_span, instrument, Span};
 
 use crate::GElement;
-use std::{rc::Rc, string::String};
+use std::{fmt::Display, rc::Rc, string::String};
 
-use self::event_builder::EventListener;
+pub use self::event_builder::EventListener;
 
 /// EventIdentify(emg_native::event::EventFlag::X,X::EventFlag)
 /// EventIdentify(Level1,Level2)
@@ -309,16 +311,36 @@ impl<Message> std::fmt::Debug for EventNode<Message>
 
 #[allow(clippy::module_name_repetitions)]
 pub struct NodeBuilderWidget<Message> {
-    id: IdStr,
+    pub(crate) id: IdStr,
     //TODO : in areas heap
-    widget: Box<GElement<Message>>,
+    pub(crate) widget: Box<GElement<Message>>,
     //TODO use vec deque
     // event_callbacks: VecDeque<EventNode<Message>>,
-    event_listener: EventListener<Message>,
+    pub(crate) event_listener: EventListener<Message>,
     // event_callbacks: Vector<EventNode<Message>>,
     // layout_str: String,
     // layout_end: (Translation3<NotNan<f64>>, NotNan<f64>, NotNan<f64>),
-    widget_state: StateAnchor<WidgetState>,
+    pub(crate) widget_state: StateAnchor<WidgetState>,
+}
+
+impl<Message> Display for NodeBuilderWidget<Message> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // let mut events = String::new();
+        // for (i, m) in self.event_listener.event_callbacks.iter() {
+        //     writeln!(events, "{}: {}", i, m)?
+        // }
+
+        let mut members = String::new();
+
+        writeln!(members, "id: {}", self.id)?;
+
+        writeln!(members, "widget: {}", &*self.widget)?;
+
+        writeln!(members, "event_listener: {:?}", "no display")?;
+        writeln!(members, "widget_state: {:?}", "no widget_state")?;
+
+        write!(f, "NodeBuilderWidget {{\n{}}}", indented(members))
+    }
 }
 
 impl<Message> PartialEq for NodeBuilderWidget<Message> {
@@ -343,7 +365,7 @@ impl<Message> Clone for NodeBuilderWidget<Message> {
     }
 }
 
-impl<Message> std::fmt::Debug for NodeBuilderWidget<Message>
+impl<Message: 'static> std::fmt::Debug for NodeBuilderWidget<Message>
 // where
 //     Message: std::fmt::Debug,
 {
@@ -353,10 +375,11 @@ impl<Message> std::fmt::Debug for NodeBuilderWidget<Message>
         // } else {
         //     String::from("Option<Rc<dyn NodeBuilder<Message> + 'a>>")
         // };
-        let widget = String::from("GElement<Message>");
+        // let widget = String::from("GElement<Message>");
 
         f.debug_struct("NodeBuilderWidget")
-            .field("widget", &widget)
+            .field("id", &self.id)
+            .field("widget", &self.widget)
             .field("event_listener", &self.event_listener)
             .field("widget_state", &self.widget_state)
             .finish()
@@ -418,12 +441,10 @@ where
             |EdgeCtx {
                  styles_end,
                  layout_end,
-                 world,
-                 children_layout_override,
+                 world: world_sa,
+                 children_layout_override: children_layout_override_sa,
                  ..
              }| {
-                let world_clone = world.clone();
-                let children_layout_override_clone = children_layout_override.clone();
                 let styles_sa = styles_end.map_(|_k, v| v.get_anchor()).then(|x| {
                     x.clone()
                         .into_iter()
@@ -432,13 +453,13 @@ where
                 });
 
                 //TODO 不要用 顺序pipe , 这样情况下 size trans改变 会 重新 进行全部 style 计算,使用 mut 保存 ws.
-                layout_end
-                    .map(move |&(trans, w, h)| {
+                (layout_end, children_layout_override_sa, world_sa)
+                    .map(move |&(trans, w, h), children_layout_override, world| {
                         WidgetState::new(
                             (w, h),
                             trans,
-                            world_clone.clone(),
-                            children_layout_override_clone.clone(),
+                            Rc::new(world.clone()),
+                            Rc::new(children_layout_override.clone()),
                         )
                     })
                     .then(move |ws| {
@@ -516,11 +537,9 @@ where
         edge_ctx: &StateAnchor<EdgeCtx>,
     ) -> Result<Self, GElement<Message>> {
         match gel {
-            // Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
             GElement::Layer_(_) | GElement::Generic_(_) => Ok(Self::new(ix, gel, edge_ctx)),
             GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
             GElement::Shaper_(_) | GElement::Event_(_) => Err(gel),
-            // GElement::Refresher_(_) => Err(gel),
             GElement::NodeRef_(_) => {
                 unreachable!("crate builder use NodeRef_ is should never happened")
             }
@@ -534,7 +553,6 @@ where
     }
 
     #[must_use]
-    #[allow(clippy::borrowed_box)]
     pub const fn widget(&self) -> &GElement<Message> {
         //TODO use cow/beef
 
@@ -559,15 +577,13 @@ where
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> StateAnchor<EventMatchsDict<Message>> {
         let event_callbacks = self.event_listener.event_callbacks().clone();
+        //TODO move event_callbacks into sa map 不会变更, 是否考虑变更?
         let cursor_position_clone = cursor_position.clone();
         let id = self.id.clone();
 
         (events_sa, &self.widget_state).then(move |events, state| {
             let _span = debug_span!("event_matching...", ?id).entered();
 
-            // if events.is_empty() {
-            //     return Anchor::constant(Dict::default());
-            // }
             let size = state.size();
 
             //TODO don't do this many times
@@ -603,21 +619,20 @@ where
                     ev_id.contains(EventIdentify::from(mouse::EventFlag::CLICK))
                 });
 
-                let id2 = id.clone();
-                let cursor_position_clone2 = cursor_position_clone.clone();
-            // let click_group = cb_matchs.remove_with_key("click");
+                // let click_group = cb_matchs.remove_with_key("click");
             // let cursor_position_clone = cursor_position.clone();
+
             let clicked_a = click_group
                 .into_iter()
                 .map(|(cb_ev_id, (ev_, click_cb_vec))| {
 
-                    let id3 = id2.clone();
-                    (
-                        &cursor_position_clone2,
-                        &state.world,
-                        &state.children_layout_override,
-                    )
-                        .map(move |c_pos, world, opt_layout_override| {
+                    let id3 = id.clone();
+                    let opt_layout_override2 =state.children_layout_override.clone();
+                    let world =state.world.clone();
+
+
+                        cursor_position_clone
+                        .map(move |c_pos| {
 
                             let id = id3.clone();
 
@@ -645,7 +660,7 @@ where
                                     debug!("⭕️ rect contains pos");
 
 
-                                    if let Some(layout_override) = opt_layout_override {
+                                    if let Some(layout_override) = &*opt_layout_override2 {
                                         debug!("⭕️ rect has layout_override");
                                         debug!("layout_override --> {:#?}",layout_override);
 
@@ -708,8 +723,11 @@ where
     // Message: PartialEq + 'static + std::clone::Clone,
 {
     type SceneCtxType = crate::SceneFrag;
-    #[instrument(skip(self, ctx), name = "NodeBuilderWidget paint")]
-    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
+    #[instrument(skip(self, painter), name = "NodeBuilderWidget paint")]
+    fn paint_sa(
+        &self,
+        painter: &StateAnchor<crate::PaintCtx>,
+    ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id1 = self.id.clone();
         let opt_span = illicit::get::<Span>().ok();
 
@@ -719,8 +737,8 @@ where
         );
         let span3 = span1.clone();
 
-        let current_ctx =
-            (ctx, &self.widget_state).map(move |incoming_ctx, current_widget_state| {
+        let current_painter =
+            (painter, &self.widget_state).map(move |incoming_painter, current_widget_state| {
                 // let id = id.clone();
                 let _span = span1.clone().entered();
                 info!(
@@ -728,20 +746,20 @@ where
                     "NodeBuilderWidget::paint-> (&ctx, &self.widget_state).map -> recalculating [{}]",
                     &id1
                 );
-                let mut incoming_ctx_mut = incoming_ctx.clone();
+                let mut incoming_painter_mut = incoming_painter.clone();
                 // incoming_ctx_mut.save_assert(&ctx_id);
-                incoming_ctx_mut.merge_widget_state(current_widget_state);
+                incoming_painter_mut.merge_widget_state(current_widget_state);
 
 
                 // incoming_ctx_mut.transform(crate::renderer::Affine::translate((
                 //     current_widget_state.translation.x * DPR,
                 //     current_widget_state.translation.y * DPR,
                 // )));
-                incoming_ctx_mut
+                incoming_painter_mut
             });
         illicit::Layer::new()
             .offer(span3)
-            .enter(|| self.widget.paint_sa(&current_ctx))
+            .enter(|| self.widget.paint_sa(&current_painter))
         // .map(move |out_scene| {
         //     info!(
         //         parent: &span2,

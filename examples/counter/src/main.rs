@@ -1,24 +1,16 @@
 use color_eyre::{eyre::Report, eyre::WrapErr};
 use emg_bind::{
-    better_any::TidAble,
-    common::mouse::CLICK,
-    common::px,
-    element::*,
-    emg::{edge_index, Direction::Incoming},
-    emg_msg,
-    graph_edit::{EdgeMode, GraphEdit},
-    gtree,
-    layout::styles::{fill, hsl, w},
-    state::use_state,
-    Error, Orders, Sandbox, Settings,
+    element::*, emg_msg_macro_prelude::*, graph_edit::*, runtime::OrdersContainer, Sandbox,
+    Settings,
 };
 use std::{cell::Cell, rc::Rc};
 use tracing::{debug_span, info, instrument};
 #[cfg(feature = "debug")]
-use tracing_subscriber::EnvFilter;
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
+    let error_layer =
+        tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
 
     #[cfg(not(feature = "debug"))]
     let out_layer = tracing_tree::HierarchicalLayer::new(2)
@@ -83,9 +75,12 @@ fn tracing_init() -> Result<(), Report> {
         .with_indent_lines(true)
         .with_indent_amount(4)
         .with_targets(true)
-        .with_filter(EnvFilter::new(
+        .with_filter(tracing_subscriber::EnvFilter::new(
             // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
-            "emg_layout[build inherited cassowary_generals_map]",
+            // "[onWindowEvent]=debug,[window_size]=debug",
+            // "error,[better_any_shaping]=debug,[GElement-shaping]=debug",
+            // "error,[sa gel in map clone]=debug",
+            "error",
         ));
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -93,7 +88,7 @@ fn tracing_init() -> Result<(), Report> {
     tracing_subscriber::registry()
         // .with(layout_override_layer)
         // .with(event_matching_layer)
-        // .with(touch_layer)
+        .with(error_layer)
         .with(emg_layout_layer)
         // .with(out_layer)
         .init();
@@ -109,7 +104,7 @@ fn tracing_init() -> Result<(), Report> {
 #[instrument]
 pub fn main() -> Result<(), Report> {
     // pub fn main() -> Result<(), Error> {
-    // #[cfg(debug_assertions)]
+    #[cfg(debug_assertions)]
     tracing_init()?;
     Counter::run(Settings::default()).wrap_err("saw a downstream error")
 }
@@ -131,7 +126,12 @@ enum Message {
 impl Sandbox for Counter {
     type Message = Message;
 
-    fn update(&mut self, graph: Self::GraphEditor, orders: &Self::Orders, message: Self::Message) {
+    fn update(
+        &mut self,
+        graph: GraphEditor<Self::Message>,
+        orders: &OrdersContainer<Self::Message>,
+        message: Self::Message,
+    ) {
         match message {
             Message::IncrementPressed => {
                 self.value += 1;
@@ -140,19 +140,19 @@ impl Sandbox for Counter {
                 self.value -= 1;
             }
             Message::Empty => {
-                graph
-                    .edit::<EdgeMode>()
-                    .moving(edge_index("a", "c"), Incoming, "b");
+                // insta::assert_display_snapshot!("graph_def", graph.borrow());
+                insta::assert_debug_snapshot!("graph_debug_def", graph.borrow());
             }
         }
     }
 
     fn tree_build(&self, orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
+        use emg_bind::gtree_macro_prelude::*;
         let n = Rc::new(Cell::new(100));
-        let ww = use_state(w(px(100)));
-        let ff = use_state(fill(hsl(150, 100, 100)));
+        let ww = use_state(|| w(px(100)));
+        let ff = use_state(|| fill(hsl(150, 100, 100)));
         gtree! {
-            @=debug_layer Layer [
+            @="debug_layer" Layer [
                 On:CLICK  ||{
                     let _span = debug_span!("LayoutOverride", "click cb")
                             .entered();
@@ -170,8 +170,29 @@ impl Sandbox for Counter {
                         b_width(px(5)),
                         b_color(rgb(1,0,0))
                     ]
-                @=a1 Layer [
-                    @=a2 @E=[
+                @="a1" Layer [
+                    @E=[
+                        origin_x(px(0)),align_x(px(250)),
+                        origin_y(px(0)),align_y(px(250)),
+                        w(px(30)),h(px(30)),
+                        fill(rgba(1., 1.,1., 1)),
+                        // b_width(px(1)),
+                        // b_color(rgb(1,0,0))
+                    ]
+                    @="a-check" Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
+                    ],
+                    @E=[
+                        origin_x(px(0)),align_x(px(350)),
+                        origin_y(px(0)),align_y(px(250)),
+                        w(px(30)),h(px(30)),
+                        fill(rgba(1., 1.,1., 1)),
+                        // b_width(px(1)),
+                        // b_color(rgb(1,0,0))
+                    ]
+                    Checkbox::new(false,"abcd",|_|Message::IncrementPressed)=>[
+                    ],
+
+                    @="a2" @E=[
                         // origin_x(px( 100)),
                         // align_x(px(100)),
                         // origin_y(px(0)),
@@ -194,7 +215,7 @@ impl Sandbox for Counter {
 
                         },
                     ],
-                    @=a3 @E=[
+                    @="a3" @E=[
                         origin_x(px( 0)),align_x(px(300)),
                         origin_y(px(0)),align_y(px(300)),
                         w(px(30)),h(px(30)),
@@ -203,7 +224,7 @@ impl Sandbox for Counter {
                         b_color(rgb(1,0,0))
                     ]
                     Layer [],
-                    @=a4 @E=[
+                    @="a4" @E=[
                         origin_x(px( 0)),align_x(px(400)),
                         origin_y(px(0)),align_y(px(400)),
                         ww,

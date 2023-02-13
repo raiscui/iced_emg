@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2023-01-31 11:30:40
+ * @LastEditTime: 2023-02-01 15:21:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,6 @@ use emg_graphics_backend::Error;
 /// A [`wgpu`] graphics backend for [`elemg`].
 pub struct Backend {
     renderer: VelloRenderer,
-    current_frame: usize,
 }
 
 impl Backend {
@@ -28,10 +27,7 @@ impl Backend {
         let renderer = VelloRenderer::new(&device_handle.device)
             .map_err(|e| Error::BackendError(e.to_string()))?;
 
-        Ok(Self {
-            renderer,
-            current_frame: 0,
-        })
+        Ok(Self { renderer })
     }
 
     /// Draws the provided primitives in the given `TextureView`.

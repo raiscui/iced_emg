@@ -1,21 +1,26 @@
 use std::{clone::Clone, cmp::PartialEq, rc::Rc};
 
-use emg_common::IdStr;
+use emg_common::{
+    better_any::{Tid, TidAble},
+    IdStr, Vector,
+};
+use emg_layout::EmgEdgeItem;
+use emg_shaping::Shaping;
 use emg_state::{Anchor, StateAnchor, StateMultiAnchor};
 use tracing::{info, Span};
 
-use crate::GElement;
+use crate::{g_tree_builder::GTreeInit, GElement, InitTree};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-type LayerChildren<Message> = Vec<GElement<Message>>;
+type LayerChildren<Message> = Vector<GElement<Message>>;
 
 /// A container that distributes its contents vertically.
 ///
 /// A [`Layer`] will try to fill the horizontal space of its container.
 //TODO remove all missing_debug_implementations
 #[allow(missing_debug_implementations)]
-#[derive(Eq)]
+#[derive(Eq, Tid)]
 pub struct Layer<Message> {
     id: IdStr,
     //TODO vec?
@@ -60,18 +65,21 @@ impl<Message> Default for Layer<Message> {
 impl<Message> Layer<Message> {
     /// Creates an empty [`Layer`].
     #[must_use]
-    pub fn new(id: IdStr) -> Self {
-        Self::with_children(id, LayerChildren::<Message>::new())
+    pub fn new(id: impl Into<IdStr>) -> Self {
+        Self::new_with_children(id.into(), LayerChildren::<Message>::new())
     }
 
     /// Creates a [`Layer`] with the given elements.
     #[must_use]
-    pub fn with_children(id: IdStr, children: LayerChildren<Message>) -> Self {
-        Self { id, children }
+    pub fn new_with_children(id: impl Into<IdStr>, children: LayerChildren<Message>) -> Self {
+        Self {
+            id: id.into(),
+            children,
+        }
     }
 
     #[must_use]
-    pub fn set_children(mut self, children: LayerChildren<Message>) -> Self {
+    pub fn with_children(mut self, children: LayerChildren<Message>) -> Self {
         self.children = children;
         self
     }
@@ -91,7 +99,21 @@ impl<Message> Layer<Message> {
     // }
 
     pub fn push(&mut self, child: GElement<Message>) {
-        self.children.push(child);
+        self.children.push_back(child);
+    }
+}
+
+impl<Message> GTreeInit<Message> for Layer<Message>
+where
+    Message: Clone + PartialEq + for<'a> emg_common::any::MessageTid<'a>,
+{
+    fn tree_init(
+        self,
+        _id: &IdStr,
+        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
+        _children: &Vec<crate::GTreeBuilderElement<Message>>,
+    ) -> InitTree<Message> {
+        GElement::Layer_(self).into()
     }
 }
 
@@ -110,10 +132,11 @@ where
         let children_sc_list_sa: StateAnchor<Vec<Rc<crate::SceneFrag>>> = self
             .children
             .iter()
-            .map(|child| child.paint_sa(&ctx).into_anchor())
+            .map(|child| child.paint_sa(ctx).into_anchor())
             .collect::<Anchor<Vec<_>>>()
             .into();
 
+        //TODO 分离 ctx, &children_sc_list_sa
         (ctx, &children_sc_list_sa).map(move |incoming_ctx, children_sc_list| {
             let mut sc = Self::SceneCtxType::new(incoming_ctx.get_translation());
             let mut builder = sc.gen_builder();

@@ -29,11 +29,10 @@ members = [
     "examples/counter",
     "examples/moving_edge",
 ]
-# exclude = [""]
-[patch.crates-io]
-# Required for metal support to work on wgpu
-# TODO: remove when wgpu is upgraded to 0.15
-naga = { git = "https://github.com/gfx-rs/naga", rev = "ddcd5d3121150b2b1beee6e54e9125ff31aaa9a2" }
+
 
 [profile.dev]
 split-debuginfo = "unpacked"
+
+[patch.crates-io]
+window_clipboard = { path = "../window_clipboard" }

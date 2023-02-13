@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-01-30 16:35:26
+ * @LastEditTime: 2023-02-13 11:50:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -27,7 +27,7 @@ use emg_common::{
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
 use emg_shaping::ShapingUse;
 use emg_state::{Anchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar};
-use tracing::{debug, error, info, info_span, trace, trace_span, warn};
+use tracing::{debug, debug_span, error, info, info_span, trace, trace_span, warn};
 // use vec_string::VecString;
 
 use crate::{node_builder::EventMatchsDict, GElement, NodeBuilderWidget};
@@ -361,7 +361,7 @@ where
                 g_sa.then(move |gel| {
                     if gel.is_node_ref_() {
                         let refs = gel.as_node_ref_().unwrap();
-                        error!("self is node ref:{} ", refs);
+                        error!("self is node_ref:{} ", refs);
                         graph_rc7
                             .borrow()
                             .get_node_item_use_ix(refs)
@@ -392,6 +392,11 @@ where
 
                     //TODO crate some method check self change, children change
 
+                    let _span = debug_span!("sa gel in map clone",path=%path3).entered();
+                    debug!("gel:\n{:#?}",&**gel);
+                    debug!("out_eix_s:\n{:#?}",out_eix_s);
+                    debug!("children:\n{:#?}",children);
+
                     let mut gel_clone = (**gel).clone();
 
 
@@ -406,18 +411,17 @@ where
                             //TODO 静态 动态 children分开, 让静态不需要 refresh
                             //TODO 用children dict 去 修改 mut gel, 而不是 重新 for循环 重建整个 gel
                             //NOTE should all builder
-                            info!("child: {:?}",child_gel);
+                            debug!("child: {:?}",child_gel);
                             debug_assert!(child_gel.is_builder());
                             // if child_gel.is_node_ref_() {
                             //     let refs =child_gel.as_node_ref_().unwrap();
                             //     error!("child_gel is node ref:{} ",refs);
                             // }
 
-                            gel_clone.shaping_use(child_gel.as_ref());
+                            let _ = gel_clone.shaping_use(child_gel.as_ref());
                         }
                     }
 
-                    debug!("gel_clone: {}", &gel_clone);
                     // for child in children {
                     //     if let Some(child_gel) = child.as_ref().right() {
                     //         gel_clone.shape_of_use(child_gel);
@@ -427,24 +431,9 @@ where
                     match NodeBuilderWidget::<Message>::try_new_use(&nix4,gel_clone,&edge_ctx) {
                         Ok(mut node_builder_widget) => {
 
-                            let _g = trace_span!("-> in NodeBuilderWidget").entered();
+                            let _g = trace_span!("-> into NodeBuilderWidget").entered();
                             trace!("[combine view gel] NodeBuilderWidget::<Message>::try_from  OK");
-                            // node_builder_widget.set_id(format!("{}", cix));
-                            // node_builder_widget.set_id(.clone());
 
-                            // // TODO use StateAnchor ? for child edge change
-                            // trace!("[combine view gel] edge::path:  {}", path3);
-                            // trace!("[combine view gel] styles---------------> {}", &edge_styles);
-                            // debug!("[combine view gel] edge::path:  {}", path3);
-                            // debug!("[combine view gel] styles---------------> {}", &edge_styles);
-
-                            // node_builder_widget.add_styles_string(edge_styles.as_str());
-
-                            // if !event_callbacks.is_empty() {
-                            //     for callback in event_callbacks {
-                            //         node_builder_widget.shape_of_use(callback);
-                            //     }
-                            // }
 
                             for eix in out_eix_s {
                                 if let Some(event_gel) =
@@ -452,7 +441,7 @@ where
                                 {
                                     info!("will shaping node builder : {:?}", event_gel);
                                      //TODO maybe just directly push event?
-                                    node_builder_widget.shaping_use(event_gel.as_ref());
+                                    let _  =node_builder_widget.shaping_use(event_gel.as_ref());
                                 }
                             }
 
@@ -463,8 +452,8 @@ where
 
                         },
                         Err(other_gel) => {
-                            warn!(
-                                "[combine view gel] NodeBuilderWidget::try_new_use->  Err({:?})",
+                            info!(
+                                "[combine view gel] can't into NodeBuilderWidget ->  {:?}",
                                 &other_gel
                             );
                             Rc::new(other_gel)

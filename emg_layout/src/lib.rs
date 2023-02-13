@@ -99,11 +99,11 @@ static CHILD_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 0.9;
 // ────────────────────────────────────────────────────────────────────────────────
 
 thread_local! {
-    static G_CLOCK: StateVar<Duration> = use_state(Duration::ZERO);
+    static G_CLOCK: StateVar<Duration> = use_state(||Duration::ZERO);
 }
 
 thread_local! {
-    static G_ANIMA_RUNNING_STORE: StateVar<Vector<Anchor<bool>>> = use_state(Vector::new());
+    static G_ANIMA_RUNNING_STORE: StateVar<Vector<Anchor<bool>>> = use_state(||Vector::new());
 }
 thread_local! {
     static G_AM_RUNING: StateAnchor<bool> = global_anima_running_build();
@@ -141,14 +141,14 @@ pub fn global_clock_set(now: Duration) {
 
 // ────────────────────────────────────────────────────────────────────────────────
 thread_local! {
-    static G_WIDTH: StateVar<f64> = use_state(0.);
+    static G_WIDTH: StateVar<f64> = use_state(||0.);
 }
 #[must_use]
 pub fn global_width() -> StateVar<f64> {
     G_WIDTH.with(|sv| *sv)
 }
 thread_local! {
-    static G_HEIGHT: StateVar<f64> = use_state(0.);
+    static G_HEIGHT: StateVar<f64> = use_state(||0.);
 }
 #[must_use]
 pub fn global_height() -> StateVar<f64> {
@@ -165,6 +165,7 @@ struct Mat4(Matrix4<Precision>);
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq, Display)]
+//TODO use StateVar<StateAnchor> for can change? note: 了解 最终 和 cassowary 如何共同影响 尺寸
 pub struct GenericSizeAnchor(StateAnchor<GenericSize>);
 
 impl Default for GenericSizeAnchor {
@@ -803,16 +804,6 @@ where
             func(o.get(key).and_then(EdgeItemNode::as_edge_data))
         })
     }
-    pub fn engine_edge_data_with<F: FnOnce(Option<&EdgeData>) -> R, R>(
-        &self,
-        engine: &mut Engine,
-        key: &EPath<Ix>,
-        func: F,
-    ) -> R {
-        self.edge_nodes.engine_get_with(engine, |o| {
-            func(o.get(key).and_then(EdgeItemNode::as_edge_data))
-        })
-    }
 }
 
 impl<Ix> EmgEdgeItem<Ix>
@@ -915,31 +906,31 @@ where
 
                 EdgeIndex::new(s.clone(), t.clone())
             });
-        let id_sv = use_state(id_sa);
+        let id_sv = use_state(|| id_sa);
         let _child_span = trace_span!(" building new child ",id=?id_sv).entered();
         // ─────────────────────────────────────────────────────────────────
 
         let layout = Layout {
-            w: use_state(size.0.into()),
-            h: use_state(size.1.into()),
-            z: use_state(StateAnchor::constant(0)),
-            origin_x: use_state(origin.0.into()),
-            origin_y: use_state(origin.1.into()),
-            origin_z: use_state(origin.2.into()),
-            align_x: use_state(align.0.into()),
-            align_y: use_state(align.1.into()),
-            align_z: use_state(align.2.into()),
-            cassowary_constants: use_state(StateAnchor::constant(vector![])),
-            cassowary_selectors: use_state(vector![]),
-            cassowary_generals: use_state(CassowaryGeneralMap::new()),
+            w: use_state(|| size.0.into()),
+            h: use_state(|| size.1.into()),
+            z: use_state(|| StateAnchor::constant(0)),
+            origin_x: use_state(|| origin.0.into()),
+            origin_y: use_state(|| origin.1.into()),
+            origin_z: use_state(|| origin.2.into()),
+            align_x: use_state(|| align.0.into()),
+            align_y: use_state(|| align.1.into()),
+            align_z: use_state(|| align.2.into()),
+            cassowary_constants: use_state(|| StateAnchor::constant(vector![])),
+            cassowary_selectors: use_state(|| vector![]),
+            cassowary_generals: use_state(|| CassowaryGeneralMap::new()),
         };
 
-        // let path_styles= use_state(Dict::unit(EPath::<Ix>::default(), s()));
-        let path_styles: StateVar<PathVarMap<Ix, Style>> = use_state(PathVarMap::default());
-        let path_layouts: StateVar<PathVarMap<Ix, Layout>> = use_state(PathVarMap::default());
+        // let path_styles= use_state(||Dict::unit(EPath::<Ix>::default(), s()));
+        let path_styles: StateVar<PathVarMap<Ix, Style>> = use_state(|| PathVarMap::default());
+        let path_layouts: StateVar<PathVarMap<Ix, Layout>> = use_state(|| PathVarMap::default());
 
-        let other_css_styles_sv = use_state(s());
-        let styles_sv = use_state(Dict::new());
+        let other_css_styles_sv = use_state(|| s());
+        let styles_sv = use_state(|| Dict::new());
 
         let opt_self_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
             let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
@@ -2060,7 +2051,7 @@ mod tests {
     use emg::{edge_index, edge_index_no_source, node_index};
     use emg_common::{im::vector, num_traits::ToPrimitive};
     use emg_common::{parent, IdStr};
-    use emg_shaping::ShapeOfUse;
+    use emg_shaping::ShapingUseDyn;
     use emg_state::StateVar;
 
     use styles::{bg_color, h, hsl, pc, width, CssBackgroundColorTrait, CssHeight, CssWidth};
@@ -2150,10 +2141,10 @@ mod tests {
 
             let css_width = width(px(100));
             let css_height = h(px(100));
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
+            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
 
-            let root_e_source = use_state(None);
-            let root_e_target = use_state(Some(node_index("root")));
+            let root_e_source = use_state(|| None);
+            let root_e_target = use_state(|| Some(node_index("root")));
             let mut root_e = EmgEdgeItem::<IdStr>::default_with_wh_in_topo(
                 root_e_source.watch(),
                 root_e_target.watch(),
@@ -2170,8 +2161,8 @@ mod tests {
                 nd
             });
 
-            let e1_source = use_state(Some(node_index("root")));
-            let e1_target = use_state(Some(node_index("1")));
+            let e1_source = use_state(|| Some(node_index("root")));
+            let e1_target = use_state(|| Some(node_index("1")));
             let e1 = EmgEdgeItem::<IdStr>::new_in_topo(
                 e1_source.watch(),
                 e1_target.watch(),
@@ -2190,8 +2181,8 @@ mod tests {
                 nd
             });
 
-            let e2_source = use_state(Some(node_index("1")));
-            let e2_target = use_state(Some(node_index("2")));
+            let e2_source = use_state(|| Some(node_index("1")));
+            let e2_target = use_state(|| Some(node_index("2")));
             let mut e2 = EmgEdgeItem::<IdStr>::new_in_topo(
                 e2_source.watch(),
                 e2_target.watch(),
@@ -2216,9 +2207,9 @@ mod tests {
             });
             info!("l2 =========================================================");
 
-            root_e.shape_of_use(&vec![css(css_width)]);
+            root_e.shaping_use_dyn(&vec![css(css_width)]);
             // root_e.shaping_use(&css(css_width.clone()));
-            root_e.shape_of_use(&Css(css_height));
+            root_e.shaping_use_dyn(&Css(css_height));
             assert_eq!(
                 e1.edge_data(&EPath(vector![
                     edge_index_no_source("root"),
@@ -2232,9 +2223,9 @@ mod tests {
             );
             info!("=========================================================");
 
-            e2.shape_of_use(&Css(CssWidth::from(px(20))));
-            e2.shape_of_use(&Css(CssHeight::from(px(20))));
-            e2.shape_of_use(&Css(bg_color(hsl(40, 70, 30))));
+            e2.shaping_use_dyn(&Css(CssWidth::from(px(20))));
+            e2.shaping_use_dyn(&Css(CssHeight::from(px(20))));
+            e2.shaping_use_dyn(&Css(bg_color(hsl(40, 70, 30))));
 
             trace!("shaping_use after {:#?}", &e2);
             info!("l3 =========================================================");
@@ -2286,10 +2277,10 @@ mod tests {
         let css_width = width(px(100));
         let css_height = h(px(100));
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
 
-        let root_e_source = use_state(None);
-        let root_e_target = use_state(Some(node_index("root")));
+        let root_e_source = use_state(|| None);
+        let root_e_target = use_state(|| Some(node_index("root")));
         let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
             root_e_source.watch(),
             root_e_target.watch(),
@@ -2306,8 +2297,8 @@ mod tests {
             nd
         });
 
-        let e1_source = use_state(Some(node_index("root")));
-        let e1_target = use_state(Some(node_index("1")));
+        let e1_source = use_state(|| Some(node_index("root")));
+        let e1_target = use_state(|| Some(node_index("1")));
         let mut e1 = EmgEdgeItem::new_in_topo(
             e1_source.watch(),
             e1_target.watch(),
@@ -2325,8 +2316,8 @@ mod tests {
             nd
         });
 
-        let e2_source = use_state(Some(node_index("1")));
-        let e2_target = use_state(Some(node_index("2")));
+        let e2_source = use_state(|| Some(node_index("1")));
+        let e2_target = use_state(|| Some(node_index("2")));
         let mut e2 = EmgEdgeItem::new_in_topo(
             e2_source.watch(),
             e2_target.watch(),
@@ -2369,49 +2360,49 @@ mod tests {
         let xx = vec![css_width];
         // let xx = vec![css(css_width)];
 
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
-        root_e.shape_of_use(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
 
         // trace!("shaping_use after css_width {}", &root_e);
         trace!("shaping_use after css_width {}", &e1);
         info!("=========================================================");
 
         // root_e.shaping_use(&Css(css_height.clone()));
-        let tempcss = use_state(css_height);
-        root_e.shape_of_use(&tempcss);
+        let tempcss = use_state(|| css_height);
+        root_e.shaping_use_dyn(&tempcss);
         assert_eq!(
             e1.edge_nodes
                 .get()
@@ -2460,36 +2451,36 @@ mod tests {
 
         info!("=========================================================");
 
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
-        e1.shape_of_use(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
         assert_eq!(
             e1.edge_nodes
                 .get()
@@ -2518,7 +2509,7 @@ mod tests {
 
         trace!("shaping_use after {}", &e2);
         info!("l1351 =========================================================");
-        e2.shape_of_use(&Css(CssHeight::from(px(50))));
+        e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
         assert_eq!(
             e2.edge_nodes
                 .get()
@@ -2560,7 +2551,7 @@ mod tests {
             trace!("shaping_use after2 {}", &e2);
         });
         info!("=========================================================");
-        e2.shape_of_use(&Css(CssHeight::from(px(150))));
+        e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
 
         trace!("shaping_use after {:#?}", &e2);
         info!("..=========================================================");
@@ -2602,10 +2593,10 @@ mod tests {
             let css_width = width(px(100));
             let css_height = h(px(100));
 
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
+            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
 
-            let root_e_source = use_state(None);
-            let root_e_target = use_state(Some(node_index("root")));
+            let root_e_source = use_state(|| None);
+            let root_e_target = use_state(|| Some(node_index("root")));
             let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
                 root_e_source.watch(),
                 root_e_target.watch(),
@@ -2622,8 +2613,8 @@ mod tests {
                 nd
             });
 
-            let e1_source = use_state(Some(node_index("root")));
-            let e1_target = use_state(Some(node_index("1")));
+            let e1_source = use_state(|| Some(node_index("root")));
+            let e1_target = use_state(|| Some(node_index("1")));
             let mut e1 = EmgEdgeItem::new_in_topo(
                 e1_source.watch(),
                 e1_target.watch(),
@@ -2648,8 +2639,8 @@ mod tests {
                 nd
             });
 
-            let e2_source = use_state(Some(node_index("1")));
-            let e2_target = use_state(Some(node_index("2")));
+            let e2_source = use_state(|| Some(node_index("1")));
+            let e2_target = use_state(|| Some(node_index("2")));
             let mut e2 = EmgEdgeItem::new_in_topo(
                 e2_source.watch(),
                 e2_target.watch(),
@@ -2717,7 +2708,7 @@ mod tests {
             let xx = vec![css_width];
             // let xx = vec![css(css_width)];
 
-            root_e.shape_of_use(&xx);
+            root_e.shaping_use_dyn(&xx);
 
             warn!("calculated 3 =========================================================");
             warn!(
@@ -2733,48 +2724,48 @@ mod tests {
                     .calculated
             );
 
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
-            root_e.shape_of_use(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
+            root_e.shaping_use_dyn(&xx);
 
             // trace!("shaping_use after css_width {}", &root_e);
             trace!("shaping_use after css_width {}", &e1);
             info!("=========================================================");
 
             // root_e.shaping_use(&Css(css_height.clone()));
-            let tempcss = use_state(css_height);
-            root_e.shape_of_use(&tempcss);
+            let tempcss = use_state(|| css_height);
+            root_e.shaping_use_dyn(&tempcss);
 
             warn!("calculated 4 root h w 100 =========================================================");
             warn!(
@@ -2849,36 +2840,36 @@ mod tests {
 
             info!("=========================================================");
 
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
-            e1.shape_of_use(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
 
             assert_eq!(
                 e1.edge_nodes
@@ -2908,7 +2899,7 @@ mod tests {
 
             trace!("shaping_use after {}", &e2);
             info!("l1351 =========================================================");
-            e2.shape_of_use(&Css(CssHeight::from(px(50))));
+            e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
             assert_eq!(
                 e2.edge_nodes
                     .get()
@@ -2950,7 +2941,7 @@ mod tests {
                 trace!("shaping_use after2 {}", &e2);
             });
             info!("=========================================================");
-            e2.shape_of_use(&Css(CssHeight::from(px(150))));
+            e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
 
             trace!("shaping_use after {:#?}", &e2);
             info!("..=========================================================");
@@ -2981,10 +2972,10 @@ mod tests {
         {
             let _g = span!(Level::TRACE, "change_parent").entered();
 
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
+            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
 
-            let root_e_source = use_state(None);
-            let root_e_target = use_state(Some(node_index("root")));
+            let root_e_source = use_state(|| None);
+            let root_e_target = use_state(|| Some(node_index("root")));
             let root_e = EmgEdgeItem::default_with_wh_in_topo(
                 root_e_source.watch(),
                 root_e_target.watch(),
@@ -3001,8 +2992,8 @@ mod tests {
                 nd
             });
 
-            let s_root_e2_source = use_state(None);
-            let root_e2_target = use_state(Some(node_index("root2")));
+            let s_root_e2_source = use_state(|| None);
+            let root_e2_target = use_state(|| Some(node_index("root2")));
             let root_e2 = EmgEdgeItem::default_with_wh_in_topo(
                 s_root_e2_source.watch(),
                 root_e2_target.watch(),
@@ -3020,8 +3011,8 @@ mod tests {
             });
             // ---------------------------------------
 
-            let e1_source = use_state(Some(node_index("root")));
-            let e1_target = use_state(Some(node_index("1")));
+            let e1_source = use_state(|| Some(node_index("root")));
+            let e1_target = use_state(|| Some(node_index("1")));
             let e1 = EmgEdgeItem::new_in_topo(
                 e1_source.watch(),
                 e1_target.watch(),
@@ -3041,8 +3032,8 @@ mod tests {
 
             //-------------------------------------
 
-            let e2_source = use_state(Some(node_index("1")));
-            let e2_target = use_state(Some(node_index("2")));
+            let e2_source = use_state(|| Some(node_index("1")));
+            let e2_target = use_state(|| Some(node_index("2")));
             let e2 = EmgEdgeItem::new_in_topo(
                 e2_source.watch(),
                 e2_target.watch(),
@@ -3125,14 +3116,14 @@ mod tests {
     //     let e2 = EmgEdgeItem::new_root(200, 200);
     //     let ec = EmgEdgeItem::new_child(
     //         "e1",
-    //         use_state(Some(e.clone())),
+    //         use_state(||Some(e.clone())),
     //         size(px(10), px(10)),
     //         origin2(pc(0), pc(0)),
     //         align2(pc(50), pc(50)),
     //     );
     //     let ec2 = EmgEdgeItem::new_child(
     //         "e2",
-    //         use_state(Some(ec.clone())),
+    //         use_state(||Some(ec.clone())),
     //         size(px(10), px(10)),
     //         origin2(pc(0), pc(0)),
     //         align2(pc(100), pc(0)),

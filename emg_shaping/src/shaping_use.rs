@@ -3,13 +3,14 @@ use crate::Shaping;
 /*
  * @Author: Rais
  * @Date: 2021-09-07 16:19:26
- * @LastEditTime: 2023-01-13 12:04:53
+ * @LastEditTime: 2023-02-04 21:15:31
  * @LastEditors: Rais
  * @Description:
  */
 
 pub trait ShapingUse<Use> {
-    fn shaping_use(&mut self, use_something: &Use);
+    #[must_use]
+    fn shaping_use(&mut self, use_something: &Use) -> bool;
 }
 
 // impl<Use, Who> ShapingUse<Use> for Who {
@@ -26,7 +27,8 @@ impl<Use, Who> ShapingUse<Use> for Who
 where
     Use: Shaping<Who>,
 {
-    fn shaping_use(&mut self, use_something: &Use) {
-        use_something.shaping(self);
+    #[inline]
+    fn shaping_use(&mut self, use_something: &Use) -> bool {
+        use_something.shaping(self)
     }
 }

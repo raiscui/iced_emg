@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-01-13 11:58:59
+ * @LastEditTime: 2023-02-10 23:20:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,14 +10,19 @@
 use crate::{
     node_builder::EventNode,
     widget::{Layer, Widget},
-    NodeBuilderWidget,
+    GTreeBuilderElement, GTreeInit, InitTree, NodeBuilderWidget,
 };
 use dyn_clone::DynClone;
 use emg_state::{StateAnchor, StateMultiAnchor};
 use match_any::match_any;
 
-use emg_common::{better_any::Tid, dyn_partial_eq::DynPartialEq, IdStr, TypeCheckObjectSafe};
-use emg_shaping::{EqShaping, Shaping, ShapingUse, TryShapingUse};
+use emg_common::{
+    any::MessageTid,
+    better_any::{impl_tid, Tid, TidAble},
+    dyn_partial_eq::DynPartialEq,
+    IdStr, TypeCheckObjectSafe, TypeCheckObjectSafeTid,
+};
+use emg_shaping::{EqShaping, Shaping, ShapingAny, ShapingDyn, ShapingUse, ShapingUseAny};
 // extern crate derive_more;
 use derive_more::From;
 // use dyn_clonable::clonable;
@@ -27,22 +32,28 @@ use tracing::{instrument, warn};
 
 #[allow(clippy::module_name_repetitions)]
 // #[clonable]
-pub trait DynGElement<Message>:
+//NOTE 继承Tid:从这个转换 , TidAble: 可以转换成这个
+pub trait DynGElement<Message:for <'a> MessageTid<'a>>:
     // AsRefreshFor<GElement< Message>>
     for<'a> Tid<'a>
      +Shaping<GElement< Message>>
      +ShapingUse<GElement<Message>>
     // + GenerateElement<Message>
     + Widget<SceneCtxType = crate::SceneFrag>
+    + TypeCheckObjectSafeTid
     + TypeCheckObjectSafe
     + DynPartialEq
     + DynClone
     + core::fmt::Debug
-    + TryShapingUse
+    + ShapingUseAny
     + ShapingUse<i32>
+    + ShapingAny
 
-{
-}
+{ }
+
+#[impl_tid]
+impl<'a, Message> TidAble<'a> for Box<dyn DynGElement<Message> + 'a> {}
+
 dyn_clone::clone_trait_object!(<Message> DynGElement<Message>);
 
 impl<Message> core::cmp::Eq for dyn DynGElement<Message> + '_ {}
@@ -82,7 +93,7 @@ mod tests {
         let _f = GElement::<Message>::Shaper_(
             Rc::new(Shaper::new(|| 1i32)) as Rc<dyn EqShaping<GElement<Message>>>
         );
-        let _a = use_state(2i32);
+        let _a = use_state(|| 2i32);
 
         let _f = GElement::<Message>::Shaper_(Rc::new(_a.watch()));
 
@@ -91,7 +102,7 @@ mod tests {
     }
 }
 
-#[derive(Display, From)]
+#[derive(Display, From, Tid)]
 // #[eq_opt(no_self_where, where_add = "Message: PartialEq+'static,")]
 #[non_exhaustive]
 pub enum GElement<Message> {
@@ -106,7 +117,7 @@ pub enum GElement<Message> {
     //NOTE internal
     Generic_(Box<dyn DynGElement<Message>>), //范型 //TODO check batter when use rc?
     #[from(ignore)]
-    NodeRef_(IdStr),     // IntoE(Rc<dyn Into<Element< Message>>>),
+    NodeRef_(IdStr),      // IntoE(Rc<dyn Into<Element< Message>>>),
     // #[from(ignore)]
     // InsideDirectUseSa_(StateAnchor<Rc<Self>>),
     //NOTE generate by tree builder use into()
@@ -114,6 +125,18 @@ pub enum GElement<Message> {
     SaNode_(StateAnchor<Rc<Self>>),
     EvolutionaryFactor(Rc<dyn Evolution<StateAnchor<Rc<Self>>>>),
     EmptyNeverUse,
+}
+
+impl<Message> GTreeInit<Message> for GElement<Message> {
+    fn tree_init(
+        self,
+        _id: &IdStr,
+        _es: &Vec<Rc<dyn Shaping<emg_layout::EmgEdgeItem<IdStr>>>>,
+        _children: &Vec<GTreeBuilderElement<Message>>,
+        //TODO use either like <GTreeBuilderElement,GElement> for speed??
+    ) -> InitTree<Message> {
+        self.into()
+    }
 }
 
 impl<Message> Clone for GElement<Message> {
@@ -283,13 +306,13 @@ mod evolution_test {
 
     #[test]
     fn test() {
-        let a = use_state(1);
+        let a = use_state(|| 1);
         let f = SaWithMapFn {
             u_s_e: a.watch(),
             map_action: Rc::new(|p, _num| p.clone()),
         };
 
-        let ge = use_state(GElement::<Message>::EmptyNeverUse).watch();
+        let ge = use_state(|| GElement::<Message>::EmptyNeverUse).watch();
         let _x = GElement::<Message>::EvolutionaryFactor(Rc::new(f.clone()));
         let _xxx: GElement<Message> = f.into();
         let _x2 = GElement::<Message>::EvolutionaryFactor(
@@ -446,9 +469,7 @@ where
                 // } else {
                 //     f.debug_tuple("GElement::Builder_").field(&nbw).finish()
                 // }
-                f.debug_tuple("GElement::Builder_")
-                    .field(builder.widget())
-                    .finish()
+                f.debug_tuple("GElement::Builder_").field(builder).finish()
             }
             Event_(e) => f.debug_tuple("GElement::EventCallBack_").field(e).finish(),
             // Button_(_) => {
@@ -475,11 +496,11 @@ where
     // }
     type SceneCtxType = crate::SceneFrag;
 
-    #[instrument(skip(self, ctx), name = "GElement paint",fields(self = %self))]
+    #[instrument(skip(self, painter), name = "GElement paint",fields(self = %self))]
     #[inline]
     fn paint_sa(
         &self,
-        ctx: &StateAnchor<emg_native::PaintCtx>,
+        painter: &StateAnchor<emg_native::PaintCtx>,
     ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         // match self {
         //     GElement::Builder_(b) => b.paint_sa(ctx),
@@ -493,12 +514,12 @@ where
         match_any!(self,
 
             // Builder_( x)| Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
-            Builder_( x)| Layer_(x) => x.paint_sa(ctx),
+            Builder_( x)| Layer_(x) => x.paint_sa(painter),
             // Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Shaper_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Generic_(x) => {
                 warn!("Generic_:: Generic_ paint_sa");
-                (x.as_ref() as &dyn Widget<SceneCtxType = Self::SceneCtxType>).paint_sa(ctx)
+                (x.as_ref() as &dyn Widget<SceneCtxType = Self::SceneCtxType>).paint_sa(painter)
 
                 // panic!("Generic_ should be Builder here");
                 },

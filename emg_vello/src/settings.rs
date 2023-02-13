@@ -1,19 +1,24 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 00:09:14
- * @LastEditTime: 2022-08-23 16:00:06
+ * @LastEditTime: 2023-02-01 15:29:01
  * @LastEditors: Rais
  * @Description:
  */
 //! Configure a renderer.
+
+use emg_graphics_backend::window::compositor::CompositorSetting;
 
 /// The settings of a [`Backend`].
 ///
 /// [`Backend`]: crate::Backend
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Settings {
+    //NOTE 逻辑尺寸
     pub width: usize,
     pub height: usize,
+    //NOTE user sf * window sf , 已开始无法获取,只能默认,但是使用这个设置创建 compositor 的时候必须有
+    pub vp_scale_factor: Option<f64>,
     // pub flags: InstanceFlags,
     // /// The present mode of the [`Backend`].
     // ///
@@ -64,12 +69,18 @@ impl Settings {
         Settings { ..Self::default() }
     }
 }
+impl CompositorSetting for Settings {
+    fn set_vp_scale_factor(&mut self, scale_factor: f64) {
+        self.vp_scale_factor = Some(scale_factor);
+    }
+}
 
 impl Default for Settings {
     fn default() -> Settings {
         Settings {
             width: 1920,
             height: 1080,
+            vp_scale_factor: None,
             // flags: InstanceFlags::default(),
             // present_mode: wgpu::PresentMode::AutoVsync,
             // internal_backend: wgpu::Backends::all(),
