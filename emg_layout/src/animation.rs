@@ -71,8 +71,8 @@ where
             });
         });
         Self {
-            steps: use_state(Rc::new(RefCell::new(VecDeque::new()))),
-            interruption: use_state(vector![]),
+            steps: use_state(|| Rc::new(RefCell::new(VecDeque::new()))),
+            interruption: use_state(|| vector![]),
             props,
         }
     }
@@ -309,7 +309,7 @@ where
         // Ix: Clone + std::hash::Hash + Eq + Default + Ord + std::fmt::Display + 'static,
     {
         let sv_now = global_clock();
-        // let sv_now = use_state(Duration::ZERO);
+        // let sv_now = use_state(||Duration::ZERO);
 
         // let rc_store = state_store();
         // let rc_store2 = rc_store;
@@ -804,8 +804,8 @@ mod tests {
 
     fn bench_less_state_am(b: &mut Bencher) {
         // let ei = edge_index_no_source("fff");
-        // let source = use_state(ei.source_nix().as_ref().cloned());
-        // let target = use_state(ei.target_nix().as_ref().cloned());
+        // let source = use_state(||ei.source_nix().as_ref().cloned());
+        // let target = use_state(||ei.target_nix().as_ref().cloned());
         // let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
         //     source.watch(),
         //     target.watch(),
@@ -886,8 +886,8 @@ mod tests {
 
     fn bench_many_state_am(b: &mut Bencher) {
         // let ei = edge_index_no_source("fff");
-        // let source = use_state(ei.source_nix().as_ref().cloned());
-        // let target = use_state(ei.target_nix().as_ref().cloned());
+        // let source = use_state(||ei.source_nix().as_ref().cloned());
+        // let target = use_state(||ei.target_nix().as_ref().cloned());
         // let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
         //     source.watch(),
         //     target.watch(),
@@ -895,7 +895,7 @@ mod tests {
         //     1920,
         //     1080,
         // );
-        // let sv_now = use_state(Duration::ZERO);
+        // let sv_now = use_state(||Duration::ZERO);
         let sv_now = global_clock();
 
         b.iter(move || {
@@ -913,7 +913,7 @@ mod tests {
     fn many() {
         let _g = _init();
 
-        // let sv_now = use_state(Duration::ZERO);
+        // let sv_now = use_state(||Duration::ZERO);
         let sv_now = global_clock();
         sv_now.set(Duration::from_millis(0));
 
@@ -940,7 +940,7 @@ mod tests {
     fn many_for() {
         let _g = _init();
 
-        // let sv_now = use_state(Duration::ZERO);
+        // let sv_now = use_state(||Duration::ZERO);
         let sv_now = global_clock();
         // let edge_item1 = edge_item.clone();
         sv_now.set(Duration::from_millis(0));
@@ -1066,8 +1066,8 @@ mod tests {
             // trace!("fff");
 
             // let ei = edge_index_no_source("fff");
-            // let source = use_state(ei.source_nix().as_ref().cloned());
-            // let target = use_state(ei.target_nix().as_ref().cloned());
+            // let source = use_state(||ei.source_nix().as_ref().cloned());
+            // let target = use_state(||ei.target_nix().as_ref().cloned());
             // let edge_item: EmgEdgeItem<String> = EmgEdgeItem::default_with_wh_in_topo(
             //     source.watch(),
             //     target.watch(),
@@ -1178,16 +1178,16 @@ mod tests {
 
         insta::with_settings!({snapshot_path => Path::new("./layout_am")}, {
 
-            let css_w: StateVar<CssWidth> = use_state(width(px(1)));
+            let css_w: StateVar<CssWidth> = use_state(||width(px(1)));
 
             // let span = trace_span!("am-test");
             // let _guard = span.enter();
             // trace!("fff");
 
-            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(||Dict::new());
 
-            let root_e_source =use_state( None);
-            let root_e_target = use_state(Some(node_index("root")));
+            let root_e_source =use_state(|| None);
+            let root_e_target = use_state(||Some(node_index("root")));
             let  root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
             // e_dict_sv.set_with(|d|{
             //     let mut nd = d .clone();
@@ -1195,8 +1195,8 @@ mod tests {
             //     nd
             // });
 
-            // let e1_source =use_state( Some(node_index("root")));
-            // let e1_target = use_state(Some(node_index("1")));
+            // let e1_source =use_state(|| Some(node_index("root")));
+            // let e1_target = use_state(||Some(node_index("1")));
             // let e1 = EmgEdgeItem::new_in_topo(
             //         e1_source.watch(),
             //         e1_target.watch(),
@@ -1401,12 +1401,12 @@ mod tests {
         // let _g = _init();
         let sv_now = global_clock();
         sv_now.set(Duration::from_millis(0));
-        let css_w: StateVar<CssWidth> = use_state(width(px(1)));
+        let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
-        let root_e_source = use_state(None);
-        let root_e_target = use_state(Some(node_index("root")));
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let root_e_source = use_state(|| None);
+        let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
             root_e_source.watch(),
             root_e_target.watch(),
@@ -1448,13 +1448,13 @@ mod tests {
         let sv_now = global_clock();
         sv_now.set(Duration::from_millis(0));
 
-        let css_w: StateVar<CssWidth> = use_state(width(px(1)));
+        let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
         insta::assert_debug_snapshot!("anima_macro_init", &a);
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
-        let root_e_source = use_state(None);
-        let root_e_target = use_state(Some(node_index("root")));
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let root_e_source = use_state(|| None);
+        let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
             root_e_source.watch(),
             root_e_target.watch(),
@@ -1488,16 +1488,16 @@ mod tests {
 
         insta::with_settings!({snapshot_path => Path::new("./layout_children_am")}, {
 
-            let css_w: StateVar<CssWidth> = use_state(width(px(1)));
+            let css_w: StateVar<CssWidth> = use_state(||width(px(1)));
 
             // let span = trace_span!("am-test");
             // let _guard = span.enter();
             // trace!("fff");
 
-            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(||Dict::new());
 
-            let root_e_source =use_state( None);
-            let root_e_target = use_state(Some(node_index("root")));
+            let root_e_source =use_state(|| None);
+            let root_e_target = use_state(||Some(node_index("root")));
             let root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
             e_dict_sv.set_with(|d|{
                 let mut nd = d .clone();
@@ -1505,8 +1505,8 @@ mod tests {
                 nd
             });
 
-            let e1_source =use_state( Some(node_index("root")));
-            let e1_target = use_state(Some(node_index("1")));
+            let e1_source =use_state(|| Some(node_index("root")));
+            let e1_target = use_state(||Some(node_index("1")));
             let e1 = EmgEdgeItem::new_in_topo(
                     e1_source.watch(),
                     e1_target.watch(),

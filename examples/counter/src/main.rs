@@ -149,8 +149,8 @@ impl Sandbox for Counter {
     fn tree_build(&self, orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
         use emg_bind::gtree_macro_prelude::*;
         let n = Rc::new(Cell::new(100));
-        let ww = use_state(w(px(100)));
-        let ff = use_state(fill(hsl(150, 100, 100)));
+        let ww = use_state(|| w(px(100)));
+        let ff = use_state(|| fill(hsl(150, 100, 100)));
         gtree! {
             @="debug_layer" Layer [
                 On:CLICK  ||{

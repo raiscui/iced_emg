@@ -151,7 +151,7 @@ impl Application for Counter {
                 value: 1,
                 // increment_button: Default::default(),
                 // decrement_button: Default::default(),
-                ddd: use_state(1),
+                ddd: use_state(|| 1),
                 dt: global_clock(),
                 dt2: Cell::new(Duration::ZERO),
                 // an: style(vector![opacity(1.)]),
@@ -266,8 +266,8 @@ impl Application for Counter {
         this: Rc<RefCell<Self>>,
         orders: impl Orders<Message> + 'static,
     ) -> GTreeBuilderElement<Message> {
-        let a = use_state(19999);
-        let b = use_state(333i32);
+        let a = use_state(|| 19999);
+        let b = use_state(|| 333i32);
         let bw = b.watch();
 
         let aw = a.watch();

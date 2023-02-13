@@ -461,9 +461,11 @@ where
 {
     #[topo::nested]
     pub fn new_in_topo(item: N) -> Self {
-        let incoming_eix_set: StateVar<EdgeCollect<Ix>> = use_state(EdgeCollect::<Ix>::default());
+        let incoming_eix_set: StateVar<EdgeCollect<Ix>> =
+            use_state(|| EdgeCollect::<Ix>::default());
         let incoming_len = incoming_eix_set.watch().map(|ins| ins.len());
-        let outgoing_eix_set: StateVar<EdgeCollect<Ix>> = use_state(EdgeCollect::<Ix>::default());
+        let outgoing_eix_set: StateVar<EdgeCollect<Ix>> =
+            use_state(|| EdgeCollect::<Ix>::default());
         let outgoing_len = outgoing_eix_set.watch().map(|outs| outs.len());
         Self {
             item,
@@ -687,8 +689,8 @@ where
     ) -> Self {
         Self {
             item,
-            source_nix: use_state(source_nix),
-            target_nix: use_state(target_nix),
+            source_nix: use_state(|| source_nix),
+            target_nix: use_state(|| target_nix),
         }
     }
     pub fn new(
@@ -864,7 +866,7 @@ where
         Self {
             store: state_store(),
             nodes: HashMap::default(),
-            edges: use_state(Dict::new()),
+            edges: use_state(|| Dict::new()),
         }
     }
 }
@@ -894,7 +896,7 @@ where
         Self {
             store: state_store(),
             nodes,
-            edges: use_state(edges),
+            edges: use_state(|| edges),
         }
     }
 
@@ -1759,21 +1761,21 @@ mod graph_test_mod {
     fn node_create() {
         let a_node: Node<String, String> = Node::new(
             String::from("is node item"),
-            use_state(
+            use_state(|| {
                 [edge_index(String::from("3"), String::from("1"))]
                     .into_iter()
-                    .collect(),
-            ),
-            use_state(
+                    .collect()
+            }),
+            use_state(|| {
                 [edge_index(String::from("1"), String::from("2"))]
                     .into_iter()
-                    .collect(),
-            ),
+                    .collect()
+            }),
         );
         let str_node: Node<String, String> = Node::new(
             String::from("is node item"),
-            use_state([edge_index("3", "1")].into_iter().collect()),
-            use_state([edge_index("1", "2")].into_iter().collect()),
+            use_state(|| [edge_index("3", "1")].into_iter().collect()),
+            use_state(|| [edge_index("1", "2")].into_iter().collect()),
         );
         println!("{:?}", a_node);
         println!("{:?}", str_node);
@@ -1786,12 +1788,12 @@ mod graph_test_mod {
             debug!("run mut_graph_create");
             let ww_node = Node::new(
                 String::from("ww_item"),
-                use_state(
+                use_state(||
                     [edge_index(String::from("xx"), String::from("ww"))]
                         .into_iter()
                         .collect(),
                 ),
-                use_state(
+                use_state(||
                     [edge_index(String::from("ww"), String::from("xx"))]
                         .into_iter()
                         .collect(),
@@ -1857,12 +1859,12 @@ mod graph_test_mod {
 
             let ww_node_rm_edge = Node::new(
                 String::from("ww_item"),
-                use_state(
+                use_state(||
                     [edge_index(String::from("xx"), String::from("ww"))]
                         .into_iter()
                         .collect(),
                 ),
-                use_state(IndexSet::default()),
+                use_state(||IndexSet::default()),
             );
 
             let xx_ww_edge = ww_node_rm_edge

@@ -53,7 +53,7 @@ use emg_state::use_state;
 use static_init::dynamic;
 
 #[dynamic]
-pub static G_POS: emg_state::StateVar<Option<Pos<f64>>> = use_state(None);
+pub static G_POS: emg_state::StateVar<Option<Pos<f64>>> = use_state(|| None);
 
 // ────────────────────────────────────────────────────────────────────────────────
 

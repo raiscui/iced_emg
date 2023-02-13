@@ -93,8 +93,8 @@ where
     }
     #[topo::nested]
     pub fn build_in_topo(self, graph_rc: &Rc<RefCell<GraphType<Message, IdStr>>>) {
-        let incoming_eix_set = use_state(self.opt_incoming_eix_set.unwrap());
-        let outgoing_eix_set = use_state(self.opt_outgoing_eix_set.unwrap());
+        let incoming_eix_set = use_state(|| self.opt_incoming_eix_set.unwrap());
+        let outgoing_eix_set = use_state(|| self.opt_outgoing_eix_set.unwrap());
 
         let node_item = EmgNodeItem::<NItem<Message>, GelType<Message>>::new(
             self.ix.clone(),
@@ -177,8 +177,8 @@ impl GraphEdgeBuilder {
         g.nodes_connect_eix(&self.edge_ix)
             .ok_or(Error::EdgeIndexNotExistInNode)?;
         // ─────────────────────────────────────────────────────
-        let source = use_state(self.edge_ix.source_nix().clone());
-        let target = use_state(self.edge_ix.target_nix().clone());
+        let source = use_state(|| self.edge_ix.source_nix().clone());
+        let target = use_state(|| self.edge_ix.target_nix().clone());
         // ─────────────────────────────────────────────────────────────
         let edge_item = EmgEdgeItem::new_in_topo(
             source.watch(),
@@ -227,9 +227,11 @@ where
 
                 let edge_ix = edge_index_no_source(root_id.clone());
                 GraphNodeBuilder::new(root_id.clone())
-                    .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
-                        Layer::<Message>::new(root_id.clone()).into(),
-                    ))))
+                    .with_gel_sa(use_state(|| {
+                        StateAnchor::constant(Rc::new(
+                            Layer::<Message>::new(root_id.clone()).into(),
+                        ))
+                    }))
                     .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                     .with_outgoing_eix_set_with_default_capacity(5)
                     .build_in_topo(self);
@@ -280,7 +282,7 @@ where
 
             //     let edge_ix = edge_index_no_source(root_id.clone());
             //     GraphNodeBuilder::new(root_id.clone())
-            //         .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+            //         .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
             //             Layer::<Message>::new(root_id.clone()).into(),
             //         ))))
             //         .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
@@ -360,7 +362,7 @@ where
             //     let nix: NodeIndex<Self::Ix> = node_index(id.clone());
             //     let edge_ix = EdgeIndex::new(parent_nix, nix.clone());
             //     GraphNodeBuilder::new(id.clone())
-            //         .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
+            //         .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
             //             Layer::<Message>::new(id.clone()).into(),
             //         ))))
             //         .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
@@ -422,7 +424,7 @@ where
                     GElement::SaNode_(gel_sa) => {
                         GraphNodeBuilder::new(id.clone())
                         //TODO GTreeBuilderElement use Rc
-                        .with_gel_sa(use_state(gel_sa.clone()))
+                        .with_gel_sa(use_state(||gel_sa.clone()))
                         .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                         .with_outgoing_eix_set_with_default()
                         .build_in_topo(self);
@@ -449,7 +451,7 @@ where
                     GElement::NodeRef_(_)   =>{
                         GraphNodeBuilder::new(id.clone())
                         //TODO GTreeBuilderElement use Rc
-                        .with_gel_sa(use_state(StateAnchor::constant(Rc::new(gel.clone()))))
+                        .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(gel.clone()))))
                         .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                         .with_outgoing_eix_set_with_default_capacity(1)
                         .build_in_topo(self);
@@ -634,7 +636,9 @@ where
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_ix = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(id.clone())
-                    .with_gel_sa(use_state(StateAnchor::constant(Rc::new(u.clone().into()))))
+                    .with_gel_sa(use_state(|| {
+                        StateAnchor::constant(Rc::new(u.clone().into()))
+                    }))
                     .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                     .with_outgoing_eix_set(IndexSet::with_hasher(
                         BuildHasherDefault::<CustomHasher>::default(),
@@ -680,9 +684,9 @@ where
                 let nix: NodeIndex<Self::Ix> = node_index(id.clone());
                 let edge_ix = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(id.clone())
-                    .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
-                        callback.clone().into(),
-                    ))))
+                    .with_gel_sa(use_state(|| {
+                        StateAnchor::constant(Rc::new(callback.clone().into()))
+                    }))
                     .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                     .with_outgoing_eix_set_with_default()
                     .build_in_topo(self);
@@ -754,9 +758,9 @@ mod tests {
         // ────────────────────────────────────────────────────────────────────────────────
 
         GraphNodeBuilder::new(root_id.clone())
-            .with_gel_sa(use_state(StateAnchor::constant(Rc::new(
-                Layer::<Message>::new(root_id.clone()).into(),
-            ))))
+            .with_gel_sa(use_state(|| {
+                StateAnchor::constant(Rc::new(Layer::<Message>::new(root_id.clone()).into()))
+            }))
             .with_incoming_eix_set([root_edge_ix.clone()].into_iter().collect())
             .with_outgoing_eix_set_with_default_capacity(5)
             .build_in_topo(&emg_graph_rc_refcell);

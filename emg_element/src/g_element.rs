@@ -93,7 +93,7 @@ mod tests {
         let _f = GElement::<Message>::Shaper_(
             Rc::new(Shaper::new(|| 1i32)) as Rc<dyn EqShaping<GElement<Message>>>
         );
-        let _a = use_state(2i32);
+        let _a = use_state(|| 2i32);
 
         let _f = GElement::<Message>::Shaper_(Rc::new(_a.watch()));
 
@@ -306,13 +306,13 @@ mod evolution_test {
 
     #[test]
     fn test() {
-        let a = use_state(1);
+        let a = use_state(|| 1);
         let f = SaWithMapFn {
             u_s_e: a.watch(),
             map_action: Rc::new(|p, _num| p.clone()),
         };
 
-        let ge = use_state(GElement::<Message>::EmptyNeverUse).watch();
+        let ge = use_state(|| GElement::<Message>::EmptyNeverUse).watch();
         let _x = GElement::<Message>::EvolutionaryFactor(Rc::new(f.clone()));
         let _xxx: GElement<Message> = f.into();
         let _x2 = GElement::<Message>::EvolutionaryFactor(

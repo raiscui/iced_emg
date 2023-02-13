@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-13 14:50:02
+ * @LastEditTime: 2023-02-13 14:59:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -1118,7 +1118,7 @@ where
     // where
     //     B: From<T> + Clone + 'static,
     // {
-    //     let b = use_state(self.get().into());
+    //     let b = use_state(||self.get().into());
     //     StateVarDi::new_use_into(*self, b)
     // }
     // #[topo::nested]
@@ -1127,7 +1127,7 @@ where
     //     B: From<T> + Clone + 'static,
     //     T: From<B> + 'static,
     // {
-    //     let b = use_state(self.get().into());
+    //     let b = use_state(||self.get().into());
     //     (
     //         StateVarDi::new_use_into(*self, b),
     //         StateVarDi::new_use_into(b, *self),
@@ -1795,7 +1795,10 @@ fn insert_var_with_topo_id<T: 'static>(var: Var<T>, current_id: TopoKey) {
     });
 }
 
-fn or_insert_var_with_topo_id<F: FnOnce() -> T, T: 'static+std::fmt::Debug>(func: F, current_id: TopoKey) {
+fn or_insert_var_with_topo_id<F: FnOnce() -> T, T: 'static + std::fmt::Debug>(
+    func: F,
+    current_id: TopoKey,
+) {
     G_STATE_STORE.with(|g_state_store_refcell| {
         trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
 

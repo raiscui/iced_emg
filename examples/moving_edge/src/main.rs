@@ -163,8 +163,8 @@ impl Sandbox for Counter {
         use emg_bind::gtree_macro_prelude::*;
 
         let n = Rc::new(Cell::new(100));
-        let ww = use_state(w(px(100)));
-        let fill_var = use_state(fill(hsl(150, 100, 30)));
+        let ww = use_state(|| w(px(100)));
+        let fill_var = use_state(|| fill(hsl(150, 100, 30)));
         gtree! {
             @="root" Layer [
                 @E=[

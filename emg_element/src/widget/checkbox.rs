@@ -104,7 +104,7 @@ impl<Message> Checkbox<Message>
         F: 'static + Fn(bool) -> Message,
     {
         Self {
-            is_checked: use_state(is_checked),
+            is_checked: use_state(|| is_checked),
             on_toggle: Some(Rc::new(f)),
             label: label.into(),
             id: None,
