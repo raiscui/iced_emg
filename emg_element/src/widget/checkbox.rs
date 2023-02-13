@@ -72,18 +72,14 @@ impl<Message> PartialEq for Checkbox<Message>
 {
     fn eq(&self, other: &Self) -> bool {
         self.is_checked == other.is_checked
-        && if let (Some(s),Some(t))= ( &self.on_toggle ,&other.on_toggle){
+            && if let (Some(s), Some(t)) = (&self.on_toggle, &other.on_toggle) {
                 std::ptr::eq(
                     (std::ptr::addr_of!(**s)).cast::<u8>(),
                     (std::ptr::addr_of!(**t)).cast::<u8>(),
                 )
-
-            }else{false}
-
-            // && std::ptr::eq(
-                // (std::ptr::addr_of!(*self.on_toggle)).cast::<u8>(),
-                // (std::ptr::addr_of!(*other.on_toggle)).cast::<u8>(),
-            // )´
+            } else {
+                false
+            }
             && self.label == other.label
             && self.id == other.id
             && self.width == other.width

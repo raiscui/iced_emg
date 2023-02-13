@@ -11,10 +11,11 @@ use emg_bind::{
 use std::{cell::Cell, rc::Rc};
 use tracing::{debug_span, instrument};
 #[cfg(feature = "debug")]
-use tracing_subscriber::EnvFilter;
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
+    let error_layer =
+        tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
 
     #[cfg(not(feature = "debug"))]
     let out_layer = tracing_tree::HierarchicalLayer::new(2)
@@ -79,9 +80,12 @@ fn tracing_init() -> Result<(), Report> {
         .with_indent_lines(true)
         .with_indent_amount(4)
         .with_targets(true)
-        .with_filter(EnvFilter::new(
+        .with_filter(tracing_subscriber::EnvFilter::new(
             // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
-            "[GElement-shaping]=debug",
+            // "[GElement-shaping]=debug",
+            // "error,[sa gel in map clone]=debug",
+            "error",
+            // "error",
         ));
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -90,6 +94,7 @@ fn tracing_init() -> Result<(), Report> {
         // .with(layout_override_layer)
         // .with(event_matching_layer)
         // .with(touch_layer)
+        .with(error_layer)
         .with(emg_layout_layer)
         // .with(out_layer)
         .init();

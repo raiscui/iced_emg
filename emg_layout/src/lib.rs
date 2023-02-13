@@ -804,16 +804,6 @@ where
             func(o.get(key).and_then(EdgeItemNode::as_edge_data))
         })
     }
-    pub fn engine_edge_data_with<F: FnOnce(Option<&EdgeData>) -> R, R>(
-        &self,
-        engine: &mut Engine,
-        key: &EPath<Ix>,
-        func: F,
-    ) -> R {
-        self.edge_nodes.engine_get_with(engine, |o| {
-            func(o.get(key).and_then(EdgeItemNode::as_edge_data))
-        })
-    }
 }
 
 impl<Ix> EmgEdgeItem<Ix>

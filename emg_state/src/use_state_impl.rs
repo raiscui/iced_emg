@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-03 18:43:26
+ * @LastEditTime: 2023-02-13 11:48:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,9 +16,9 @@ use anchors::{
     singlethread::MultiAnchor,
 };
 use emg_common::{TypeCheck, TypeName};
-use tracing::{debug, debug_span, warn};
+use tracing::{debug, debug_span, error, error_span, warn};
 
-use std::{hash::BuildHasherDefault, panic::Location};
+use std::{hash::BuildHasherDefault, ops::Deref, panic::Location};
 // use im::HashMap;
 use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
@@ -41,6 +41,8 @@ use indexmap::IndexMap as HashMap;
 // use rustc_hash::FxHashMap as HashMap;
 // use rustc_hash::FxHasher as CustomHasher;
 use emg_hasher::CustomHasher;
+
+use crate::error::Error;
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[allow(clippy::module_name_repetitions)]
@@ -92,16 +94,19 @@ impl GStateStore {
     /// # Panics
     ///
     /// Will panic if engine cannot `borrow_mut`
+    #[track_caller]
     fn engine_get<O: Clone + 'static>(&self, anchor: &Anchor<O>) -> O {
         trace!("engine_get: {}", &std::any::type_name::<O>());
         let _g = trace_span!("-> enging_get", "type: {}", &std::any::type_name::<O>()).entered();
 
         self.engine.try_borrow_mut().map_or_else(
             |err| {
+                let x = &*illicit::expect::<LocationEngineGet>();
                 panic!(
-                    "can't borrow_mut engine err: {} , for anchor type: {}",
+                    "can't borrow_mut engine err: {} , for anchor type: {},\n at:{}",
                     &err,
-                    &std::any::type_name::<O>()
+                    &std::any::type_name::<O>(),
+                    x.0
                 )
             },
             |mut e| {
@@ -116,6 +121,48 @@ impl GStateStore {
             },
         )
     }
+
+    /// # Panics
+    ///
+    /// Will panic if engine cannot `borrow_mut`
+    #[track_caller]
+    fn try_engine_get<O: Clone + 'static>(&self, anchor: &Anchor<O>) -> Result<O, Error> {
+        self.engine.try_borrow_mut().map_or_else(
+            |err| {
+                let x = *illicit::expect::<LocationEngineGet>().deref();
+
+                #[cfg(feature = "engine-try-borrow-mut-no-panic")]
+                {
+                    let e = format!(
+                        "can't borrow_mut engine err: {} , for anchor type: {}",
+                        &err,
+                        &std::any::type_name::<O>(),
+                    );
+                    Err(Error::EngineAlreadyMut(x, e))
+                }
+                #[cfg(not(feature = "engine-try-borrow-mut-no-panic"))]
+                {
+                    panic!(
+                        "can't borrow_mut engine err: {} , for anchor type: {},\n at:{}",
+                        &err,
+                        &std::any::type_name::<O>(),
+                        x.0
+                    )
+                }
+            },
+            |mut e| {
+                let _gg = trace_span!(
+                    "-> enging_get:engine borrow_muted , now getting.. ",
+                    "type: {}",
+                    &std::any::type_name::<O>()
+                )
+                .entered();
+
+                Ok(e.get(anchor))
+            },
+        )
+    }
+
     fn engine_get_with<O: Clone + 'static, F: FnOnce(&O) -> R, R>(
         &self,
         anchor: &Anchor<O>,
@@ -1212,9 +1259,17 @@ impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateAnchor<T
 }
 
 impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateAnchor<T> {
+    #[track_caller]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let v = self.get();
-        f.debug_tuple("StateAnchor").field(&v).finish()
+        match self.try_get() {
+            Ok(v) => f.debug_tuple("StateAnchor").field(&v).finish(),
+            Err(e) => {
+                eprintln!("error:!!!!!!!!!!!! \n---- {}", e);
+                f.debug_tuple("StateAnchor")
+                    .field(&"_err_can_not_get_mut_engine_")
+                    .finish()
+            }
+        }
     }
 }
 impl<T> From<Anchor<T>> for StateAnchor<T>
@@ -1248,19 +1303,61 @@ where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
+    fn try_get(&self) -> Result<T, Error>;
     fn get_with<F: FnOnce(&T) -> R, R>(&self, func: F) -> R;
 
     fn store_get(&self, store: &GStateStore) -> T;
     fn store_get_with<F: FnOnce(&T) -> R, R>(&self, store: &GStateStore, func: F) -> R;
-    fn engine_get_with<F: FnOnce(&T) -> R, R>(&self, engine: &mut Engine, func: F) -> R;
 }
+
+#[derive(Copy, Clone, Debug)]
+pub struct LocationEngineGet(&'static Location<'static>);
+
+impl LocationEngineGet {
+    #[track_caller]
+    pub fn new() -> Self {
+        match illicit::get::<LocationEngineGet>().as_deref() {
+            Ok(x) => *x,
+            Err(_) => LocationEngineGet(Location::caller()),
+        }
+    }
+    #[track_caller]
+    pub fn reset_new() -> Self {
+        LocationEngineGet(Location::caller())
+    }
+}
+
+impl Deref for LocationEngineGet {
+    type Target = &'static Location<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl<T> CloneStateAnchor<T> for StateAnchor<T>
 where
     T: Clone + 'static,
 {
+    #[track_caller]
     fn get(&self) -> T {
+        // let loc = LocationEngineGet::reset_new();
+        // illicit::Layer::new().offer(loc).enter(|| {
+        let _span = debug_span!("StateAnchor::get").entered();
         global_engine_get_anchor_val(&self.0)
+        // })
     }
+
+    #[track_caller]
+    fn try_get(&self) -> Result<T, Error> {
+        let loc = LocationEngineGet::new();
+
+        illicit::Layer::new().offer(loc).enter(|| {
+            let _span = debug_span!("StateAnchor::get").entered();
+            try_global_engine_get_anchor_val(&self.0)
+        })
+    }
+
     fn get_with<F: FnOnce(&T) -> R, R>(&self, func: F) -> R {
         global_engine_get_anchor_val_with(&self.0, func)
     }
@@ -1269,9 +1366,6 @@ where
     }
     fn store_get_with<F: FnOnce(&T) -> R, R>(&self, store: &GStateStore, func: F) -> R {
         store.engine_get_with(&self.0, func)
-    }
-    fn engine_get_with<F: FnOnce(&T) -> R, R>(&self, engine: &mut Engine, func: F) -> R {
-        GStateStore::engine_get_with2(engine, &self.0, func)
     }
 }
 
@@ -1622,11 +1716,22 @@ impl From<TopoKey> for StorageKey {
     }
 }
 
+#[track_caller]
 fn global_engine_get_anchor_val<O: Clone + 'static>(anchor: &Anchor<O>) -> O {
     trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
 
     G_STATE_STORE.with(|g_state_store_refcell| g_state_store_refcell.borrow().engine_get(anchor))
 }
+
+#[track_caller]
+fn try_global_engine_get_anchor_val<O: Clone + 'static>(anchor: &Anchor<O>) -> Result<O, Error> {
+    trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
+
+    G_STATE_STORE
+        .with(|g_state_store_refcell| g_state_store_refcell.borrow().try_engine_get(anchor))
+}
+
+#[track_caller]
 fn global_engine_get_anchor_val_with<O: Clone + 'static, F: FnOnce(&O) -> R, R>(
     anchor: &Anchor<O>,
     func: F,
