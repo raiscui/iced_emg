@@ -28,6 +28,7 @@ members = [
     # "tests",
     "examples/counter",
     "examples/moving_edge",
+    "examples/checkbox",
 ]
 
 

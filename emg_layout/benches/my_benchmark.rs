@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2023-01-20 15:21:58
+ * @LastEditTime: 2023-02-14 15:58:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -95,7 +95,6 @@ pub fn ame_initd_benchmark(c: &mut Criterion) {
         .measurement_time(Duration::from_secs(10));
 
     // ────────────────────────────────────────────────────────────────────────────────
-
     // ────────────────────────────────────────────────────────────────────────────────
 
     group.bench_function("animation-initd-get", |b| {

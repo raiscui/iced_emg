@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-13 14:59:54
+ * @LastEditTime: 2023-02-14 10:02:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,7 +24,7 @@ use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
 use tracing::{trace, trace_span};
 // use delegate::delegate;
 // use anchors::collections::
-use slotmap::{DefaultKey, Key, SlotMap, SparseSecondaryMap};
+use slotmap::{DefaultKey, Key, SecondaryMap, SlotMap, SparseSecondaryMap};
 // ────────────────────────────────────────────────────────────────────────────────
 
 thread_local! {
@@ -48,7 +48,7 @@ use crate::error::Error;
 #[allow(clippy::module_name_repetitions)]
 pub struct GStateStore {
     anymap: anymap::AnyMap,
-    id_to_key_map: HashMap<StorageKey, DefaultKey>,
+    id_to_key_map: HashMap<StorageKey, DefaultKey, BuildHasherDefault<CustomHasher>>,
     primary_slotmap: SlotMap<DefaultKey, StorageKey>,
     engine: RefCell<Engine>,
 }
@@ -226,11 +226,21 @@ impl GStateStore {
     fn get_secondarymap<T: 'static>(&self) -> Option<&VarSecMap<T>> {
         self.anymap.get::<VarSecMap<T>>()
     }
+    fn remove_secondarymap<T: 'static>(&mut self) {
+        self.anymap.remove::<VarSecMap<T>>();
+    }
+
     fn get_before_secondarymap<T: 'static>(&self) -> Option<&VarBeforeSecMap<T>> {
         self.anymap.get::<VarBeforeSecMap<T>>()
     }
+    fn remove_before_secondarymap<T: 'static>(&mut self) {
+        self.anymap.remove::<VarBeforeSecMap<T>>();
+    }
     fn get_after_secondarymap<T: 'static>(&self) -> Option<&VarAfterSecMap<T>> {
         self.anymap.get::<VarAfterSecMap<T>>()
+    }
+    fn remove_after_secondarymap<T: 'static>(&mut self) {
+        self.anymap.remove::<VarAfterSecMap<T>>();
     }
     fn get_mut_secondarymap<T: 'static>(&mut self) -> Option<&mut VarSecMap<T>> {
         self.anymap.get_mut::<VarSecMap<T>>()
@@ -358,7 +368,6 @@ impl GStateStore {
             let key = self.primary_slotmap.insert(*current_id);
             self.id_to_key_map.insert(*current_id, key);
             if let Some(sec_map) = self.get_mut_secondarymap::<T>() {
-                //TODO  use (var,secondarymap) replace (var, HashMap::default())
                 sec_map.insert(key, var);
             } else {
                 self.register_secondarymap::<T>();
@@ -394,13 +403,13 @@ impl GStateStore {
                 {
                     let loc = Location::caller();
 
-                    let old = StateVar::<T>::new(*current_id.as_topo_key().unwrap());
-                    let old_v = old.get_rc();
-                    warn!( "this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {},\n old_v:{:?}",
+                    // let old = StateVar::<T>::new(*current_id.as_topo_key().unwrap());
+                    // let old_v = old.get_rc();
+                    warn!( "this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {}",
                         &std::any::type_name::<T>(),
                         &loc,
                         // id,
-                        &old_v
+                        // &old_v
                     );
                 }
 
@@ -416,7 +425,6 @@ impl GStateStore {
                 let key = self.primary_slotmap.insert(*current_id);
                 self.id_to_key_map.insert(*current_id, key);
                 if let Some(sec_map) = self.get_mut_secondarymap::<T>() {
-                    //TODO  use (var,secondarymap) replace (var, HashMap::default())
                     sec_map.insert(key, Var::new(func()));
                 } else {
                     self.register_secondarymap::<T>();
@@ -457,7 +465,12 @@ impl GStateStore {
                 let fns = existing_before_secondary_map
                     .entry(existing_key)
                     .unwrap()
-                    .or_insert_with(|| SynCallBeforeFnsMap::<T>::with_capacity(1));
+                    .or_insert_with(|| {
+                        SynCallBeforeFnsMap::<T>::with_capacity_and_hasher(
+                            1,
+                            BuildHasherDefault::<CustomHasher>::default(),
+                        )
+                    });
 
                 if fns.contains_key(before_fn_id) {
                     return Err("before_fns already has this fn".to_string());
@@ -477,7 +490,10 @@ impl GStateStore {
             (Some(existing_key), None) => {
                 self.register_before_secondarymap::<T>();
 
-                let mut new_map = SynCallBeforeFnsMap::<T>::with_capacity(1);
+                let mut new_map = SynCallBeforeFnsMap::<T>::with_capacity_and_hasher(
+                    1,
+                    BuildHasherDefault::<CustomHasher>::default(),
+                );
                 new_map.insert(*before_fn_id, func);
 
                 self.get_mut_before_secondarymap::<T>()
@@ -518,7 +534,12 @@ impl GStateStore {
                 let fns = existing_after_secondary_map
                     .entry(existing_key)
                     .unwrap()
-                    .or_insert_with(|| SynCallAfterFnsMap::<T>::with_capacity(1));
+                    .or_insert_with(|| {
+                        SynCallAfterFnsMap::<T>::with_capacity_and_hasher(
+                            1,
+                            BuildHasherDefault::<CustomHasher>::default(),
+                        )
+                    });
 
                 if fns.contains_key(after_fn_id) {
                     return Err("before_fns already has this fn".to_string());
@@ -531,7 +552,10 @@ impl GStateStore {
             (Some(existing_key), None) => {
                 self.register_after_secondarymap::<T>();
 
-                let mut new_map = SynCallAfterFnsMap::<T>::with_capacity(1);
+                let mut new_map = SynCallAfterFnsMap::<T>::with_capacity_and_hasher(
+                    1,
+                    BuildHasherDefault::<CustomHasher>::default(),
+                );
                 new_map.insert(*after_fn_id, func);
 
                 self.get_mut_after_secondarymap::<T>()
@@ -640,9 +664,10 @@ impl GStateStore {
         self.engine.borrow_mut()
     }
 }
-//TODO hash
-type SynCallAfterFnsMap<T> = HashMap<StorageKey, BoxSynCallAfterFn<T>>;
-type SynCallBeforeFnsMap<T> = HashMap<StorageKey, BoxSynCallBeforeFn<T>>;
+type SynCallAfterFnsMap<T> =
+    HashMap<StorageKey, BoxSynCallAfterFn<T>, BuildHasherDefault<CustomHasher>>;
+type SynCallBeforeFnsMap<T> =
+    HashMap<StorageKey, BoxSynCallBeforeFn<T>, BuildHasherDefault<CustomHasher>>;
 
 fn before_fns_run<T: 'static>(
     // store: &GStateStore,
@@ -791,6 +816,35 @@ impl<T> StateVar<T>
 where
     T: 'static,
 {
+    pub fn manually_drop(&self) {
+        G_STATE_STORE.with(|g_state_store_refcell| {
+            let mut store = g_state_store_refcell.borrow_mut();
+            let key = store
+                .id_to_key_map
+                .remove(&StorageKey::TopoKey(self.id))
+                .unwrap();
+            store.primary_slotmap.remove(key);
+            let existing_secondary_map = store.get_mut_secondarymap::<T>().unwrap();
+            existing_secondary_map.remove(key);
+            if existing_secondary_map.is_empty() {
+                store.remove_secondarymap::<T>();
+            }
+
+            if let Some(b_map) = store.get_mut_before_secondarymap::<T>() {
+                b_map.remove(key);
+                if b_map.is_empty() {
+                    store.remove_secondarymap::<T>();
+                }
+            }
+            if let Some(a_map) = store.get_mut_after_secondarymap::<T>() {
+                a_map.remove(key);
+                if a_map.is_empty() {
+                    store.remove_after_secondarymap::<T>()
+                }
+            }
+        });
+    }
+
     #[must_use]
     const fn new(id: TopoKey) -> Self {
         Self {
@@ -805,21 +859,20 @@ where
     }
 
     #[must_use]
+    #[inline]
     pub fn state_exists(&self) -> bool {
         state_exists_for_topo_id::<T>(self.id)
     }
 
     // #[must_use]
+    #[inline]
     pub fn get_with<F: Fn(&T) -> R, R>(&self, func: F) -> R {
         read_val_with_topo_id(self.id, |t| func(t))
     }
 
     #[must_use]
+    #[inline]
     pub fn store_get_rc(&self, store: &GStateStore) -> Rc<T> {
-        // store
-        //     .get_state_with_id::<T>(&StorageKey::TopoKey(self.id))
-        //     .expect("You are trying to get a var state that doesn't exist in this context!")
-        //     .get()
         self.store_get_var_with(store, anchors::expert::Var::get)
     }
 
@@ -833,6 +886,7 @@ where
         })
     }
 
+    #[inline]
     pub fn get_var_with<F: Fn(&Var<T>) -> R, R>(&self, func: F) -> R {
         read_var_with_topo_id::<_, T, R>(self.id, |v: &Var<T>| -> R { func(v) })
     }
@@ -847,15 +901,18 @@ where
     }
 
     #[must_use]
+    #[inline]
     pub fn watch(&self) -> StateAnchor<T> {
         self.get_var_with(|v| StateAnchor(v.watch()))
     }
     #[must_use]
+    #[inline]
     pub fn store_watch(&self, store: &GStateStore) -> StateAnchor<T> {
         // self.get_var_with(|v| StateAnchor(v.watch()))
         self.store_get_var_with(store, |v| StateAnchor(v.watch()))
     }
     /// # set, but in the before / after callback fn scope
+    #[inline]
     pub fn seting_in_b_a_callback(&self, skip: &SkipKeyCollection, value: &T)
     where
         T: Clone + std::fmt::Debug,
@@ -2377,5 +2434,52 @@ mod state_test {
 
         println!("=========3 a-edit:{:#?}", &a);
         println!("=========3 b-edit:{:#?}", &b);
+    }
+    use color_eyre::{eyre::Report, eyre::WrapErr};
+    fn tracing_init() -> Result<(), Report> {
+        use tracing_subscriber::prelude::*;
+        let error_layer =
+            tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
+
+        let tree_layer = tracing_tree::HierarchicalLayer::new(2)
+            .with_indent_lines(true)
+            .with_indent_amount(4)
+            .with_targets(true)
+            .with_filter(tracing_subscriber::EnvFilter::new(
+                // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
+                // "[GElement-shaping]=debug",
+                // "error,[sa gel in map clone]=debug",
+                "[anchors-drop]=trace",
+                // "error",
+            ));
+
+        tracing_subscriber::registry()
+            // .with(layout_override_layer)
+            // .with(event_matching_layer)
+            // .with(touch_layer)
+            .with(error_layer)
+            .with(tree_layer)
+            // .with(out_layer)
+            .init();
+        color_eyre::install()
+    }
+
+    #[test]
+    fn drop_test() {
+        tracing_init().unwrap();
+        let a = use_state(|| 1);
+        G_STATE_STORE.with(|g_state_store_refcell| {
+            let store = g_state_store_refcell.borrow();
+            println!("anymap len:{:#?}", store.anymap.len());
+            println!("id_to_key_map len:{:#?}", store.id_to_key_map.len());
+            println!("primary_slotmap len:{:#?}", store.primary_slotmap.len());
+        });
+        a.manually_drop();
+        G_STATE_STORE.with(|g_state_store_refcell| {
+            let store = g_state_store_refcell.borrow();
+            println!("anymap len:{:#?}", store.anymap.len());
+            println!("id_to_key_map len:{:#?}", store.id_to_key_map.len());
+            println!("primary_slotmap len:{:#?}", store.primary_slotmap.len());
+        });
     }
 }

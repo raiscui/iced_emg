@@ -1,5 +1,5 @@
 [package]
-name = "counter"
+name = "checkbox"
 version = "0.1.0"
 authors = ["Rais"]
 edition = "2021"

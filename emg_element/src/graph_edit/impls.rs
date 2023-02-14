@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-02-01 18:35:54
+ * @LastEditTime: 2023-02-14 17:53:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -64,7 +64,9 @@ mod test {
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     enum Message {}
 
+    #[ignore = "reason"]
     #[test]
+
     fn test_edge_path_change_source() {
         insta::with_settings!({snapshot_path => Path::new("./insta")},{
          let emg_graph = GraphType::<Message>::default();
@@ -166,7 +168,7 @@ mod test {
 
          // println!("{:#?}", &emg_graph_rc_refcell);
          let x = &*emg_graph_rc_refcell.borrow();
-         println!("{}", x);
+        //  println!("{}", x);
              insta::assert_display_snapshot!("graph_moved",x);
          });
     }

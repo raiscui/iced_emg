@@ -24,7 +24,7 @@
 use cassowary::{Constraint, Solver, Variable, WeightedRelation};
 use ccsa::{CCSSEqExpression, CassowaryGeneralMap, CassowaryMap, ScopeViewVariable, CCSS};
 use emg_hasher::CustomHasher;
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 use std::{
     cell::RefCell,
     clone::Clone,
@@ -808,7 +808,15 @@ where
 
 impl<Ix> EmgEdgeItem<Ix>
 where
-    Ix: Clone + Hash + Eq + PartialEq + PartialOrd + Ord + Default + std::borrow::Borrow<str>,
+    Ix: Clone
+        + Hash
+        + Eq
+        + PartialEq
+        + PartialOrd
+        + Ord
+        + Default
+        + std::borrow::Borrow<str>
+        + Display,
 {
     pub fn build_path_layout(&self, func: impl FnOnce(Layout) -> (EPath<Ix>, Layout)) {
         let (path, layout) = func(self.layout);
@@ -1604,12 +1612,12 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                             for (var,v) in changed_vars.iter() {
                                 let id_prop_str =   children_cass_maps.iter().find_map(|(id,(cassowary_map ,..))|{
                                      cassowary_map.prop(var).map(|prop|{
-                                        let vv:IdStr = format!("{:?} |=> #{:?}[{}]",&self_path4, &id,&prop).into();
+                                        let vv:IdStr = format!("{} |=> #{:?}[{}]",&self_path4, &id,&prop).into();
                                         vv
                                      })
                                 }).or_else(||{
                                     current_cassowary_map3.prop(var).map(|prop|{
-                                        let vv:IdStr = format!("{:?}[{}] ",&self_path4,&prop).into();
+                                        let vv:IdStr = format!("{}[{}] ",&self_path4,&prop).into();
                                         vv
                                     })
                                 }).unwrap_or_default();//TODO add genal vals

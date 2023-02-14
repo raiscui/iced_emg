@@ -1,6 +1,6 @@
 ---
 source: emg_bind/src/lib.rs
-assertion_line: 180
+assertion_line: 158
 expression: b
 ---
 GTreeBuilderElement::GElementTree(
@@ -8,7 +8,9 @@ GTreeBuilderElement::GElementTree(
     "with Some Edge Vector...size:0",
     GElement::Generic_(
         Checkbox {
-            is_checked: false,
+            is_checked: StateVar(
+                false,
+            ),
             label: "abcd",
             id: None,
             width: Simplex(

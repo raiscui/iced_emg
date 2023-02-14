@@ -1,8 +1,6 @@
 ---
 source: emg_layout/src/animation.rs
-assertion_line: 1168
 expression: "&a"
-
 ---
 AnimationEdge {
     inside: AnimationInside {
@@ -55,10 +53,10 @@ AnimationEdge {
                         ),
                         Motion {
                             position: NotNan(
-                                0.8790954727392676,
+                                0.8790955,
                             ),
                             velocity: NotNan(
-                                -4.334475455337199,
+                                -4.3344755,
                             ),
                             target: NotNan(
                                 0.0,

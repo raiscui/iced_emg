@@ -1,5 +1,6 @@
 ---
 source: emg_element/src/graph_edit/impls.rs
+assertion_line: 155
 expression: x
 ---
 Graph {
@@ -8,8 +9,8 @@ Graph {
                Node {
                    item: EmgNodeItem {
                        gel: ✦ (⚓ (Layer_)) ,
-                       paths_sa: [⚬-▣ root],
-                       paths_view_gel {
+                       paths_sa: ⚓ [⚬-▣ root],
+                       paths_view_gel ⚓ {
                            [⚬-▣ root] : Builder_
                        }
 
@@ -29,8 +30,8 @@ Graph {
                Node {
                    item: EmgNodeItem {
                        gel: ✦ (⚓ (Layer_)) ,
-                       paths_sa: [⚬-▣ root => ▣ b],
-                       paths_view_gel {
+                       paths_sa: ⚓ [⚬-▣ root => ▣ b],
+                       paths_view_gel ⚓ {
                            [⚬-▣ root => ▣ b] : Builder_
                        }
 
@@ -48,8 +49,8 @@ Graph {
                Node {
                    item: EmgNodeItem {
                        gel: ✦ (⚓ (Layer_)) ,
-                       paths_sa: [⚬-▣ root => ▣ a => ▣ c],
-                       paths_view_gel {
+                       paths_sa: ⚓ [⚬-▣ root => ▣ a => ▣ c],
+                       paths_view_gel ⚓ {
                            [⚬-▣ root => ▣ a => ▣ c] : Builder_
                        }
 
@@ -67,8 +68,8 @@ Graph {
                Node {
                    item: EmgNodeItem {
                        gel: ✦ (⚓ (Layer_)) ,
-                       paths_sa: [⚬-▣ root => ▣ a],
-                       paths_view_gel {
+                       paths_sa: ⚓ [⚬-▣ root => ▣ a],
+                       paths_view_gel ⚓ {
                            [⚬-▣ root => ▣ a] : Builder_
                        }
 

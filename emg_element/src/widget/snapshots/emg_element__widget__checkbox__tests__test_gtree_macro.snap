@@ -1,6 +1,6 @@
 ---
 source: emg_element/src/widget/checkbox.rs
-assertion_line: 642
+assertion_line: 655
 expression: gtree
 ---
 GTreeBuilderElement::GElementTree(
@@ -8,7 +8,9 @@ GTreeBuilderElement::GElementTree(
     "with Some Edge Vector...size:0",
     GElement::Generic_(
         Checkbox {
-            is_checked: false,
+            is_checked: StateVar(
+                false,
+            ),
             label: "checkbox",
             id: None,
             width: Simplex(

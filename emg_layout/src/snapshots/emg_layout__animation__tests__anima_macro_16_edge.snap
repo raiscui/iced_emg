@@ -5,7 +5,7 @@ expression: "&root_e"
 EmgEdgeItem {
     id: StateVar(
         StateAnchor(
-            EdgeIndex(None->Some(NodeIndex("root"))),
+            EdgeIndex(OptionNodeIndex(None)->OptionNodeIndex(Some(NodeIndex("root")))),
         ),
     ),
     paths: StateAnchor(
@@ -24,7 +24,7 @@ EmgEdgeItem {
                             ExactLengthSimplex {
                                 unit: Px,
                                 value: NotNan(
-                                    0.95278155548,
+                                    0.95278156,
                                 ),
                             },
                         ),
@@ -106,11 +106,11 @@ EmgEdgeItem {
         cassowary_generals: StateVar(
             CassowaryGeneralMap {
                 map: {},
-                v_v: {},
+                v_v_suggest: {},
                 virtual_constraints: {},
                 top_virtual_constraints: {},
                 top_map: {},
-                top_v_v: {},
+                top_v_v_suggest: {},
                 parent: None,
             },
         ),
@@ -125,7 +125,7 @@ EmgEdgeItem {
         {
             EPath(
                 [
-                    EdgeIndex(None->Some(NodeIndex("root"))),
+                    EdgeIndex(OptionNodeIndex(None)->OptionNodeIndex(Some(NodeIndex("root")))),
                 ],
             ): Layout {
                 w: StateVar(
@@ -136,7 +136,7 @@ EmgEdgeItem {
                                     ExactLengthSimplex {
                                         unit: Px,
                                         value: NotNan(
-                                            0.95278155548,
+                                            0.95278156,
                                         ),
                                     },
                                 ),
@@ -218,11 +218,11 @@ EmgEdgeItem {
                 cassowary_generals: StateVar(
                     CassowaryGeneralMap {
                         map: {},
-                        v_v: {},
+                        v_v_suggest: {},
                         virtual_constraints: {},
                         top_virtual_constraints: {},
                         top_map: {},
-                        top_v_v: {},
+                        top_v_v_suggest: {},
                         parent: None,
                     },
                 ),
@@ -234,7 +234,7 @@ EmgEdgeItem {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:1007:45",
+                "emg_layout/src/lib.rs:940:48",
             ],
             pseudo: None,
             media: None,
@@ -250,7 +250,7 @@ EmgEdgeItem {
         {
             EPath(
                 [
-                    EdgeIndex(None->Some(NodeIndex("root"))),
+                    EdgeIndex(OptionNodeIndex(None)->OptionNodeIndex(Some(NodeIndex("root")))),
                 ],
             ): EdgeData(
                 EdgeData {
@@ -264,7 +264,7 @@ EmgEdgeItem {
                                                 ExactLengthSimplex {
                                                     unit: Px,
                                                     value: NotNan(
-                                                        0.95278155548,
+                                                        0.95278156,
                                                     ),
                                                 },
                                             ),
@@ -346,11 +346,11 @@ EmgEdgeItem {
                             cassowary_generals: StateVar(
                                 CassowaryGeneralMap {
                                     map: {},
-                                    v_v: {},
+                                    v_v_suggest: {},
                                     virtual_constraints: {},
                                     top_virtual_constraints: {},
                                     top_map: {},
-                                    top_v_v: {},
+                                    top_v_v_suggest: {},
                                     parent: None,
                                 },
                             ),
@@ -364,16 +364,14 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        70,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
                                                 },
                                             ],
                                             constant: NotNan(
-                                                -0.95278155548,
+                                                -0.9527815580368042,
                                             ),
                                         },
                                         strength: NotNan(
@@ -387,9 +385,7 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        71,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
@@ -410,25 +406,19 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        74,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
                                                 },
                                                 Term {
-                                                    variable: Variable(
-                                                        72,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         -1.0,
                                                     ),
                                                 },
                                                 Term {
-                                                    variable: Variable(
-                                                        71,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         -1.0,
                                                     ),
@@ -449,25 +439,19 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        75,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
                                                 },
                                                 Term {
-                                                    variable: Variable(
-                                                        73,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         -1.0,
                                                     ),
                                                 },
                                                 Term {
-                                                    variable: Variable(
-                                                        70,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         -1.0,
                                                     ),
@@ -488,17 +472,13 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        74,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
                                                 },
                                                 Term {
-                                                    variable: Variable(
-                                                        72,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         -1.0,
                                                     ),
@@ -519,17 +499,13 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        75,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
                                                 },
                                                 Term {
-                                                    variable: Variable(
-                                                        73,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         -1.0,
                                                     ),
@@ -550,9 +526,7 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        70,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
@@ -573,9 +547,7 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        71,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
@@ -596,9 +568,7 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        72,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
@@ -619,9 +589,7 @@ EmgEdgeItem {
                                         expression: Expression {
                                             terms: [
                                                 Term {
-                                                    variable: Variable(
-                                                        73,
-                                                    ),
+                                                    variable: Variable,
                                                     coefficient: NotNan(
                                                         1.0,
                                                     ),
@@ -642,89 +610,39 @@ EmgEdgeItem {
                         cassowary_inherited_generals_sa: StateAnchor(
                             CassowaryGeneralMap {
                                 map: {
-                                    "align_x": Variable(
-                                        80,
-                                    ),
-                                    "align_y": Variable(
-                                        81,
-                                    ),
-                                    "align_z": Variable(
-                                        82,
-                                    ),
-                                    "baseline": Variable(
-                                        101,
-                                    ),
-                                    "bottom": Variable(
-                                        74,
-                                    ),
-                                    "height": Variable(
-                                        71,
-                                    ),
-                                    "hgap": Variable(
-                                        97,
-                                    ),
-                                    "left": Variable(
-                                        73,
-                                    ),
-                                    "origin_x": Variable(
-                                        77,
-                                    ),
-                                    "origin_y": Variable(
-                                        78,
-                                    ),
-                                    "origin_z": Variable(
-                                        79,
-                                    ),
-                                    "right": Variable(
-                                        75,
-                                    ),
-                                    "top": Variable(
-                                        72,
-                                    ),
-                                    "vgap": Variable(
-                                        99,
-                                    ),
-                                    "width": Variable(
-                                        70,
-                                    ),
-                                    "z": Variable(
-                                        76,
-                                    ),
+                                    "align_x": Variable,
+                                    "align_y": Variable,
+                                    "align_z": Variable,
+                                    "baseline": Variable,
+                                    "bottom": Variable,
+                                    "height": Variable,
+                                    "hgap": Variable,
+                                    "left": Variable,
+                                    "origin_x": Variable,
+                                    "origin_y": Variable,
+                                    "origin_z": Variable,
+                                    "right": Variable,
+                                    "top": Variable,
+                                    "vgap": Variable,
+                                    "width": Variable,
+                                    "z": Variable,
                                 },
-                                v_v: {
-                                    Variable(
-                                        97,
-                                    ): 10.0,
-                                    Variable(
-                                        99,
-                                    ): 10.0,
-                                    Variable(
-                                        101,
-                                    ): 16.0,
+                                v_v_suggest: {
+                                    Variable: 10.0,
+                                    Variable: 10.0,
+                                    Variable: 16.0,
                                 },
                                 virtual_constraints: {},
                                 top_virtual_constraints: {},
                                 top_map: {
-                                    "baseline": Variable(
-                                        100,
-                                    ),
-                                    "hgap": Variable(
-                                        96,
-                                    ),
-                                    "vgap": Variable(
-                                        98,
-                                    ),
+                                    "baseline": Variable,
+                                    "hgap": Variable,
+                                    "vgap": Variable,
                                 },
-                                top_v_v: {
-                                    Variable(
-                                        96,
-                                    ): 10.0,
-                                    Variable(
-                                        98,
-                                    ): 10.0,
-                                    Variable(
-                                        100,
-                                    ): 16.0,
+                                top_v_v_suggest: {
+                                    Variable: 10.0,
+                                    Variable: 10.0,
+                                    Variable: 16.0,
                                 },
                                 parent: None,
                             },
@@ -732,7 +650,7 @@ EmgEdgeItem {
                         cass_or_calc_size: StateAnchor(
                             [
                                 [
-                                    0.95278155548,
+                                    0.95278156,
                                     1080.0,
                                 ],
                             ],
@@ -812,7 +730,7 @@ EmgEdgeItem {
                                                 ExactLengthSimplex {
                                                     unit: Px,
                                                     value: NotNan(
-                                                        0.95278155548,
+                                                        0.95278156,
                                                     ),
                                                 },
                                             ),
@@ -837,10 +755,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/lib.rs:1961:9",
-                                    "emg_layout/src/lib.rs:1961:13",
-                                    "emg_layout/src/lib.rs:1961:27",
-                                    "emg_layout/src/lib.rs:1961:41",
+                                    "emg_layout/src/lib.rs:1906:13",
+                                    "emg_layout/src/lib.rs:1906:17",
+                                    "emg_layout/src/lib.rs:1906:31",
+                                    "emg_layout/src/lib.rs:1906:45",
                                 ],
                                 pseudo: None,
                                 media: None,
@@ -862,86 +780,34 @@ EmgEdgeItem {
                     },
                     cassowary_map: CassowaryMap {
                         map: {
-                            "align_x": Variable(
-                                80,
-                            ),
-                            "align_y": Variable(
-                                81,
-                            ),
-                            "align_z": Variable(
-                                82,
-                            ),
-                            "bottom": Variable(
-                                74,
-                            ),
-                            "height": Variable(
-                                71,
-                            ),
-                            "left": Variable(
-                                73,
-                            ),
-                            "origin_x": Variable(
-                                77,
-                            ),
-                            "origin_y": Variable(
-                                78,
-                            ),
-                            "origin_z": Variable(
-                                79,
-                            ),
-                            "right": Variable(
-                                75,
-                            ),
-                            "top": Variable(
-                                72,
-                            ),
-                            "width": Variable(
-                                70,
-                            ),
-                            "z": Variable(
-                                76,
-                            ),
+                            "align_x": Variable,
+                            "align_y": Variable,
+                            "align_z": Variable,
+                            "bottom": Variable,
+                            "height": Variable,
+                            "left": Variable,
+                            "origin_x": Variable,
+                            "origin_y": Variable,
+                            "origin_z": Variable,
+                            "right": Variable,
+                            "top": Variable,
+                            "width": Variable,
+                            "z": Variable,
                         },
                         v_k: {
-                            Variable(
-                                70,
-                            ): "width",
-                            Variable(
-                                71,
-                            ): "height",
-                            Variable(
-                                72,
-                            ): "top",
-                            Variable(
-                                73,
-                            ): "left",
-                            Variable(
-                                74,
-                            ): "bottom",
-                            Variable(
-                                75,
-                            ): "right",
-                            Variable(
-                                76,
-                            ): "z",
-                            Variable(
-                                77,
-                            ): "origin_x",
-                            Variable(
-                                78,
-                            ): "origin_y",
-                            Variable(
-                                79,
-                            ): "origin_z",
-                            Variable(
-                                80,
-                            ): "align_x",
-                            Variable(
-                                81,
-                            ): "align_y",
-                            Variable(
-                                82,
-                            ): "align_z",
+                            Variable: "width",
+                            Variable: "height",
+                            Variable: "top",
+                            Variable: "left",
+                            Variable: "bottom",
+                            Variable: "right",
+                            Variable: "z",
+                            Variable: "origin_x",
+                            Variable: "origin_y",
+                            Variable: "origin_z",
+                            Variable: "align_x",
+                            Variable: "align_y",
+                            Variable: "align_z",
                         },
                     },
                     children_vars_sa: StateAnchor(
@@ -949,129 +815,97 @@ EmgEdgeItem {
                     ),
                     cassowary_calculated_vars: StateAnchor(
                         {
-                            Variable(
-                                70,
-                            ): (
+                            Variable: (
                                 NotNan(
-                                    0.95278155548,
+                                    0.95278156,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][width] ",
+                                "[⚬-▣ root][width] ",
                             ),
-                            Variable(
-                                71,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     1080.0,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][height] ",
+                                "[⚬-▣ root][height] ",
                             ),
-                            Variable(
-                                72,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     -0.0,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][top] ",
+                                "[⚬-▣ root][top] ",
                             ),
-                            Variable(
-                                73,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     -0.0,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][left] ",
+                                "[⚬-▣ root][left] ",
                             ),
-                            Variable(
-                                74,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     1080.0,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][bottom] ",
+                                "[⚬-▣ root][bottom] ",
                             ),
-                            Variable(
-                                75,
-                            ): (
+                            Variable: (
                                 NotNan(
-                                    0.95278155548,
+                                    0.95278156,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][right] ",
+                                "[⚬-▣ root][right] ",
                             ),
-                            Variable(
-                                77,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     0.0,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][origin_x] ",
+                                "[⚬-▣ root][origin_x] ",
                             ),
-                            Variable(
-                                78,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     0.0,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][origin_y] ",
+                                "[⚬-▣ root][origin_y] ",
                             ),
-                            Variable(
-                                80,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     0.0,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][align_x] ",
+                                "[⚬-▣ root][align_x] ",
                             ),
-                            Variable(
-                                81,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     0.0,
                                 ),
-                                "path [◈├─ ▢ -> ▣ root ][align_y] ",
+                                "[⚬-▣ root][align_y] ",
                             ),
-                            Variable(
-                                96,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     10.0,
                                 ),
                                 "",
                             ),
-                            Variable(
-                                97,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     10.0,
                                 ),
                                 "",
                             ),
-                            Variable(
-                                98,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     10.0,
                                 ),
                                 "",
                             ),
-                            Variable(
-                                99,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     10.0,
                                 ),
                                 "",
                             ),
-                            Variable(
-                                100,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     16.0,
                                 ),
                                 "",
                             ),
-                            Variable(
-                                101,
-                            ): (
+                            Variable: (
                                 NotNan(
                                     16.0,
                                 ),
@@ -1082,7 +916,7 @@ EmgEdgeItem {
                     cassowary_calculated_layout: StateAnchor(
                         (
                             Some(
-                                0.95278155548,
+                                0.95278156,
                             ),
                             Some(
                                 1080.0,
@@ -1090,7 +924,7 @@ EmgEdgeItem {
                         ),
                     ),
                     styles_string: StateAnchor(
-                        "width: 0.95278155548px;\nheight: 1080px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n width: 0.95278155548px;\nheight: 1080px;\n",
+                        "width: 0.95278156px;\nheight: 1080px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n width: 0.95278156px;\nheight: 1080px;\n",
                     ),
                     ctx: EdgeCtx {
                         styles_end: StateAnchor(
@@ -1103,7 +937,7 @@ EmgEdgeItem {
                                     0.0,
                                     0.0,
                                 ],
-                                0.95278155548,
+                                0.95278156,
                                 1080.0,
                             ),
                         ),
