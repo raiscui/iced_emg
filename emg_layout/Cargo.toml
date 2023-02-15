@@ -55,6 +55,9 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 tracing-flame = "0.2.0"
 insta = "1"
 criterion = { version = "0.4.0", features = ["html_reports", "real_blackbox"] }
+tracing-tree = "0.2"
+color-eyre = "0.6"
+
 
 [[bench]]
 name = "my_benchmark"

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-01-23 22:46:18
+ * @LastEditTime: 2023-02-15 12:56:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -64,10 +64,8 @@ where
     #[topo::nested]
     fn new_in_topo(props: SmallVec<[StateVarProperty; PROP_SIZE]>) -> Self {
         props.iter().for_each(|prop| {
-            prop.set_with_once(|p| {
-                let mut new_p = p.clone();
-                set_default_interpolation(&mut new_p);
-                new_p
+            prop.update(|p| {
+                set_default_interpolation(p);
             });
         });
         Self {
@@ -725,23 +723,33 @@ mod tests {
     // use tracing_flame::FlameLayer;
     // use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    fn _init() {
-        // let _el = env_logger::try_init();
+    use color_eyre::{eyre::Report, eyre::WrapErr};
+    fn tracing_init() -> Result<(), Report> {
+        use tracing_subscriber::prelude::*;
+        let error_layer =
+            tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
 
-        let _subscriber = tracing_subscriber::fmt()
-            .with_test_writer()
-            // .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-            .with_span_events(
-                tracing_subscriber::fmt::format::FmtSpan::ACTIVE
-                    | tracing_subscriber::fmt::format::FmtSpan::ENTER
-                    | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
-            )
-            .with_max_level(Level::WARN)
-            // .with_max_level(Level::DEBUG)
-            .try_init();
+        let tree_layer = tracing_tree::HierarchicalLayer::new(2)
+            .with_indent_lines(true)
+            .with_indent_amount(4)
+            .with_targets(true)
+            .with_filter(tracing_subscriber::EnvFilter::new(
+                // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
+                // "[GElement-shaping]=debug",
+                // "error,[sa gel in map clone]=debug",
+                "warn,emg_layout=off",
+                // "error",
+            ));
 
-        // tracing::subscriber::set_global_default(subscriber)
-        // .expect("setting default subscriber failed");
+        tracing_subscriber::registry()
+            // .with(layout_override_layer)
+            // .with(event_matching_layer)
+            // .with(touch_layer)
+            .with(error_layer)
+            .with(tree_layer)
+            // .with(out_layer)
+            .try_init()?;
+        color_eyre::install()
     }
 
     #[allow(dead_code)]
@@ -793,10 +801,10 @@ mod tests {
         for i in 1002..2000 {
             emg_animation::update(Tick(Duration::from_millis(i * 16)), am);
             let _e = am.get_position(0);
-            // println!("pos: {_e}")
+            println!("pos: {_e}")
         }
         let _e = am.get_position(0);
-        // println!("pos: {_e}")
+        println!("pos: {_e}")
     }
 
     #[bench]
@@ -911,7 +919,7 @@ mod tests {
     #[test]
     #[topo::nested]
     fn many() {
-        let _g = _init();
+        let _g = tracing_init();
 
         // let sv_now = use_state(||Duration::ZERO);
         let sv_now = global_clock();
@@ -938,7 +946,7 @@ mod tests {
     #[test]
     #[topo::nested]
     fn many_for() {
-        let _g = _init();
+        let _g = tracing_init();
 
         // let sv_now = use_state(||Duration::ZERO);
         let sv_now = global_clock();
@@ -1174,7 +1182,7 @@ mod tests {
     #[topo::nested]
     fn test_layout_anima() {
         // ! layout am
-        let _nn = _init();
+        let _nn = tracing_init();
 
         insta::with_settings!({snapshot_path => Path::new("./layout_am")}, {
 
@@ -1378,7 +1386,7 @@ mod tests {
     #[test]
     #[topo::nested]
     fn anima_macro_for_bench_2_test() {
-        let _g = _init();
+        let _g = tracing_init();
 
         anima_macro_for_bench();
         global_clock().set(Duration::from_millis(0));
@@ -1388,7 +1396,7 @@ mod tests {
     #[test]
     #[topo::nested]
     fn anima_macro_for_2_test() {
-        let _g = _init();
+        let _g = tracing_init();
 
         anima_macro();
         global_clock().set(Duration::from_millis(0));
@@ -1444,7 +1452,7 @@ mod tests {
     #[test]
     #[topo::nested]
     fn anima_macro() {
-        let _g = _init();
+        let _g = tracing_init();
         let sv_now = global_clock();
         sv_now.set(Duration::from_millis(0));
 
@@ -1484,7 +1492,7 @@ mod tests {
     #[topo::nested]
     fn test_layout_children_anima() {
         // ! layout am
-        let _nn = _init();
+        let _nn = tracing_init();
 
         insta::with_settings!({snapshot_path => Path::new("./layout_children_am")}, {
 
