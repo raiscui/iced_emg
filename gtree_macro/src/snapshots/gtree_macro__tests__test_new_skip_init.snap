@@ -1,6 +1,5 @@
 ---
 source: gtree_macro/src/lib.rs
-assertion_line: 1241
 expression: ok.to_token_stream()
 ---
-{ GTreeBuilderElement :: GElementTree (IdStr :: new_inline ("root") . into () , vec ! [] , Layer :: new (IdStr :: new_inline ("root")) . into () , vec ! []) }
+{ GTreeBuilderElement :: GElementTree (IdStr :: new_inline ("root") , vec ! [] , Layer :: new (IdStr :: new_inline ("root")) . into () , vec ! []) }

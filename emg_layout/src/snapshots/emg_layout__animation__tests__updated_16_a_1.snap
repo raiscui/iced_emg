@@ -4,7 +4,7 @@ expression: "&a"
 ---
 AnimationEdge {
     inside: AnimationInside {
-        steps: StateVar(
+        steps: StateVarLit(
             RefCell {
                 value: [
                     _Step,
@@ -41,12 +41,12 @@ AnimationEdge {
                 ],
             },
         ),
-        interruption: StateVar(
+        interruption: StateVarLit(
             [],
         ),
         props: [
-            StateVarProperty(
-                StateVar(
+            StateVarProperty {
+                prop_sv: StateVar(
                     Prop(
                         TypeName(
                             "opacity",
@@ -74,7 +74,8 @@ AnimationEdge {
                         },
                     ),
                 ),
-            ),
+                trace_id: 1,
+            },
         ],
     },
     timing: StateAnchor(

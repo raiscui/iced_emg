@@ -469,7 +469,7 @@ where
                 }));
                 //TODO move it , for  use StateAnchor
                 sa_dict_gbe
-                    .insert_before_fn(
+                    .insert_before_fn_in_topo(
                         update_id,
                         move |_skip, current, new_v| {
                             //// TODO use graph find all parent
@@ -497,7 +497,7 @@ where
                 let gtbe_id = id.clone();
 
                 sa_dict_gbe
-                    .insert_after_fn(
+                    .insert_after_fn_in_topo(
                         update_id,
                         move |_skip, value| {
                             debug!("builder::running after_fn");

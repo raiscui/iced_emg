@@ -1,3 +1,4 @@
+#![deny(clippy::disallowed_types)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
@@ -21,10 +22,11 @@ use emg_common::GenericSize;
 pub use topo;
 pub use use_state_impl::reset_state;
 pub use use_state_impl::state_store;
-pub use use_state_impl::state_store_with;
+// pub use use_state_impl::state_store_with;
 pub use use_state_impl::use_state;
 pub use use_state_impl::CloneStateAnchor;
 pub use use_state_impl::CloneStateVar;
+pub use use_state_impl::DepsVarTopoKey;
 pub use use_state_impl::Dict;
 pub use use_state_impl::GStateStore;
 pub use use_state_impl::SkipKeyCollection;

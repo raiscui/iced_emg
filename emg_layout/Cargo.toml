@@ -55,8 +55,10 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 tracing-flame = "0.2.0"
 insta = "1"
 criterion = { version = "0.4.0", features = ["html_reports", "real_blackbox"] }
-tracing-tree = "0.2"
+tracing-tree = { path = "../../tracing-tree" }
+
 color-eyre = "0.6"
+tracing-error = "0.2.0"
 
 
 [[bench]]

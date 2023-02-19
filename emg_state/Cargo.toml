@@ -32,11 +32,13 @@ emg_common = { path = "../emg_common" }
 indexmap = "1.9"
 illicit = "1.1.2"
 thiserror = "1.0"
+weak-table = "0.3.2"
 
 
 [dev-dependencies]
+tracing-error = "0.2.0"
 wasm-bindgen-test = "0.3"
 tracing-flame = "0.2.0"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-tracing-tree = "0.2.2"
+tracing-tree = { path = "../../tracing-tree" }
 color-eyre = "0.6"

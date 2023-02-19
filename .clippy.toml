@@ -1,6 +1,15 @@
-[clippy]
-# 启用默认情况下打开的所有 lints
-default-features = true
-# 启用其他 lints
-#（将 `+` 替换为 `-` 以禁用特定的 lints）
-extra-plugins = [ "clippy::pedantic" , "clippy ::cargo" , "+clippy::nursery" , "+clippy::style" , "+clippy::complexity" , "+clippy::perf" , "+clippy::correctness" ]
+# [clippy]
+# # 启用默认情况下打开的所有 lints
+# default-features = true
+# # 启用其他 lints
+# #（将 `+` 替换为 `-` 以禁用特定的 lints）
+# extra-plugins = [
+#     "clippy::pedantic",
+#     "clippy ::cargo",
+#     "+clippy::nursery",
+#     "+clippy::style",
+#     "+clippy::complexity",
+#     "+clippy::perf",
+#     "+clippy::correctness",
+# ]
+disallowed-types = ["std::collections::HashMap", "std::collections::HashSet"]

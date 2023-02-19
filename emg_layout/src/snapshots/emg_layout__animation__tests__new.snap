@@ -1,22 +1,21 @@
 ---
 source: emg_layout/src/animation.rs
-assertion_line: 1079
+assertion_line: 1115
 expression: "&a"
-
 ---
 AnimationEdge {
     inside: AnimationInside {
-        steps: StateVar(
+        steps: StateVarLit(
             RefCell {
                 value: [],
             },
         ),
-        interruption: StateVar(
+        interruption: StateVarLit(
             [],
         ),
         props: [
-            StateVarProperty(
-                StateVar(
+            StateVarProperty {
+                prop_sv: StateVar(
                     Prop(
                         TypeName(
                             "opacity",
@@ -44,7 +43,8 @@ AnimationEdge {
                         },
                     ),
                 ),
-            ),
+                trace_id: 1,
+            },
         ],
     },
     timing: StateAnchor(

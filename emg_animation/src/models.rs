@@ -20,7 +20,7 @@ use std::{
     rc::Rc,
     time::Duration,
 };
-use tracing::{trace, warn};
+use tracing::{debug, instrument, trace, warn};
 
 // use emg_debuggable::{dbg4, Debuggable};
 
@@ -558,6 +558,7 @@ impl<Message> DerefMut for MsgBackIsNew<Message> {
 /// # Panics
 ///
 /// Will panic if `Step::ToWith` done
+#[instrument(skip_all)]
 pub fn resolve_steps<Message>(
     current_style: &mut SmallVec<[Property; PROP_SIZE]>,
     steps: &mut VecDeque<Step<Message>>,
@@ -582,7 +583,7 @@ pub fn resolve_steps<Message>(
             }
             Step::To(target) => {
                 for x in &target {
-                    warn!("to {x}");
+                    debug!("to {x}");
                 }
                 // println!("to- {:?}", current_style);
 
@@ -595,11 +596,11 @@ pub fn resolve_steps<Message>(
                 let done = test_current_style.iter().all(is_done_sm);
 
                 if done {
-                    warn!("step::to , done!");
+                    debug!("step::to , done!");
                     // println!("to-done {:?}", test_current_style);
                     *current_style = test_current_style;
                 } else {
-                    warn!("not done yet");
+                    debug!("not done yet");
                     // println!("to-not done {:?}", test_current_style);
 
                     steps.push_front(Step::_Step);

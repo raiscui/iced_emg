@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-02-10 23:24:08
+ * @LastEditTime: 2023-02-19 00:02:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -527,29 +527,28 @@ where
                     topo::call_in_slot(sa_dict_gbe.id(), topo::CallId::current)
                 }));
                 //TODO move it , for  use StateAnchor
-                sa_dict_gbe
-                    .insert_before_fn(
-                        update_id,
-                        move |_skip, current, new_v| {
-                            //// TODO use graph find all parent
-                            // let parent = parent_nix.clone();
-                            debug!("builder::running before_fn");
-                            trace!("builder::before_fn: is current has? {}", &current.is_some());
-                            if let Some(old_data) = current {
-                                let old_data_clone = (**old_data).clone();
+                sa_dict_gbe.insert_before_fn_in_topo(
+                    // update_id,
+                    move |_skip, current, new_v| {
+                        //// TODO use graph find all parent
+                        // let parent = parent_nix.clone();
+                        debug!("builder::running before_fn");
+                        trace!("builder::before_fn: is current has? {}", &current.is_some());
+                        if let Some(old_data) = current {
+                            let old_data_clone = (**old_data).clone();
 
-                                let new_v_removed =
-                                    old_data_clone.relative_complement(new_v.clone());
-                                for k in new_v_removed.keys() {
-                                    this.borrow_mut().remove_node(node_index(k.clone()));
-                                }
-
-                                //INFO like: https://stackoverflow.com/questions/56261476/why-is-finding-the-intersection-of-integer-sets-faster-with-a-vec-compared-to-bt
+                            let new_v_removed = old_data_clone.relative_complement(new_v.clone());
+                            for k in new_v_removed.keys() {
+                                this.borrow_mut().remove_node(node_index(k.clone()));
                             }
-                        },
-                        false,
-                    )
-                    .unwrap();
+
+                            //NOTE like: https://stackoverflow.com/questions/56261476/why-is-finding-the-intersection-of-integer-sets-faster-with-a-vec-compared-to-bt
+                        }
+                    },
+                    false,
+                    &[],
+                );
+                // .unwrap();
 
                 // let update_id2 =TopoKey::new(topo::CallId::current());
                 // let update_id2 = TopoKey::new(topo::call(topo::CallId::current));
@@ -558,8 +557,8 @@ where
                 // let parent_nix_clone = parent_nix.cloned();
 
                 sa_dict_gbe
-                    .insert_after_fn(
-                        update_id,
+                    .insert_after_fn_in_topo(
+                        // update_id,
                         move |_skip, value| {
                             debug!("builder::running after_fn");
                             let cur_parent_nix = illicit::get::<NodeIndex<Self::Ix>>().ok().as_deref().cloned().unwrap();
@@ -597,8 +596,9 @@ where
                                 });
                         },
                         false, //TODO make true (false for debug)
-                    )
-                    .unwrap();
+                        &[]
+                    );
+                // .unwrap();
 
                 debug!("builder:: sa_dict_gbe run handle_children_in_topo");
                 let rc_sa = sa_dict_gbe.get_rc();

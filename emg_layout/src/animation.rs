@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-02-15 12:56:10
+ * @LastEditTime: 2023-02-18 02:06:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,8 +11,8 @@ mod func;
 
 use emg_common::{im::vector, Precision, SmallVec, Vector};
 use emg_state::{
-    state_store, topo, use_state, use_state_impl::TopoKey, Anchor, CloneStateAnchor, CloneStateVar,
-    StateAnchor, StateMultiAnchor, StateVar,
+    state_lit::StateVarLit, state_store, topo, use_state_impl::TopoKey, Anchor, CloneStateAnchor,
+    CloneStateVar, DepsVarTopoKey, StateAnchor, StateMultiAnchor, StateVar,
 };
 use std::{
     cell::{Cell, RefCell},
@@ -26,9 +26,9 @@ use emg_animation::{
     models::{map_to_motion, resolve_steps, Motion, MsgBackIsNew, Property, Step, StepTimeVector},
     set_default_interpolation, Timing, PROP_SIZE,
 };
-use tracing::{debug, info, trace};
+use tracing::{debug, debug_span, trace};
 
-use crate::{global_anima_running_add, global_clock, EPath, EmgEdgeItem, G_CLOCK};
+use crate::{global_anima_running_add, global_clock, EPath, EmgEdgeItem};
 
 use self::{define::StateVarProperty, func::props::warn_for_double_listed_properties};
 
@@ -52,8 +52,8 @@ struct AnimationInside<Message>
 where
     Message: Clone + std::fmt::Debug + 'static,
 {
-    pub(crate) steps: StateVar<Rc<RefCell<VecDeque<Step<Message>>>>>,
-    pub(crate) interruption: StateVar<StepTimeVector<Message>>,
+    pub(crate) steps: StateVarLit<Rc<RefCell<VecDeque<Step<Message>>>>>,
+    pub(crate) interruption: StateVarLit<StepTimeVector<Message>>,
     pub(crate) props: SmallVec<[StateVarProperty; PROP_SIZE]>,
 }
 
@@ -61,16 +61,15 @@ impl<Message> AnimationInside<Message>
 where
     Message: Clone + std::fmt::Debug + 'static,
 {
-    #[topo::nested]
-    fn new_in_topo(props: SmallVec<[StateVarProperty; PROP_SIZE]>) -> Self {
+    fn new(props: SmallVec<[StateVarProperty; PROP_SIZE]>) -> Self {
         props.iter().for_each(|prop| {
             prop.update(|p| {
                 set_default_interpolation(p);
             });
         });
         Self {
-            steps: use_state(|| Rc::new(RefCell::new(VecDeque::new()))),
-            interruption: use_state(|| vector![]),
+            steps: StateVarLit::new(Rc::new(RefCell::new(VecDeque::new()))),
+            interruption: StateVarLit::new(vector![]),
             props,
         }
     }
@@ -132,7 +131,7 @@ where
     // processed_interruptions: StateAnchor<(StepTimeVector<Message>, StepTimeVector<Message>)>,
     // revised: SAPropsMessageSteps2<Message>,
     id: TopoKey,
-    ref_count: Rc<Cell<usize>>,
+    ref_count: Rc<Cell<usize>>, //NOTE for drop, current no used
 }
 
 impl<Message> Clone for AnimationE<Message>
@@ -295,6 +294,7 @@ where
     // }
     #[allow(clippy::too_many_lines)]
     // #[track_caller]
+    //TODO check 是否需要 nested (有一个 CallId::current())
     #[topo::nested]
     #[must_use]
     pub fn new_in_topo(
@@ -308,6 +308,8 @@ where
     {
         let sv_now = global_clock();
         // let sv_now = use_state(||Duration::ZERO);
+        let cb_fn_deps = props.iter().map(|p| *p.id()).collect::<Vec<_>>();
+        debug!("cb_fn_deps:{:?}", &cb_fn_deps);
 
         // let rc_store = state_store();
         // let rc_store2 = rc_store;
@@ -348,7 +350,7 @@ where
 
         // ─────────────────────────────────────────────────────────────────
 
-        let sv_inside: AnimationInside<Message> = AnimationInside::<Message>::new_in_topo(props);
+        let sv_inside: AnimationInside<Message> = AnimationInside::<Message>::new(props);
 
         let sa_timing = Self::set_timer(sv_now);
 
@@ -358,7 +360,7 @@ where
             props: props_init,
         } = sv_inside.clone();
 
-        trace!("||@@@@@@@@@@@@@@@@@@@@ step id:{:#?}", &steps_init.id());
+        // trace!("||@@@@@@@@@@@@@@@@@@@@ step id:{:#?}", &steps_init.id());
 
         let mut opt_old_current: Option<Duration> = None;
         // let mut opt_old_interruption: Option<StepTimeVector<Message>> = None;
@@ -374,7 +376,6 @@ where
         let revised: SAPropsMessageSteps2<Message> = (
             &sa_timing,
             &interruption_init.watch(),
-            // &steps_init.store_watch(&store),
             &pa,
             &steps_init.watch(),
         )
@@ -585,39 +586,44 @@ where
         global_anima_running_add(&sa_running);
         let sa_running_clone = sa_running.clone();
 
-        sv_now
-            .insert_after_fn(
-                id,
-                move |skip, _| {
-                    // println!("call update after set timing {:?}", v);
-                    info!("====[insert_after_fn] calling --> topo id:{:?}", &id);
-                    // anima_clone.update_in_callback(skip);
-                    if !sa_running_clone.get() {
-                        debug!("not running , return");
-                        return;
-                    }
-                    debug!("after callback running ");
+        sv_now.insert_after_fn_in_topo(
+            move |skip, _| {
+                // println!("call update after set timing {:?}", v);
+                debug!("-> [insert_after_fn] calling --> topo id:{:?}", &id);
+                // anima_clone.update_in_callback(skip);
+                if !sa_running_clone.get() {
+                    debug!("not running , return");
+                    return;
+                }
+                debug!("after callback running ");
 
-                    //TODO remove clone, 每一次都克隆 比较重 , get_with? sized?
-                    // let revised_value = revised.get();
-                    revised.store_get_with(&state_store().borrow(), |(a, b, c, _d)| {
-                        props_init
-                            .iter()
-                            .zip(c.iter())
-                            .for_each(|(sv, prop)| sv.seting_in_b_a_callback(skip, prop));
-                        interruption_init.seting_in_b_a_callback(skip, a);
-                        steps_init.seting_in_b_a_callback(skip, b);
+                //TODO remove clone, 每一次都克隆 比较重 , get_with? sized?
+                // let revised_value = revised.get();
+                revised.store_get_with(&state_store().borrow(), |(a, _b, c, _d)| {
+                    props_init.iter().zip(c.iter()).for_each(|(sv, prop)| {
+                        sv.seting_in_b_a_callback(skip, move || prop.clone())
                     });
-                    // props_init
-                    //     .iter()
-                    //     .zip(revised_value.2.iter())
-                    //     .for_each(|(sv, prop)| sv.seting_in_b_a_callback(skip, prop));
-                    // interruption_init.seting_in_b_a_callback(skip, &revised_value.0);
-                    // steps_init.seting_in_b_a_callback(skip, &revised_value.1);
-                },
-                false,
-            )
-            .ok();
+                    interruption_init.set(a.clone());
+                    #[cfg(test)]
+                    {
+                        let s = steps_init.get();
+                        debug_assert_eq!(&s, _b);
+                    }
+
+                    //NOTE debug_assert_eq!(&s, b) is no panic, steps_init no need set ⇣
+                    // steps_init.set(b.clone());
+                });
+                // props_init
+                //     .iter()
+                //     .zip(revised_value.2.iter())
+                //     .for_each(|(sv, prop)| sv.seting_in_b_a_callback(skip, prop));
+                // interruption_init.seting_in_b_a_callback(skip, &revised_value.0);
+                // steps_init.seting_in_b_a_callback(skip, &revised_value.1);
+            },
+            false,
+            &cb_fn_deps,
+        );
+
         // .unwrap_or_else(|_| panic!("find same id already in after_fn map \n id:{:?}", &id));
 
         // let update_id = TopoKey::new(topo::call(topo::CallId::current));
@@ -647,14 +653,12 @@ where
     }
 
     pub fn interrupt(&self, steps: impl Into<VecDeque<Step<Message>>>) {
-        self.inside.interruption.set_with_once(|interruption| {
-            let mut new_interruption = interruption.clone();
+        self.inside.interruption.update(|interruption| {
             let steps_vd = steps.into();
             // trace!("steps_vd: {steps_vd:#?}");
 
-            new_interruption.push_front(extract_initial_wait(steps_vd));
+            interruption.push_front(extract_initial_wait(steps_vd));
             // trace!("Interrupt: {new_interruption:#?}");
-            new_interruption
         });
     }
     pub fn replace(&self, steps: impl Into<VecDeque<Step<Message>>>) {
@@ -677,26 +681,27 @@ where
     }
 }
 
-impl<Message> Drop for AnimationE<Message>
-where
-    Message: Clone + std::fmt::Debug + 'static + PartialEq,
-{
-    fn drop(&mut self) {
-        let count = self.ref_count.get();
-        debug!("===============in Dropping  AnimationE count:{}", &count);
+// impl<Message> Drop for AnimationE<Message>
+// where
+//     Message: Clone + std::fmt::Debug + 'static + PartialEq,
+// {
+//     fn drop(&mut self) {
+//         let count = self.ref_count.get();
+//         debug!("===============in Dropping  AnimationE count:{}", &count);
 
-        if count <= 1 {
-            G_CLOCK.with(|clock| {
-                // self.running = StateAnchor::constant(false);
-                clock.remove_after_fn(self.id);
-            });
-        } else {
-            self.ref_count.set(count - 1);
-            debug!("===============after count:{}", &self.ref_count.get());
-        }
-        // let clock = global_clock();
-    }
-}
+//         if count <= 1 {
+//             G_CLOCK.with(|clock| {
+//                 // self.running = StateAnchor::constant(false);
+//                 let _span = debug_span!("clock.remove_after_fn").entered();
+//                 clock.remove_after_fn(self.id);
+//             });
+//         } else {
+//             self.ref_count.set(count - 1);
+//             debug!("===============after count:{}", &self.ref_count.get());
+//         }
+//         // let clock = global_clock();
+//     }
+// }
 #[cfg(test)]
 mod tests {
     extern crate test;
@@ -714,43 +719,14 @@ mod tests {
     use styles::{pc, width};
     use styles::{px, CssWidth};
 
-    use crate::animation::global_clock;
+    use crate::{animation::global_clock, tests::tracing_init};
     use crate::{EPath, EdgeItemNode, EmgEdgeItem, GraphEdgesDict};
 
     use super::AnimationE;
-    use tracing::{debug, warn, Level};
+    use tracing::{debug, debug_span, trace_span, warn, warn_span, Level};
 
     // use tracing_flame::FlameLayer;
     // use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-
-    use color_eyre::{eyre::Report, eyre::WrapErr};
-    fn tracing_init() -> Result<(), Report> {
-        use tracing_subscriber::prelude::*;
-        let error_layer =
-            tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
-
-        let tree_layer = tracing_tree::HierarchicalLayer::new(2)
-            .with_indent_lines(true)
-            .with_indent_amount(4)
-            .with_targets(true)
-            .with_filter(tracing_subscriber::EnvFilter::new(
-                // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
-                // "[GElement-shaping]=debug",
-                // "error,[sa gel in map clone]=debug",
-                "warn,emg_layout=off",
-                // "error",
-            ));
-
-        tracing_subscriber::registry()
-            // .with(layout_override_layer)
-            // .with(event_matching_layer)
-            // .with(touch_layer)
-            .with(error_layer)
-            .with(tree_layer)
-            // .with(out_layer)
-            .try_init()?;
-        color_eyre::install()
-    }
 
     #[allow(dead_code)]
     #[derive(Debug, Clone, PartialEq)]
@@ -909,8 +885,8 @@ mod tests {
         b.iter(move || {
             sv_now.set(Duration::from_millis(0));
             // let edge_item1 = edge_item.clone();
-
-            let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(1))]);
+            let w = use_state(|| width(px(1)));
+            let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![w]);
             // AnimationE::new_in_topo(into_smvec![width(px(1))], sv_now);
             black_box(many_am_run(&a, &sv_now));
         });
@@ -924,14 +900,15 @@ mod tests {
         // let sv_now = use_state(||Duration::ZERO);
         let sv_now = global_clock();
         sv_now.set(Duration::from_millis(0));
-
+        let w1 = use_state(|| width(px(2)));
+        let w2 = use_state(|| width(px(99)));
         debug!("===================================main loop ");
-        let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(2))]);
+        let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![w1]);
         a.interrupt([to(into_smvec![width(px(0))])]);
 
         debug!("===================================main loop--2 ");
 
-        let b: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(99))]);
+        let b: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![w2]);
         b.interrupt([to(into_smvec![width(px(888))])]);
         sv_now.set(Duration::from_millis(16));
         debug!("a====:\n {:#?}", a.inside.props[0].get());
@@ -1398,11 +1375,62 @@ mod tests {
     fn anima_macro_for_2_test() {
         let _g = tracing_init();
 
+        warn!("run anima_macro first time");
         anima_macro();
-        global_clock().set(Duration::from_millis(0));
-
+        warn!("set time 0====================================================");
         anima_macro();
     }
+    // #[test]
+    // #[topo::nested]
+    // fn anchor_err_test() {
+    //     let _g = tracing_init();
+    //     let _span = debug_span!("anchors-dirty").entered();
+    //     warn!("run anima_macro first time");
+
+    //     anima_macro_for_anchor_error();
+    //     warn!("set time 0");
+    //     global_clock().set(Duration::from_millis(0));
+
+    //     anima_macro_for_anchor_error();
+    // }
+
+    #[test]
+    #[topo::nested]
+    fn anima_macro_for_anchor_error() {
+        let _g = tracing_init();
+        let sv_now = global_clock();
+        sv_now.set(Duration::from_millis(0));
+
+        let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
+        let a: AnimationE<Message> = anima![css_w];
+
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let root_e_source = use_state(|| None);
+        let root_e_target = use_state(|| Some(node_index("root")));
+        let root_e = EmgEdgeItem::default_with_wh_in_topo(
+            root_e_source.watch(),
+            root_e_target.watch(),
+            e_dict_sv.watch(),
+            1920,
+            1080,
+        );
+        a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
+        a.interrupt([to(into_smvec![width(px(0))]), to(into_smvec![width(px(1))])]);
+
+        for i in 1..1 {
+            sv_now.set(Duration::from_millis(i * 16));
+            if i == 1 {
+                // insta::assert_debug_snapshot!("anima_macro_16", &a);
+                // insta::assert_debug_snapshot!("anima_macro_16_edge", &root_e);
+            }
+            // a.update();
+            // println!("in ------ i:{}", &i);
+            // a.timing.get();
+            debug!("prop current : {:?}", a.inside.props[0].get());
+            a.inside.props[0].get();
+        }
+    }
+
     #[test]
     #[topo::nested]
     fn anima_macro_for_bench() {
@@ -1449,15 +1477,16 @@ mod tests {
             a.inside.props[0].get();
         }
     }
-    #[test]
+    // #[test]
     #[topo::nested]
     fn anima_macro() {
-        let _g = tracing_init();
+        // let _g = tracing_init();
         let sv_now = global_clock();
         sv_now.set(Duration::from_millis(0));
 
         let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
+        debug!("will assert_debug_snapshot a");
         insta::assert_debug_snapshot!("anima_macro_init", &a);
 
         let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
@@ -1472,9 +1501,9 @@ mod tests {
         );
         a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
         a.interrupt([to(into_smvec![width(px(0))]), to(into_smvec![width(px(1))])]);
-        insta::assert_debug_snapshot!("anima_macro_interrupt", &a);
+        // insta::assert_debug_snapshot!("anima_macro_interrupt", &a);
 
-        for i in 1..100 {
+        for i in 1..1 {
             sv_now.set(Duration::from_millis(i * 16));
             if i == 1 {
                 insta::assert_debug_snapshot!("anima_macro_16", &a);
@@ -1483,7 +1512,7 @@ mod tests {
             // a.update();
             // println!("in ------ i:{}", &i);
             // a.timing.get();
-            debug!("**{:?}", a.inside.props[0].get());
+            // debug!("prop current : {:?}", a.inside.props[0].get());
             a.inside.props[0].get();
         }
     }

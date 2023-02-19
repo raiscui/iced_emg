@@ -882,8 +882,8 @@ where
             ),
         )
     }
-
     #[topo::nested]
+    #[instrument(skip_all)]
     pub fn new_in_topo(
         source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
@@ -1642,7 +1642,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                     //TODO check diff with [calculated], because calculated_vars may re suggestion some value.
                     //TODO replace current_cassowary_map4.var("width") use   width
                     let cassowary_calculated_layout = cassowary_calculated_vars.map(move |cassowary_vars|{
-                        warn!("[calculated_vars] [calculated_cassowary_layout] total  prop:\n{:#?} ",&cassowary_vars);
+                        debug!("[calculated_vars] [calculated_cassowary_layout] total  prop:\n{:#?} ",&cassowary_vars);
 
 
                         let w  =cassowary_vars.get(&width_var).map(|x|x.0.into_inner() as Precision);
@@ -1676,7 +1676,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 
                     let styles_string:StateAnchor<String> = (&info_string,&layout_styles_string, &cassowary_calculated_layout).map(move |info,layout_styles,(w,h)|{
 
-                        warn!("[calculated_vars] [info] total  info:\n{} ",&info);
+                        debug!("[calculated_vars] [info] total  info:\n{} ",&info);
 
 
                         if let (Some(w), Some(h)) = (w,h){
@@ -2051,7 +2051,7 @@ pub fn css<
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     #![allow(clippy::too_many_lines)]
     use crate::*;
     extern crate test;
@@ -2070,6 +2070,52 @@ mod tests {
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
     use emg_common::num_traits::cast;
+
+    use color_eyre::{eyre::Report, eyre::WrapErr};
+    pub fn tracing_init() -> Result<(), Report> {
+        use tracing_subscriber::prelude::*;
+        // let error_layer =
+        // tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
+
+        let tree_layer = tracing_tree::HierarchicalLayer::new(2)
+            .with_indent_lines(true)
+            .with_indent_amount(4)
+            .with_targets(true)
+            .with_filter(tracing_subscriber::EnvFilter::new(
+                // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
+                // "[GElement-shaping]=debug",
+                // "error,[sa gel in map clone]=debug",
+                // "emg_state=off,[anchors-dirty]=debug,cassowary=off",
+                // ,
+                "[StateVarProperty clone]=debug,[StateVarProperty drop]=debug,[manually_drop]=trace,[sv to svp]=debug,[clock.remove_after_fn]=debug",
+                // emg_layout::animation::tests=off
+                // "error",
+            ));
+
+        tracing_subscriber::registry()
+            // .with(layout_override_layer)
+            // .with(event_matching_layer)
+            // .with(touch_layer)
+            .with(tree_layer)
+            .with(tracing_error::ErrorLayer::default())
+            // .with(out_layer)
+            .try_init()?;
+
+        fn theme() -> color_eyre::config::Theme {
+            use color_eyre::{config::Theme, owo_colors::style};
+
+            Theme::dark().active_line(style().bright_yellow().bold())
+            // ^ use `new` to derive from a blank theme, or `light` to derive from a light theme.
+            // Now configure your theme (see the docs for all options):
+            // .line_number(style().blue())
+            // .help_info_suggestion(style().red())
+        }
+
+        // color_eyre::install()
+        color_eyre::config::HookBuilder::new()
+            .theme(theme())
+            .install()
+    }
 
     #[test]
     fn f64_to_f32() {
@@ -2090,57 +2136,10 @@ mod tests {
         // let after = f64::trunc(before  * 100.0) / 100.0; // or f32::trunc
     }
 
-    fn setup_global_subscriber() -> impl Drop {
-        std::env::set_var("RUST_LOG", "trace");
-        // std::env::set_var("RUST_LOG", "warn");
-        std::env::set_var("RUST_LOG", "info");
-
-        let _el = env_logger::try_init();
-
-        let filter_layer = EnvFilter::try_from_default_env()
-            .or_else(|_| EnvFilter::try_new("info"))
-            .unwrap();
-
-        let fmt_layer = fmt::Layer::default()
-            .with_target(false)
-            .with_test_writer()
-            .with_span_events(
-                tracing_subscriber::fmt::format::FmtSpan::ENTER
-                    // |tracing_subscriber::fmt::format::FmtSpan::FULL
-                    | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
-            );
-
-        let (flame_layer, _guard) = FlameLayer::with_file("./tracing/tracing.folded").unwrap();
-
-        let _s = tracing_subscriber::registry()
-            .with(filter_layer)
-            .with(fmt_layer)
-            .with(flame_layer)
-            .try_init();
-        _guard
-    }
-
-    fn _init() {
-        let _el = env_logger::try_init();
-
-        let _subscriber = tracing_subscriber::fmt()
-            .with_test_writer()
-            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-            .with_span_events(
-                tracing_subscriber::fmt::format::FmtSpan::ACTIVE
-                    | tracing_subscriber::fmt::format::FmtSpan::ENTER
-                    | tracing_subscriber::fmt::format::FmtSpan::CLOSE,
-            )
-            // .with_max_level(Level::TRACE)
-            .try_init();
-
-        // tracing::subscriber::set_global_default(subscriber)
-        // .expect("setting default subscriber failed");
-    }
     #[test]
     fn loc() {
         // init();
-        let _xx = setup_global_subscriber();
+        let _xx = tracing_init();
         {
             let span = span!(Level::TRACE, "loc-test");
             let _guard = span.enter();
@@ -2510,7 +2509,7 @@ mod tests {
                 .unwrap()
                 .styles_string
                 .get() ,
-            "width: 12px;\nheight: 10px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,10,0,1);\n"
+            "transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,10,0,1);\n width: 12px;\nheight: 10px;\n"
             );
         trace!("shaping_use after {}", &e1);
         info!("=========================================================");
@@ -2586,227 +2585,107 @@ mod tests {
     }
 
     #[test]
+    #[instrument]
     fn it_works() {
-        let _xx = setup_global_subscriber();
-        {
-            let span = span!(Level::TRACE, "start");
-            let _guard = span.enter();
+        let _xx = tracing_init();
 
-            info!("--------------------=====================================");
-            // vec![ CssWidth::from(px(100))].up
-            info!("=========================================================");
+        let _span = debug_span!("start").entered();
 
-            // let cc = Affine3<f64>::identity();
-            let _build_test = s().width(pc(11)).bg_color(hsl(40, 70, 30));
-            let css_width = width(px(100));
-            let css_height = h(px(100));
+        info!("--------------------=====================================");
+        // vec![ CssWidth::from(px(100))].up
+        info!("=========================================================");
 
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        // let cc = Affine3<f64>::identity();
+        let _build_test = s().width(pc(11)).bg_color(hsl(40, 70, 30));
+        let css_width = width(px(100));
+        let css_height = h(px(100));
 
-            let root_e_source = use_state(|| None);
-            let root_e_target = use_state(|| Some(node_index("root")));
-            let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
-                root_e_source.watch(),
-                root_e_target.watch(),
-                e_dict_sv.watch(),
-                1920,
-                1080,
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+
+        let root_e_source = use_state(|| None);
+        let root_e_target = use_state(|| Some(node_index("root")));
+        let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
+            root_e_source.watch(),
+            root_e_target.watch(),
+            e_dict_sv.watch(),
+            1920,
+            1080,
+        );
+        e_dict_sv.set_with(|d| {
+            let mut nd = d.clone();
+            nd.insert(
+                EdgeIndex::new(None, Some(node_index("root"))),
+                Edge::new(root_e_source, root_e_target, root_e.clone()),
             );
-            e_dict_sv.set_with(|d| {
-                let mut nd = d.clone();
-                nd.insert(
-                    EdgeIndex::new(None, Some(node_index("root"))),
-                    Edge::new(root_e_source, root_e_target, root_e.clone()),
-                );
-                nd
-            });
+            nd
+        });
 
-            let e1_source = use_state(|| Some(node_index("root")));
-            let e1_target = use_state(|| Some(node_index("1")));
-            let mut e1 = EmgEdgeItem::new_in_topo(
-                e1_source.watch(),
-                e1_target.watch(),
-                e_dict_sv.watch(),
-                (
-                    (parent!(CssHeight) + pc(100)),
-                    (parent!(CssHeight) + pc(100)),
-                ),
-                (pc(100), pc(100), pc(100)),
-                (
-                    (parent!(CssWidth) * 0.5),
-                    (parent!(CssHeight) * 0.2),
-                    pc(20),
-                ),
+        let e1_source = use_state(|| Some(node_index("root")));
+        let e1_target = use_state(|| Some(node_index("1")));
+        let mut e1 = EmgEdgeItem::new_in_topo(
+            e1_source.watch(),
+            e1_target.watch(),
+            e_dict_sv.watch(),
+            (
+                (parent!(CssHeight) + pc(100)),
+                (parent!(CssHeight) + pc(100)),
+            ),
+            (pc(100), pc(100), pc(100)),
+            (
+                (parent!(CssWidth) * 0.5),
+                (parent!(CssHeight) * 0.2),
+                pc(20),
+            ),
+        );
+        e_dict_sv.set_with(|d| {
+            let mut nd = d.clone();
+            nd.insert(
+                edge_index("root", "1"),
+                Edge::new(e1_source, e1_target, e1.clone()),
             );
-            e_dict_sv.set_with(|d| {
-                let mut nd = d.clone();
-                nd.insert(
-                    edge_index("root", "1"),
-                    Edge::new(e1_source, e1_target, e1.clone()),
-                );
-                nd
-            });
+            nd
+        });
 
-            let e2_source = use_state(|| Some(node_index("1")));
-            let e2_target = use_state(|| Some(node_index("2")));
-            let mut e2 = EmgEdgeItem::new_in_topo(
-                e2_source.watch(),
-                e2_target.watch(),
-                e_dict_sv.watch(),
-                (px(10), px(10)),
-                (pc(100), pc(100), pc(100)),
-                (pc(50), pc(20), pc(20)),
+        let e2_source = use_state(|| Some(node_index("1")));
+        let e2_target = use_state(|| Some(node_index("2")));
+        let mut e2 = EmgEdgeItem::new_in_topo(
+            e2_source.watch(),
+            e2_target.watch(),
+            e_dict_sv.watch(),
+            (px(10), px(10)),
+            (pc(100), pc(100), pc(100)),
+            (pc(50), pc(20), pc(20)),
+        );
+        e_dict_sv.set_with(|d| {
+            let mut nd = d.clone();
+            nd.insert(
+                edge_index("1", "2"),
+                Edge::new(e2_source, e2_target, e2.clone()),
             );
-            e_dict_sv.set_with(|d| {
-                let mut nd = d.clone();
-                nd.insert(
-                    edge_index("1", "2"),
-                    Edge::new(e2_source, e2_target, e2.clone()),
-                );
-                nd
-            });
+            nd
+        });
 
-            // debug!("shaping_use before {}", &ec);
-            let _span = span!(Level::TRACE, "debug print e1");
-            _span.in_scope(|| {
-                trace!("shaping_use before {}", &e1);
-            });
-            info!("l1 =========================================================");
-            warn!("calculated 1 =========================================================");
-            warn!(
-                "{}",
-                e1.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-            );
-            assert_eq!(
-                e1.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-                    .coordinates_trans
-                    .get(),
-                Translation3::<Precision>::new(-2040.0, -1944.0, 0.)
-            );
-            warn!("calculated 2 =========================================================");
-            warn!(
-                "{}",
-                e1.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-            );
-
-            let xx = vec![css_width];
-            // let xx = vec![css(css_width)];
-
-            root_e.shaping_use_dyn(&xx);
-
-            warn!("calculated 3 =========================================================");
-            warn!(
-                "{}",
-                e1.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-            );
-
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-            root_e.shaping_use_dyn(&xx);
-
-            // trace!("shaping_use after css_width {}", &root_e);
-            trace!("shaping_use after css_width {}", &e1);
-            info!("=========================================================");
-
-            // root_e.shaping_use(&Css(css_height.clone()));
-            let tempcss = use_state(|| css_height);
-            root_e.shaping_use_dyn(&tempcss);
-
-            warn!("calculated 4 root h w 100 =========================================================");
-            warn!(
-                "{}",
-                e1.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-            );
-
-            assert_eq!(
-                e1.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-                    .coordinates_trans
-                    .get(),
-                Translation3::<Precision>::new(-150.0, -180.0, 0.)
-            );
-            info!("=========================================================");
-            tempcss.set(h(px(1111)));
-            let _ff = e1
-                .edge_nodes
+        // debug!("shaping_use before {}", &ec);
+        let _span = span!(Level::TRACE, "debug print e1");
+        _span.in_scope(|| {
+            trace!("shaping_use before {}", &e1);
+        });
+        info!("l1 =========================================================");
+        debug!("calculated 1 =========================================================");
+        // debug!(
+        //     "==== {}",
+        //     e1.edge_nodes
+        //         .get()
+        //         .get(&EPath(vector![
+        //             edge_index_no_source("root"),
+        //             edge_index("root", "1")
+        //         ]))
+        //         .and_then(EdgeItemNode::as_edge_data)
+        //         .unwrap()
+        //         .calculated
+        // );
+        assert_eq!(
+            e1.edge_nodes
                 .get()
                 .get(&EPath(vector![
                     edge_index_no_source("root"),
@@ -2814,169 +2693,290 @@ mod tests {
                 ]))
                 .and_then(EdgeItemNode::as_edge_data)
                 .unwrap()
-                .styles_string
-                .get();
-            assert_ne!(
-                e1.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-                    .coordinates_trans
-                    .get(),
-                Translation3::<Precision>::new(40., 10., 0.)
-            );
-            tempcss.set(h(px(100)));
-            assert_eq!(
-                e1.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-                    .coordinates_trans
-                    .get(),
-                Translation3::<Precision>::new(-150.0, -180.0, 0.)
-            );
+                .calculated
+                .coordinates_trans
+                .get(),
+            Translation3::<Precision>::new(-2040.0, -1944.0, 0.)
+        );
+        debug!("calculated 2 =========================================================");
+        debug!(
+            "{}",
+            e1.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .calculated
+        );
 
-            info!("=========================================================");
+        let xx = vec![css_width];
+        // let xx = vec![css(css_width)];
 
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-            e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        root_e.shaping_use_dyn(&xx);
 
-            assert_eq!(
-                e1.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-                    .cass_or_calc_size
-                    .get(),
-                Vector2::<Precision>::new(12., 200.)
-            );
-            info!("=========================================================");
-            assert_eq!(
+        warn!("calculated 3 =========================================================");
+        warn!(
+            "======= {}",
+            e1.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .calculated
+        );
+
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+        root_e.shaping_use_dyn(&xx);
+
+        // trace!("shaping_use after css_width {}", &root_e);
+        trace!("shaping_use after css_width {}", &e1);
+        info!("=========================================================");
+
+        // root_e.shaping_use(&Css(css_height.clone()));
+        let tempcss = use_state(|| css_height);
+        root_e.shaping_use_dyn(&tempcss);
+
+        warn!(
+            "calculated 4 root h w 100 ========================================================="
+        );
+        warn!(
+            "{}",
+            e1.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .calculated
+        );
+
+        assert_eq!(
+            e1.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .calculated
+                .coordinates_trans
+                .get(),
+            Translation3::<Precision>::new(-150.0, -180.0, 0.)
+        );
+        info!("=========================================================");
+        tempcss.set(h(px(1111)));
+        let _ff = e1
+            .edge_nodes
+            .get()
+            .get(&EPath(vector![
+                edge_index_no_source("root"),
+                edge_index("root", "1")
+            ]))
+            .and_then(EdgeItemNode::as_edge_data)
+            .unwrap()
+            .styles_string
+            .get();
+        assert_ne!(
+            e1.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .calculated
+                .coordinates_trans
+                .get(),
+            Translation3::<Precision>::new(40., 10., 0.)
+        );
+        tempcss.set(h(px(100)));
+        assert_eq!(
+            e1.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .calculated
+                .coordinates_trans
+                .get(),
+            Translation3::<Precision>::new(-150.0, -180.0, 0.)
+        );
+
+        info!("=========================================================");
+
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+
+        assert_eq!(
+            e1.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .calculated
+                .cass_or_calc_size
+                .get(),
+            Vector2::<Precision>::new(12., 200.)
+        );
+        info!("=========================================================");
+        assert_eq!(
                 e1.edge_nodes.get().get(&EPath(vector![edge_index_no_source("root"), edge_index("root", "1")]))
                     .and_then(EdgeItemNode::as_edge_data)
                 .unwrap()
                 .styles_string
                 .get() ,
-            "width: 12px;\nheight: 200px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,-180,0,1);\n"
+            "transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,38,-180,0,1);\n width: 12px;\nheight: 200px;\n"
             );
-            trace!("shaping_use after {}", &e1);
-            info!("=========================================================");
+        trace!("shaping_use after {}", &e1);
+        info!("=========================================================");
 
+        trace!("shaping_use after {}", &e2);
+        info!("l1351 =========================================================");
+        e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
+        assert_eq!(
+            e2.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1"),
+                    edge_index("1", "2")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .calculated
+                .coordinates_trans
+                .get(),
+            Translation3::<Precision>::new(-4.0, -10.0, 0.0)
+        );
+        e2.set_size(px(100), px(100));
+        assert_eq!(
+            e2.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1"),
+                    edge_index("1", "2")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .calculated
+                .cass_or_calc_size
+                .get(),
+            Vector2::<Precision>::new(100.0, 100.0)
+        );
+        let _span1 = span!(Level::TRACE, "debug print 1");
+        _span1.in_scope(|| {
             trace!("shaping_use after {}", &e2);
-            info!("l1351 =========================================================");
-            e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
-            assert_eq!(
-                e2.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1"),
-                        edge_index("1", "2")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-                    .coordinates_trans
-                    .get(),
-                Translation3::<Precision>::new(-4.0, -10.0, 0.0)
-            );
-            e2.set_size(px(100), px(100));
-            assert_eq!(
-                e2.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1"),
-                        edge_index("1", "2")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .calculated
-                    .cass_or_calc_size
-                    .get(),
-                Vector2::<Precision>::new(100.0, 100.0)
-            );
-            let _span1 = span!(Level::TRACE, "debug print 1");
-            _span1.in_scope(|| {
-                trace!("shaping_use after {}", &e2);
-            });
+        });
 
-            let _span2 = span!(Level::TRACE, "debug print 2");
-            _span2.in_scope(|| {
-                trace!("shaping_use after2 {}", &e2);
-            });
-            info!("=========================================================");
-            e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
+        let _span2 = span!(Level::TRACE, "debug print 2");
+        _span2.in_scope(|| {
+            trace!("shaping_use after2 {}", &e2);
+        });
+        info!("=========================================================");
+        e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
 
-            trace!("shaping_use after {:#?}", &e2);
-            info!("..=========================================================");
-            trace!(
-                "{}",
-                e2.edge_nodes
-                    .get()
-                    .get(&EPath(vector![
-                        edge_index_no_source("root"),
-                        edge_index("root", "1"),
-                        edge_index("1", "2")
-                    ]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                    .unwrap()
-                    .styles_string
-                    .get(),
-            );
-            insta::assert_debug_snapshot!("it_works-root_e", &root_e);
-            insta::assert_debug_snapshot!("it_works-e1", &e1);
-            insta::assert_debug_snapshot!("it_works-e2", &e2);
-            info!("..=========================================================");
-        }
+        trace!("shaping_use after {:#?}", &e2);
+        info!("..=========================================================");
+        trace!(
+            "{}",
+            e2.edge_nodes
+                .get()
+                .get(&EPath(vector![
+                    edge_index_no_source("root"),
+                    edge_index("root", "1"),
+                    edge_index("1", "2")
+                ]))
+                .and_then(EdgeItemNode::as_edge_data)
+                .unwrap()
+                .styles_string
+                .get(),
+        );
+        insta::assert_debug_snapshot!("it_works-root_e", &root_e);
+        insta::assert_debug_snapshot!("it_works-e1", &e1);
+        insta::assert_debug_snapshot!("it_works-e2", &e2);
+        info!("..=========================================================");
     }
 
     #[test]
     fn change_parent() {
-        let _xx = setup_global_subscriber();
+        let _xx = tracing_init();
         {
             let _g = span!(Level::TRACE, "change_parent").entered();
 

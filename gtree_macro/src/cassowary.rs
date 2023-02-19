@@ -3,7 +3,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-01-31 21:26:36
+ * @LastEditTime: 2023-02-19 01:06:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -166,6 +166,7 @@ pub enum NameCharsOrNumber {
     Last(Box<Self>),
     #[display("{0}:first")]
     First(Box<Self>),
+    //TODO add before after 表示 层级 前后
 }
 
 impl NameCharsOrNumber {
@@ -174,7 +175,7 @@ impl NameCharsOrNumber {
     //     Self::Next(Box::new(self))
     // }
     fn make_next(&self) -> Self {
-        assert!(!self.is_id());
+        assert!(!self.is_id(), "只适用于selector,非 id");
         Self::Next(Box::new(self.clone()))
     }
     fn make_last(&self) -> Self {
@@ -2744,7 +2745,7 @@ mod tests {
     #[test]
     fn chain_v() {
         let input = r#"
-        @v (#b1)(#b2) chain-top chain-bottom(250)
+        @h (#b1)(#b2) chain-top chain-bottom(250)
             "#;
 
         token_test("chain_v", input);
@@ -2893,7 +2894,7 @@ mod tests {
         let input = r#"
         @=root
                 Layer [
-                    @=x111x @E=[{@h |(#button)...| }]
+                    @="x111x" @E=[{@h |(#button)...| }]
                     Layer [],
                     @=x111x @E=[{@h |(#button)...| in(#panel) gap(10) }]
                     Layer []
