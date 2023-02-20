@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-20 13:43:13
+ * @LastEditTime: 2023-02-20 14:40:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -163,8 +163,16 @@ where
             @SkipInit self =>[
                 @=id.clone() + "|CLICK" On:CLICK  move||{
 
-                    is_checked.set_with(|v| !*v);
-                    (on_toggle)(is_checked.get())
+                    // is_checked.update_and_return(|v| {
+
+                    //   let new_v =   !*v;
+                    //   *v =new_v;
+                    //   (on_toggle)(new_v)
+                    // })
+
+                    is_checked.set_with_once(|v| !*v);
+                      (on_toggle)(is_checked.get())
+
                 },
             ]
         }

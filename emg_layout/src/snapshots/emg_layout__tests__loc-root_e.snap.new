@@ -1,5 +1,6 @@
 ---
 source: emg_layout/src/lib.rs
+assertion_line: 2269
 expression: "&root_e"
 ---
 EmgEdgeItem {
@@ -772,13 +773,13 @@ EmgEdgeItem {
                             ),
                             Variable: (
                                 NotNan(
-                                    12.0,
+                                    50.0,
                                 ),
                                 "[⚬-▣ root] |=> #\"1\"[width]",
                             ),
                             Variable: (
                                 NotNan(
-                                    200.0,
+                                    50.0,
                                 ),
                                 "[⚬-▣ root] |=> #\"1\"[height]",
                             ),
@@ -796,13 +797,13 @@ EmgEdgeItem {
                             ),
                             Variable: (
                                 NotNan(
-                                    200.0,
+                                    50.0,
                                 ),
                                 "[⚬-▣ root] |=> #\"1\"[bottom]",
                             ),
                             Variable: (
                                 NotNan(
-                                    12.0,
+                                    50.0,
                                 ),
                                 "[⚬-▣ root] |=> #\"1\"[right]",
                             ),
@@ -885,45 +886,31 @@ EmgEdgeItem {
                                     rect_tree: {
                                         RectLTRB {
                                             x0: NotNan(
-                                                -56.0,
-                                            ),
-                                            y0: NotNan(
-                                                -290.0,
-                                            ),
-                                            x1: NotNan(
-                                                44.0,
-                                            ),
-                                            y1: NotNan(
-                                                -140.0,
-                                            ),
-                                        },
-                                        RectLTRB {
-                                            x0: NotNan(
-                                                38.0,
-                                            ),
-                                            y0: NotNan(
-                                                -180.0,
-                                            ),
-                                            x1: NotNan(
                                                 50.0,
                                             ),
+                                            y0: NotNan(
+                                                50.0,
+                                            ),
+                                            x1: NotNan(
+                                                100.0,
+                                            ),
                                             y1: NotNan(
-                                                20.0,
+                                                100.0,
                                             ),
                                         },
                                     },
                                     bbox: RectLTRB {
                                         x0: NotNan(
-                                            -56.0,
-                                        ),
-                                        y0: NotNan(
-                                            -290.0,
-                                        ),
-                                        x1: NotNan(
                                             50.0,
                                         ),
+                                        y0: NotNan(
+                                            50.0,
+                                        ),
+                                        x1: NotNan(
+                                            100.0,
+                                        ),
                                         y1: NotNan(
-                                            20.0,
+                                            100.0,
                                         ),
                                     },
                                 },

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-20 13:06:13
+ * @LastEditTime: 2023-02-20 15:48:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -1072,14 +1072,19 @@ where
     // where
     //     T: std::fmt::Debug;
     fn store_set(&self, store: &GStateStore, value: T);
-    fn set_with_opt_once<F: FnOnce(&T) -> Option<T>>(&self, func_once: F);
+    fn opt_set_with_once<F: FnOnce(&T) -> Option<T>>(&self, func_once: F);
     fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F);
     // fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
     fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F);
     fn set_with<F: Fn(&T) -> T>(&self, func: F);
     // fn try_get(&self) -> Option<T>;
 
-    fn update<F: FnOnce(&mut T)>(&self, func: F);
+    // fn update<F: FnOnce(&mut T)>(&self, func: F);
+    fn update<F: FnOnce(&mut T) -> R, R>(&self, func: F) -> R;
+    fn or_update<F: FnOnce(&mut T) -> bool>(&self, func: F) -> bool;
+
+    fn opt_update<F: FnOnce(&mut T) -> Option<R>, R>(&self, func: F) -> Option<R>;
+
     fn store_update<F: FnOnce(&mut T)>(&self, store: &GStateStore, func: F);
 
     /// # Errors
@@ -1165,28 +1170,7 @@ where
         let current = var.get();
         start_set_var_and_run_before_after(self.id, var, current, value, before_fns, after_fns);
     }
-    //TODO remove this use set_with_opt_once
-    // fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F) {
-    //     let (var, before_fns, after_fns) = store
-    //         .opt_get_var_and_bf_af_use_id::<T>(&StorageKey::TopoKey(self.id))
-    //         // .cloned()
-    //         .expect("You are trying to get a var state that doesn't exist in this context!");
 
-    //     let current = var.get();
-    //     let data = func(&current);
-
-    //     start_set_var_and_run_before_after(
-    //         // store,
-    //         &StorageKey::TopoKey(self.id),
-    //         var,
-    //         current,
-    //         data,
-    //         before_fns,
-    //         after_fns,
-    //     );
-    // }
-
-    //TODO remove this use set_with_opt_once
     fn set_with<F: Fn(&T) -> T>(&self, func: F) {
         read_var_b_a_with_topo_id::<_, T, ()>(
             self.id(),
@@ -1200,7 +1184,6 @@ where
             },
         );
     }
-    //TODO remove this function use set_with_opt_once
     fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F) {
         read_var_b_a_with_topo_id::<_, T, ()>(
             self.id(),
@@ -1215,7 +1198,7 @@ where
             },
         );
     }
-    fn set_with_opt_once<F: FnOnce(&T) -> Option<T>>(&self, func_once: F) {
+    fn opt_set_with_once<F: FnOnce(&T) -> Option<T>>(&self, func_once: F) {
         read_var_b_a_with_topo_id::<_, T, ()>(
             self.id(),
             |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
@@ -1249,21 +1232,76 @@ where
     //     clone_state_with_topo_id::<T>(self.id).map(|v| (*v.get()).clone())
     // }
 
-    //TODO use bool(changed?) func
-    fn update<F: FnOnce(&mut T)>(&self, func: F) {
-        // read_var_with_topo_id::<_, T, ()>(self.id, |var| {
-        //     let mut old = (*var.get()).clone();
-        //     func(&mut old);
-        //     var.set(old);
-        // })
+    // fn update<F: FnOnce(&mut T)>(&self, func: F) {
+    //     // read_var_with_topo_id::<_, T, ()>(self.id, |var| {
+    //     //     let mut old = (*var.get()).clone();
+    //     //     func(&mut old);
+    //     //     var.set(old);
+    //     // })
 
-        //NOTE 'set_with_once' has callback update inside
-        self.set_with_once(|v| {
-            let mut old = v.clone();
-            func(&mut old);
-            old
-        });
+    //     //NOTE 'set_with_once' has callback update inside
+    //     self.set_with_once(|v| {
+    //         let mut old = v.clone();
+    //         func(&mut old);
+    //         old
+    //     });
+    // }
+    fn update<F: FnOnce(&mut T) -> R, R>(&self, func: F) -> R {
+        read_var_b_a_with_topo_id::<_, T, R>(
+            self.id(),
+            |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
+                let current = var.get();
+                let mut edited_v = (*current).clone();
+
+                let r = func(&mut edited_v);
+
+                start_set_var_and_run_before_after(
+                    // store,
+                    self.id, var, current, edited_v, before_fns, after_fns,
+                );
+                r
+            },
+        )
     }
+    fn or_update<F: FnOnce(&mut T) -> bool>(&self, func: F) -> bool {
+        read_var_b_a_with_topo_id::<_, T, bool>(
+            self.id(),
+            |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
+                let current = var.get();
+                let mut edited_v = (*current).clone();
+
+                let is_changed = func(&mut edited_v);
+                if is_changed {
+                    start_set_var_and_run_before_after(
+                        // store,
+                        self.id, var, current, edited_v, before_fns, after_fns,
+                    );
+                }
+
+                is_changed
+            },
+        )
+    }
+
+    fn opt_update<F: FnOnce(&mut T) -> Option<R>, R>(&self, func: F) -> Option<R> {
+        read_var_b_a_with_topo_id::<_, T, Option<R>>(
+            self.id(),
+            |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
+                let current = var.get();
+                let mut edited_v = (*current).clone();
+
+                let opt_r = func(&mut edited_v);
+                if opt_r.is_some() {
+                    start_set_var_and_run_before_after(
+                        // store,
+                        self.id, var, current, edited_v, before_fns, after_fns,
+                    );
+                }
+                opt_r
+            },
+        )
+    }
+
     fn store_update<F: FnOnce(&mut T)>(&self, store: &GStateStore, func: F) {
         // read_var_with_topo_id::<_, T, ()>(self.id, |var| {
         //     let mut old = (*var.get()).clone();

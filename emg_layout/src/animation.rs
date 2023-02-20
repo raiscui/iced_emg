@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-02-18 02:06:47
+ * @LastEditTime: 2023-02-20 14:43:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -1536,7 +1536,7 @@ mod tests {
             let root_e_source =use_state(|| None);
             let root_e_target = use_state(||Some(node_index("root")));
             let root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
-            e_dict_sv.set_with(|d|{
+            e_dict_sv.set_with_once(|d|{
                 let mut nd = d .clone();
                 nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
                 nd
@@ -1553,7 +1553,7 @@ mod tests {
                   (pc(50), pc(50), pc(50)),
             );
 
-            e_dict_sv.set_with(|d|{
+            e_dict_sv.set_with_once(|d|{
                 let mut nd = d .clone();
                 nd.insert(edge_index("root","1"), Edge::new(e1_source, e1_target, e1.clone()));
                 nd

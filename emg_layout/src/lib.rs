@@ -110,7 +110,7 @@ thread_local! {
 }
 
 thread_local! {
-    static G_ANIMA_RUNNING_STORE: StateVar<Vector<Anchor<bool>>> = use_state(||Vector::new());
+    static G_ANIMA_RUNNING_STORE: StateVar<Vector<Anchor<bool>>> = use_state(Vector::new);
 }
 thread_local! {
     static G_AM_RUNING: StateAnchor<bool> = global_anima_running_build();
@@ -937,15 +937,15 @@ where
             align_z: use_state(|| align.2.into()),
             cassowary_constants: use_state(|| StateAnchor::constant(vector![])),
             cassowary_selectors: use_state(|| vector![]),
-            cassowary_generals: use_state(|| CassowaryGeneralMap::new()),
+            cassowary_generals: use_state(CassowaryGeneralMap::new),
         };
 
         // let path_styles= use_state(||Dict::unit(EPath::<Ix>::default(), s()));
-        let path_styles: StateVar<PathVarMap<Ix, Style>> = use_state(|| PathVarMap::default());
-        let path_layouts: StateVar<PathVarMap<Ix, Layout>> = use_state(|| PathVarMap::default());
+        let path_styles: StateVar<PathVarMap<Ix, Style>> = use_state(PathVarMap::default);
+        let path_layouts: StateVar<PathVarMap<Ix, Layout>> = use_state(PathVarMap::default);
 
-        let other_css_styles_sv = use_state(|| s());
-        let styles_sv = use_state(|| Dict::new());
+        let other_css_styles_sv = use_state(s);
+        let styles_sv = use_state(Dict::new);
 
         let opt_self_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
             let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
@@ -2166,7 +2166,7 @@ pub mod tests {
                 1920,
                 1080,
             );
-            e_dict_sv.set_with(|d| {
+            e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     EdgeIndex::new(None, node_index("root")),
@@ -2186,7 +2186,7 @@ pub mod tests {
                 (pc(50), pc(50), pc(50)),
             );
 
-            e_dict_sv.set_with(|d| {
+            e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("root", "1"),
@@ -2205,7 +2205,7 @@ pub mod tests {
                 (pc(100), pc(100), pc(100)),
                 (pc(100), pc(100), pc(100)),
             );
-            e_dict_sv.set_with(|d| {
+            e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("1", "2"),
@@ -2302,7 +2302,7 @@ pub mod tests {
             1920,
             1080,
         );
-        e_dict_sv.set_with(|d| {
+        e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 EdgeIndex::new(None, Some(node_index("root"))),
@@ -2321,7 +2321,7 @@ pub mod tests {
             (pc(100), pc(100), pc(100)),
             (pc(50), pc(20), pc(20)),
         );
-        e_dict_sv.set_with(|d| {
+        e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("root", "1"),
@@ -2340,7 +2340,7 @@ pub mod tests {
             (pc(100), pc(100), pc(100)),
             (pc(50), pc(20), pc(20)),
         );
-        e_dict_sv.set_with(|d| {
+        e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("1", "2"),
@@ -2618,7 +2618,7 @@ pub mod tests {
             1920,
             1080,
         );
-        e_dict_sv.set_with(|d| {
+        e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 EdgeIndex::new(None, Some(node_index("root"))),
@@ -2644,7 +2644,7 @@ pub mod tests {
                 pc(20),
             ),
         );
-        e_dict_sv.set_with(|d| {
+        e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("root", "1"),
@@ -2663,7 +2663,7 @@ pub mod tests {
             (pc(100), pc(100), pc(100)),
             (pc(50), pc(20), pc(20)),
         );
-        e_dict_sv.set_with(|d| {
+        e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("1", "2"),
@@ -2998,7 +2998,7 @@ pub mod tests {
                 100,
                 100,
             );
-            e_dict_sv.set_with(|d| {
+            e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     EdgeIndex::new(None, Some(node_index("root"))),
@@ -3016,7 +3016,7 @@ pub mod tests {
                 200,
                 200,
             );
-            e_dict_sv.set_with(|d| {
+            e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     EdgeIndex::new(None, Some(node_index("root2"))),
@@ -3036,7 +3036,7 @@ pub mod tests {
                 (pc(0), pc(0), pc(0)),
                 (pc(50), pc(50), pc(50)),
             );
-            e_dict_sv.set_with(|d| {
+            e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("root", "1"),
@@ -3057,7 +3057,7 @@ pub mod tests {
                 (pc(0), pc(0), pc(0)),
                 (pc(100), pc(000), pc(000)),
             );
-            e_dict_sv.set_with(|d| {
+            e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("1", "2"),

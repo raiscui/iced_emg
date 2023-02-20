@@ -1,5 +1,6 @@
 ---
-source: emg_layout/src/lib.rs
+source: emg_layout/src/impl_refresh.rs
+assertion_line: 459
 expression: "&root_e"
 ---
 EmgEdgeItem {
@@ -24,7 +25,7 @@ EmgEdgeItem {
                             ExactLengthSimplex {
                                 unit: Px,
                                 value: NotNan(
-                                    100.0,
+                                    94.32537,
                                 ),
                             },
                         ),
@@ -40,7 +41,7 @@ EmgEdgeItem {
                             ExactLengthSimplex {
                                 unit: Px,
                                 value: NotNan(
-                                    100.0,
+                                    1080.0,
                                 ),
                             },
                         ),
@@ -122,7 +123,112 @@ EmgEdgeItem {
         {},
     ),
     path_layouts: StateVar(
-        {},
+        {
+            EPath(
+                [
+                    EdgeIndex(OptionNodeIndex(None)->OptionNodeIndex(Some(NodeIndex("root")))),
+                ],
+            ): Layout {
+                w: StateVar(
+                    GenericSizeAnchor(
+                        StateAnchor(
+                            Length(
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            94.32537,
+                                        ),
+                                    },
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+                h: StateVar(
+                    GenericSizeAnchor(
+                        StateAnchor(
+                            Length(
+                                Simplex(
+                                    ExactLengthSimplex {
+                                        unit: Px,
+                                        value: NotNan(
+                                            1080.0,
+                                        ),
+                                    },
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+                z: StateVar(
+                    StateAnchor(
+                        0,
+                    ),
+                ),
+                origin_x: StateVar(
+                    GenericSizeAnchor(
+                        StateAnchor(
+                            None,
+                        ),
+                    ),
+                ),
+                origin_y: StateVar(
+                    GenericSizeAnchor(
+                        StateAnchor(
+                            None,
+                        ),
+                    ),
+                ),
+                origin_z: StateVar(
+                    GenericSizeAnchor(
+                        StateAnchor(
+                            None,
+                        ),
+                    ),
+                ),
+                align_x: StateVar(
+                    GenericSizeAnchor(
+                        StateAnchor(
+                            None,
+                        ),
+                    ),
+                ),
+                align_y: StateVar(
+                    GenericSizeAnchor(
+                        StateAnchor(
+                            None,
+                        ),
+                    ),
+                ),
+                align_z: StateVar(
+                    GenericSizeAnchor(
+                        StateAnchor(
+                            None,
+                        ),
+                    ),
+                ),
+                cassowary_constants: StateVar(
+                    StateAnchor(
+                        [],
+                    ),
+                ),
+                cassowary_selectors: StateVar(
+                    [],
+                ),
+                cassowary_generals: StateVar(
+                    CassowaryGeneralMap {
+                        map: {},
+                        v_v_suggest: {},
+                        virtual_constraints: {},
+                        top_virtual_constraints: {},
+                        top_map: {},
+                        top_v_v_suggest: {},
+                        parent: None,
+                    },
+                ),
+            },
+        },
     ),
     other_css_styles: StateVar(
         Style {
@@ -159,7 +265,7 @@ EmgEdgeItem {
                                                 ExactLengthSimplex {
                                                     unit: Px,
                                                     value: NotNan(
-                                                        100.0,
+                                                        94.32537,
                                                     ),
                                                 },
                                             ),
@@ -175,7 +281,7 @@ EmgEdgeItem {
                                                 ExactLengthSimplex {
                                                     unit: Px,
                                                     value: NotNan(
-                                                        100.0,
+                                                        1080.0,
                                                     ),
                                                 },
                                             ),
@@ -266,7 +372,7 @@ EmgEdgeItem {
                                                 },
                                             ],
                                             constant: NotNan(
-                                                -100.0,
+                                                -94.32537078857422,
                                             ),
                                         },
                                         strength: NotNan(
@@ -287,7 +393,7 @@ EmgEdgeItem {
                                                 },
                                             ],
                                             constant: NotNan(
-                                                -100.0,
+                                                -1080.0,
                                             ),
                                         },
                                         strength: NotNan(
@@ -545,8 +651,8 @@ EmgEdgeItem {
                         cass_or_calc_size: StateAnchor(
                             [
                                 [
-                                    100.0,
-                                    100.0,
+                                    94.32537,
+                                    1080.0,
                                 ],
                             ],
                         ),
@@ -625,7 +731,7 @@ EmgEdgeItem {
                                                 ExactLengthSimplex {
                                                     unit: Px,
                                                     value: NotNan(
-                                                        100.0,
+                                                        94.32537,
                                                     ),
                                                 },
                                             ),
@@ -637,7 +743,7 @@ EmgEdgeItem {
                                                 ExactLengthSimplex {
                                                     unit: Px,
                                                     value: NotNan(
-                                                        100.0,
+                                                        1080.0,
                                                     ),
                                                 },
                                             ),
@@ -712,13 +818,13 @@ EmgEdgeItem {
                         {
                             Variable: (
                                 NotNan(
-                                    100.0,
+                                    94.32537,
                                 ),
                                 "[⚬-▣ root][width] ",
                             ),
                             Variable: (
                                 NotNan(
-                                    100.0,
+                                    1080.0,
                                 ),
                                 "[⚬-▣ root][height] ",
                             ),
@@ -736,13 +842,13 @@ EmgEdgeItem {
                             ),
                             Variable: (
                                 NotNan(
-                                    100.0,
+                                    1080.0,
                                 ),
                                 "[⚬-▣ root][bottom] ",
                             ),
                             Variable: (
                                 NotNan(
-                                    100.0,
+                                    94.32537,
                                 ),
                                 "[⚬-▣ root][right] ",
                             ),
@@ -769,42 +875,6 @@ EmgEdgeItem {
                                     0.0,
                                 ),
                                 "[⚬-▣ root][align_y] ",
-                            ),
-                            Variable: (
-                                NotNan(
-                                    12.0,
-                                ),
-                                "[⚬-▣ root] |=> #\"1\"[width]",
-                            ),
-                            Variable: (
-                                NotNan(
-                                    200.0,
-                                ),
-                                "[⚬-▣ root] |=> #\"1\"[height]",
-                            ),
-                            Variable: (
-                                NotNan(
-                                    -0.0,
-                                ),
-                                "[⚬-▣ root] |=> #\"1\"[top]",
-                            ),
-                            Variable: (
-                                NotNan(
-                                    -0.0,
-                                ),
-                                "[⚬-▣ root] |=> #\"1\"[left]",
-                            ),
-                            Variable: (
-                                NotNan(
-                                    200.0,
-                                ),
-                                "[⚬-▣ root] |=> #\"1\"[bottom]",
-                            ),
-                            Variable: (
-                                NotNan(
-                                    12.0,
-                                ),
-                                "[⚬-▣ root] |=> #\"1\"[right]",
                             ),
                             Variable: (
                                 NotNan(
@@ -847,15 +917,15 @@ EmgEdgeItem {
                     cassowary_calculated_layout: StateAnchor(
                         (
                             Some(
-                                100.0,
+                                94.32537,
                             ),
                             Some(
-                                100.0,
+                                1080.0,
                             ),
                         ),
                     ),
                     styles_string: StateAnchor(
-                        "width: 100px;\nheight: 100px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n width: 100px;\nheight: 100px;\n",
+                        "width: 94.32537px;\nheight: 1080px;\ntransform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);\n width: 94.32537px;\nheight: 1080px;\n",
                     ),
                     ctx: EdgeCtx {
                         styles_end: StateAnchor(
@@ -868,8 +938,8 @@ EmgEdgeItem {
                                     0.0,
                                     0.0,
                                 ],
-                                100.0,
-                                100.0,
+                                94.32537,
+                                1080.0,
                             ),
                         ),
                         world: StateAnchor(
@@ -880,54 +950,7 @@ EmgEdgeItem {
                             ],
                         ),
                         children_layout: StateAnchor(
-                            Some(
-                                LayoutOverride {
-                                    rect_tree: {
-                                        RectLTRB {
-                                            x0: NotNan(
-                                                -56.0,
-                                            ),
-                                            y0: NotNan(
-                                                -290.0,
-                                            ),
-                                            x1: NotNan(
-                                                44.0,
-                                            ),
-                                            y1: NotNan(
-                                                -140.0,
-                                            ),
-                                        },
-                                        RectLTRB {
-                                            x0: NotNan(
-                                                38.0,
-                                            ),
-                                            y0: NotNan(
-                                                -180.0,
-                                            ),
-                                            x1: NotNan(
-                                                50.0,
-                                            ),
-                                            y1: NotNan(
-                                                20.0,
-                                            ),
-                                        },
-                                    },
-                                    bbox: RectLTRB {
-                                        x0: NotNan(
-                                            -56.0,
-                                        ),
-                                        y0: NotNan(
-                                            -290.0,
-                                        ),
-                                        x1: NotNan(
-                                            50.0,
-                                        ),
-                                        y1: NotNan(
-                                            20.0,
-                                        ),
-                                    },
-                                },
-                            ),
+                            None,
                         ),
                     },
                     opt_p_calculated: None,

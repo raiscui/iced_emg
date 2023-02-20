@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2023-02-14 15:58:10
+ * @LastEditTime: 2023-02-20 14:48:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -73,7 +73,7 @@ pub fn ame_benchmark(c: &mut Criterion) {
                     to(smallvec![opacity(1.)]),
                 ])]);
 
-                sv_now.set_with(|t| {
+                sv_now.set_with_once(|t| {
                     (*t).checked_add(Duration::from_millis(16))
                         .unwrap_or(Duration::ZERO)
                 });
@@ -122,7 +122,7 @@ pub fn ame_initd_benchmark(c: &mut Criterion) {
         a.replace([loop_am([to![opacity(0.)], to![opacity(1.)]])]);
 
         b.iter(|| {
-            sv_now.set_with(|t| {
+            sv_now.set_with_once(|t| {
                 (*t).checked_add(Duration::from_millis(16))
                     .unwrap_or(Duration::ZERO)
             });
@@ -153,7 +153,7 @@ pub fn ame_new_benchmark(c: &mut Criterion) {
         a.replace([loop_am([to![opacity(0.)], to![opacity(1.)]])]);
 
         b.iter(|| {
-            sv_now.set_with(|t| {
+            sv_now.set_with_once(|t| {
                 (*t).checked_add(Duration::from_millis(16))
                     .unwrap_or(Duration::ZERO)
             });
