@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 11:27:18
- * @LastEditTime: 2023-02-20 13:19:47
+ * @LastEditTime: 2023-02-20 16:25:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -18,6 +18,7 @@ mod code_test {
 
     use tracing_subscriber::{prelude::*, registry::Registry};
 
+    #[track_caller]
     fn token_2_code_test(name: &str, input: &str) -> String {
         // ────────────────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ mod code_test {
         macro_disp_string
     }
 
+    #[track_caller]
     fn cass_code_test<T: ToTokens + Parse + std::fmt::Debug>(name: &str, input: &str) {
         let subscriber = Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
         // .with(subscriber1);

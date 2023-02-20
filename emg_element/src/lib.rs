@@ -33,8 +33,8 @@ use emg_vello::SceneFrag;
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod prelude {
     pub use crate::{
-        graph_edit, node_ref, widget::*, EventCallback, EventMessage, GElement,
-        GTreeBuilderElement, GelType, GraphType,
+        error::Error as ElementError, graph_edit, node_ref, widget::*, EventCallback, EventMessage,
+        GElement, GTreeBuilderElement, GelType, GraphType,
     };
 }
 pub mod gtree_macro_prelude {

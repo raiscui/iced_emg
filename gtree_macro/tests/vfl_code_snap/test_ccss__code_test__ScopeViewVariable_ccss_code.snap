@@ -2,4 +2,4 @@
 source: gtree_macro/tests/test_ccss.rs
 expression: x
 ---
-emg_layout :: ccsa :: ScopeViewVariable :: new (:: std :: option :: Option :: None , :: std :: option :: Option :: Some (emg_layout :: ccsa :: NameCharsOrNumber :: Id (emg_common :: IdStr :: new ("button"))) , :: std :: option :: Option :: Some (emg_layout :: ccsa :: PredVariable (emg_common :: IdStr :: new ("width"))))
+ccsa_macro_prelude :: ccsa :: ScopeViewVariable :: new (:: std :: option :: Option :: None , :: std :: option :: Option :: Some (ccsa_macro_prelude :: ccsa :: NameCharsOrNumber :: Id (ccsa_macro_prelude :: common :: IdStr :: new ("button"))) , :: std :: option :: Option :: Some (ccsa_macro_prelude :: ccsa :: PredVariable (ccsa_macro_prelude :: common :: IdStr :: new ("width"))))

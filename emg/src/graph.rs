@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-02-14 16:27:25
+ * @LastEditTime: 2023-02-21 01:02:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -29,7 +29,7 @@ use indented::{indented, indented_with};
 use iter_format::{DebugMap, IterFormatExt};
 use neighbors::NodeNeighborsIter;
 use owning_ref::RcRef;
-use std::fmt::Write;
+use std::{borrow::Cow, fmt::Write};
 // use smallvec::{smallvec, SmallVec};
 use std::{
     cell::{Ref, RefCell},
@@ -162,10 +162,7 @@ pub struct OptionNodeIndex<Ix>(Option<NodeIndex<Ix>>);
 
 impl<Ix> OptionNodeIndex<Ix> {
     pub fn as_ref(&self) -> Option<&NodeIndex<Ix>> {
-        match **self {
-            Some(ref x) => Some(x),
-            None => None,
-        }
+        (**self).as_ref()
     }
 }
 
@@ -461,11 +458,9 @@ where
 {
     #[topo::nested]
     pub fn new_in_topo(item: N) -> Self {
-        let incoming_eix_set: StateVar<EdgeCollect<Ix>> =
-            use_state(|| EdgeCollect::<Ix>::default());
+        let incoming_eix_set: StateVar<EdgeCollect<Ix>> = use_state(EdgeCollect::<Ix>::default);
         let incoming_len = incoming_eix_set.watch().map(|ins| ins.len());
-        let outgoing_eix_set: StateVar<EdgeCollect<Ix>> =
-            use_state(|| EdgeCollect::<Ix>::default());
+        let outgoing_eix_set: StateVar<EdgeCollect<Ix>> = use_state(EdgeCollect::<Ix>::default);
         let outgoing_len = outgoing_eix_set.watch().map(|outs| outs.len());
         Self {
             item,
@@ -524,42 +519,38 @@ where
         self.outgoing_eix_set.update(func)
     }
 
-    pub fn remove_plug(&self, dir: Direction, e_ix: &EdgeIndex<Ix>) -> Option<EdgeIndex<Ix>> {
+    pub fn remove_plug(
+        &self,
+        dir: Direction,
+        e_ix: &EdgeIndex<Ix>,
+    ) -> Result<EdgeIndex<Ix>, Error> {
         let removed = match dir {
             Incoming => {
                 if self.incoming_len.get() == 1 {
-                    let old = self
-                        .incoming_eix_set
-                        .get_with(|ins| ins.get(e_ix).cloned())?;
-                    self.incoming_eix_set.set(IndexSet::default());
-                    old
+                    self.incoming_eix_set
+                        .update(|ins| ins.take(e_ix))
+                        .ok_or(Error::CanNotGetEdge)?
                 } else {
-                    let mut old_eix_s = self.incoming_eix_set.get();
-                    let old = old_eix_s.shift_take(e_ix)?;
-                    self.incoming_eix_set.set(old_eix_s);
-                    old
+                    self.incoming_eix_set
+                        .update(|ins| ins.shift_take(e_ix))
+                        .ok_or(Error::CanNotGetEdge)?
                 }
             }
             Outgoing => {
                 if self.outgoing_len.get() == 1 {
-                    let old = self
-                        .outgoing_eix_set
-                        .get_with(|outs| outs.get(e_ix).cloned())?;
-                    self.outgoing_eix_set.set(IndexSet::default());
-                    old
+                    self.outgoing_eix_set
+                        .update(|x| x.take(e_ix))
+                        .ok_or(Error::CanNotGetEdge)?
                 } else {
-                    let mut old_eix_s = self.outgoing_eix_set.get();
-                    let old = old_eix_s.shift_take(e_ix)?;
-
-                    // let old = old_eix_s.remove(old_eix_s.index_of(e_ix)?); //TODO 检索性能, 测试 use indexSet 库
-                    self.outgoing_eix_set.set(old_eix_s);
-                    old
+                    self.outgoing_eix_set
+                        .update(|x| x.shift_take(e_ix))
+                        .ok_or(Error::CanNotGetEdge)?
                 }
             }
         };
         assert_eq!(&removed, e_ix);
 
-        Some(removed)
+        Ok(removed)
     }
 
     pub fn incoming_len(&self) -> usize {
@@ -846,7 +837,7 @@ where
             if size_of::<E>() != 0 {
                 fmt_struct.field(
                     "edge item",
-                    &DebugMap(|| (&es).iter().map(|(eix, e)| (eix, e)).collect::<Vec<_>>()),
+                    &DebugMap(|| es.iter().map(|(eix, e)| (eix, e)).collect::<Vec<_>>()),
                 );
             }
         }
@@ -866,7 +857,7 @@ where
         Self {
             store: state_store(),
             nodes: HashMap::default(),
-            edges: use_state(|| Dict::new()),
+            edges: use_state(Dict::new),
         }
     }
 }
@@ -1059,33 +1050,42 @@ where
 
         let edge_idx = EdgeIndex::new(s_nix.clone(), t_nix.clone());
 
-        self.nodes_connect_eix(&edge_idx)?;
+        self.nodes_connect(&edge_idx).unwrap();
 
         let edge = Edge::new_in_topo(Some(s_nix.clone()), Some(t_nix.clone()), item);
 
-        self.just_insert_edge(edge_idx.clone(), edge);
+        self.insert_edge_only(edge_idx.clone(), edge);
 
         Some(edge_idx)
     }
 
-    //TODO return Result
-    pub fn nodes_connect_eix(&self, edge_index: &EdgeIndex<Ix>) -> Option<()> {
-        if let Some(s_nix) = edge_index.source_nix() {
-            self.nodes.get(s_nix.index())?.outgoing_mut_with(|outs| {
-                outs.insert(edge_index.clone());
-            });
+    pub fn nodes_connect(&self, e_ix: &EdgeIndex<Ix>) -> Result<(), Error> {
+        if let Some(s_nix) = e_ix.source_nix() {
+            self.nodes
+                .get(s_nix.index())
+                .ok_or_else(|| Error::CanNotGetNode {
+                    nix: format!("{s_nix:?}"),
+                })?
+                .outgoing_mut_with(|outs| {
+                    outs.insert(e_ix.clone());
+                });
         }
 
-        if let Some(t_nix) = edge_index.target_nix() {
-            self.nodes.get(t_nix.index())?.incoming_mut_with(|in_s| {
-                in_s.insert(edge_index.clone());
-            });
+        if let Some(t_nix) = e_ix.target_nix() {
+            self.nodes
+                .get(t_nix.index())
+                .ok_or_else(|| Error::CanNotGetNode {
+                    nix: format!("{t_nix:?}"),
+                })?
+                .incoming_mut_with(|in_s| {
+                    in_s.insert(e_ix.clone());
+                });
         }
 
-        Some(())
+        Ok(())
     }
 
-    pub fn just_insert_edge(&mut self, edge_idx: EdgeIndex<Ix>, edge: Edge<E, Ix>)
+    pub fn insert_edge_only(&mut self, edge_idx: EdgeIndex<Ix>, edge: Edge<E, Ix>)
     // where
     //     Ix: Eq,
     //     E: Eq,
@@ -1119,7 +1119,12 @@ where
         RcRef::new(self.edges.store_get_rc(&self.store())).map(|f| f[e].source_nix())
     }
 
-    pub fn edge_plug_edit(&self, eix: &EdgeIndex<Ix>, dir: Direction, change_to: impl Into<Ix>) {
+    pub fn edge_plug_edit(
+        &self,
+        eix: &EdgeIndex<Ix>,
+        dir: Direction,
+        change_to: impl Into<Ix>,
+    ) -> Result<(), Error> {
         match dir {
             Outgoing => {
                 //TODO finish this like incoming
@@ -1128,92 +1133,63 @@ where
             }
             Incoming => {
                 let new_incoming_nix = Some(node_index(change_to));
-                let new_eix = eix.clone().with_incoming(new_incoming_nix.clone().into());
 
-                self.just_remove_plug_in_nodes(eix);
+                let old_eix = self.nodes_disconnect_only(eix)?;
+                let new_eix = old_eix
+                    .into_owned()
+                    .with_incoming(new_incoming_nix.clone().into());
 
                 // add in nodes ─────────────────────────────────────────────
-                self.nodes_connect_eix(&new_eix);
+                self.nodes_connect(&new_eix)?;
 
                 //edges ─────────────────────────────────────────────────────────────────────────────
 
-                self.edges.store_update(&self.store(), |edges| {
-                    //TODO 当前在 FnOnce中 无法 返回 result , 暂时只能 unwrap
-                    let edge = edges.remove(eix).ok_or(Error::CanNotGetEdge).unwrap();
-                    edge.source_nix.set(new_incoming_nix);
-                    edges.insert(new_eix, edge);
-                });
-                // ─────────────────────────────────────────────
-                // //old source node remove eix a->c change to  a!=>c
-                // self.disconnect_plug_in_node_with_dir(eix.source_nix(), Outgoing, eix);
-                // // old target node's incoming eix change to new eix   ,c的 incoming eix a->c 改成 b->c (删除 a->c 添加 b->c)
-                // self.update_plug_in_node_with_dir(eix.target_nix(), Incoming, eix, ||panic!("在node修改源过程中,类似 a->c 变成 b->c, c肯定要有一个已有的edge a->c, 但这里没有"),|eix| {
-                //     eix.set_incoming(new_incoming_nix.clone().into())
-                // });
-                // //new incoming node set target eix, b的 outgoing eix 添加 b->c
-                // let mut new_incoming_eix = eix.clone();
-                // new_incoming_eix.set_incoming(new_incoming_nix.into());
-                // self.nodes_connect_eix(&new_incoming_eix);
-                // remove edge in node ─────────────────────────────────────────────
+                self.edges
+                    .store_update_result_check(&self.store(), |edges| {
+                        let edge = edges.remove(eix).ok_or(Error::CanNotGetEdge)?;
+                        edge.source_nix.set(new_incoming_nix);
+                        edges.insert(new_eix, edge);
+                        Ok(())
+                    })
             }
         }
     }
 
-    fn just_remove_plug_in_nodes<'a>(&self, e_ix: &'a EdgeIndex<Ix>) -> Option<&'a EdgeIndex<Ix>> {
+    fn nodes_disconnect_only<'a>(
+        &self,
+        e_ix: &'a EdgeIndex<Ix>,
+    ) -> Result<Cow<'a, EdgeIndex<Ix>>, Error> {
         let (source_n, target_n) = e_ix.get_nix_s();
 
-        self.disconnect_plug_in_node_with_dir(source_n, Outgoing, e_ix);
-        self.disconnect_plug_in_node_with_dir(target_n, Incoming, e_ix);
+        match (
+            self.disconnect_plug_in_node_with_dir(source_n, Outgoing, e_ix),
+            self.disconnect_plug_in_node_with_dir(target_n, Incoming, e_ix),
+        ) {
+            (Ok(a), Ok(b)) => match (a, b) {
+                (aa @ Cow::Owned(_), _) => Ok(aa),
 
-        Some(e_ix)
+                (_, bb) => Ok(bb),
+            },
+            (a, b) => a.and(b),
+        }
     }
 
-    //移除 opt_n_ix (如果有) 的 dir 方向 的 edgeindex记录- e_ix
-    fn disconnect_plug_in_node_with_dir(
+    fn disconnect_plug_in_node_with_dir<'a>(
         &self,
         opt_n_ix: &Option<NodeIndex<Ix>>,
         dir: Direction,
-        e_ix: &EdgeIndex<Ix>,
-    ) -> Option<EdgeIndex<Ix>> {
-        opt_n_ix
-            .as_ref()
-            .and_then(|n_ix| self.nodes.get(n_ix.index())?.remove_plug(dir, e_ix))
-    }
-
-    fn update_plug_in_node_with_dir<F, Fdef>(
-        &self,
-        opt_n_ix: &Option<NodeIndex<Ix>>,
-        dir: Direction,
-        e_ix: &EdgeIndex<Ix>,
-        not_has_new_fn: Fdef,
-        update_fn: F,
-    ) -> Option<()>
-    where
-        F: FnOnce(&mut EdgeIndex<Ix>),
-        Fdef: FnOnce() -> EdgeIndex<Ix>,
-    {
+        e_ix: &'a EdgeIndex<Ix>,
+    ) -> Result<Cow<'a, EdgeIndex<Ix>>, Error> {
         if let Some(n_ix) = opt_n_ix {
-            let n = self.nodes.get(n_ix.index())?;
-            let edge_ixs_sa = n.edge_ixs_sa(dir);
-            let mut e_sets = edge_ixs_sa.get();
-
-            if let Some((i, mut the_eix)) = e_sets.swap_remove_full(e_ix) {
-                //a-c -> b->c
-                update_fn(&mut the_eix);
-                let (end_i, is_inserted) = e_sets.insert_full(the_eix);
-                debug_assert!(is_inserted);
-                e_sets.swap_indices(i, end_i);
-            } else {
-                // not has , add new
-                let is_inserted = e_sets.insert(not_has_new_fn());
-                debug_assert!(is_inserted);
-            }
-
-            edge_ixs_sa.set(e_sets);
-
-            Some(())
+            self.nodes
+                .get(n_ix.index())
+                .ok_or_else(|| Error::CanNotGetNode {
+                    nix: format!("{n_ix:?}"),
+                })
+                .and_then(|n| n.remove_plug(dir, e_ix))
+                .map(Cow::Owned)
         } else {
-            None
+            Ok(Cow::Borrowed(e_ix))
         }
     }
 
@@ -1224,14 +1200,16 @@ where
     ///
     /// Computes in **O(e')** time, where **e'** is the size of four particular edge lists, for
     /// the vertices of `e` and the vertices of another affected edge.
-    pub fn remove_edge<'a>(&mut self, e_ix: &'a EdgeIndex<Ix>) -> Option<&'a EdgeIndex<Ix>> {
+    #[allow(clippy::type_complexity)]
+    pub fn remove_edge_and_disconnect<'a>(
+        &mut self,
+        e_ix: &'a EdgeIndex<Ix>,
+    ) -> Result<(Edge<E, Ix>, Cow<'a, EdgeIndex<Ix>>), Error> {
         // remove edge
-        self.just_remove_edge_in_edges(e_ix);
-
-        // remove edge in node
-        self.just_remove_plug_in_nodes(e_ix);
-
-        Some(e_ix)
+        Ok((
+            self.remove_edge_only(e_ix)?,
+            self.nodes_disconnect_only(e_ix)?,
+        ))
     }
 
     /// Remove `a` from the graph if it exists, and return its item.
@@ -1247,7 +1225,7 @@ where
     /// of edges with an endpoint in `a`, and including the edges with an
     /// endpoint in the displaced node.
     // TODO: iter version for array remove
-    pub fn remove_node(&mut self, n: NodeIndex<Ix>) -> Option<N> {
+    pub fn remove_node_and_edge_and_disconnect(&mut self, n: NodeIndex<Ix>) -> Option<N> {
         let Node {
             incoming_eix_set: incoming,
             outgoing_eix_set: outgoing,
@@ -1255,25 +1233,22 @@ where
             ..
         } = self.nodes.remove(&n)?;
 
-        // 断开 node 进出 连接
-        // TODO: Rc - ENGINE in graph
+        // 断开 node 进出 连接,删除 edge
         for n_in_e_ix in incoming.get_rc().iter() {
             self.disconnect_plug_in_node_with_dir(n_in_e_ix.source_nix(), Outgoing, n_in_e_ix);
-            self.just_remove_edge_in_edges(n_in_e_ix);
+            self.remove_edge_only(n_in_e_ix).unwrap();
         }
-        // TODO: Rc - ENGINE in graph
         for n_out_e_ix in outgoing.get_rc().iter() {
             self.disconnect_plug_in_node_with_dir(n_out_e_ix.target_nix(), Incoming, n_out_e_ix);
-            self.just_remove_edge_in_edges(n_out_e_ix);
+            self.remove_edge_only(n_out_e_ix).unwrap();
         }
 
         Some(item)
     }
 
-    fn just_remove_edge_in_edges(&self, eix: &EdgeIndex<Ix>) {
-        self.edges.store_update(&self.store(), |es| {
-            es.remove(eix)
-                .expect("edges can't remove not find EdgeIndex.");
+    fn remove_edge_only(&self, eix: &EdgeIndex<Ix>) -> Result<Edge<E, Ix>, Error> {
+        self.edges.store_update_result_check(&self.store(), |es| {
+            es.remove(eix).ok_or(Error::CanNotGetEdge)
         })
     }
 
@@ -1603,7 +1578,6 @@ mod graph_test_mod {
     // ────────────────────────────────────────────────────────────────────────────────
 
     use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::mem;
     use std::rc::Rc;
 
@@ -1731,31 +1705,6 @@ mod graph_test_mod {
         assert_eq!(*data, 8);
         assert_eq!(*other_data, 12);
     }
-    #[test]
-    fn test() {
-        let ff: RefCell<_> = RefCell::new(HashMap::new());
-
-        ff.borrow_mut().insert("africa", 92388);
-        ff.borrow_mut().insert("kyoto", 11837);
-        ff.borrow_mut().insert("piccadilly", 11826);
-        ff.borrow_mut().insert("marbles", 38);
-        let _xx = ff.clone();
-        // println!("{:?}", ff);
-
-        let shared_map: Rc<RefCell<_>> = Rc::new(RefCell::new(HashMap::new()));
-        let cloned = Rc::clone(&shared_map);
-        let own = cloned.to_owned();
-        shared_map.borrow_mut().insert("africa", 92388);
-        shared_map.borrow_mut().insert("kyoto", 11837);
-        shared_map.borrow_mut().insert("piccadilly", 11826);
-        shared_map.borrow_mut().insert("marbles", 38);
-        assert_eq!(cloned, shared_map);
-        assert_eq!(own, shared_map);
-        println!("{:?}", shared_map);
-        println!("{:?}", cloned);
-        println!("{:?}", own);
-        println!("{:?}", own);
-    }
 
     #[test]
     fn node_create() {
@@ -1852,7 +1801,7 @@ mod graph_test_mod {
             assert_eq!((&ww_nix, &xx_nix), op_eix1.get_nix_s_unwrap());
 
             // @ remove edge ─────────────────────────────────────────────────────────────────
-            g1.remove_edge(&op_eix1);
+            g1.remove_edge_and_disconnect(&op_eix1);
 
 
             assert_eq!(1, g1.edges_count());
@@ -1864,7 +1813,7 @@ mod graph_test_mod {
                         .into_iter()
                         .collect(),
                 ),
-                use_state(||IndexSet::default()),
+                use_state(IndexSet::default),
             );
 
             let xx_ww_edge = ww_node_rm_edge
@@ -1881,7 +1830,7 @@ mod graph_test_mod {
 
             // @ remove node ─────────────────────────────────────────────────────────────────
             insta::assert_display_snapshot!("graph_a",g1);
-            g1.remove_node(node_index(String::from("ww")));
+            g1.remove_node_and_edge_and_disconnect(node_index(String::from("ww")));
             insta::assert_display_snapshot!("graph_a_removed",g1);
 
 
@@ -2039,7 +1988,6 @@ mod graph_test_mod {
         let cc = *xx;
         let dd = ff;
         println!("clone: {:?}", ff.as_ptr());
-        println!("clone: {:?}", ff.clone().as_ptr());
         println!("clone: {:?}", xx.as_ptr());
         println!("clone: {:?}", cc.as_ptr());
         println!("clone: {:?}", dd.as_ptr());

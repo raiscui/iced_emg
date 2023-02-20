@@ -2,8 +2,10 @@
 #![feature(negative_impls)]
 #![feature(auto_traits)]
 mod error;
+
 mod graph;
 mod macros;
+pub use error::Error;
 pub use graph::edge_index;
 pub use graph::edge_index_no_source;
 pub use graph::node_index;

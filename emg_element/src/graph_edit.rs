@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-19 17:43:32
- * @LastEditTime: 2023-01-31 21:24:17
+ * @LastEditTime: 2023-02-21 00:12:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,7 @@ use emg::{Direction, EdgeIndex};
 use emg_common::IdStr;
 pub use impls::*;
 
-use crate::GraphType;
+use crate::{error::Error, GraphType};
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -34,7 +34,12 @@ where
 pub trait GraphEditManyMethod {
     type Ix;
     //实例连源枝移动( 某 path edge 原 edge 更改 source node) ,枝上其他node 不动(clone edge?)
-    fn edge_plug_edit(&self, who: &EdgeIndex<Self::Ix>, dir: Direction, to: Self::Ix);
+    fn edge_plug_edit(
+        &self,
+        who: &EdgeIndex<Self::Ix>,
+        dir: Direction,
+        to: Self::Ix,
+    ) -> Result<(), Error>;
 
     //实例嫁接(实例不连源枝移动 , 某 path node 原 edge 断开, xin edge 接上)
     fn edge_path_node_change_edge(&mut self);
@@ -95,8 +100,13 @@ pub struct EdittingGraphEdge<'a, Ix, M> {
 }
 
 impl<'a, Ix, M> EdittingGraphEdge<'a, Ix, M> {
-    pub fn moving(&self, who: impl Into<EdgeIndex<Ix>>, dir: Direction, to: impl Into<Ix>) {
-        self.inner.edge_plug_edit(&who.into(), dir, to.into());
+    pub fn moving(
+        &self,
+        who: impl Into<EdgeIndex<Ix>>,
+        dir: Direction,
+        to: impl Into<Ix>,
+    ) -> Result<(), Error> {
+        self.inner.edge_plug_edit(&who.into(), dir, to.into())
     }
 
     //TODO fn edit to edit other eg. node

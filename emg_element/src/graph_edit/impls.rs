@@ -1,12 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-02-14 17:53:15
+ * @LastEditTime: 2023-02-21 00:07:13
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg::{Direction, EdgeIndex};
+
+use crate::error::Error;
 
 use super::{GraphEditManyMethod, GraphEditor};
 
@@ -33,8 +35,10 @@ where
     Ix: std::hash::Hash + Clone + Ord + Default + std::fmt::Debug,
 {
     type Ix = Ix;
-    fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) {
-        self.borrow().edge_plug_edit(who, dir, to)
+    fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) -> Result<(), Error> {
+        self.borrow()
+            .edge_plug_edit(who, dir, to)
+            .map_err(|e| e.into())
     }
 
     fn edge_path_node_change_edge(&mut self) {

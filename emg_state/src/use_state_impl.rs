@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-20 15:48:21
+ * @LastEditTime: 2023-02-20 22:01:16
  * @LastEditors: Rais
  * @Description:
  */
@@ -688,19 +688,19 @@ impl GStateStore {
     //     fns.remove(after_fn_id);
     // }
 
-    #[must_use]
     fn opt_get_var_and_bf_af_use_id<T: 'static>(
         &self,
         current_id: impl Into<StorageKey>,
-    ) -> Option<VarOptBAfnCollectRef<T>> {
+    ) -> Result<VarOptBAfnCollectRef<T>, Error> {
+        let storage_key = current_id.into();
         match (
-            self.id_to_key_map.get(&current_id.into()),
+            self.id_to_key_map.get(&storage_key),
             self.get_secondarymap::<T>(),
         ) {
             (Some(existing_key), Some(existing_secondary_map)) => {
                 let v = existing_secondary_map
                     .get(*existing_key)
-                    .expect("can not get var in fn[opt_get_var_and_bf_af_use_id]");
+                    .ok_or(Error::SecMapNoKey(*existing_key, storage_key))?;
 
                 let b =
                     self.get_before_secondarymap::<T>()
@@ -714,9 +714,14 @@ impl GStateStore {
                             existing_after_secondary_map.get(*existing_key)
                         });
 
-                Some((v, b, a))
+                Ok((v, b, a))
             }
-            _ => None,
+            (None, None) => Err(Error::StoreNoKeyNoVarMapForType(
+                storage_key,
+                std::any::type_name::<T>(),
+            )),
+            (None, Some(_)) => Err(Error::StoreNoKey(storage_key)),
+            (Some(_), None) => Err(Error::StoreNoVarMapForType(std::any::type_name::<T>())),
         }
     }
     #[instrument(level = "debug", skip_all)]
@@ -1074,19 +1079,34 @@ where
     fn store_set(&self, store: &GStateStore, value: T);
     fn opt_set_with_once<F: FnOnce(&T) -> Option<T>>(&self, func_once: F);
     fn set_with_once<F: FnOnce(&T) -> T>(&self, func_once: F);
-    // fn store_set_with<F: Fn(&T) -> T>(&self, store: &GStateStore, func: F);
-    fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F);
+
+    /// # Errors
+    ///
+    /// Will return `Err` if got [Error]
+    /// permission to read it.
+    fn store_set_with_once<F: FnOnce(&T) -> T>(
+        &self,
+        store: &GStateStore,
+        func_once: F,
+    ) -> Result<(), Error>;
     fn set_with<F: Fn(&T) -> T>(&self, func: F);
     // fn try_get(&self) -> Option<T>;
 
     // fn update<F: FnOnce(&mut T)>(&self, func: F);
     fn update<F: FnOnce(&mut T) -> R, R>(&self, func: F) -> R;
-    fn or_update<F: FnOnce(&mut T) -> bool>(&self, func: F) -> bool;
+    fn update_bool_check<F: FnOnce(&mut T) -> bool>(&self, func: F) -> bool;
 
-    fn opt_update<F: FnOnce(&mut T) -> Option<R>, R>(&self, func: F) -> Option<R>;
+    fn update_opt_check<F: FnOnce(&mut T) -> Option<R>, R>(&self, func: F) -> Option<R>;
 
-    fn store_update<F: FnOnce(&mut T)>(&self, store: &GStateStore, func: F);
-
+    fn store_update<F: FnOnce(&mut T) -> R, R>(&self, store: &GStateStore, func: F) -> R;
+    /// # Errors
+    ///
+    /// Will return `Err` if got [Error]
+    fn store_update_result_check<F: FnOnce(&mut T) -> Result<R, E>, R, E>(
+        &self,
+        store: &GStateStore,
+        func: F,
+    ) -> Result<R, E>;
     /// # Errors
     ///
     /// Will return `Err` if `fns.contains_key(callback_key)`
@@ -1214,12 +1234,12 @@ where
         );
     }
 
-    fn store_set_with_once<F: FnOnce(&T) -> T>(&self, store: &GStateStore, func_once: F) {
-        let (var,before_fns,after_fns) = store
-            .opt_get_var_and_bf_af_use_id::<T>(self.id())
-            .expect(
-            "fn store_set_with: You are trying to get a var state that doesn't exist in this context!",
-        );
+    fn store_set_with_once<F: FnOnce(&T) -> T>(
+        &self,
+        store: &GStateStore,
+        func_once: F,
+    ) -> Result<(), Error> {
+        let (var, before_fns, after_fns) = store.opt_get_var_and_bf_af_use_id::<T>(self.id())?;
         let current = var.get();
         let data = func_once(&current);
 
@@ -1227,6 +1247,7 @@ where
             // store,
             self.id, var, current, data, before_fns, after_fns,
         );
+        Ok(())
     }
     // fn try_get(&self) -> Option<T> {
     //     clone_state_with_topo_id::<T>(self.id).map(|v| (*v.get()).clone())
@@ -1263,7 +1284,7 @@ where
             },
         )
     }
-    fn or_update<F: FnOnce(&mut T) -> bool>(&self, func: F) -> bool {
+    fn update_bool_check<F: FnOnce(&mut T) -> bool>(&self, func: F) -> bool {
         read_var_b_a_with_topo_id::<_, T, bool>(
             self.id(),
             |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
@@ -1283,7 +1304,7 @@ where
         )
     }
 
-    fn opt_update<F: FnOnce(&mut T) -> Option<R>, R>(&self, func: F) -> Option<R> {
+    fn update_opt_check<F: FnOnce(&mut T) -> Option<R>, R>(&self, func: F) -> Option<R> {
         read_var_b_a_with_topo_id::<_, T, Option<R>>(
             self.id(),
             |(var, before_fns, after_fns): VarOptBAfnCollectRef<T>| {
@@ -1302,18 +1323,39 @@ where
         )
     }
 
-    fn store_update<F: FnOnce(&mut T)>(&self, store: &GStateStore, func: F) {
-        // read_var_with_topo_id::<_, T, ()>(self.id, |var| {
-        //     let mut old = (*var.get()).clone();
-        //     func(&mut old);
-        //     var.set(old);
-        // })
-        //NOTE 'store_set_with_once' has callback update inside
-        self.store_set_with_once(store, |v| {
-            let mut old = v.clone();
-            func(&mut old);
-            old
-        });
+    fn store_update<F: FnOnce(&mut T) -> R, R>(&self, store: &GStateStore, func: F) -> R {
+        let (var, before_fns, after_fns) =
+            store.opt_get_var_and_bf_af_use_id::<T>(self.id()).unwrap();
+        let current = var.get();
+
+        let mut edited_v = (*current).clone();
+
+        let r = func(&mut edited_v);
+
+        start_set_var_and_run_before_after(
+            // store,
+            self.id, var, current, edited_v, before_fns, after_fns,
+        );
+        r
+    }
+    fn store_update_result_check<F: FnOnce(&mut T) -> Result<R, E>, R, E>(
+        &self,
+        store: &GStateStore,
+        func: F,
+    ) -> Result<R, E> {
+        let (var, before_fns, after_fns) =
+            store.opt_get_var_and_bf_af_use_id::<T>(self.id()).unwrap();
+        let current = var.get();
+
+        let mut edited_v = (*current).clone();
+
+        let r = func(&mut edited_v)?;
+        start_set_var_and_run_before_after(
+            // store,
+            self.id, var, current, edited_v, before_fns, after_fns,
+        );
+
+        Ok(r)
     }
 
     // #[topo::nested]
@@ -2005,6 +2047,7 @@ fn insert_var_with_topo_id<T: 'static>(var: Var<T>, current_id: TopoKey) {
     });
 }
 
+#[track_caller]
 fn or_insert_var_with_topo_id<F: FnOnce() -> T, T: 'static + std::fmt::Debug>(
     func: F,
     current_id: TopoKey,
@@ -2055,8 +2098,8 @@ fn read_var_b_a_with_topo_id<F: FnOnce(VarOptBAfnCollectRef<T>) -> R, T: 'static
     state_store_with(|g_state_store_refcell: &Rc<RefCell<GStateStore>>| {
         trace!("G_STATE_STORE::borrow:\n{}", Location::caller());
 
-        let s = g_state_store_refcell.borrow();
-        let var_b_a = s
+        let store = g_state_store_refcell.borrow();
+        let var_b_a = store
             .opt_get_var_and_bf_af_use_id::<T>(id)
             .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 

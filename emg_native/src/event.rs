@@ -84,35 +84,3 @@ pub enum MacOS {
     /// [bundled]: https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW19
     ReceivedUrl(String),
 }
-
-//TODO  disabled this
-/// The status of an [`Event`] after being processed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    /// The [`Event`] was **NOT** handled by any widget.
-    Ignored,
-
-    /// The [`Event`] was handled and processed by a widget.
-    Captured,
-}
-
-impl Status {
-    /// Merges two [`Status`] into one.
-    ///
-    /// `Captured` takes precedence over `Ignored`:
-    ///
-    /// ```
-    /// use iced_native::event::Status;
-    ///
-    /// assert_eq!(Status::Ignored.merge(Status::Ignored), Status::Ignored);
-    /// assert_eq!(Status::Ignored.merge(Status::Captured), Status::Captured);
-    /// assert_eq!(Status::Captured.merge(Status::Ignored), Status::Captured);
-    /// assert_eq!(Status::Captured.merge(Status::Captured), Status::Captured);
-    /// ```
-    pub fn merge(self, b: Self) -> Self {
-        match self {
-            Status::Ignored => b,
-            Status::Captured => Status::Captured,
-        }
-    }
-}

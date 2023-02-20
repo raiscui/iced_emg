@@ -18,7 +18,7 @@ members = [
     "emg_msg_macro",
     "emg_msg_impl",
     "emg_hasher",
-    "emg_web",
+    # "emg_web",
     "emg_futures",
     "emg_native",
     "emg_winit",
@@ -30,7 +30,7 @@ members = [
     "examples/moving_edge",
     "examples/checkbox",
 ]
-
+exclude = ["tests", "emg_web"]
 
 [profile.dev]
 split-debuginfo = "unpacked"

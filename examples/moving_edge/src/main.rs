@@ -152,7 +152,19 @@ impl Sandbox for App {
 
                 graph
                     .edit::<EdgeMode>()
-                    .moving(edge_index("a", "b"), Incoming, "m");
+                    .moving(edge_index("a", "b"), Incoming, "m")
+                    .or_else(|e| match e {
+                        ElementError::GraphError(ee) => {
+                            match ee {
+                                emg_bind::emg::Error::CanNotGetEdge => graph
+                                    .edit::<EdgeMode>()
+                                    .moving(edge_index("m", "b"), Incoming, "a"),
+
+                                _ => todo!(),
+                            }
+                        }
+                    })
+                    .unwrap()
 
                 // insta::assert_display_snapshot!("graph_moved", graph.borrow());
             }

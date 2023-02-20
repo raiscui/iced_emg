@@ -1,6 +1,5 @@
 ---
 source: emg_layout/src/animation.rs
-assertion_line: 1282
 expression: "&root_e"
 ---
 EmgEdgeItem {
@@ -235,7 +234,7 @@ EmgEdgeItem {
             media_rules: {},
             rules: [],
             updated_at: [
-                "emg_layout/src/lib.rs:940:48",
+                "/rustc/7aa413d59206fd511137728df3d9e0fd377429bd/library/core/src/ops/function.rs:250:5",
             ],
             pseudo: None,
             media: None,
@@ -756,10 +755,10 @@ EmgEdgeItem {
                                     },
                                 ],
                                 updated_at: [
-                                    "emg_layout/src/lib.rs:1906:13",
-                                    "emg_layout/src/lib.rs:1906:17",
-                                    "emg_layout/src/lib.rs:1906:31",
-                                    "emg_layout/src/lib.rs:1906:45",
+                                    "emg_layout/src/lib.rs:1913:13",
+                                    "emg_layout/src/lib.rs:1913:17",
+                                    "emg_layout/src/lib.rs:1913:31",
+                                    "emg_layout/src/lib.rs:1913:45",
                                 ],
                                 pseudo: None,
                                 media: None,

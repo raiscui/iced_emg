@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-02-19 00:02:30
+ * @LastEditTime: 2023-02-21 00:06:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -174,8 +174,7 @@ impl GraphEdgeBuilder {
         let align = self.opt_align.unwrap_or_default();
         // ─────────────────────────────────────────────────────────────
 
-        g.nodes_connect_eix(&self.edge_ix)
-            .ok_or(Error::EdgeIndexNotExistInNode)?;
+        g.nodes_connect(&self.edge_ix)?;
         // ─────────────────────────────────────────────────────
         let source = use_state(|| self.edge_ix.source_nix().clone());
         let target = use_state(|| self.edge_ix.target_nix().clone());
@@ -190,7 +189,7 @@ impl GraphEdgeBuilder {
         );
         // ─────────────────────────────────────────────────────────────
 
-        g.just_insert_edge(self.edge_ix, Edge::new(source, target, edge_item.clone()));
+        g.insert_edge_only(self.edge_ix, Edge::new(source, target, edge_item.clone()));
 
         Ok(edge_item)
     }
@@ -539,7 +538,8 @@ where
 
                             let new_v_removed = old_data_clone.relative_complement(new_v.clone());
                             for k in new_v_removed.keys() {
-                                this.borrow_mut().remove_node(node_index(k.clone()));
+                                this.borrow_mut()
+                                    .remove_node_and_edge_and_disconnect(node_index(k.clone()));
                             }
 
                             //NOTE like: https://stackoverflow.com/questions/56261476/why-is-finding-the-intersection-of-integer-sets-faster-with-a-vec-compared-to-bt
