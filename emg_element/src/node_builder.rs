@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-02-13 14:18:14
+ * @LastEditTime: 2023-02-20 13:31:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -146,7 +146,7 @@ impl<Message: MsgMarker> IntoOptionMs<Message> for Message {
 
 impl<Message> IntoOptionMs<Message> for () {
     fn into_option(self) -> Option<Message> {
-        None
+        Option::<Message>::None
     }
 }
 
@@ -158,7 +158,7 @@ impl<Message> IntoOptionMs<Message> for Option<Message> {
 // ────────────────────────────────────────────────────────────────────────────────
 
 impl<Message: 'static> EventMessage<Message> {
-    pub fn new<T: IntoOptionMs<Message> + 'static>(
+    pub fn new<T: IntoOptionMs<Message>>(
         name: EventIdentify,
         cb: impl Fn() -> T + 'static,
         // cb: impl FnOnce() -> T + Clone + 'static,

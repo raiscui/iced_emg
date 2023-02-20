@@ -1,4 +1,4 @@
-use color_eyre::{eyre::Report, eyre::WrapErr};
+use color_eyre::{eyre::Report, eyre::Result, eyre::WrapErr};
 use emg_bind::{
     element::*,
     emg::{edge_index, Direction::Incoming},
@@ -107,16 +107,16 @@ fn tracing_init() -> Result<(), Report> {
 }
 
 // pub fn main() -> emg_bind::Result {
-#[instrument]
+// #[instrument]
 pub fn main() -> Result<(), Report> {
     // pub fn main() -> Result<(), Error> {
     // #[cfg(debug_assertions)]
     tracing_init()?;
-    Counter::run(Settings::default()).wrap_err("saw a downstream error")
+    App::run(Settings::default()).wrap_err("saw a downstream error")
 }
 
 #[derive(Default)]
-struct Counter {
+struct App {
     value: i32,
 }
 
@@ -129,7 +129,7 @@ enum Message {
     DecrementPressed,
 }
 
-impl Sandbox for Counter {
+impl Sandbox for App {
     type Message = Message;
 
     fn update(
@@ -221,6 +221,18 @@ impl Sandbox for Counter {
                             fill(rgba(1, 0, 0, 1))
                         ]
                         @="b" Layer [
+
+
+                            @E=[
+                                // origin_x(px(0)),align_x(px(250)),
+                                // origin_y(px(0)),align_y(px(250)),
+                                w(px(50)),h(px(50)),
+                                // fill(rgba(1., 1.,1., 1)),
+                                // b_width(px(1)),
+                                // b_color(rgb(1,0,0))
+                            ]
+                            @="b-check" Checkbox::new(false,"b-abcd",|_|{})=>[
+                            ],
 
                         ],
                     ],

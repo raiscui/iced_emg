@@ -46,7 +46,7 @@ pub mod gtree_macro_prelude {
         better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
         IdStr, TypeCheck,
     };
-    pub use emg_layout::{add_values::*, css, styles::*, EmgEdgeItem};
+    pub use emg_layout::{add_values::*, ccsa_macro_prelude, css, styles::*, EmgEdgeItem};
     pub use emg_shaping::{EqShaping, Shaper, Shaping, ShapingUse};
     pub use emg_state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor};
 }

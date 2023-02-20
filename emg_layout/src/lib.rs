@@ -90,6 +90,13 @@ pub use emg_common;
 
 pub mod ccsa;
 pub type LayoutEndType = (Translation3<Precision>, Precision, Precision);
+// ─────────────────────────────────────────────────────────────────────────────
+pub mod ccsa_macro_prelude {
+
+    pub use crate::ccsa;
+
+    pub use emg_common as common;
+}
 
 // ────────────────────────────────────────────────────────────────────────────────
 

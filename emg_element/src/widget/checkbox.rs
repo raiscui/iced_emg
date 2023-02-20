@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-14 18:05:33
+ * @LastEditTime: 2023-02-20 13:43:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,6 +11,7 @@ use gtree::gtree;
 
 use crate::{
     g_element::DynGElement, g_tree_builder::GTreeInit, GElement, GTreeBuilderElement, InitTree,
+    IntoOptionMs,
 };
 
 use emg_common::{
@@ -28,13 +29,10 @@ use std::{panic::Location, rc::Rc};
 
 #[allow(missing_debug_implementations)]
 #[derive(Tid)]
-pub struct Checkbox<Message>
-// where
-//     dyn std::ops::Fn(bool) -> Message + 'static: std::cmp::PartialEq,
-{
+pub struct Checkbox<Message> {
     is_checked: StateVar<bool>,
     //FIXME use cow for Rc 防止 克隆对象和 原始对象使用同一个 callback
-    on_toggle: Option<Rc<dyn Fn(bool) -> Message>>,
+    on_toggle: Option<Rc<dyn Fn(bool) -> Option<Message>>>,
     label: IdStr,
     id: Option<IdStr>,
     width: LogicLength,
@@ -99,13 +97,17 @@ impl<Message> Checkbox<Message>
     ///     will receive the new state of the [`Checkbox`] and must produce a
     ///     `Message`.
     #[topo::nested]
-    pub fn new<F>(is_checked: bool, label: impl Into<IdStr>, f: F) -> Self
+    pub fn new<T>(
+        is_checked: bool,
+        label: impl Into<IdStr>,
+        f: impl Fn(bool) -> T + 'static,
+    ) -> Self
     where
-        F: 'static + Fn(bool) -> Message,
+        T: IntoOptionMs<Message>,
     {
         Self {
             is_checked: use_state(|| is_checked),
-            on_toggle: Some(Rc::new(f)),
+            on_toggle: Some(Rc::new(move |is_checked| f(is_checked).into_option())),
             label: label.into(),
             id: None,
             width: LogicLength::default(),
@@ -160,8 +162,9 @@ where
         gtree! {
             @SkipInit self =>[
                 @=id.clone() + "|CLICK" On:CLICK  move||{
+
                     is_checked.set_with(|v| !*v);
-                    (on_toggle)(true);
+                    (on_toggle)(is_checked.get())
                 },
             ]
         }

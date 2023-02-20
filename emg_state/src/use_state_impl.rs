@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-18 00:36:00
+ * @LastEditTime: 2023-02-20 13:06:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -342,34 +342,31 @@ impl GStateStore {
             .expect("set_state_with_key: can't set state that doesn't exist in this context!");
 
         //
-        match opt_before_fns {
-            Some(rcr_before_fns) => {
-                let current = Some(var.get());
+        if let Some(rcr_before_fns) = opt_before_fns {
+            let current = Some(var.get());
 
-                let before_fns = rcr_before_fns.borrow();
-                if before_fns.is_empty() {
-                    return;
-                }
-                let skips_clone = skips.clone();
-
-                //
-                // let skips_borrowed = skips.get_mut();
-
-                before_fns
-                    .iter()
-                    .filter_map(|(_key, (deps, func))| {
-                        if deps.iter().any(|d| skips_clone.contains(d)) {
-                            None
-                        } else {
-                            Some(func)
-                        }
-                    })
-                    .for_each(|func| {
-                        // let skip_clone = skip2.clone();
-                        func(skips, &current, &data);
-                    });
+            let before_fns = rcr_before_fns.borrow();
+            if before_fns.is_empty() {
+                return;
             }
-            _ => (),
+            let skips_clone = skips.clone();
+
+            //
+            // let skips_borrowed = skips.get_mut();
+
+            before_fns
+                .iter()
+                .filter_map(|(_key, (deps, func))| {
+                    if deps.iter().any(|d| skips_clone.contains(d)) {
+                        None
+                    } else {
+                        Some(func)
+                    }
+                })
+                .for_each(|func| {
+                    // let skip_clone = skip2.clone();
+                    func(skips, &current, &data);
+                });
         }
 
         // debug!("in callbacks ,bf_fns called, then --> var set :{:?}", data);
@@ -377,28 +374,25 @@ impl GStateStore {
 
         var.set(data.clone());
         // ─────────────────────────────────────────────────────────────────
-        match opt_after_fns {
-            Some(rcr_after_fns) => {
-                let after_fns = rcr_after_fns.borrow();
-                if after_fns.is_empty() {
-                    return;
-                }
-                let skips_clone = skips.clone();
-
-                after_fns
-                    .iter()
-                    .filter_map(|(_key, (deps, func))| {
-                        if deps.iter().any(|d| skips_clone.contains(d)) {
-                            None
-                        } else {
-                            Some(func)
-                        }
-                    })
-                    .for_each(|func| {
-                        func(skips, &data);
-                    });
+        if let Some(rcr_after_fns) = opt_after_fns {
+            let after_fns = rcr_after_fns.borrow();
+            if after_fns.is_empty() {
+                return;
             }
-            _ => (),
+            let skips_clone = skips.clone();
+
+            after_fns
+                .iter()
+                .filter_map(|(_key, (deps, func))| {
+                    if deps.iter().any(|d| skips_clone.contains(d)) {
+                        None
+                    } else {
+                        Some(func)
+                    }
+                })
+                .for_each(|func| {
+                    func(skips, &data);
+                });
         }
     }
     fn insert_var_with_key<T: 'static>(&mut self, var: Var<T>, current_id: &StorageKey) {
@@ -760,7 +754,7 @@ impl GStateStore {
         self.engine.borrow_mut()
     }
 
-    fn link_callback_drop<T>(&mut self, dep_topo_key: TopoKey, b_a_key: Rc<StorageKey>) {
+    fn link_callback_drop(&mut self, dep_topo_key: TopoKey, b_a_key: Rc<StorageKey>) {
         let key = self
             .id_to_key_map
             .get(&StorageKey::TopoKey(dep_topo_key))
@@ -903,9 +897,12 @@ impl<T> StateVar<StateAnchor<T>>
 where
     T: 'static + std::clone::Clone,
 {
-    #[must_use]
+    /// # Errors
+    ///
+    /// Will return `Err` if engine cannot `borrow_mut`
+    /// permission to read it.
     pub fn try_get(&self) -> Result<T, Error> {
-        self.get_with(|x| x.try_get())
+        self.get_with(CloneStateAnchor::try_get)
     }
     #[must_use]
     pub fn get(&self) -> T {
@@ -930,7 +927,9 @@ impl<T> StateVar<T>
 where
     T: 'static,
 {
-    // #[instrument(level = "debug", skip_all, fields(id = ?self.id()))]
+    /// # Panics
+    ///
+    /// Will panic if `store.id_to_key_map` not have Self `topo_key`
     pub fn manually_drop(&self) {
         debug!("StateVar<{}> drop .. ", std::any::type_name::<T>(),);
 
@@ -1386,7 +1385,7 @@ where
     fn link_callback_drop(&self, fk: Rc<StorageKey>) {
         let state_store = state_store();
         let mut store = state_store.borrow_mut();
-        store.link_callback_drop::<T>(self.id, fk);
+        store.link_callback_drop(self.id, fk);
     }
 }
 
@@ -1416,11 +1415,12 @@ impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateAnchor<T
 
 impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateAnchor<T> {
     #[track_caller]
+    #[allow(clippy::print_in_format_impl)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.try_get() {
             Ok(v) => f.debug_tuple("StateAnchor").field(&v).finish(),
             Err(e) => {
-                eprintln!("error:!!!!!!!!!!!! \n---- {}", e);
+                eprintln!("error:!!!!!!!!!!!! \n---- {e}");
                 f.debug_tuple("StateAnchor")
                     .field(&"_err_can_not_get_mut_engine_")
                     .finish()
@@ -1459,6 +1459,10 @@ where
     T: Clone + 'static,
 {
     fn get(&self) -> T;
+    /// # Errors
+    ///
+    /// Will return `Err` if engine cannot `borrow_mut`
+    /// permission to read it.
     fn try_get(&self) -> Result<T, Error>;
     fn get_with<F: FnOnce(&T) -> R, R>(&self, func: F) -> R;
 
@@ -1470,16 +1474,18 @@ where
 pub struct LocationEngineGet(&'static Location<'static>);
 
 impl LocationEngineGet {
+    #[allow(clippy::new_without_default)]
     #[track_caller]
-    pub fn new() -> Self {
-        match illicit::get::<LocationEngineGet>().as_deref() {
-            Ok(x) => *x,
-            Err(_) => LocationEngineGet(Location::caller()),
-        }
+    #[must_use]
+    fn new() -> Self {
+        illicit::get::<Self>()
+            .as_deref()
+            .map_or_else(|_| Self(Location::caller()), |x| *x)
     }
     #[track_caller]
-    pub fn reset_new() -> Self {
-        LocationEngineGet(Location::caller())
+    #[must_use]
+    fn reset_new() -> Self {
+        Self(Location::caller())
     }
 }
 
@@ -2060,14 +2066,14 @@ fn insert_before_fn_common_in_topo<T: 'static + std::clone::Clone>(
             .insert_before_fn_in_topo(&StorageKey::TopoKey(sv.id), func, deps)
             .unwrap();
 
-        if !deps.is_empty() {
+        if deps.is_empty() {
+            Some(fk)
+        } else {
             for d in deps {
-                store.link_callback_drop::<T>(*d, fk.clone());
+                store.link_callback_drop(*d, fk.clone());
             }
             drop(fk);
             None
-        } else {
-            Some(fk)
         }
     })
 }
@@ -2102,14 +2108,14 @@ fn insert_after_fn_common_in_topo<T: 'static + std::clone::Clone>(
             .insert_after_fn_in_topo(&StorageKey::TopoKey(sv.id), func, deps)
             .unwrap();
 
-        if !deps.is_empty() {
+        if deps.is_empty() {
+            Some(fk)
+        } else {
             for d in deps {
-                store.link_callback_drop::<T>(*d, fk.clone());
+                store.link_callback_drop(*d, fk.clone());
             }
             drop(fk);
             None
-        } else {
-            Some(fk)
         }
     })
 }

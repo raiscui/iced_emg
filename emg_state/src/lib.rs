@@ -1,4 +1,3 @@
-#![deny(clippy::disallowed_types)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]

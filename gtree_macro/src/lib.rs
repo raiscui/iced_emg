@@ -4,7 +4,6 @@
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(is_some_and)]
 // ────────────────────────────────────────────────────────────────────────────────
-use proc_macro_crate::{crate_name, FoundCrate};
 // use std::collections::HashSet as Set;
 
 // use trace_var::trace_var;
@@ -1066,7 +1065,7 @@ impl Parse for Gtree {
         // Ok(Gtree { emg_graph, root })
 
         if !input.is_empty() {
-            let err = format!("input has unknown tokens not parsed: {} ", input,);
+            let err = format!("input has unknown tokens not parsed: {input} ",);
 
             return Err(input.error(err));
         }
