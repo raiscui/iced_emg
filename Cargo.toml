@@ -29,6 +29,7 @@ members = [
     "examples/counter",
     "examples/moving_edge",
     "examples/checkbox",
+    "examples/emg_editor",
 ]
 exclude = ["tests", "emg_web"]
 

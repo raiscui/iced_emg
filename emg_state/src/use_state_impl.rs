@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-20 22:01:16
+ * @LastEditTime: 2023-02-21 11:17:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,18 +16,11 @@ use anchors::{
     expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
     singlethread::MultiAnchor,
 };
-use emg_common::{
-    im::{HashSet, OrdSet},
-    smallvec,
-    SVec::ToSmallVec,
-    SmallVec, TypeCheck, TypeName,
-};
-use tracing::{debug, debug_span, error, error_span, instrument, warn};
+use emg_common::{smallvec, SVec::ToSmallVec, SmallVec, TypeCheck, TypeName};
+use tracing::{debug, debug_span, instrument, warn};
 
 use std::{
-    borrow::Cow,
-    collections::hash_map::DefaultHasher,
-    hash::{BuildHasherDefault, Hash, Hasher},
+    hash::{BuildHasherDefault, Hash},
     ops::Deref,
     panic::Location,
     rc::Weak,
@@ -781,7 +774,7 @@ fn before_fns_run<T: 'static>(
     if let Some(rcr_fns) = opt_fns {
         let fns = rcr_fns.borrow();
 
-        for (deps, f) in fns.values() {
+        for (_deps, f) in fns.values() {
             f(&mut skip, current_data, data);
         }
         // fns.values()
@@ -803,7 +796,7 @@ fn after_fns_run<T: 'static>(
 
         debug!("after_fns len:{}", fns.len());
 
-        for (deps, f) in fns.values() {
+        for (_deps, f) in fns.values() {
             f(&mut skip, data);
         }
     }
@@ -2348,16 +2341,15 @@ where
 #[allow(clippy::fallible_impl_from)]
 mod state_test {
 
-    use crate::{topo, AnchorMultiAnchor};
-    use std::{collections::HashMap, ops::Deref};
+    use crate::topo;
+    use std::collections::HashMap;
 
-    use topo::CallId;
     use tracing::debug;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
 
-    use color_eyre::{eyre::Report, eyre::WrapErr};
+    use color_eyre::eyre::Report;
     fn tracing_init() -> Result<(), Report> {
         use tracing_subscriber::prelude::*;
         // let error_layer =
