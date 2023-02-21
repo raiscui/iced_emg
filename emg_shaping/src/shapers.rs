@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2023-02-04 21:11:07
+ * @LastEditTime: 2023-02-21 12:19:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -310,13 +310,12 @@ mod updater_test {
     use crate::ShapingUseDyn;
     use crate::{test::setup_tracing, Shaping};
     use tracing::info;
-    use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
 
     impl Shaping<String> for i32 {
         fn shaping(&self, el: &mut String) -> bool {
-            *el = format!("{},{}", el, self);
+            *el = format!("{el},{self}");
             true
         }
     }
@@ -325,7 +324,7 @@ mod updater_test {
 
     use emg_state::use_state;
 
-    #[wasm_bindgen_test]
+    #[test]
     fn test_anchor() {
         setup_tracing();
 
@@ -365,7 +364,7 @@ mod updater_test {
 
         assert_eq!("hello,2,2,2,2,2,99,99,4,4", ff.get());
     }
-    #[wasm_bindgen_test]
+    #[test]
 
     fn test_shaper_for() {
         setup_tracing();
@@ -383,9 +382,9 @@ mod updater_test {
         a.shaping(&mut f);
         a.shaping(&mut f);
         info!("{}", &f);
-        assert_eq!("cccdddddd", f)
+        assert_eq!("cccdddddd", f);
     }
-    #[wasm_bindgen_test]
+    #[test]
 
     fn realtime_update() {
         setup_tracing();

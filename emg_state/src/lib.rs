@@ -64,7 +64,7 @@ mod tests {
     // #[track_caller]
     #[topo::nested]
     fn t1_in_topo() -> StateVar<i32> {
-        return use_state(|| 1);
+        use_state(|| 1)
     }
     // #[track_caller]
     fn call_t1() -> StateVar<i32> {
@@ -73,7 +73,7 @@ mod tests {
 
     #[topo::nested(slot = "&i")]
     fn t2_in_topo(i: i32) -> StateVar<i32> {
-        return use_state(|| 1);
+        use_state(|| 1)
     }
     #[allow(unused)]
     fn call_t2(i: i32) -> StateVar<i32> {
@@ -81,7 +81,7 @@ mod tests {
     }
 
     fn t3() -> StateVar<i32> {
-        return use_state(|| 1);
+        use_state(|| 1)
     }
 
     #[topo::nested]
@@ -134,7 +134,7 @@ mod tests {
         let _f = dict! {1=>2};
         let x = Rc::new(X {
             a: use_state(|| 0),
-            b: use_state(|| vec![]),
+            b: use_state(std::vec::Vec::new),
             c: use_state(|| 0),
         });
 
@@ -172,10 +172,10 @@ mod tests {
         println!("{:?}", x.b);
         x.a.set(1);
         let f = x.b.watch();
-        println!("w {:?}", f);
-        println!("w {:?}", f);
-        println!("w {:?}", f);
-        println!("w {:?}", f);
+        println!("w {f:?}");
+        println!("w {f:?}");
+        println!("w {f:?}");
+        println!("w {f:?}");
         state_store().borrow().engine_mut().stabilize();
         println!("{:?}", x.b);
         state_store().borrow().engine_mut().stabilize();

@@ -91,7 +91,6 @@ mod test1 {
     }
 
     #[test]
-
     fn aa() {
         let n = "xx";
         aaaa(n);
@@ -100,7 +99,6 @@ mod test1 {
     fn xx() {
         let f = mouse::CLICK;
         println!("{f:?}");
-        return;
     }
 }
 
@@ -127,8 +125,8 @@ mod tests {
     use emg_msg_macro::emg_msg;
 
     use crate::element::GTreeBuilderElement;
-    use crate::emg_msg_macro_prelude::*;
-    use crate::gtree_macro_prelude::*;
+    use crate::emg_msg_macro_prelude::{any, better_any};
+    use crate::gtree_macro_prelude::{gtree, Checkbox, GtreeInitCall, IdStr, Layer, Tid};
 
     #[emg_msg]
     enum M {

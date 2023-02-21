@@ -1238,9 +1238,9 @@ mod tests {
             match parse_str {
                 Ok(ok) => {
                     insta::assert_display_snapshot!("test_new_skip_init", ok.to_token_stream());
-                    println!("===>{}", ok.to_token_stream())
+                    println!("===>{}", ok.to_token_stream());
                 }
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1261,9 +1261,9 @@ mod tests {
             match parse_str {
                 Ok(ok) => {
                     insta::assert_display_snapshot!("test_new_not_builder", ok.to_token_stream());
-                    println!("===>{}", ok.to_token_stream())
+                    println!("===>{}", ok.to_token_stream());
                 }
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1284,9 +1284,9 @@ mod tests {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => {
                     insta::assert_display_snapshot!("test_vfl_1", ok.to_token_stream());
-                    println!("===>{}", ok.to_token_stream())
+                    println!("===>{}", ok.to_token_stream());
                 }
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1308,7 +1308,7 @@ mod tests {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1329,10 +1329,15 @@ mod tests {
 
     #[test]
     fn test_vfl_3() {
+        #[allow(unused)]
+        enum A {
+            B,
+            C,
+        }
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1354,11 +1359,6 @@ mod tests {
 
         token_test(input);
         println!();
-        #[allow(unused)]
-        enum A {
-            B,
-            C,
-        }
 
         // GTreeBuilderElement :: Layer (IdStr :: new_inline ("root") , vec ! [] , vec ! [
         //     GTreeBuilderElement :: Layer (IdStr :: new_inline ("x111x") , vec ! [
@@ -1411,7 +1411,7 @@ mod tests {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1433,7 +1433,7 @@ mod tests {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 

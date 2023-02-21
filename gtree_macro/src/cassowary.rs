@@ -5,7 +5,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-02-20 17:17:50
+ * @LastEditTime: 2023-02-21 12:31:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -2264,7 +2264,7 @@ mod tests {
                 Ok(ok) => {
                     panic!("should error =============\n{:#?}\n", &ok);
                      }
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         });
     }
@@ -2301,7 +2301,7 @@ mod tests {
 
                     // assert_eq!(x.as_str(), r#"NameCharsOrNumber :: Id (IdStr :: new ("button"))"#)
                 }
-                Err(error) => panic!("...{:?}", error),
+                Err(error) => panic!("...{error:?}"),
             }
         });
     }
@@ -2890,6 +2890,12 @@ mod tests {
 
     #[test]
     fn test_1() {
+        fn token_test(input: &str) {
+            match syn::parse_str::<Gtree>(input) {
+                Ok(ok) => println!("===>{}", ok.to_token_stream()),
+                Err(error) => panic!("...{error:?}"),
+            }
+        }
         // ────────────────────────────────────────────────────────────────────────────────
         // ────────────────────────────────────────────────────────────────────────────────
 
@@ -2899,13 +2905,6 @@ mod tests {
 
         // ─────────────────────────────────────────────────────────────────
         // ────────────────────────────────────────────────────────────────────────────────
-
-        fn token_test(input: &str) {
-            match syn::parse_str::<Gtree>(input) {
-                Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => panic!("...{:?}", error),
-            }
-        }
 
         println!();
         let input = r#"

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-21 11:17:41
+ * @LastEditTime: 2023-02-21 12:23:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -2339,19 +2339,28 @@ where
 #[allow(clippy::many_single_char_names)]
 #[allow(clippy::let_unit_value)]
 #[allow(clippy::fallible_impl_from)]
+#[allow(clippy::disallowed_types)]
 mod state_test {
 
     use crate::topo;
     use std::collections::HashMap;
 
     use tracing::debug;
-    use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
 
     use color_eyre::eyre::Report;
     fn tracing_init() -> Result<(), Report> {
         use tracing_subscriber::prelude::*;
+        fn theme() -> color_eyre::config::Theme {
+            use color_eyre::{config::Theme, owo_colors::style};
+
+            Theme::dark().active_line(style().bright_yellow().bold())
+            // ^ use `new` to derive from a blank theme, or `light` to derive from a light theme.
+            // Now configure your theme (see the docs for all options):
+            // .line_number(style().blue())
+            // .help_info_suggestion(style().red())
+        }
         // let error_layer =
         // tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
 
@@ -2378,16 +2387,6 @@ mod state_test {
             .with(tree_layer)
             // .with(out_layer)
             .try_init()?;
-
-        fn theme() -> color_eyre::config::Theme {
-            use color_eyre::{config::Theme, owo_colors::style};
-
-            Theme::dark().active_line(style().bright_yellow().bold())
-            // ^ use `new` to derive from a blank theme, or `light` to derive from a light theme.
-            // Now configure your theme (see the docs for all options):
-            // .line_number(style().blue())
-            // .help_info_suggestion(style().red())
-        }
 
         // color_eyre::install()
         color_eyre::config::HookBuilder::new()
@@ -2580,24 +2579,22 @@ mod state_test {
 
     // #[wasm_bindgen_test]
     #[test]
-    #[wasm_bindgen_test]
 
     fn sa_in_sv() {
         let x = use_state(|| 1);
         let xw = x.watch();
         let a = use_state(|| xw);
-        println!("{}", a);
+        println!("{a}");
         println!("{}", a.get());
         assert_eq!(1, a.get());
     }
     #[test]
     fn macros() {
         let ffss = dict! {1=>1};
-        println!("{:?}", ffss);
+        println!("{ffss:?}");
     }
     #[allow(clippy::similar_names)]
     #[test]
-    #[wasm_bindgen_test]
     fn xx() {
         let a = use_state(|| 99);
 
@@ -2607,7 +2604,7 @@ mod state_test {
         let cadd2 = b.map(|x| *x + 2);
         let cadd_c = cadd.clone();
         let cadd2_c = cadd2;
-        let c = b.map(|x| format!("{}", x));
+        let c = b.map(|x| format!("{x}"));
         let d = b.then(move |x| {
             if *x > 1 {
                 b2.anchor().clone()
@@ -2628,7 +2625,7 @@ mod state_test {
         let ddw = dd.watch();
         let ddw2 = dd.watch();
         let dcadd = ddw.map(|x| *x + 1);
-        let dc = ddw.map(|x| format!("{}", x));
+        let dc = ddw.map(|x| format!("{x}"));
 
         let ddw3 = ddw.then(move |x| if *x > 1 { ddw2.clone() } else { dcadd.clone() });
     }
@@ -2651,11 +2648,11 @@ mod state_test {
 
         let b = a.watch().map_(|_, x: &StateVar<i32>| {
             x.set(x.get() + 1);
-            x.clone()
+            *x
         });
 
-        dict.insert("a".to_string(), a_node1.clone());
-        dict.insert("b".to_string(), a_node2.clone());
+        dict.insert("a".to_string(), a_node1);
+        dict.insert("b".to_string(), a_node2);
         a.set(dict.clone());
 
         println!("a:{:#?}", &a);
@@ -2670,7 +2667,7 @@ mod state_test {
 
         if let Some(av) = dict.get_mut("a") {
             println!("get a");
-            *av = a_node0.clone();
+            *av = a_node0;
             a.set(dict.clone());
         }
         println!("=========3 a-edit:{:#?}", &a);
@@ -2724,8 +2721,8 @@ mod state_test {
             .unwrap();
         let fk_c = {
             println!("fk: {:?}", &fk);
-            let x = *fk.clone();
-            x
+
+            *fk
         };
 
         a.link_callback_drop(fk);
@@ -2756,7 +2753,7 @@ mod state_test {
             println!("map len:{:#?}", var_map.len());
 
             for x in var_map.iter() {
-                println!("x:{:#?}", x);
+                println!("x:{x:#?}");
             }
 
             if let Some(b_map) = store.get_before_secondarymap::<i32>() {
@@ -2765,16 +2762,16 @@ mod state_test {
                 // let func = borrow.get(&fk);
                 println!("before fn map len:{:?}", before_fn_weak_map.len());
                 for (k, f) in before_fn_weak_map.iter() {
-                    println!("before fn map:{:#?}", k);
+                    println!("before fn map:{k:#?}");
                 }
                 assert!(before_fn_weak_map.len() == 1);
                 let (fk_got, f) = before_fn_weak_map.get(&fk_c).unwrap();
-                println!("fk_got:{:?}", fk_got);
+                println!("fk_got:{fk_got:?}");
             }
 
             if let Some(drop_cb_deps) = store.b_a_fn_drop_link_map.get(key) {
                 for fk_linked in drop_cb_deps.iter() {
-                    println!("fk_linked:{:?}", fk_linked);
+                    println!("fk_linked:{fk_linked:?}");
                 }
                 assert!(drop_cb_deps.len() == 1);
             }
@@ -2804,7 +2801,7 @@ mod state_test {
                 println!("map len:{:#?}", var_map.len());
 
                 for x in var_map.iter() {
-                    println!("x:{:#?}", x);
+                    println!("x:{x:#?}");
                 }
             }
             let mut store = g_state_store_refcell.borrow();
@@ -2821,7 +2818,7 @@ mod state_test {
                     before_fn_weak_map.load_factor()
                 );
                 for (k, f) in before_fn_weak_map.iter() {
-                    println!("before fn map:{:#?}", k);
+                    println!("before fn map:{k:#?}");
                 }
                 before_fn_weak_map.remove_expired();
 

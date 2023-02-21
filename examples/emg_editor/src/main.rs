@@ -141,16 +141,13 @@ impl Sandbox for Counter {
             }
             Message::Empty => {
                 // insta::assert_display_snapshot!("graph_def", graph.borrow());
-                insta::assert_debug_snapshot!("graph_debug_def", graph.borrow());
+                // insta::assert_debug_snapshot!("graph_debug_def", graph.borrow());
             }
         }
     }
 
     fn tree_build(&self, orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
         use emg_bind::gtree_macro_prelude::*;
-        let n = Rc::new(Cell::new(100));
-        let ww = use_state(|| w(px(100)));
-        let ff = use_state(|| fill(hsl(150, 100, 100)));
         gtree! {
             @="debug_layer" Layer [
                 On:CLICK  ||{
@@ -166,7 +163,6 @@ impl Sandbox for Counter {
                         {@h |-(#a2)-|   },
                         origin_x(pc(0)),align_x(pc(0)),
                         w(pc(90)),h(pc(90)),
-                        ff,
                         b_width(px(5)),
                         b_color(rgb(1,0,0))
                     ]
@@ -208,11 +204,6 @@ impl Sandbox for Counter {
                             info!(" on [a2] ----click cb ----");
 
 
-                            let nn =n.get()+4;
-                            n.set(nn);
-                            ww.set(w(px(nn)));
-                            ff.set(fill(hsl(nn as f64/100.*360.%360., 50, 50)));
-
                         },
                     ],
                     @="a3" @E=[
@@ -227,7 +218,6 @@ impl Sandbox for Counter {
                     @="a4" @E=[
                         origin_x(px( 0)),align_x(px(400)),
                         origin_y(px(0)),align_y(px(400)),
-                        ww,
                         // w(px(40)),
                         h(px(40)),
                         fill(rgba(1, 1, 0, 1)),

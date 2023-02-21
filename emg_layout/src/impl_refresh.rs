@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2023-02-20 14:42:44
+ * @LastEditTime: 2023-02-21 12:11:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -430,7 +430,7 @@ mod refresh_test {
 
     #[test]
     fn edge() {
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let mut root_e = EmgEdgeItem::default_with_wh_in_topo(

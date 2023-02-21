@@ -1,14 +1,12 @@
-use std::{cell::Cell, rc::Rc};
-
 use emg_animation::{models::Property, Debuggable};
-use emg_state::{state_store, topo, use_state, CloneStateVar, StateVar};
+use emg_state::{topo, use_state, CloneStateVar, StateVar};
 // use emg_state::{state_store, topo, use_state, CloneStateVar, StateVar, StorageKey};
 use tracing::{debug, debug_span, trace};
 
 use crate::GenericSizeAnchor;
 
-/// 第一个 StateVarProperty Drop 将会 Drop 内部StateVar,以及相关依赖 before_fn after_fn,
-/// clone的其他 StateVarProperty drop将没有任何额外操作
+/// 第一个 [`StateVarProperty`] Drop 将会 Drop 内部StateVar,以及相关依赖 `before_fn` `after_fn`,
+/// clone的其他 [`StateVarProperty`] drop将没有任何额外操作
 /// *建议 第一个用来 储存 和使用 ,clone的仅用来 使用
 // TODO change to enum :DropEffect/ DropNoneEffect
 #[derive(Debug, PartialEq, Eq)]
@@ -33,7 +31,7 @@ impl Clone for StateVarProperty {
 }
 
 impl StateVarProperty {
-    fn new(prop_sv: StateVar<Property>) -> Self {
+    const fn new(prop_sv: StateVar<Property>) -> Self {
         Self {
             prop_sv,
             // ref_count: Rc::new(Cell::new(1)),

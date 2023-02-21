@@ -27,7 +27,7 @@ use better_any::Tid;
 pub use compact_str as id_str;
 pub use compact_str::CompactString as IdStr;
 pub use dyn_partial_eq;
-#[macro_use(vector)]
+// #[macro_use(vector)]
 pub extern crate im_rc as im;
 pub use im::Vector;
 pub use layout::*;
@@ -208,7 +208,7 @@ impl GenericSize {
             "directly get length value failed, expected Length Px or None struct, v:{:?}",
             self
         );
-        self.try_get_length_value().expect(&*msg)
+        self.try_get_length_value().expect(&msg)
     }
 
     /// # Errors
@@ -264,6 +264,8 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::vtable_address_comparisons)]
+
     fn it_works() {
         assert_eq!(2 + 2, 4);
         let _f: Vector<i32> = into_vector![1, 2, 3];

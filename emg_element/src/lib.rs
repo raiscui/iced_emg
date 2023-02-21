@@ -21,7 +21,7 @@ pub use g_element::{node_ref, GElement};
 pub use g_node::{EventMatchsSa, GelType, GraphMethods, GraphType, NItem, E, N};
 
 pub use g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn, GTreeInit, InitTree};
-pub use graph_program::GraphProgram;
+pub use graph_program::{EventAndCtx, GraphProgram};
 pub use node_builder::{EventCallback, EventMessage, EventNode, IntoOptionMs, NodeBuilderWidget};
 pub use widget::Widget;
 pub mod graph_edit;

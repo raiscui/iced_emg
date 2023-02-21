@@ -1133,12 +1133,12 @@ mod tests_zip_all {
         let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
 
         for i in &initial_props {
-            println!("{}", i);
+            println!("{i}");
         }
         println!("===================");
         for r in &res {
             if let Some(prop) = r {
-                println!("{}", prop);
+                println!("{prop}");
             } else {
                 println!("None");
             }
@@ -1168,7 +1168,7 @@ mod tests_zip_all {
         let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
 
         for i in initial_props {
-            println!("{:#?}", i);
+            println!("{i:#?}");
         }
         println!("===================");
         for r in res {

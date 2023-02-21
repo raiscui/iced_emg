@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-02-20 14:43:23
+ * @LastEditTime: 2023-02-21 12:08:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,7 +12,7 @@ mod func;
 use emg_common::{im::vector, Precision, SmallVec, Vector};
 use emg_state::{
     state_lit::StateVarLit, state_store, topo, use_state_impl::TopoKey, Anchor, CloneStateAnchor,
-    CloneStateVar, DepsVarTopoKey, StateAnchor, StateMultiAnchor, StateVar,
+    CloneStateVar, StateAnchor, StateMultiAnchor, StateVar,
 };
 use std::{
     cell::{Cell, RefCell},
@@ -26,7 +26,7 @@ use emg_animation::{
     models::{map_to_motion, resolve_steps, Motion, MsgBackIsNew, Property, Step, StepTimeVector},
     set_default_interpolation, Timing, PROP_SIZE,
 };
-use tracing::{debug, debug_span, trace};
+use tracing::{debug, trace};
 
 use crate::{global_anima_running_add, global_clock, EPath, EmgEdgeItem};
 
@@ -601,7 +601,7 @@ where
                 // let revised_value = revised.get();
                 revised.store_get_with(&state_store().borrow(), |(a, _b, c, _d)| {
                     props_init.iter().zip(c.iter()).for_each(|(sv, prop)| {
-                        sv.seting_in_b_a_callback(skip, move || prop.clone())
+                        sv.seting_in_b_a_callback(skip, move || prop.clone());
                     });
                     interruption_init.set(a.clone());
                     #[cfg(test)]
@@ -740,7 +740,8 @@ mod tests {
     fn bench_nom_am(b: &mut Bencher) {
         b.iter(|| {
             let mut am = style::<Message>(into_smvec![width(px(1))]);
-            black_box(nom_am_run(&mut am));
+            nom_am_run(&mut am);
+            black_box(());
         });
     }
     #[test]
@@ -777,10 +778,10 @@ mod tests {
         for i in 1002..2000 {
             emg_animation::update(Tick(Duration::from_millis(i * 16)), am);
             let _e = am.get_position(0);
-            println!("pos: {_e}")
+            println!("pos: {_e}");
         }
         let _e = am.get_position(0);
-        println!("pos: {_e}")
+        println!("pos: {_e}");
     }
 
     #[bench]
@@ -804,7 +805,8 @@ mod tests {
 
             // let edge_item1 = edge_item.clone();
             let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(1))]);
-            black_box(less_am_run(&state_store().borrow(), &a, &sv_now));
+            less_am_run(&state_store().borrow(), &a, &sv_now);
+            black_box(());
         });
     }
 
@@ -888,7 +890,8 @@ mod tests {
             let w = use_state(|| width(px(1)));
             let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![w]);
             // AnimationE::new_in_topo(into_smvec![width(px(1))], sv_now);
-            black_box(many_am_run(&a, &sv_now));
+            many_am_run(&a, &sv_now);
+            black_box(());
         });
     }
 
@@ -933,7 +936,8 @@ mod tests {
         debug!("===================================main loop ");
         let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![width(px(0.5))]);
         for _i in 0..4 {
-            black_box(many_am_run_for_test(&a, &sv_now));
+            many_am_run_for_test(&a, &sv_now);
+            black_box(());
         }
     }
 
@@ -982,11 +986,11 @@ mod tests {
             // a.inside.props[0].store_get(storeref);
             // if i % 10 == 0 {
             let _e = a.inside.props[0].get();
-            warn!("i: {i}, pos: {_e}")
+            warn!("i: {i}, pos: {_e}");
             // }
         }
         let _e = a.inside.props[0].get();
-        warn!("end pos: {_e}")
+        warn!("end pos: {_e}");
 
         // a.inside.props[0].store_get(storeref);
     }
@@ -1068,7 +1072,7 @@ mod tests {
             // println!("a:{:#?}", &a);
             insta::assert_debug_snapshot!("new", &a);
             insta::assert_debug_snapshot!("new2", &a);
-            assert_eq!(a.running.get(), false);
+            assert!(!a.running.get());
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
             a.interrupt([
@@ -1081,7 +1085,7 @@ mod tests {
             insta::assert_debug_snapshot!("interrupt2", &a);
             // println!("over interrupt insta");
 
-            assert_eq!(a.running.get(), true);
+            assert!(a.running.get());
             // println!("over interrupt running.get()");
             // a.update_animation();
             // ────────────────────────────────────────────────────────────────────────────────
@@ -1169,7 +1173,7 @@ mod tests {
             // let _guard = span.enter();
             // trace!("fff");
 
-            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(||Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
 
             let root_e_source =use_state(|| None);
             let root_e_target = use_state(||Some(node_index("root")));
@@ -1236,7 +1240,7 @@ mod tests {
             let new2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new2.snap")).unwrap();
             assert_eq!(new1.contents(),new2.contents());
 
-            assert_eq!(a.running.get(), false);
+            assert!(!a.running.get());
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
             a.interrupt([
@@ -1249,7 +1253,7 @@ mod tests {
             // insta::assert_debug_snapshot!("interrupt2", &a);
             // println!("over interrupt insta");
 
-            assert_eq!(a.running.get(), true);
+            assert!(a.running.get());
             // println!("over interrupt running.get()");
             // a.update_animation();
             // ────────────────────────────────────────────────────────────────────────────────
@@ -1356,7 +1360,8 @@ mod tests {
 
     fn anima_macro_bench(b: &mut Bencher) {
         b.iter(move || {
-            black_box(anima_macro_for_bench());
+            anima_macro_for_bench();
+            black_box(());
         });
     }
 
@@ -1404,7 +1409,7 @@ mod tests {
         let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
@@ -1417,7 +1422,7 @@ mod tests {
         a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
         a.interrupt([to(into_smvec![width(px(0))]), to(into_smvec![width(px(1))])]);
 
-        for i in 1..1 {
+        for i in 1..100 {
             sv_now.set(Duration::from_millis(i * 16));
             if i == 1 {
                 // insta::assert_debug_snapshot!("anima_macro_16", &a);
@@ -1440,7 +1445,7 @@ mod tests {
         let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
@@ -1477,7 +1482,7 @@ mod tests {
             a.inside.props[0].get();
         }
     }
-    // #[test]
+    #[test]
     #[topo::nested]
     fn anima_macro() {
         // let _g = tracing_init();
@@ -1489,7 +1494,7 @@ mod tests {
         debug!("will assert_debug_snapshot a");
         insta::assert_debug_snapshot!("anima_macro_init", &a);
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
@@ -1503,7 +1508,7 @@ mod tests {
         a.interrupt([to(into_smvec![width(px(0))]), to(into_smvec![width(px(1))])]);
         // insta::assert_debug_snapshot!("anima_macro_interrupt", &a);
 
-        for i in 1..1 {
+        for i in 1..100 {
             sv_now.set(Duration::from_millis(i * 16));
             if i == 1 {
                 insta::assert_debug_snapshot!("anima_macro_16", &a);
@@ -1531,7 +1536,7 @@ mod tests {
             // let _guard = span.enter();
             // trace!("fff");
 
-            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(||Dict::new());
+            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
 
             let root_e_source =use_state(|| None);
             let root_e_target = use_state(||Some(node_index("root")));
@@ -1591,7 +1596,7 @@ mod tests {
             let new2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new2.snap")).unwrap();
             assert_eq!(new1.contents(),new2.contents());
 
-            assert_eq!(a.running.get(), false);
+            assert!(!a.running.get());
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
             a.interrupt([
@@ -1604,7 +1609,7 @@ mod tests {
             // insta::assert_debug_snapshot!("interrupt2", &a);
             // println!("over interrupt insta");
 
-            assert_eq!(a.running.get(), true);
+            assert!(a.running.get());
             // println!("over interrupt running.get()");
             // a.update_animation();
             // ────────────────────────────────────────────────────────────────────────────────

@@ -764,7 +764,7 @@ where
 {
     #[cfg(test)]
     fn set_size(&self, w: impl Into<GenericSizeAnchor>, h: impl Into<GenericSizeAnchor>) {
-        self.layout.set_size(w, h)
+        self.layout.set_size(w, h);
     }
     pub fn store_set_size(
         &self,
@@ -2060,7 +2060,12 @@ pub fn css<
 #[cfg(test)]
 pub mod tests {
     #![allow(clippy::too_many_lines)]
-    use crate::*;
+    use crate::{
+        css, debug, debug_span, emg_common, epath, instrument, px, s, styles, topo, trace,
+        use_state, Clone, CloneStateAnchor, CloneStateVar, Css, CssWidthTrait, Dict, EPath, Edge,
+        EdgeIndex, EdgeItemNode, EmgEdgeItem, GraphEdgesDict, Level, Precision, Translation3,
+        Vector2,
+    };
     extern crate test;
 
     use emg::{edge_index, edge_index_no_source, node_index};
@@ -2073,14 +2078,23 @@ pub mod tests {
     use tracing::{info, span, warn};
 
     use test::{black_box, Bencher};
-    use tracing_flame::FlameLayer;
-    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
     use emg_common::num_traits::cast;
 
-    use color_eyre::{eyre::Report, eyre::WrapErr};
+    use color_eyre::eyre::Report;
+    ///# Errors
+    /// run twice
     pub fn tracing_init() -> Result<(), Report> {
         use tracing_subscriber::prelude::*;
+        fn theme() -> color_eyre::config::Theme {
+            use color_eyre::{config::Theme, owo_colors::style};
+
+            Theme::dark().active_line(style().bright_yellow().bold())
+            // ^ use `new` to derive from a blank theme, or `light` to derive from a light theme.
+            // Now configure your theme (see the docs for all options):
+            // .line_number(style().blue())
+            // .help_info_suggestion(style().red())
+        }
         // let error_layer =
         // tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
 
@@ -2108,16 +2122,6 @@ pub mod tests {
             // .with(out_layer)
             .try_init()?;
 
-        fn theme() -> color_eyre::config::Theme {
-            use color_eyre::{config::Theme, owo_colors::style};
-
-            Theme::dark().active_line(style().bright_yellow().bold())
-            // ^ use `new` to derive from a blank theme, or `light` to derive from a light theme.
-            // Now configure your theme (see the docs for all options):
-            // .line_number(style().blue())
-            // .help_info_suggestion(style().red())
-        }
-
         // color_eyre::install()
         color_eyre::config::HookBuilder::new()
             .theme(theme())
@@ -2127,6 +2131,7 @@ pub mod tests {
     #[test]
     fn f64_to_f32() {
         // let val = 1452089033.7674935_f64;
+        #[allow(clippy::unreadable_literal)]
         let val = 12089033.7674935_f64;
         let x: f32 = cast(val).unwrap();
         println!("64- {val:?}");
@@ -2136,6 +2141,7 @@ pub mod tests {
         println!("64- {val:?}");
         println!("32- {x:?}");
 
+        #[allow(clippy::cast_possible_truncation)]
         let x: f32 = (f64::trunc(val * 100.0f64) / 100.0f64) as f32;
         println!("64- {val:?}");
         println!("32- {x:?}");
@@ -2155,7 +2161,7 @@ pub mod tests {
 
             let css_width = width(px(100));
             let css_height = h(px(100));
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
 
             let root_e_source = use_state(|| None);
             let root_e_target = use_state(|| Some(node_index("root")));
@@ -2277,7 +2283,8 @@ pub mod tests {
     #[topo::nested]
     fn it_works_bench(b: &mut Bencher) {
         b.iter(|| {
-            black_box(it_works_for_bench());
+            it_works_for_bench();
+            black_box(());
         });
     }
 
@@ -2291,7 +2298,7 @@ pub mod tests {
         let css_width = width(px(100));
         let css_height = h(px(100));
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
 
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
@@ -2588,7 +2595,7 @@ pub mod tests {
     #[test]
     fn test_edge() {
         let f = width(parent!(CssHeight) + pc(100));
-        println!("{}", f);
+        println!("{f}");
     }
 
     #[test]
@@ -2607,7 +2614,7 @@ pub mod tests {
         let css_width = width(px(100));
         let css_height = h(px(100));
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
 
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
@@ -2987,7 +2994,7 @@ pub mod tests {
         {
             let _g = span!(Level::TRACE, "change_parent").entered();
 
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
 
             let root_e_source = use_state(|| None);
             let root_e_target = use_state(|| Some(node_index("root")));

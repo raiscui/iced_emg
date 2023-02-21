@@ -352,7 +352,7 @@ mod tests {
     #[test]
     fn it_works() {
         let styles: AmState<Message> = style(smallvec![fill(Color::new(0, 0, 0, 1.))]);
-        println!("{:#?}", styles);
+        println!("{styles:#?}");
     }
     #[test]
     fn test_extract_initial_wait() {
@@ -361,7 +361,7 @@ mod tests {
             Step::_Step,
             Step::Send(Message::A),
         ];
-        println!("{:#?}", xx);
+        println!("{xx:#?}");
         let ff = extract_initial_wait(VecDeque::from([
             Step::Wait(Duration::from_millis(16)),
             Step::_Step,
@@ -372,7 +372,7 @@ mod tests {
             Duration::from_millis(16),
             vec![Step::_Step, Step::Send(Message::A)],
         );
-        assert_eq!(format!("{:?}", v), format!("{:?}", ff))
+        assert_eq!(format!("{v:?}"), format!("{ff:?}"));
     }
     #[test]
     fn test_update_animation() {

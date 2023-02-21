@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-02-01 12:39:18
+ * @LastEditTime: 2023-02-21 12:38:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -274,10 +274,7 @@ where
         painter: &StateAnchor<crate::runtime::PaintCtx>,
         events: &StateAnchor<Vector<crate::runtime::EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> (
-        crate::runtime::EventMatchsSa<Self::Message>,
-        StateAnchor<Rc<<Self::Renderer as crate::runtime::renderer::Renderer>::SceneCtx>>,
-    ) {
+    ) -> crate::runtime::EventAndCtx<Self::Message,Self::Renderer> {
         let root_id = self.root_id();
 
         g.runtime_prepare(&IdStr::new(root_id), painter, events, cursor_position)

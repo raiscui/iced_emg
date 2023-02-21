@@ -1,6 +1,5 @@
 ---
 source: emg_layout/src/animation.rs
-assertion_line: 1555
 expression: "&a"
 ---
 AnimationEdge {
@@ -75,9 +74,7 @@ AnimationEdge {
                         },
                     ),
                 ),
-                ref_count: Cell {
-                    value: 2,
-                },
+                trace_id: 1,
             },
         ],
     },

@@ -3,7 +3,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 18:27:38
- * @LastEditTime: 2023-02-04 00:57:26
+ * @LastEditTime: 2023-02-21 12:20:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -53,13 +53,12 @@ mod updater_test1 {
     use std::convert::TryFrom;
     use std::rc::Rc;
     use tracing::info;
-    use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
         impl_shaping::ShapingUseNoWarper, test::setup_tracing, Shaper, Shaping, ShapingWhoNoWarper,
     };
 
-    use super::*;
+    use super::ShapingUseDyn;
 
     // impl RtUpdateFor<String> for i32 {
     //     fn shaping(&self, el: &mut String) {
@@ -70,7 +69,7 @@ mod updater_test1 {
     impl ShapingUseNoWarper for String {}
     impl Shaping<Self> for String {
         fn shaping(&self, el: &mut Self) -> bool {
-            *el = format!("{},{}", el, self);
+            *el = format!("{el},{self}");
             true
         }
     }
@@ -82,7 +81,6 @@ mod updater_test1 {
     }
 
     #[test]
-    #[wasm_bindgen_test]
     fn realtime_update() {
         setup_tracing();
         let mut f = String::from("xx");

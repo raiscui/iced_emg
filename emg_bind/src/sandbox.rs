@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use emg_element::{
     graph_edit::{GraphEdit, GraphEditManyMethod, GraphEditor},
     GraphMethods,
@@ -21,6 +19,7 @@ pub trait Sandbox: std::default::Default {
     /// Initializes the [`Sandbox`].
     ///
     /// Here is where you should return the initial state of your app.
+    #[must_use]
     fn new() -> Self {
         Self::default()
     }
@@ -101,8 +100,7 @@ pub trait Sandbox: std::default::Default {
     /// Error: [`crate::Error`]
     fn run(settings: Settings<()>) -> crate::Result
     where
-        Self: 'static,
-        Self: Application<Flags = ()>,
+        Self: Application<Flags = ()> + 'static,
         Instance<Self>: crate::runtime::Application<
             Flags = (),
             Message = <Self as Application>::Message,

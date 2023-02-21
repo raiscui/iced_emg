@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-25 18:39:47
- * @LastEditTime: 2023-02-13 14:51:23
+ * @LastEditTime: 2023-02-21 12:25:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -161,7 +161,7 @@ where
 mod test {
 
     use crate::{dict, use_state, CloneStateAnchor, CloneStateVar, StateAnchor};
-    use anchors::{collections::ord_map_methods::Dict, singlethread::*};
+    use anchors::{collections::ord_map_methods::Dict, singlethread::MultiAnchor};
     #[test]
     fn collect() {
         let a = use_state(|| 1);
@@ -187,7 +187,7 @@ mod test {
         let f = dict!(1usize=>a.watch(),2usize=>b.watch(),3usize=>c.watch());
         let nums: StateAnchor<Dict<_, _>> = (&f).into_iter().collect();
         let sum: StateAnchor<usize> = nums.map(|nums| nums.values().sum());
-        let ns: StateAnchor<usize> = nums.map(|nums: &Dict<_, _>| nums.len());
+        let ns: StateAnchor<usize> = nums.map(anchors::im::OrdMap::len);
 
         assert_eq!(sum.get(), 8);
 

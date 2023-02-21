@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-22 14:02:47
- * @LastEditTime: 2023-01-28 20:01:06
+ * @LastEditTime: 2023-02-21 12:12:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -142,7 +142,7 @@ impl<Ix: Clone + Hash + Eq + PartialEq + Default> std::ops::DerefMut for EPath<I
 impl<Ix: Clone + Hash + Eq + PartialEq + Default> EPath<Ix> {
     /// # Panics
     ///
-    /// Will panic if 'vec' is empty, or if the first element's source_nix is not None.
+    /// Will panic if 'vec' is empty, or if the first element's `source_nix` is not None.
     #[must_use]
     pub fn new(vec: Vector<EdgeIndex<Ix>>) -> Self {
         assert!(vec.front().unwrap().source_nix().is_none());
@@ -268,6 +268,7 @@ mod test_epath {
     use crate::EPath;
 
     #[test]
+    #[allow(clippy::many_single_char_names)]
     fn test_macro_var() {
         let a: NodeIndex<IdStr> = node_index("a");
         let b: NodeIndex<IdStr> = node_index("b");
@@ -286,7 +287,7 @@ mod test_epath {
         // });
 
         let ep: EPath<IdStr> = epath![a=>b=>c=>d=>e];
-        println!("{}", ep);
+        println!("{ep}");
         assert_eq!(
             ep,
             EPath(vector![
@@ -298,7 +299,7 @@ mod test_epath {
             ])
         );
         let ep: EPath<IdStr> = epath![a =>"b"=>c=>"d"];
-        println!("{}", ep);
+        println!("{ep}");
         assert_eq!(
             ep,
             EPath(vector![
@@ -309,7 +310,7 @@ mod test_epath {
             ])
         );
         let ep: EPath<IdStr> = epath!["a" =>b=>"c"];
-        println!("{}", ep);
+        println!("{ep}");
         assert_eq!(
             ep,
             EPath(vector![
@@ -321,7 +322,7 @@ mod test_epath {
             ])
         );
         let ep: EPath<IdStr> = epath![" a x "=>"b"];
-        println!("{}", ep);
+        println!("{ep}");
         assert_eq!(
             ep,
             EPath(vector![
@@ -333,7 +334,7 @@ mod test_epath {
             ])
         );
         let ep: EPath<IdStr> = epath!["a"];
-        println!("{}", ep);
+        println!("{ep}");
         assert_eq!(
             ep,
             EPath(vector![
@@ -349,7 +350,7 @@ mod test_epath {
     #[test]
     fn test_macro_literal() {
         let a = epath![<IdStr>"a"=>"b"=>"c"=>"d"=>"e"];
-        println!("{}", a);
+        println!("{a}");
         assert_eq!(
             a,
             EPath(vector![
@@ -361,7 +362,7 @@ mod test_epath {
             ])
         );
         let a: EPath<IdStr> = epath!["a"=>"b"=>"c"=>"d"];
-        println!("{}", a);
+        println!("{a}");
         assert_eq!(
             a,
             EPath(vector![
@@ -372,7 +373,7 @@ mod test_epath {
             ])
         );
         let a: EPath<IdStr> = epath!["a"=>"b"=>"c"];
-        println!("{}", a);
+        println!("{a}");
         assert_eq!(
             a,
             EPath(vector![
@@ -384,7 +385,7 @@ mod test_epath {
             ])
         );
         let a: EPath<IdStr> = epath![" a x "=>"b"];
-        println!("{}", a);
+        println!("{a}");
         assert_eq!(
             a,
             EPath(vector![
@@ -396,7 +397,7 @@ mod test_epath {
             ])
         );
         let a: EPath<IdStr> = epath!["a"];
-        println!("{}", a);
+        println!("{a}");
         assert_eq!(
             a,
             EPath(vector![
@@ -413,7 +414,7 @@ mod test_epath {
     fn test_parser() {
         let s = "a=>b=>c=>D=>e";
         let f: EPath<IdStr> = s.parse().unwrap();
-        println!("{}", f);
+        println!("{f}");
         assert_eq!(f, epath!["a"=>"b"=>"c"=>"D"=>"e"]);
         assert_eq!(
             f,
@@ -430,7 +431,7 @@ mod test_epath {
     fn test_parser_has_space() {
         let s = "中 文 =>b=>c=>D=>e";
         let f: EPath<IdStr> = s.parse().unwrap();
-        println!("{}", f);
+        println!("{f}");
         assert_eq!(f, epath!["中 文" => "b"=>"c"=>"D"=>"e"]);
         assert_eq!(
             f,

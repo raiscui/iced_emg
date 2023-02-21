@@ -1,3 +1,5 @@
+editor:
+	cargo run --package emg_editor --bin emg_editor --features gpu
 moving_edge:
 	INSTA_FORCE_PASS=1 cargo run --package moving_edge --bin moving_edge --features gpu
 counter:
