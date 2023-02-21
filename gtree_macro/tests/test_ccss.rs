@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 11:27:18
- * @LastEditTime: 2023-02-20 16:25:20
+ * @LastEditTime: 2023-02-21 21:44:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -60,7 +60,7 @@ mod code_test {
     }
 
     #[track_caller]
-    fn cass_code_test<T: ToTokens + Parse + std::fmt::Debug>(name: &str, input: &str) {
+    fn cass_code_test<T: ToTokens + Parse + std::fmt::Debug>(name: &str, input: &str) -> String {
         let subscriber = Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
         // .with(subscriber1);
         tracing::subscriber::set_global_default(subscriber).ok();
@@ -72,13 +72,14 @@ mod code_test {
                 Ok(ok) => {
                     println!("============= parsed\n{:#?}\n", &ok);
 
-                    let x = format!("{}", ok.to_token_stream());
-                    println!("token_stream result:\n{}", x);
-                    insta::assert_display_snapshot!(name.to_string() + "_ccss_code", x);
+                    let rust_code = format!("{}", ok.to_token_stream());
+                    println!("token_stream result:\n{}", rust_code);
+                    insta::assert_display_snapshot!(name.to_string() + "_ccss_code", rust_code);
+                    rust_code
                 }
                 Err(error) => panic!("...{:?}", error),
             }
-        });
+        })
     }
 
     #[test]
@@ -86,7 +87,7 @@ mod code_test {
         println!();
         let input = r#"#button"#;
 
-        cass_code_test::<NameCharsOrNumber>("name_chars", input);
+        let macro_2_code_string = cass_code_test::<NameCharsOrNumber>("name_chars", input);
         let code = emg_layout::ccsa::NameCharsOrNumber::Id(IdStr::new("button"));
         println!("{}", code);
         assert_eq!(input, format!("{}", code));
@@ -116,6 +117,7 @@ mod code_test {
     fn ccss_svv_op_svv_expr() {
         println!();
         let input = r#"#button[width] + 10"#;
+        //TODO CCSS parse
 
         let code = emg_layout::ccsa::ScopeViewVariable::new_id_var("button", "width");
         let res = code + emg_layout::ccsa::ScopeViewVariable::new_number(10.0);
@@ -126,12 +128,14 @@ mod code_test {
     fn ccss_svv_op_svv_expr2() {
         println!();
         let input = r#"#button[width] + #button2[height]"#;
+        //TODO CCSS parse
 
         let code = emg_layout::ccsa::ScopeViewVariable::new_id_var("button", "width");
         let res = code + emg_layout::ccsa::ScopeViewVariable::new_id_var("button2", "height");
         println!("{}", res);
         assert_eq!(input, format!("{}", res));
     }
+
     #[test]
     fn base1() {
         let input = r#"
@@ -139,7 +143,7 @@ mod code_test {
             "#;
 
         let name = &"base1";
-        let parsed = token_2_code_test(name, input);
+        let parsed_macro_disp = token_2_code_test(name, input);
 
         let (res, selector) = (
             emg_common::im::vector![emg_layout::ccsa::CCSS::new(
@@ -196,7 +200,7 @@ mod code_test {
         });
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
-        assert_eq!(parsed, format!("{}", res_disp));
+        assert_eq!(parsed_macro_disp, format!("{}", res_disp));
     }
 
     #[test]

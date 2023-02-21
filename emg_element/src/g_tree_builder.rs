@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-02-11 23:31:41
+ * @LastEditTime: 2023-02-21 23:33:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,7 +17,7 @@ use emg_layout::EmgEdgeItem;
 use emg_shaping::{EqShaping, Shaping};
 use emg_state::{Dict, StateVar};
 use std::{
-    any::{Any, TypeId},
+    any::TypeId,
     cell::{Ref, RefMut},
     hash::BuildHasherDefault,
     panic::Location,
@@ -102,8 +102,8 @@ pub trait GTreeInit<Message> {
     fn tree_init(
         self,
         _id: &IdStr,
-        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
-        _children: &Vec<GTreeBuilderElement<Message>>,
+        _es: &[Rc<dyn Shaping<EmgEdgeItem<IdStr>>>],
+        _children: &[GTreeBuilderElement<Message>],
     ) -> InitTree<Message>;
 }
 pub trait GtreeInitCall<Message> {
@@ -111,8 +111,8 @@ pub trait GtreeInitCall<Message> {
     fn tree_init_calling(
         self,
         _id: &IdStr,
-        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
-        _children: &Vec<GTreeBuilderElement<Message>>,
+        _es: &[Rc<dyn Shaping<EmgEdgeItem<IdStr>>>],
+        _children: &[GTreeBuilderElement<Message>],
     ) -> InitTree<Message>;
 }
 
@@ -128,8 +128,8 @@ where
     fn tree_init_calling(
         self,
         _id: &IdStr,
-        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
-        _children: &Vec<GTreeBuilderElement<Message>>,
+        _es: &[Rc<dyn Shaping<EmgEdgeItem<IdStr>>>],
+        _children: &[GTreeBuilderElement<Message>],
     ) -> InitTree<Message> {
         let new_type_sets = if let Some(type_sets) = illicit::get::<TypeIdSets>().ok().as_deref() {
             let self_id = self.self_id();

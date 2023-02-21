@@ -1,19 +1,23 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-19 17:43:32
- * @LastEditTime: 2023-02-21 00:12:13
+ * @LastEditTime: 2023-02-21 23:46:42
  * @LastEditors: Rais
  * @Description:
  */
 
 mod impls;
-use std::{cell::RefCell, marker::PhantomData, ops::Deref, rc::Rc};
+mod mode;
 
+// ─────────────────────────────────────────────────────────────────────────────
+
+use std::{cell::RefCell, ops::Deref, rc::Rc};
+
+use crate::{error::Error, GraphType};
 use emg::{Direction, EdgeIndex};
 use emg_common::IdStr;
 pub use impls::*;
-
-use crate::{error::Error, GraphType};
+pub use mode::*;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -21,7 +25,7 @@ pub trait GraphEdit {
     type Ix;
     fn edit<M: Mode>(&self) -> M::Interface<'_, Self::Ix>;
 }
-impl<'a, T> GraphEdit for T
+impl<T> GraphEdit for T
 where
     T: GraphEditManyMethod,
 {
@@ -64,52 +68,14 @@ where
     }
 }
 
-// EdgeMode ─────────────────────────────────────────────────────────────────────────────
-// I :实例?
-pub struct EdgeMode<I = ()>(PhantomData<I>);
-
 pub trait Mode {
     type Interface<'a, Ix>
     where
         Ix: 'a;
 
-    fn interface<'a, Ix, G>(g: &'a G) -> Self::Interface<'a, Ix>
+    fn interface<Ix, G>(g: &G) -> Self::Interface<'_, Ix>
     where
         G: GraphEditManyMethod<Ix = Ix>;
-}
-
-impl Mode for EdgeMode {
-    type Interface<'a, Ix> = EdittingGraphEdge<'a, Ix, Self> where Ix:'a;
-
-    fn interface<'a, Ix, G>(g: &'a G) -> Self::Interface<'a, Ix>
-    where
-        G: GraphEditManyMethod<Ix = Ix>,
-    {
-        let inner = g;
-        let phantom_data = PhantomData;
-        EdittingGraphEdge {
-            inner,
-            phantom_data,
-        }
-    }
-}
-
-pub struct EdittingGraphEdge<'a, Ix, M> {
-    inner: &'a dyn GraphEditManyMethod<Ix = Ix>,
-    phantom_data: PhantomData<M>,
-}
-
-impl<'a, Ix, M> EdittingGraphEdge<'a, Ix, M> {
-    pub fn moving(
-        &self,
-        who: impl Into<EdgeIndex<Ix>>,
-        dir: Direction,
-        to: impl Into<Ix>,
-    ) -> Result<(), Error> {
-        self.inner.edge_plug_edit(&who.into(), dir, to.into())
-    }
-
-    //TODO fn edit to edit other eg. node
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

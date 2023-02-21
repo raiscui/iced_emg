@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-02-10 23:20:56
+ * @LastEditTime: 2023-02-21 23:33:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,7 +22,7 @@ use emg_common::{
     dyn_partial_eq::DynPartialEq,
     IdStr, TypeCheckObjectSafe, TypeCheckObjectSafeTid,
 };
-use emg_shaping::{EqShaping, Shaping, ShapingAny, ShapingDyn, ShapingUse, ShapingUseAny};
+use emg_shaping::{EqShaping, Shaping, ShapingAny, ShapingUse, ShapingUseAny};
 // extern crate derive_more;
 use derive_more::From;
 // use dyn_clonable::clonable;
@@ -131,8 +131,8 @@ impl<Message> GTreeInit<Message> for GElement<Message> {
     fn tree_init(
         self,
         _id: &IdStr,
-        _es: &Vec<Rc<dyn Shaping<emg_layout::EmgEdgeItem<IdStr>>>>,
-        _children: &Vec<GTreeBuilderElement<Message>>,
+        _es: &[Rc<dyn Shaping<emg_layout::EmgEdgeItem<IdStr>>>],
+        _children: &[GTreeBuilderElement<Message>],
         //TODO use either like <GTreeBuilderElement,GElement> for speed??
     ) -> InitTree<Message> {
         self.into()

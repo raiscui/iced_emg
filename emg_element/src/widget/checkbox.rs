@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-20 14:40:21
+ * @LastEditTime: 2023-02-21 23:34:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -149,11 +149,12 @@ where
     // Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default,
 {
     #[topo::nested]
+    #[allow(clippy::useless_conversion)]
     fn tree_init(
         mut self,
         id: &IdStr,
-        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
-        _children: &Vec<GTreeBuilderElement<Message>>,
+        _es: &[Rc<dyn Shaping<EmgEdgeItem<IdStr>>>],
+        _children: &[GTreeBuilderElement<Message>],
     ) -> InitTree<Message> {
         use crate::gtree_macro_prelude::*;
         let is_checked = self.is_checked;
@@ -490,7 +491,7 @@ where
             debug!("成功 downcast to any Box<dyn DynGElement<Message>>");
 
             // self.shaping_use(x);
-            if let Some(x2) = (&**x).downcast_ref::<Self>() {
+            if let Some(x2) = (**x).downcast_ref::<Self>() {
                 debug!("1 ** 成功 downcast to Self");
                 return self.shaping_use(x2);
             }

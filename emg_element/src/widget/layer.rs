@@ -110,8 +110,8 @@ where
     fn tree_init(
         self,
         _id: &IdStr,
-        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
-        _children: &Vec<crate::GTreeBuilderElement<Message>>,
+        _es: &[Rc<dyn Shaping<EmgEdgeItem<IdStr>>>],
+        _children: &[crate::GTreeBuilderElement<Message>],
     ) -> InitTree<Message> {
         GElement::Layer_(self).into()
     }

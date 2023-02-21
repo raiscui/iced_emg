@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-02-21 00:07:13
+ * @LastEditTime: 2023-02-21 23:51:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -90,7 +90,7 @@ mod test {
              .build_in_topo(&emg_graph_rc_refcell);
          // edge ─────────────────────────────────────────────────────
 
-         let  _root_ei = GraphEdgeBuilder::new(root_edge_ix.clone())
+         let  _root_ei = GraphEdgeBuilder::new(root_edge_ix)
              .with_size((px(1000), px(1000)))
              .build_in_topo(&emg_graph_rc_refcell)
              .unwrap();
@@ -110,7 +110,7 @@ mod test {
              .build_in_topo(&emg_graph_rc_refcell);
          // edge ─────────────────────────────────────────────────────
 
-         let _e_item = GraphEdgeBuilder::new(edge_ix.clone())
+         let _e_item = GraphEdgeBuilder::new(edge_ix)
          .with_size((px(100), px(100)))
              .build_in_topo(&emg_graph_rc_refcell)
              .unwrap();
@@ -131,7 +131,7 @@ mod test {
              .build_in_topo(&emg_graph_rc_refcell);
          // edge ─────────────────────────────────────────────────────
 
-         let _e_item = GraphEdgeBuilder::new(edge_ix.clone())
+         let _e_item = GraphEdgeBuilder::new(edge_ix)
          .with_size((px(200), px(200)))
              .build_in_topo(&emg_graph_rc_refcell)
              .unwrap();
@@ -152,7 +152,7 @@ mod test {
              .build_in_topo(&emg_graph_rc_refcell);
          // edge ─────────────────────────────────────────────────────
 
-         let _e_item = GraphEdgeBuilder::new(edge_ix.clone())
+         let _e_item = GraphEdgeBuilder::new(edge_ix)
          .with_size((px(30), px(30)))
              .build_in_topo(&emg_graph_rc_refcell)
              .unwrap();
@@ -166,7 +166,7 @@ mod test {
 
             emg_graph_rc_refcell.editor()
              .edit::<EdgeMode>()
-             .moving(edge_index("a", "c"),Incoming, "b");
+             .moving(edge_index("a", "c"),Incoming, "b").unwrap();
          }
          // ─────────────────────────────────────────────────────
 
