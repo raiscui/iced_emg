@@ -128,8 +128,8 @@ impl Sandbox for Counter {
 
     fn update(
         &mut self,
-        graph: GraphEditor<Self::Message>,
-        orders: &OrdersContainer<Self::Message>,
+        _graph: GraphEditor<Self::Message>,
+        _orders: &OrdersContainer<Self::Message>,
         message: Self::Message,
     ) {
         match message {
@@ -146,7 +146,7 @@ impl Sandbox for Counter {
         }
     }
 
-    fn tree_build(&self, orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
+    fn tree_build(&self, _orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
         use emg_bind::gtree_macro_prelude::*;
         gtree! {
             @="debug_layer" Layer [

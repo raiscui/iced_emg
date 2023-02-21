@@ -1,0 +1,9 @@
+---
+source: gtree_macro/src/cassowary.rs
+assertion_line: 2297
+expression: disp
+---
+[
+#sub[right]  ==  &[right],
+]
+

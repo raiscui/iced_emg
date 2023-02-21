@@ -5,7 +5,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-02-21 12:31:08
+ * @LastEditTime: 2023-02-21 19:52:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -2307,6 +2307,16 @@ mod tests {
     }
 
     #[test]
+    fn base0() {
+        println!();
+        // ─────────────────────────────────────────────────────────────────
+        let input = r#"
+            @h (#b1)
+        "#;
+
+        token_test("base-simple-single", input);
+    }
+    #[test]
     fn base() {
         println!();
         // ─────────────────────────────────────────────────────────────────
@@ -2513,6 +2523,22 @@ mod tests {
             "#;
 
         token_test("element_containment_default", input);
+    }
+    #[test]
+    fn element_containment_default_half() {
+        let input = r#"
+        @h |(#sub)
+            "#;
+
+        token_test("element_containment_default_half", input);
+    }
+    #[test]
+    fn element_containment_default_half_right() {
+        let input = r#"
+        @h (#sub)|
+            "#;
+
+        token_test("element_containment_default_half_right", input);
     }
     #[test]
     fn element_containment_view_gap() {
@@ -2733,6 +2759,7 @@ mod tests {
 
         token_test("predicate_constraint_variable", input);
     }
+
     #[test]
     fn predicate_explicit_view_var() {
         let input = r#"
