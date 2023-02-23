@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-02-22 16:13:08
+ * @LastEditTime: 2023-02-23 13:40:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -115,14 +115,13 @@ macro_rules! anima {
 pub struct AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-    // Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
 {
     // sv_now: StateVar<Duration>,
     inside: AnimationInside<Message>,
     timing: StateAnchor<Timing>,
     pub(crate) running: StateAnchor<bool>,
     // store: Rc<RefCell<GStateStore>>,
-    // edge: Option<EmgEdgeItem<Ix>>,
+    // edge: Option<EmgEdgeItem>,
     // queued_interruptions: StateAnchor<StepTimeVector<Message>>,
     // revised_steps: StateAnchor<Vector<Step<Message>>>,
     // revised_props: StateAnchor<Vector<Property>>,
@@ -154,7 +153,6 @@ where
 impl<Message> std::fmt::Debug for AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-    // Ix: Clone + std::hash::Hash + Eq + Default + Ord + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AnimationEdge")
@@ -232,16 +230,8 @@ where
     /// Will return `Err` if `self.edge` is None
     /// permission to read it.
     //TODO return bool changed or not
-    pub fn effecting_edge_path<Ix>(&self, edge: &EmgEdgeItem<Ix>, for_path: EPath<Ix>)
-    where
-        Ix: std::borrow::Borrow<str>
-            + Clone
-            + std::hash::Hash
-            + Eq
-            + Default
-            + Ord
-            + std::fmt::Display
-            + 'static,
+    pub fn effecting_edge_path(&self, edge: &EmgEdgeItem, for_path: EPath)
+
     {
         edge.build_path_layout(|mut l| {
             // • • • • •
@@ -269,7 +259,7 @@ where
         });
     }
 
-    // pub fn effecting_path(self, for_path: EPath<Ix>) -> Result<Self, String> {
+    // pub fn effecting_path(self, for_path: EPath) -> Result<Self, String> {
     //     self.edge
     //         .as_ref()
     //         .ok_or_else(|| "cannot effecting_path where self.edge is None .".to_string())?
@@ -300,11 +290,10 @@ where
     pub fn new_in_topo(
         props: SmallVec<[StateVarProperty; PROP_SIZE]>,
         // sv_now: StateVar<Duration>,
-        // edge_path: Option<(EmgEdgeItem<Ix>, EPath<Ix>)>,
+        // edge_path: Option<(EmgEdgeItem, EPath)>,
     ) -> Self
     where
         Message: Clone + std::fmt::Debug + 'static + PartialEq,
-        // Ix: Clone + std::hash::Hash + Eq + Default + Ord + std::fmt::Display + 'static,
     {
         let sv_now = global_clock();
         // let sv_now = use_state(||Duration::ZERO);
@@ -1190,7 +1179,7 @@ mod tests {
                     // let _guard = span.enter();
                     // trace!("fff");
 
-                    let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+                    let e_dict_sv:StateVar<GraphEdgesDict> = use_state(Dict::new);
 
                     let root_e_source =use_state(|| None);
                     let root_e_target = use_state(||Some(node_index("root")));
@@ -1443,7 +1432,7 @@ mod tests {
         let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+        let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
@@ -1481,7 +1470,7 @@ mod tests {
         let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+        let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
@@ -1531,7 +1520,7 @@ mod tests {
         #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("anima_macro_init", &a);
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+        let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
@@ -1576,7 +1565,7 @@ mod tests {
                     // let _guard = span.enter();
                     // trace!("fff");
 
-                    let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+                    let e_dict_sv:StateVar<GraphEdgesDict> = use_state(Dict::new);
 
                     let root_e_source =use_state(|| None);
                     let root_e_target = use_state(||Some(node_index("root")));

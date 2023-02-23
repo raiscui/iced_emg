@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-02-23 11:18:13
+ * @LastEditTime: 2023-02-23 13:36:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -29,29 +29,23 @@ pub use impl_for_node_item_rc_sv::{GraphEdgeBuilder, GraphNodeBuilder};
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[derive(From)]
-pub enum InitTree<Message: 'static, Ix = IdStr>
-where
-    Ix: Clone + std::hash::Hash + Ord + Default + 'static,
-{
-    Builder(GTreeBuilderElement<Message, Ix>),
+pub enum InitTree<Message: 'static> {
+    Builder(GTreeBuilderElement<Message>),
     Gel(GElement<Message>),
 }
 
-type EdgesAndChildren<Message, Ix> = (
-    Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
-    Vec<GTreeBuilderElement<Message, Ix>>,
+type EdgesAndChildren<Message> = (
+    Vec<Rc<dyn Shaping<EmgEdgeItem>>>,
+    Vec<GTreeBuilderElement<Message>>,
 );
 
-impl<Message, Ix> InitTree<Message, Ix>
-where
-    Ix: Clone + std::hash::Hash + Ord + Default,
-{
+impl<Message> InitTree<Message> {
     fn merge_es_and_children(
-        opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>>,
-        mut o_es: Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
-        opt_children: Option<Vec<GTreeBuilderElement<Message, Ix>>>,
-        mut o_children: Vec<GTreeBuilderElement<Message, Ix>>,
-    ) -> EdgesAndChildren<Message, Ix> {
+        opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem>>>>,
+        mut o_es: Vec<Rc<dyn Shaping<EmgEdgeItem>>>,
+        opt_children: Option<Vec<GTreeBuilderElement<Message>>>,
+        mut o_children: Vec<GTreeBuilderElement<Message>>,
+    ) -> EdgesAndChildren<Message> {
         let new_es = opt_es
             .map(|mut es| {
                 es.append(&mut o_es);
@@ -70,10 +64,10 @@ where
     //TODO work here make fn with_id_edge_children
     pub fn with_id_edge_children(
         self,
-        id: Ix,
-        opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>>,
-        opt_children: Option<Vec<GTreeBuilderElement<Message, Ix>>>,
-    ) -> GTreeBuilderElement<Message, Ix> {
+        id: IdStr,
+        opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem>>>>,
+        opt_children: Option<Vec<GTreeBuilderElement<Message>>>,
+    ) -> GTreeBuilderElement<Message> {
         match self {
             InitTree::Gel(gel) => {
                 GTreeBuilderElement::GElementTree(id, opt_es.unwrap(), gel, opt_children.unwrap())
@@ -104,7 +98,7 @@ pub trait GTreeInit<Message> {
     fn tree_init(
         self,
         _id: &IdStr,
-        _es: &[Rc<dyn Shaping<EmgEdgeItem<IdStr>>>],
+        _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
     ) -> InitTree<Message>;
 }
@@ -113,7 +107,7 @@ pub trait GtreeInitCall<Message> {
     fn tree_init_calling(
         self,
         _id: &IdStr,
-        _es: &[Rc<dyn Shaping<EmgEdgeItem<IdStr>>>],
+        _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
     ) -> InitTree<Message>;
 }
@@ -130,7 +124,7 @@ where
     fn tree_init_calling(
         self,
         _id: &IdStr,
-        _es: &[Rc<dyn Shaping<EmgEdgeItem<IdStr>>>],
+        _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
     ) -> InitTree<Message> {
         let new_type_sets = if let Some(type_sets) = illicit::get::<TypeIdSets>().ok().as_deref() {
@@ -157,105 +151,47 @@ where
     }
 }
 
-pub enum GTreeBuilderElement<Message, Ix = IdStr>
+pub enum GTreeBuilderElement<Message>
 where
-    Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
 {
     // Layer(
-    //     Ix,
-    //     Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>, //NOTE Rc for clone
-    //     Vec<GTreeBuilderElement<Message, Ix>>,
+    //     IdStr,
+    //     Vec<Rc<dyn Shaping<EmgEdgeItem>>>, //NOTE Rc for clone
+    //     Vec<GTreeBuilderElement<Message>>,
     // ),
-    // El(Ix, Element< Message>),
+    // El(IdStr, Element< Message>),
     GElementTree(
-        Ix,
-        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
+        IdStr,
+        Vec<Rc<dyn Shaping<EmgEdgeItem>>>,
         GElement<Message>,
-        Vec<GTreeBuilderElement<Message, Ix>>,
+        Vec<GTreeBuilderElement<Message>>,
     ),
     // SaMapEffectGElementTree(
-    //     Ix,
-    //     Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
+    //     IdStr,
+    //     Vec<Rc<dyn Shaping<EmgEdgeItem>>>,
     //     Rc< SaBuilderFn< GElement<Message>>>,
-    //     Vec<GTreeBuilderElement<Message, Ix>>,
+    //     Vec<GTreeBuilderElement<Message>>,
     // ),
-    ShapingUse(Ix, Rc<dyn EqShaping<GElement<Message>>>),
-    Cl(Ix, Rc<dyn Fn()>),
-    Event(Ix, EventNode<Message>),
+    ShapingUse(IdStr, Rc<dyn EqShaping<GElement<Message>>>),
+    Cl(IdStr, Rc<dyn Fn()>),
+    Event(IdStr, EventNode<Message>),
     Dyn(
-        Ix,
-        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
-        StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>,
+        IdStr,
+        Vec<Rc<dyn Shaping<EmgEdgeItem>>>,
+        StateVar<Dict<IdStr, GTreeBuilderElement<Message>>>,
     ),
-    // Fragment(Vec<GTreeBuilderElement< Message, Ix>>),
+    // Fragment(Vec<GTreeBuilderElement< Message>>),
     // GenericTree(
-    //     Ix,
-    //     Vec<Box<dyn Shaping<EmgEdgeItem<Ix>>>>,
+    //     IdStr,
+    //     Vec<Box<dyn Shaping<EmgEdgeItem>>>,
     //     Box<dyn DynGElement< Message> + 'static>,
-    //     Vec<GTreeBuilderElement< Message, Ix>>,
+    //     Vec<GTreeBuilderElement< Message>>,
     // )
 }
 
-// impl<Message, Ix> GTreeBuilderElement<Message, Ix>
-// where
-//     Ix: Clone + std::hash::Hash + Ord + Default,
-// {
-//     fn merge_es_and_children(
-//         opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>>,
-//         mut o_es: Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
-//         opt_children: Option<Vec<GTreeBuilderElement<Message, Ix>>>,
-//         mut o_children: Vec<GTreeBuilderElement<Message, Ix>>,
-//     ) -> (
-//         Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
-//         Vec<GTreeBuilderElement<Message, Ix>>,
-//     ) {
-//         let new_es = opt_es
-//             .map(|mut es| {
-//                 es.append(&mut o_es);
-//                 es
-//             })
-//             .unwrap_or_else(|| o_es);
-//         let new_children = opt_children
-//             .map(|mut children| {
-//                 children.append(&mut o_children);
-//                 children
-//             })
-//             .unwrap_or_else(|| o_children);
-//         (new_es, new_children)
-//     }
-
-//     //TODO work here make fn with_id_edge_children
-//     pub fn with_id_edge_children(
-//         self,
-//         id: Ix,
-//         opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>>,
-//         opt_children: Option<Vec<GTreeBuilderElement<Message, Ix>>>,
-//     ) -> Self {
-//         match self {
-//             GTreeBuilderElement::Layer(_, o_es, o_children) => {
-//                 unreachable!("deprecated");
-//                 let (new_es, new_children) =
-//                     Self::merge_es_and_children(opt_es, o_es, opt_children, o_children);
-
-//                 GTreeBuilderElement::Layer(id, new_es, new_children)
-//             }
-//             GTreeBuilderElement::GElementTree(_, o_es, gel, o_children) => {
-//                 let (new_es, new_children) =
-//                     Self::merge_es_and_children(opt_es, o_es, opt_children, o_children);
-//                 GTreeBuilderElement::GElementTree(id, new_es, gel, new_children)
-//             }
-//             GTreeBuilderElement::ShapingUse(_, _) => todo!(),
-//             GTreeBuilderElement::Cl(_, _) => todo!(),
-//             GTreeBuilderElement::Event(_, _) => todo!(),
-//             GTreeBuilderElement::Dyn(_, _, _) => todo!(),
-//         }
-//     }
-// }
-
-impl<Message, Ix> Clone for GTreeBuilderElement<Message, Ix>
+impl<Message> Clone for GTreeBuilderElement<Message>
 where
-    Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
 {
     fn clone(&self) -> Self {
@@ -272,14 +208,13 @@ where
     }
 }
 
-impl<Message, Ix> From<StateVar<Dict<Ix, Self>>> for GTreeBuilderElement<Message, Ix>
+impl<Message> From<StateVar<Dict<IdStr, Self>>> for GTreeBuilderElement<Message>
 where
-    Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
 {
-    fn from(value: StateVar<Dict<Ix, Self>>) -> Self {
+    fn from(value: StateVar<Dict<IdStr, Self>>) -> Self {
         //TODO check ix use default value or build uuid ?(先检查在哪里用了)
-        Self::Dyn(Ix::default(), vec![], value)
+        Self::Dyn(IdStr::default(), vec![], value)
     }
 }
 
@@ -330,7 +265,7 @@ impl<Message> std::fmt::Debug for GTreeBuilderElement<Message>
             Self::Dyn(id, _e, _sa_dict_gbe) => f
                 .debug_tuple("GTreeBuilderElement::Dyn")
                 .field(id)
-                .field(&"StateVar<Dict<Ix, GTreeBuilderElement<Message, Ix>>>")
+                .field(&"StateVar<Dict<IdStr, GTreeBuilderElement<Message>>>")
                 .finish(), // GTreeBuilderElement::GenericTree(id, _, dyn_gel, updaters) => {
                            //     let edge_str = "with Some Edge Vector...";
                            //     let dyn_name = format!("DynGElement({})", dyn_gel.type_name());
@@ -346,11 +281,7 @@ impl<Message> std::fmt::Debug for GTreeBuilderElement<Message>
     }
 }
 
-pub trait GTreeBuilderFn<Message>
-where
-    Self::Ix: Clone + Default + std::hash::Hash + Ord,
-{
-    type Ix;
+pub trait GTreeBuilderFn<Message> {
     type GraphType;
     type GraphEditor: GraphEdit + GraphEditManyMethod;
 
@@ -363,7 +294,7 @@ where
     fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message>);
     fn handle_children_in_topo(
         &self,
-        replace_id: Option<&Self::Ix>,
+        replace_id: Option<&IdStr>,
         tree_element: &'_ GTreeBuilderElement<Message>,
     );
 }

@@ -22,8 +22,8 @@ use tracing::{instrument, trace, trace_span};
 
 type N<Message> = StateAnchor<GElement<Message>>;
 // pub type N< Message> = RefCell<GElement< Message>>;
-type E<Ix> = EmgEdgeItem<Ix>;
-type GraphType<Message, Ix = IdStr> = Graph<N<Message>, E<Ix>, Ix>;
+type E = EmgEdgeItem;
+type GraphType<Message> = Graph<N<Message>, E>;
 
 pub trait GraphView {
     type N;
@@ -33,11 +33,11 @@ pub trait GraphView {
 
     fn gelement_refresh_and_comb(
         &self,
-        edges: &GraphEdgesDict<Self::Ix>,
+        edges: &GraphEdgesDict,
         cix: &Self::Ix,
-        paths: &EPath<Self::Ix>,
+        paths: &EPath,
         // opt_parent_e: Option<Self::E>,
-        // opt_eix: Option<&EdgeIndex<Ix>>,
+        // opt_eix: Option<&EdgeIndex>,
         // current_node: &RefCell<GElement< Message>>,
     ) -> GElement<Self::Message>
     where
@@ -46,16 +46,16 @@ pub trait GraphView {
 
     fn children_to_elements(
         &self,
-        node: &Node<Self::N, Self::Ix>,
-        edges: &GraphEdgesDict<Self::Ix>,
+        node: &Node<Self::N>,
+        edges: &GraphEdgesDict,
         cix: &Self::Ix,
-        paths: &EPath<Self::Ix>,
+        paths: &EPath,
     ) -> Vec<GElement<Self::Message>>
     where
         // <Self as GraphView<Message>>::Ix: Clone + Hash + Eq + Ord + Default;
         Self::Ix: Clone + Hash + Eq + Ord + Default;
 
-    fn view(&self, into_ix: impl Into<Self::Ix>) -> GElement<Self::Message>;
+    fn view(&self, into_ix: impl Into<IdStr>) -> GElement<Self::Message>;
 }
 
 // impl<Message> GraphView<Message> for GraphType<Message>
@@ -64,22 +64,20 @@ where
     Message: 'static + Clone + std::fmt::Debug + std::cmp::PartialEq,
 {
     type Ix = IdStr;
-    type E = E<Self::Ix>;
+    type E = E;
     type Message = Message;
     type N = N<Self::Message>;
 
     // #[instrument(skip(self, edges))]
     fn gelement_refresh_and_comb(
         &self,
-        edges: &GraphEdgesDict<Self::Ix>,
+        edges: &GraphEdgesDict,
         cix: &Self::Ix,
-        paths: &EPath<Self::Ix>,
-        // edge_for_cix: &Edge<Self::E, Ix>,
-        // current_node: &RefCell<GElement< Message>>,
+        paths: &EPath,
     ) -> GElement<Self::Message> {
         // debug!("run here 01");
 
-        let node: &Node<Self::N, Self::Ix> = self.get_node_use_ix(cix).unwrap();
+        let node: &Node<Self::N> = self.get_node_use_ix(cix).unwrap();
         let mut current_node_item_clone = node.item.get();
         // debug!("run here 01.1");
 
@@ -153,10 +151,10 @@ where
     #[instrument(skip(self, edges))]
     fn children_to_elements(
         &self,
-        node: &Node<Self::N, Self::Ix>,
-        edges: &GraphEdgesDict<Self::Ix>,
+        node: &Node<Self::N, Self::IdStr>,
+        edges: &GraphEdgesDict<Self::IdStr>,
         cix: &Self::Ix,
-        paths: &EPath<Self::Ix>,
+        paths: &EPath<Self::IdStr>,
     ) -> Vec<GElement<Message>> {
         node.edge_out_ixs()
             .as_ref()
@@ -175,7 +173,7 @@ where
             .collect()
     }
 
-    fn view(&self, into_ix: impl Into<Self::Ix>) -> GElement<Self::Message> {
+    fn view(&self, into_ix: impl Into<Self::IdStr>) -> GElement<Self::Message> {
         let cix: Self::Ix = into_ix.into();
         let _g = trace_span!("graph view-", ?cix);
         {

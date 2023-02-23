@@ -5,48 +5,47 @@ use emg_bind::{
 };
 use std::{cell::Cell, rc::Rc};
 use tracing::{debug_span, info, instrument};
-#[cfg(feature = "debug")]
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
     let error_layer =
         tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
 
-    #[cfg(not(feature = "debug"))]
-    let out_layer = tracing_tree::HierarchicalLayer::new(2)
-        .with_indent_lines(true)
-        .with_indent_amount(4)
-        .with_targets(true)
-        .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
-            |metadata, _cx| {
-                tracing::debug!(target: "tracing", "metadata.level() = {:?}, metadata.is_span() = {:?}, metadata.name() = {:?}", metadata.level(), metadata.is_span(), metadata.name());
-                // if metadata.level() <= &tracing::Level::DEBUG{
-                //     // If this *is* "interesting_span", make sure to enable it.
-                //     if metadata.is_span() && metadata.name() == "LayoutOverride" {
-                //         return true;
-                //     }
+    // #[cfg(not(feature = "debug"))]
+    // let out_layer = tracing_tree::HierarchicalLayer::new(2)
+    //     .with_indent_lines(true)
+    //     .with_indent_amount(4)
+    //     .with_targets(true)
+    //     .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
+    //         |metadata, _cx| {
+    //             tracing::debug!(target: "tracing", "metadata.level() = {:?}, metadata.is_span() = {:?}, metadata.name() = {:?}", metadata.level(), metadata.is_span(), metadata.name());
+    //             // if metadata.level() <= &tracing::Level::DEBUG{
+    //             //     // If this *is* "interesting_span", make sure to enable it.
+    //             //     if metadata.is_span() && metadata.name() == "LayoutOverride" {
+    //             //         return true;
+    //             //     }
 
-                //     // Otherwise, are we in an interesting span?
-                //     if let Some(current_span) = cx.lookup_current()  {
-                //         return current_span.name() == "LayoutOverride";
-                //     }
-                // }
-                // ─────────────────────────────────────────────────────
+    //             //     // Otherwise, are we in an interesting span?
+    //             //     if let Some(current_span) = cx.lookup_current()  {
+    //             //         return current_span.name() == "LayoutOverride";
+    //             //     }
+    //             // }
+    //             // ─────────────────────────────────────────────────────
 
-                // #[cfg(feature = "debug")]
-                // return false;
+    //             // #[cfg(feature = "debug")]
+    //             // return false;
 
-                !metadata.target().contains("anchors")
-                    && !metadata.target().contains("emg_layout")
-                    && !metadata.target().contains("emg_state")
-                    && !metadata.target().contains("cassowary")
-                    && !metadata.target().contains("wgpu")
-                    && metadata.level() <= &tracing::Level::INFO // global tracing level
-                // && !metadata.target().contains("winit event")
-                // && !metadata.fields().field("event").map(|x|x.to_string())
-                // && !metadata.target().contains("winit event: DeviceEvent")
-            },
-        ));
+    //             !metadata.target().contains("anchors")
+    //                 && !metadata.target().contains("emg_layout")
+    //                 && !metadata.target().contains("emg_state")
+    //                 && !metadata.target().contains("cassowary")
+    //                 && !metadata.target().contains("wgpu")
+    //                 && metadata.level() <= &tracing::Level::INFO // global tracing level
+    //             // && !metadata.target().contains("winit event")
+    //             // && !metadata.fields().field("event").map(|x|x.to_string())
+    //             // && !metadata.target().contains("winit event: DeviceEvent")
+    //         },
+    //     ));
 
     // #[cfg(feature = "debug")]
     // let layout_override_layer = tracing_tree::HierarchicalLayer::new(2)
@@ -84,17 +83,14 @@ fn tracing_init() -> Result<(), Report> {
         ));
     // ─────────────────────────────────────────────────────────────────────────────
 
-    #[cfg(feature = "debug")]
     tracing_subscriber::registry()
         // .with(layout_override_layer)
         // .with(event_matching_layer)
         .with(error_layer)
-        .with(emg_layout_layer)
+        // .with(emg_layout_layer)
         // .with(out_layer)
         .init();
 
-    #[cfg(not(feature = "debug"))]
-    tracing_subscriber::registry().with(out_layer).init();
     // ─────────────────────────────────────────────────────────────────────────────
 
     color_eyre::install()
@@ -140,8 +136,6 @@ impl Sandbox for Counter {
                 self.value -= 1;
             }
             Message::Empty => {
-
-
                 #[cfg(feature = "insta")]
                 insta::assert_debug_snapshot!("graph_debug_def", graph.borrow());
             }
@@ -259,7 +253,7 @@ impl Sandbox for Counter {
     // fn view(&self, g: &GraphType<Self::Message>) -> GelType<Self::Message> {
     //     g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
     //         .unwrap()
-    //         .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]))
+    //         .get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("debug_layer")]))
     //         .get()
     // }
 }

@@ -236,7 +236,7 @@ impl ToTokens for Edge {
         let content_iter = content.iter();
         //NOTE use Rc because dyn
         quote_spanned!(
-            bracket_token.span=> vec![#(std::rc::Rc::new(#content_iter) as std::rc::Rc<dyn Shaping<EmgEdgeItem<_>>>),*]
+            bracket_token.span=> vec![#(std::rc::Rc::new(#content_iter) as std::rc::Rc<dyn Shaping<EmgEdgeItem>>),*]
         )
         .to_tokens(tokens);
     }

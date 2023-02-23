@@ -236,7 +236,7 @@ impl Application for Counter {
         // g.view("a")
         g.get_node_item_use_ix(&IdStr::new_inline("a"))
             .unwrap()
-            .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")]))
+            .get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")]))
             .get()
 
         // ─────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-02-23 11:18:35
+ * @LastEditTime: 2023-02-23 15:43:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,16 +13,11 @@ use crate::{error::Error, GTreeBuilderElement};
 
 use super::{GraphEditManyMethod, GraphEditor};
 
-// impl<Message, Ix> GraphEditManyMethod for GraphType<Message, Ix>
+// impl<Message> GraphEditManyMethod for GraphType<Message>
 // where
-//     Ix: std::hash::Hash
-//         + std::clone::Clone
-//         + std::cmp::Ord
-//         + std::default::Default
-//         + std::fmt::Debug,
+
 // {
-//     type Ix = Ix;
-//     fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) {
+//     fn edge_plug_edit(&self, who: &EdgeIndex, dir: Direction, to: IdStr) {
 //         self.edge_plug_edit(who, dir, to);
 //     }
 
@@ -32,9 +27,8 @@ use super::{GraphEditManyMethod, GraphEditor};
 // }
 
 impl<Message> GraphEditManyMethod for GraphEditor<Message> {
-    type Ix = IdStr;
     type Message = Message;
-    fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) -> Result<(), Error> {
+    fn edge_plug_edit(&self, who: &EdgeIndex, dir: Direction, to: IdStr) -> Result<(), Error> {
         self.borrow()
             .edge_plug_edit(who, dir, to)
             .map_err(|e| e.into())
@@ -45,7 +39,8 @@ impl<Message> GraphEditManyMethod for GraphEditor<Message> {
     }
 
     fn insert_node_in_topo(&self, tree_element: &'_ GTreeBuilderElement<Message>) {
-        self.handle_children_in_topo
+        // self.handle_children_in_topo
+        todo!()
     }
 }
 

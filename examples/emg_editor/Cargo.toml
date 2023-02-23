@@ -14,7 +14,7 @@ split-debuginfo = "unpacked"
 
 
 [features]
-default = ["gpu", "debug"]
+default = ["gpu"]
 gpu = ["emg_bind/gpu"]
 debug = ["emg_bind/debug"]
 

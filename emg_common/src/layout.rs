@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-09 16:53:34
- * @LastEditTime: 2023-02-22 18:09:13
+ * @LastEditTime: 2023-02-23 15:06:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -114,7 +114,7 @@ impl std::ops::Add for LayoutOverride {
         } else {
             rhs.rect_tree.into_iter().fold(self, |mut old, rect| {
                 #[cfg(feature = "debug")]
-                old.underlay::<String>(None, rect);
+                old.underlay(None, rect);
                 #[cfg(not(feature = "debug"))]
                 old.underlay(rect);
 
@@ -138,7 +138,8 @@ impl std::ops::Add for LayoutOverride {
 //             })
 //     }
 // }
-
+#[cfg(feature = "debug")]
+use crate::IdStr;
 impl LayoutOverride {
     pub fn new(rect: RectLTRB) -> Self {
         Self {
@@ -174,7 +175,7 @@ impl LayoutOverride {
     }
 
     #[cfg(feature = "debug")]
-    pub fn underlay<Ix: std::fmt::Debug>(&mut self, ix: Option<Ix>, rect: RectLTRB) {
+    pub fn underlay(&mut self, ix: Option<IdStr>, rect: RectLTRB) {
         let _span = debug_span!("LayoutOverride", ?ix, func = "underlay").entered();
         debug!(target = "underlay", "self:{:#?}", self);
         debug!(target = "underlay", "rect:{:#?}", rect);

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-21 10:50:01
- * @LastEditTime: 2023-01-24 17:51:49
+ * @LastEditTime: 2023-02-23 13:46:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -52,22 +52,12 @@ type SvvOpSvvsToExpr = (
 );
 
 #[instrument(skip(children_cass_maps))]
-pub(crate) fn svv_op_svvs_to_expr<Ix>(
+pub(crate) fn svv_op_svvs_to_expr(
     svv_op_svvs: &CCSSSvvOpSvvExpr,
-    children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
+    children_cass_maps: &Dict<IdStr, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
     current_cassowary_inherited_generals: &Rc<CassowaryGeneralMap>,
 ) -> SvvOpSvvsToExpr
-where
-    Ix: std::fmt::Debug
-        + Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + Default
-        // + std::fmt::Display
-        + std::borrow::Borrow<str>,
+
 {
     let CCSSSvvOpSvvExpr {
         svv: main_svv,
@@ -134,22 +124,12 @@ where
 }
 
 #[instrument(skip(children_cass_maps))]
-fn svv_to_var<Ix>(
+fn svv_to_var(
     scope_view_variable: &ScopeViewVariable,
-    children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
+    children_cass_maps: &Dict<IdStr, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
     current_cassowary_inherited_generals: &Rc<CassowaryGeneralMap>,
 ) -> (Option<Either<Variable, Expression>>, Option<ConstraintList>)
-where
-    Ix: std::fmt::Debug
-        + Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + Default
-        // + std::fmt::Display
-        + std::borrow::Borrow<str>,
+
 {
     let ScopeViewVariable {
         scope,

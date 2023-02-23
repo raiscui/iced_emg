@@ -131,7 +131,7 @@ impl<Message> GTreeInit<Message> for GElement<Message> {
     fn tree_init(
         self,
         _id: &IdStr,
-        _es: &[Rc<dyn Shaping<emg_layout::EmgEdgeItem<IdStr>>>],
+        _es: &[Rc<dyn Shaping<emg_layout::EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
         //TODO use either like <GTreeBuilderElement,GElement> for speed??
     ) -> InitTree<Message> {

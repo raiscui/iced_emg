@@ -34,19 +34,13 @@ mod cassowary_calc;
 
 // #[track_caller]
 #[topo::nested]
-pub fn layout_calculating<Ix>(
-    _id: StateVar<StateAnchor<EdgeIndex<Ix>>>,
+pub fn layout_calculating(
+    _id: StateVar<StateAnchor<EdgeIndex>>,
     path_edgedata: &EdgeData, //parent
     current_cassowary_map: &Rc<CassowaryMap>,
     layout: &StateAnchor<Layout>,
 ) -> LayoutCalculated
-where
-    Ix: 'static
-        + std::clone::Clone
-        + std::hash::Hash
-        + std::cmp::Eq
-        + std::default::Default
-        + std::cmp::Ord,
+
 {
     let _span_ = trace_span!("->[ layout_calculating ] ").entered();
     let _debug_span_ = debug_span!("->[ layout_calculating ] ").entered();

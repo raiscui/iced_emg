@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2023-02-21 12:11:39
+ * @LastEditTime: 2023-02-23 13:41:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,21 +24,17 @@ use crate::{
 // ────────────────────────────────────────────────────────────────────────────────
 
 //TODO lifetime
-impl<Ix> ShapingWhoNoWarper for EmgEdgeItem<Ix> where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default
-{
-}
+impl ShapingWhoNoWarper for EmgEdgeItem {}
 
 //TODO this is warper , try not write this way
 impl<T> ShapingUseNoWarper for Css<T> where T: CssValueTrait + Clone + 'static {}
 
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for Box<dyn Shaping<EmgEdgeItem<Ix>>>
+impl Shaping<EmgEdgeItem> for Box<dyn Shaping<EmgEdgeItem>>
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
+    EmgEdgeItem: ShapingWhoNoWarper,
 {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!(
             "!!!!!!!!!!!!!!-> Shaping<EdgeItem> for Box<(dyn Shaping<EdgeItem> + 'static)>"
         )
@@ -48,13 +44,12 @@ where
     }
 }
 
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for Rc<dyn Shaping<EmgEdgeItem<Ix>>>
+impl Shaping<EmgEdgeItem> for Rc<dyn Shaping<EmgEdgeItem>>
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
+    EmgEdgeItem: ShapingWhoNoWarper,
 {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!(
             "!!!!!!!!!!!!!!-> Shaping<EdgeItem> for Box<(dyn Shaping<EdgeItem> + 'static)>"
         )
@@ -64,13 +59,12 @@ where
     }
 }
 
-impl<Ix, Use> Shaping<EmgEdgeItem<Ix>> for StateVar<Use>
+impl<Use> Shaping<EmgEdgeItem> for StateVar<Use>
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
-    Use: ShapingUseNoWarper + Shaping<EmgEdgeItem<Ix>> + Clone + 'static,
+    EmgEdgeItem: ShapingWhoNoWarper,
+    Use: ShapingUseNoWarper + Shaping<EmgEdgeItem> + Clone + 'static,
 {
-    default fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    default fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let rc_v = self.get_var_with(emg_state::Var::get);
         warn!("Edge [default!!] Refresh use StateVar current value !!!");
         who.shaping_use_dyn(&*rc_v)
@@ -78,12 +72,11 @@ where
 }
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for StateVar<CssWidth>
+impl Shaping<EmgEdgeItem> for StateVar<CssWidth>
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
+    EmgEdgeItem: ShapingWhoNoWarper,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssWidth>");
 
         who.layout.w.set(self.watch().into());
@@ -92,13 +85,12 @@ where
         true
     }
 }
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for StateAnchor<CssWidth>
+impl Shaping<EmgEdgeItem> for StateAnchor<CssWidth>
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
-    // Use: ShapingUseNoWarper + Shaping<EmgEdgeItem<Ix>> + Clone + 'static,
+    EmgEdgeItem: ShapingWhoNoWarper,
+    // Use: ShapingUseNoWarper + Shaping<EmgEdgeItem> + Clone + 'static,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateAnchor<CssWidth>");
 
         who.layout.w.set(self.clone().into());
@@ -107,13 +99,12 @@ where
         true
     }
 }
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for StateVar<CssHeight>
+impl Shaping<EmgEdgeItem> for StateVar<CssHeight>
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
-    // Use: ShapingUseNoWarper + Shaping<EmgEdgeItem<Ix>> + Clone + 'static,
+    EmgEdgeItem: ShapingWhoNoWarper,
+    // Use: ShapingUseNoWarper + Shaping<EmgEdgeItem> + Clone + 'static,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssHeight>");
 
         who.layout.h.set(self.watch().into());
@@ -122,13 +113,12 @@ where
         true
     }
 }
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for StateAnchor<CssHeight>
+impl Shaping<EmgEdgeItem> for StateAnchor<CssHeight>
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
-    // Use: ShapingUseNoWarper + Shaping<EmgEdgeItem<Ix>> + Clone + 'static,
+    EmgEdgeItem: ShapingWhoNoWarper,
+    // Use: ShapingUseNoWarper + Shaping<EmgEdgeItem> + Clone + 'static,
 {
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateAnchor<CssHeight>");
 
         who.layout.h.set(self.clone().into());
@@ -141,12 +131,10 @@ where
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
 
-// impl<Ix> Shaping<EmgEdgeItem<Ix>> for Vec<Box<(dyn Shaping<EmgEdgeItem<Ix>> + 'static)>>
-// where
-//     Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
+// impl Shaping<EmgEdgeItem> for Vec<Box<(dyn Shaping<EmgEdgeItem> + 'static)>>
 // {
 //     #[track_caller]
-//     fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
+//     fn shaping(&self, who: &mut EmgEdgeItem) {
 //         for i in self {
 //             let _g = trace_span!(
 //                 "-> Shaping<EdgeItem> for Vec<Box<(dyn Shaping<EdgeItem> + 'static)>>"
@@ -169,10 +157,9 @@ where
 // }
 //TODO 做 不是refresh 版本的
 #[track_caller]
-fn css_refresh_edgedata<Use, Ix>(css: &Css<Use>, ei: &mut EmgEdgeItem<Ix>) -> bool
+fn css_refresh_edgedata<Use>(css: &Css<Use>, ei: &mut EmgEdgeItem) -> bool
 where
     Use: CssValueTrait + std::clone::Clone,
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     let _g = trace_span!("-> css_refresh_edgedata").entered();
 
@@ -206,13 +193,12 @@ where
 }
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Use, Ix> Shaping<EmgEdgeItem<Ix>> for Css<Use>
+impl<Use> Shaping<EmgEdgeItem> for Css<Use>
 where
     Use: CssValueTrait + std::clone::Clone,
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
 {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EdgeItem> for Css<Use>").entered();
 
         css_refresh_edgedata(self, who)
@@ -221,12 +207,9 @@ where
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for CssWidth
-where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-{
+impl Shaping<EmgEdgeItem> for CssWidth {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for CssWidth").entered();
 
         who.layout.w.set(self.clone().into());
@@ -234,36 +217,27 @@ where
     }
 }
 
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for CssHeight
-where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-{
+impl Shaping<EmgEdgeItem> for CssHeight {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for CssHeight").entered();
 
         who.layout.h.set(self.clone().into());
         true
     }
 }
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for OriginX
-where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-{
+impl Shaping<EmgEdgeItem> for OriginX {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for OriginX").entered();
 
         who.layout.origin_x.set(self.clone().into());
         true
     }
 }
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for OriginY
-where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-{
+impl Shaping<EmgEdgeItem> for OriginY {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for OriginY").entered();
 
         who.layout.origin_y.set(self.clone().into());
@@ -271,24 +245,18 @@ where
     }
 }
 
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for AlignX
-where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-{
+impl Shaping<EmgEdgeItem> for AlignX {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for AlignX").entered();
 
         who.layout.align_x.set(self.clone().into());
         true
     }
 }
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for AlignY
-where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-{
+impl Shaping<EmgEdgeItem> for AlignY {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for AlignY").entered();
 
         who.layout.align_y.set(self.clone().into());
@@ -296,94 +264,20 @@ where
     }
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
 
-// #[derive(Clone)]
-// pub struct EffectingPath<Ix, T>(T, PhantomData<Ix>)
-// where
-//     T: Shaping<EmgEdgeItem<Ix>> + Clone + 'static,
-//     Ix: Clone
-//         + std::hash::Hash
-//         + Eq
-//         + Ord
-//         + 'static
-//         + Default
-//         + std::fmt::Debug
-//         + std::fmt::Display;
-
-// impl<Ix, T> std::ops::Deref for EffectingPath<Ix, T>
-// where
-//     T: Shaping<EmgEdgeItem<Ix>> + Clone + 'static,
-//     Ix: Clone
-//         + std::hash::Hash
-//         + Eq
-//         + Ord
-//         + 'static
-//         + Default
-//         + std::fmt::Debug
-//         + std::fmt::Display,
-// {
-//     type Target = T;
-
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
-
-// impl<T, Ix> From<T> for EffectingPath<Ix, T>
-// where
-//     T: Shaping<EmgEdgeItem<Ix>> + Clone + 'static,
-//     Ix: Clone
-//         + std::hash::Hash
-//         + Eq
-//         + Ord
-//         + 'static
-//         + Default
-//         + std::fmt::Debug
-//         + std::fmt::Display,
-// {
-//     fn from(v: T) -> Self {
-//         Self(v, PhantomData)
-//     }
-// }
-// impl<Ix, T> Shaping<EmgEdgeItem<Ix>> for EffectingPath<Ix, T>
-// where
-//     T: Shaping<EmgEdgeItem<Ix>> + Clone + 'static,
-//     Ix: Clone
-//         + std::hash::Hash
-//         + Eq
-//         + Ord
-//         + 'static
-//         + Default
-//         + std::fmt::Debug
-//         + std::fmt::Display,
-// {
-//     fn shaping(&self, who: &mut EmgEdgeItem<Ix>) {
-//         // self.effect_with_path(p,who);
-//         // who.shaping_use(self);
-//     }
-// }
 /// using at tree building
-impl<Ix, Message> Shaping<EmgEdgeItem<Ix>> for AnimationE<Message>
+impl< Message> Shaping<EmgEdgeItem> for AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-    Ix: std::borrow::Borrow<str>
-        + Clone
-        + std::hash::Hash
-        + Eq
-        + Ord
-        + 'static
-        + Default
-        + std::fmt::Debug
-        + std::fmt::Display,
+
 {
-    fn shaping(&self, edge: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, edge: &mut EmgEdgeItem) -> bool {
         //NOTE 当 tree 宏 中 在 edge中使用 am类型
         trace!(
             "AnimationE  Shaping EmgEdgeItem snapshot: \n{:#?}",
             illicit::Snapshot::get()
         );
-        illicit::get::<EPath<Ix>>().map_or_else(
+        illicit::get::<EPath>().map_or_else(
             |e| {
                 panic!(" cannot get illicit env EPath for animationE::effecting_edge_path,e:{e:?}");
             },
@@ -430,7 +324,7 @@ mod refresh_test {
 
     #[test]
     fn edge() {
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+        let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
@@ -444,7 +338,7 @@ mod refresh_test {
         let css_w: StateVar<CssWidth> = use_state(|| width(px(99)));
         let a: AnimationE<Message> = anima![css_w];
         illicit::Layer::new()
-            .offer(EPath::<IdStr>(vector![edge_index_no_source("root")]))
+            .offer(EPath(vector![edge_index_no_source("root")]))
             .enter(|| {
                 root_e.shaping_use_dyn(&a);
                 // root_e.shaping_use(&a);

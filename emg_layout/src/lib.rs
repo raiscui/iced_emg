@@ -398,10 +398,7 @@ pub struct EdgeCtx {
 impl EdgeCtx {
     #[cfg(feature = "debug")]
     #[must_use]
-    pub fn to_layout_override<Ix: std::fmt::Debug + 'static + std::clone::Clone>(
-        &self,
-        nix: NodeIndex<Ix>,
-    ) -> StateAnchor<LayoutOverride> {
+    pub fn to_layout_override(&self, nix: NodeIndex) -> StateAnchor<LayoutOverride> {
         (
             &self.world,
             &self.layout_end,
@@ -622,47 +619,30 @@ where
     }
 }
 
-pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
+pub type GraphEdgesDict = Dict<EdgeIndex, Edge<EmgEdgeItem>>;
 // use ahash::AHasher as CustomHasher;
 // use rustc_hash::FxHasher as CustomHasher;
 
-// type PathVarMap<Ix,T> = Dict<EPath<Ix>,T>;
-// type PathVarMap<Ix,T> = indexmap::IndexMap <EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
-type PathVarMap<Ix, T> = HashMap<EPath<Ix>, T, BuildHasherDefault<CustomHasher>>;
+type PathVarMap<T> = HashMap<EPath, T, BuildHasherDefault<CustomHasher>>;
 pub type StylesDict =
     Dict<TypeName, StateAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
 
-pub struct EmgEdgeItem<Ix>
-where
-    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
-{
+pub struct EmgEdgeItem {
     //TODO save g_store
-    pub id: StateVar<StateAnchor<EdgeIndex<Ix>>>, // dyn by Edge(source_nix , target_nix)
-    pub paths: DictPathEiNodeSA<Ix>, // with parent self  // current not has current node
+    pub id: StateVar<StateAnchor<EdgeIndex>>, // dyn by Edge(source_nix , target_nix)
+    pub paths: DictPathEiNodeSA,              // with parent self  // current not has current node
     pub layout: Layout,
     pub styles: StateVar<StylesDict>,
-    path_styles: StateVar<PathVarMap<Ix, Style>>, //TODO check use
-    path_layouts: StateVar<PathVarMap<Ix, Layout>>, // layout only for one path
+    path_styles: StateVar<PathVarMap<Style>>, //TODO check use
+    path_layouts: StateVar<PathVarMap<Layout>>, // layout only for one path
 
     pub other_css_styles: StateVar<Style>,
     // no self  first try
-    pub edge_nodes: DictPathEiNodeSA<Ix>, //TODO with self?  not with self?  (current with self)
+    pub edge_nodes: DictPathEiNodeSA, //TODO with self?  not with self?  (current with self)
     store: Rc<RefCell<GStateStore>>,
 }
 
-impl<Ix> std::fmt::Display for EmgEdgeItem<Ix>
-where
-    Ix: 'static
-        + Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + std::default::Default
-        + std::fmt::Display,
-{
+impl std::fmt::Display for EmgEdgeItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut members = String::new();
 
@@ -699,11 +679,7 @@ where
     }
 }
 
-impl<Ix> Clone for EmgEdgeItem<Ix>
-where
-    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
-{
+impl Clone for EmgEdgeItem {
     fn clone(&self) -> Self {
         Self {
             id: self.id,
@@ -719,11 +695,7 @@ where
     }
 }
 
-impl<Ix> std::fmt::Debug for EmgEdgeItem<Ix>
-where
-    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static + std::fmt::Debug,
-{
+impl std::fmt::Debug for EmgEdgeItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EmgEdgeItem")
             .field("id", &self.id)
@@ -737,15 +709,9 @@ where
             .finish()
     }
 }
-impl<Ix> Eq for EmgEdgeItem<Ix> where
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static
-{
-}
+impl Eq for EmgEdgeItem {}
 
-impl<Ix> PartialEq for EmgEdgeItem<Ix>
-where
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
-{
+impl PartialEq for EmgEdgeItem {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             && self.paths == other.paths
@@ -756,12 +722,9 @@ where
     }
 }
 
-pub type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>; //NOTE: EdgeData or something
+pub type DictPathEiNodeSA = StateAnchor<Dict<EPath, EdgeItemNode>>; //NOTE: EdgeData or something
 
-impl<Ix> EmgEdgeItem<Ix>
-where
-    Ix: Clone + Hash + Ord + Default + std::fmt::Debug,
-{
+impl EmgEdgeItem {
     #[cfg(test)]
     fn set_size(&self, w: impl Into<GenericSizeAnchor>, h: impl Into<GenericSizeAnchor>) {
         self.layout.set_size(w, h);
@@ -777,7 +740,7 @@ where
 
     #[cfg(test)]
     #[must_use]
-    fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
+    fn edge_data(&self, key: &EPath) -> Option<EdgeData> {
         //TODO not get(), use ref
         self.edge_nodes
             .get()
@@ -787,7 +750,7 @@ where
     }
 
     // #[must_use]
-    // pub fn store_edge_data(&self,store:&GStateStore, key: &EPath<Ix>) -> Option<EdgeData> {
+    // pub fn store_edge_data(&self,store:&GStateStore, key: &EPath) -> Option<EdgeData> {
     //     self.node.store_get(store)
     //         .get(key)
     //         .and_then(EdgeItemNode::as_edge_data).cloned()
@@ -796,7 +759,7 @@ where
     pub fn store_edge_data_with<F: FnOnce(Option<&EdgeData>) -> R, R>(
         &self,
         store: &GStateStore,
-        key: &EPath<Ix>,
+        key: &EPath,
         func: F,
     ) -> R {
         #[cfg(debug_assertions)]
@@ -813,19 +776,8 @@ where
     }
 }
 
-impl<Ix> EmgEdgeItem<Ix>
-where
-    Ix: Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + Default
-        + std::borrow::Borrow<str>
-        + Display,
-{
-    pub fn build_path_layout(&self, func: impl FnOnce(Layout) -> (EPath<Ix>, Layout)) {
+impl EmgEdgeItem {
+    pub fn build_path_layout(&self, func: impl FnOnce(Layout) -> (EPath, Layout)) {
         let (path, layout) = func(self.layout);
         self.path_layouts
             .set_with_once(move |pls_map| pls_map.update(path, layout));
@@ -834,13 +786,10 @@ where
     #[topo::nested]
     #[instrument(skip(edges))]
     pub fn default_in_topo(
-        source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
-    ) -> Self
-    where
-        Ix: std::fmt::Debug + std::fmt::Display,
-    {
+        source_node_nix_sa: StateAnchor<Option<NodeIndex>>,
+        target_node_nix_sa: StateAnchor<Option<NodeIndex>>,
+        edges: StateAnchor<GraphEdgesDict>,
+    ) -> Self {
         Self::new_in_topo(
             source_node_nix_sa,
             target_node_nix_sa,
@@ -863,15 +812,12 @@ where
     #[topo::nested]
     #[instrument(skip(edges))]
     pub fn default_with_wh_in_topo<T: AsPrimitive<Precision> + std::fmt::Debug>(
-        source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
+        source_node_nix_sa: StateAnchor<Option<NodeIndex>>,
+        target_node_nix_sa: StateAnchor<Option<NodeIndex>>,
+        edges: StateAnchor<GraphEdgesDict>,
         w: T,
         h: T,
-    ) -> Self
-    where
-        Ix: std::fmt::Debug,
-    {
+    ) -> Self {
         Self::new_in_topo(
             source_node_nix_sa,
             target_node_nix_sa,
@@ -892,9 +838,9 @@ where
     #[topo::nested]
     #[instrument(skip_all)]
     pub fn new_in_topo(
-        source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
+        source_node_nix_sa: StateAnchor<Option<NodeIndex>>,
+        target_node_nix_sa: StateAnchor<Option<NodeIndex>>,
+        edges: StateAnchor<GraphEdgesDict>,
         size: (impl Into<GenericSizeAnchor>, impl Into<GenericSizeAnchor>),
         origin: (
             impl Into<GenericSizeAnchor>,
@@ -908,10 +854,9 @@ where
         ),
     ) -> Self
     where
-        Ix: std::fmt::Debug,
         (IdStr, NotNan<Precision>): PartialEq,
     {
-        let id_sa: StateAnchor<EdgeIndex<Ix>> =
+        let id_sa: StateAnchor<EdgeIndex> =
             (&source_node_nix_sa, &target_node_nix_sa).map(|s, t| {
                 let _g = span!(
                     Level::TRACE,
@@ -940,17 +885,17 @@ where
             cassowary_generals: use_state(CassowaryGeneralMap::new),
         };
 
-        // let path_styles= use_state(||Dict::unit(EPath::<Ix>::default(), s()));
-        let path_styles: StateVar<PathVarMap<Ix, Style>> = use_state(PathVarMap::default);
-        let path_layouts: StateVar<PathVarMap<Ix, Layout>> = use_state(PathVarMap::default);
+        // let path_styles= use_state(||Dict::unit(EPath::::default(), s()));
+        let path_styles: StateVar<PathVarMap<Style>> = use_state(PathVarMap::default);
+        let path_layouts: StateVar<PathVarMap<Layout>> = use_state(PathVarMap::default);
 
         let other_css_styles_sv = use_state(s);
         let styles_sv = use_state(Dict::new);
 
-        let opt_self_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
+        let opt_self_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex>> = id_sv.watch().then(|eid_sa_inner|{
             let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
 
-            eid_sa_inner.map(|i:&EdgeIndex<Ix>|{
+            eid_sa_inner.map(|i:&EdgeIndex|{
 
                 let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:eid_sa_inner change ",edge_index=?i).entered();
 
@@ -958,28 +903,28 @@ where
             }).into()
         });
 
-        let opt_self_target_node_nix_sa_re_get: StateAnchor<Option<NodeIndex<Ix>>> =
+        let opt_self_target_node_nix_sa_re_get: StateAnchor<Option<NodeIndex>> =
             id_sv.watch().then(|eid_sa_inner| {
                 eid_sa_inner
-                    .map(|i: &EdgeIndex<Ix>| i.target_nix().clone())
+                    .map(|i: &EdgeIndex| i.target_nix().clone())
                     .into()
             });
 
         let edges2 = edges.clone();
 
-        let parent_paths: DictPathEiNodeSA<Ix> =
-            opt_self_source_node_nix_sa_re_get.then(move|opt_self_source_nix:&Option<NodeIndex<Ix>>| {
+        let parent_paths: DictPathEiNodeSA =
+            opt_self_source_node_nix_sa_re_get.then(move|opt_self_source_nix:&Option<NodeIndex>| {
 
                 let _g = span!(Level::TRACE, "[ source_node_incoming_edge_dict_sa recalculation ]:source_node_nix_sa_re_get change ").entered();
 
                 // if opt_self_source_nix.is_none(){
                 //     //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
-                //     Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
+                //     Anchor::constant(Dict::<EPath, EdgeItemNode>::unit(EPath::::default(), EdgeItemNode::Empty))
                 //     //TODO check why use unit? answer:need for `EdgeItemNode::Empty => path_ein_empty_node_builder`
-                //     // Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::new())
+                //     // Anchor::constant(Dict::<EPath, EdgeItemNode>::new())
                 // }else{
                     opt_self_source_nix.clone().map_or_else(
-                        ||Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty)),
+                        ||Anchor::constant(Dict::<EPath, EdgeItemNode>::unit(EPath::default(), EdgeItemNode::Empty)),
                         |some_source_nix|{
 
 
@@ -997,7 +942,7 @@ where
 
                         })
                         .anchor()
-                        .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
+                        .then(|x:&Dict<EdgeIndex, DictPathEiNodeSA>|{
 
                             x.values().map(emg_state::StateAnchor::anchor)
                             .collect::<Anchor<Vector<_>>>()
@@ -1017,12 +962,12 @@ where
         let children_nodes = opt_self_target_node_nix_sa_re_get.then(move |opt_self_target_nix| {
             // if opt_self_target_nix.is_none() {
             //     //NOTE 尾
-            //     Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default())
+            //     Anchor::constant(Dict::<EPath, EdgeItemNode>::default())
             // } else {
             // TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
             // TODO ? let e = edges2.map(|e|e.get(Edge::default()));
             opt_self_target_nix.clone().map_or_else(
-                || Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default()),
+                || Anchor::constant(Dict::<EPath, EdgeItemNode>::default()),
                 |self_target_nix| {
                     edges2
                         .filter_map(move |child_eix, v| {
@@ -1035,7 +980,7 @@ where
                             }
                         })
                         .anchor()
-                        .then(|x: &Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>| {
+                        .then(|x: &Dict<EdgeIndex, DictPathEiNodeSA>| {
                             x.values()
                                 .map(emg_state::StateAnchor::anchor)
                                 .collect::<Anchor<Vector<_>>>()
@@ -1046,20 +991,20 @@ where
         });
         // ─────────────────────────────────────────────────────────────────
 
-        //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
+        //TODO not paths: StateVar<Dict<EPath,EdgeItemNode>>  use edgeIndex instead to Reduce memory
         let paths_clone = parent_paths.clone();
-        let edge_nodes_sa:DictPathEiNodeSA<Ix,> = id_sv.watch().then(move|id_sa|{
+        let edge_nodes_sa:DictPathEiNodeSA = id_sv.watch().then(move|id_sa|{
 
             let paths_clone2 = paths_clone.clone();
             let children_nodes2 = children_nodes.clone();
 
-            id_sa.then(move |eid:&EdgeIndex<Ix>|{
+            id_sa.then(move |eid:&EdgeIndex|{
 
             let children_nodes3 = children_nodes2.clone();
 
                 let eid_clone = eid.clone();
 
-                paths_clone2.map(move |p_node_as_paths:&Dict<EPath<Ix>, EdgeItemNode>|{
+                paths_clone2.map(move |p_node_as_paths:&Dict<EPath, EdgeItemNode>|{
 
                     p_node_as_paths.iter()
                         .map(|(parent_e_path, p_ei_node_v)| {
@@ -1070,9 +1015,9 @@ where
                             p_ep_add_self.push_back(eid_clone.clone());
                             (p_ep_add_self, p_ei_node_v.clone())
                         })
-                        .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
+                        .collect::<Dict<EPath, EdgeItemNode>>()
 
-                }) .map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode| {
+                }) .map_( move |self_path:&EPath, p_path_edge_item_node:&EdgeItemNode| {
 
 //@=====    each    path    edge    prosess     ============================================================================================================================================
 //
@@ -1099,7 +1044,7 @@ where
                         span!(Level::TRACE, "[ node recalculation ]:paths change ").entered();
 
                         //TODO use Dict anchor Collection
-                    let path_layout:StateAnchor<Layout> = path_layouts.watch().map(move|path_layouts_map:&PathVarMap<Ix, Layout>|{
+                    let path_layout:StateAnchor<Layout> = path_layouts.watch().map(move|path_layouts_map:&PathVarMap< Layout>|{
                         // println!("--> id: {:?}", &id_sv);
                         trace!("--> finding path_layout in path_with_ed_node_builder------------------- len:{}",path_layouts_map.len());
                         // println!("--> layout:{:?}",pls_map.get(&path_clone));
@@ -1229,7 +1174,6 @@ where
                         });
                         (children_layout_override,children_cass_maps)
 
-                        // .collect::<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>>();
 
                     }).split();
 
@@ -1746,27 +1690,19 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
     }
 }
 
-fn path_with_ed_node_builder<Ix>(
-    id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>,
+fn path_with_ed_node_builder(
+    id_sv: StateVar<StateAnchor<EdgeIndex>>,
     ped: &EdgeData,
     path_layout: &StateAnchor<Layout>,
-    path: &EPath<Ix>,
+    path: &EPath,
     current_cassowary_map: &Rc<CassowaryMap>,
-    path_styles: StateVar<PathVarMap<Ix, Style>>,
+    path_styles: StateVar<PathVarMap<Style>>,
     other_styles_sv: StateVar<Style>,
 ) -> (
     Option<LayoutCalculated>,
     LayoutCalculated,
     StateAnchor<String>,
-)
-where
-    Ix: std::clone::Clone
-        + std::hash::Hash
-        + std::default::Default
-        + std::cmp::Ord
-        + 'static
-        + std::fmt::Debug,
-{
+) {
     // println!("run path_with_ed_node_builder ******************************************************************");
 
     let p_calculated = ped.calculated.clone();
@@ -1775,7 +1711,7 @@ where
     let layout_calculated = layout_calculating(id_sv, ped, current_cassowary_map, path_layout);
     // let p = path.clone();
     let this_path_style_string_sa: StateAnchor<Option<String>> =
-        path_styles.watch().map(move |d: &PathVarMap<Ix, Style>| {
+        path_styles.watch().map(move |d: &PathVarMap<Style>| {
             let _g = trace_span!(
                 "[  this_path_style_string_sa recalculation ]:layout.path_styles change "
             )
@@ -1808,21 +1744,18 @@ where
     (Some(p_calculated), layout_calculated, styles_string)
 }
 
-fn path_ein_empty_node_builder<Ix: 'static>(
+fn path_ein_empty_node_builder(
     path_layout: &StateAnchor<Layout>,
-    _path: &EPath<Ix>,
+    _path: &EPath,
     current_cassowary_map: &Rc<CassowaryMap>,
 
-    path_styles: StateVar<PathVarMap<Ix, Style>>,
+    path_styles: StateVar<PathVarMap<Style>>,
     other_styles_sv: StateVar<Style>,
 ) -> (
     Option<LayoutCalculated>,
     LayoutCalculated,
     StateAnchor<String>,
-)
-where
-    Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord,
-{
+) {
     // println!("run path_ein_empty_node_builder ******************************************************************");
 
     // ─────────────────────────────────────────────────────────────────
@@ -1934,7 +1867,7 @@ where
         &other_styles_sv.watch(),
     )
         .map(
-            move |path_styles: &PathVarMap<Ix, Style>, loc_styles: &Style, other_styles: &Style| {
+            move |path_styles: &PathVarMap<Style>, loc_styles: &Style, other_styles: &Style| {
                 let _enter = span!(
                     Level::TRACE,
                     "-> [ROOT styles ] recalculation..(&other_styles_watch, &loc_styles).map ",
@@ -2047,12 +1980,7 @@ impl<T: Clone + seed_styles::CssValueTrait> From<T> for Css<T> {
 //     GenericLoc::new(x, y, px(0))
 // }
 //TODO lifetime
-pub fn css<
-    Ix: Clone + Hash + Eq + Ord + 'static + Default,
-    Use: CssValueTrait + Clone + 'static,
->(
-    v: Use,
-) -> Box<dyn Shaping<EmgEdgeItem<Ix>>> {
+pub fn css<Use: CssValueTrait + Clone + 'static>(v: Use) -> Box<dyn Shaping<EmgEdgeItem>> {
     // pub fn css<Use: CssValueTrait + std::clone::Clone + 'static>(v: Use) -> Box<Css<Use>> {
     Box::new(Css(v))
 }
@@ -2161,11 +2089,11 @@ pub mod tests {
 
             let css_width = width(px(100));
             let css_height = h(px(100));
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+            let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
 
             let root_e_source = use_state(|| None);
             let root_e_target = use_state(|| Some(node_index("root")));
-            let mut root_e = EmgEdgeItem::<IdStr>::default_with_wh_in_topo(
+            let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
                 root_e_source.watch(),
                 root_e_target.watch(),
                 e_dict_sv.watch(),
@@ -2183,7 +2111,7 @@ pub mod tests {
 
             let e1_source = use_state(|| Some(node_index("root")));
             let e1_target = use_state(|| Some(node_index("1")));
-            let e1 = EmgEdgeItem::<IdStr>::new_in_topo(
+            let e1 = EmgEdgeItem::new_in_topo(
                 e1_source.watch(),
                 e1_target.watch(),
                 e_dict_sv.watch(),
@@ -2203,7 +2131,7 @@ pub mod tests {
 
             let e2_source = use_state(|| Some(node_index("1")));
             let e2_target = use_state(|| Some(node_index("2")));
-            let mut e2 = EmgEdgeItem::<IdStr>::new_in_topo(
+            let mut e2 = EmgEdgeItem::new_in_topo(
                 e2_source.watch(),
                 e2_target.watch(),
                 e_dict_sv.watch(),
@@ -2301,7 +2229,7 @@ pub mod tests {
         let css_width = width(px(100));
         let css_height = h(px(100));
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+        let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
 
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
@@ -2617,7 +2545,7 @@ pub mod tests {
         let css_width = width(px(100));
         let css_height = h(px(100));
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+        let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
 
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
@@ -3000,7 +2928,7 @@ pub mod tests {
         {
             let _g = span!(Level::TRACE, "change_parent").entered();
 
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+            let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
 
             let root_e_source = use_state(|| None);
             let root_e_target = use_state(|| Some(node_index("root")));

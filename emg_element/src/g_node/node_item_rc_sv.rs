@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-02-13 11:50:41
+ * @LastEditTime: 2023-02-23 13:16:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -40,9 +40,9 @@ const POOL_SIZE: usize = 1;
 pub type GelType<Message> = Rc<GElement<Message>>;
 
 pub type NItem<Message> = StateVar<StateAnchor<GelType<Message>>>;
-pub type N<Message, Ix> = EmgNodeItem<NItem<Message>, GelType<Message>, Ix>;
-pub type E<Ix> = EmgEdgeItem<Ix>;
-pub type GraphType<Message, Ix = IdStr> = Graph<N<Message, Ix>, E<Ix>, Ix>;
+pub type N<Message> = EmgNodeItem<NItem<Message>, GelType<Message>>;
+pub type E = EmgEdgeItem;
+pub type GraphType<Message> = Graph<N<Message>, E>;
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub type EventMatchsSa<Message> = StateAnchor<EventMatchsDict<Message>>;
@@ -50,32 +50,31 @@ pub type EventMatchsSa<Message> = StateAnchor<EventMatchsDict<Message>>;
 // ────────────────────────────────────────────────────────────────────────────────
 type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
 
-type CurrentPathChildrenEixGElSA<Message> = StateAnchor<(EdgeIndex<IdStr>, GElEither<Message>)>;
+type CurrentPathChildrenEixGElSA<Message> = StateAnchor<(EdgeIndex, GElEither<Message>)>;
 
 impl<Message> EmgNodeItem<NItem<Message>, GelType<Message>>
 where
     Message: 'static,
-    // Dict<EPath<Ix>, EmgNodeItem<Message, Ix>>: PartialEq,
 {
     #[allow(clippy::too_many_lines)]
     #[allow(clippy::missing_panics_doc)]
     pub fn new(
         nix: IdStr,
         gel_sa: NItem<Message>,
-        incoming_eix_sa: &StateAnchor<EdgeCollect<IdStr>>,
-        outgoing_eix_sa: &StateAnchor<EdgeCollect<IdStr>>,
+        incoming_eix_sa: &StateAnchor<EdgeCollect>,
+        outgoing_eix_sa: &StateAnchor<EdgeCollect>,
         graph_rc: Rc<RefCell<GraphType<Message>>>,
     ) -> Self {
         let graph_rc2 = graph_rc.clone();
         let nix2 = nix.clone();
-        let paths_ord_map_pool_0: OrdMapPool<EPath<IdStr>, ()> = OrdMapPool::new(POOL_SIZE);
+        let paths_ord_map_pool_0: OrdMapPool<EPath, ()> = OrdMapPool::new(POOL_SIZE);
 
         let paths_sa = incoming_eix_sa.then(move |ins| {
             let _span = info_span!("paths_sa recalculation").entered();
             let ord_map_pool = paths_ord_map_pool_0.clone();
             ins.iter()
                 .map(|in_eix| {
-                    // let left_sa = Var::new(Dict::<EPath<IdStr>, _>::unit(
+                    // let left_sa = Var::new(Dict::<EPath, _>::unit(
                     //     EPath::new(vector![in_eix.clone()]),
                     //     (),
                     // ))
@@ -114,7 +113,7 @@ where
                                         vec_e_path_clone
                                             .into_iter()
                                             .map(|(ep, _)| (ep.link(nix2.clone().into()), ()))
-                                            .collect::<PathDictAsSets<IdStr>>()
+                                            .collect::<PathDictAsSets>()
                                     })
                                     .get_anchor(),
                             )
@@ -127,18 +126,18 @@ where
                         //         pd.insert(EPath::new(vector![no_source_self_eix]), false);
                         //         Anchor::constant(pd)
                         //     }else{
-                        //         Anchor::constant(Dict::<EPath<IdStr>, bool>::unit(EPath::new(vector![no_source_self_eix]), false))
+                        //         Anchor::constant(Dict::<EPath, bool>::unit(EPath::new(vector![no_source_self_eix]), false))
                         //     }
                         // }
                         // ─────────────────────────────
 
-                        Anchor::constant(PathDictAsSets::<IdStr>::unit(
+                        Anchor::constant(PathDictAsSets::unit(
                             EPath::new(vector![no_source_self_eix]),
                             (),
                         ))
                         // ─────────────────────────────
 
-                        // Var::new(Dict::<EPath<IdStr>, _>::unit(
+                        // Var::new(Dict::<EPath, _>::unit(
                         //     EPath::new(vector![no_source_self_eix]),
                         //     (),
                         // ))
@@ -158,18 +157,18 @@ where
                     //         PathDict::<IdStr>::unions(vd.clone())
                     //     }
                     // }
-                    PathDictAsSets::<IdStr>::unions(vd.clone())
+                    PathDictAsSets::unions(vd.clone())
                 })
         });
 
         let graph_rc3 = graph_rc.clone();
         let nix3 = nix.clone();
 
-        let children_ord_map_pool_0: OrdMapPool<EPath<IdStr>, StateAnchor<GelType<Message>>> =
+        let children_ord_map_pool_0: OrdMapPool<EPath, StateAnchor<GelType<Message>>> =
             OrdMapPool::new(POOL_SIZE);
 
-        let children_view_gel_sa: StateAnchor<Dict<EPath<IdStr>, GelType<Message>>> =
-            outgoing_eix_sa.then(move |outs| {
+        let children_view_gel_sa: StateAnchor<Dict<EPath, GelType<Message>>> = outgoing_eix_sa
+            .then(move |outs| {
                 let children_ord_map_pool = children_ord_map_pool_0.clone();
                 outs.iter()
                     .filter_map(|out_eix| out_eix.target_nix().as_ref())
@@ -201,15 +200,15 @@ where
                         // cfg_if!{
                         //     if #[cfg(feature = "pool")]{
                         //         vd.clone().into_iter().fold(
-                        //             Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::with_pool(&children_ord_map_pool),
+                        //             Dict::<EPath, StateAnchor<GelType<Message>>>::with_pool(&children_ord_map_pool),
                         //             Dict::union,
                         //         )
 
                         //     }else{
-                        //         Dict::<EPath<IdStr>, StateAnchor<GelType<Message>>>::unions(vd.clone())
+                        //         Dict::<EPath, StateAnchor<GelType<Message>>>::unions(vd.clone())
                         //     }
                         // }
-                        Dict::<EPath<IdStr>, GelType<Message>>::unions(vd.clone())
+                        Dict::<EPath, GelType<Message>>::unions(vd.clone())
                     })
             });
         // let children_count = children_view_gel_sa.map(Dict::len).get();
@@ -218,7 +217,7 @@ where
         // @────────────────────────────────────────────────────────────────────────────────
         let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
 
-        let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex<IdStr>, GElEither<Message>> =
+        let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex, GElEither<Message>> =
             OrdMapPool::new(POOL_SIZE);
 
         let paths_view_gel_sa = paths_sa.map_(move |current_path, _| {
@@ -229,7 +228,7 @@ where
 
             let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 
-            let this_path_children_sa: StateAnchor<Dict<EdgeIndex<IdStr>, GElEither<Message>>> =
+            let this_path_children_sa: StateAnchor<Dict<EdgeIndex, GElEither<Message>>> =
                 children_view_gel_sa
                     .filter_map(move |k_child_path, v_child_gel| {
                         let _span = info_span!("[this_path_children_sa] recalculation,( in [Dict] children_view_gel_sv_sa.filter_map => )",current_path = %current_path_clone2).entered();
@@ -314,11 +313,11 @@ where
 
                         children
                             .values().cloned()
-                            .collect::<Dict<EdgeIndex<IdStr>, GElEither<Message>>>()
+                            .collect::<Dict<EdgeIndex, GElEither<Message>>>()
                             // .map(move |v| {
                             //     v.clone()
                             //         .into_iter()
-                            //         .collect::<Dict<EdgeIndex<IdStr>, GElEither<Message>>>()
+                            //         .collect::<Dict<EdgeIndex, GElEither<Message>>>()
                             // })
                     });
 
@@ -473,24 +472,24 @@ where
     }
 
     fn gen_paths_view_gel(
-        paths_view_gel_sa: &StateAnchor<Dict<EPath<IdStr>, StateAnchor<GelType<Message>>>>,
-    ) -> StateAnchor<Dict<EPath<IdStr>, GelType<Message>>> {
+        paths_view_gel_sa: &StateAnchor<Dict<EPath, StateAnchor<GelType<Message>>>>,
+    ) -> StateAnchor<Dict<EPath, GelType<Message>>> {
         //NOTE newest version convert sa
         paths_view_gel_sa.then(|dict| {
             dict.into_iter()
-                .collect::<StateAnchor<Dict<EPath<IdStr>, GelType<Message>>>>()
+                .collect::<StateAnchor<Dict<EPath, GelType<Message>>>>()
                 .into_anchor()
         })
         // paths_view_gel_sa.map_(|k, v| v.anchor()).then(|dict| {
         //     dict.into_iter()
-        //         .collect::<Anchor<Dict<EPath<IdStr>, GelType<Message>>>>()
+        //         .collect::<Anchor<Dict<EPath, GelType<Message>>>>()
         //         .into_anchor()
         // })
     }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn get_view_gelement_sa(&self, eix: &EPath<IdStr>) -> StateAnchor<GelType<Message>> {
+    pub fn get_view_gelement_sa(&self, eix: &EPath) -> StateAnchor<GelType<Message>> {
         //TODO make state_anchor eix ;使用 sa的 eix, 动态更新 gel
         let eix_clone = eix.clone();
         //  self.paths_view_gel.get_with(|x|x.get(eix).unwrap().clone());

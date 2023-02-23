@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-19 17:43:32
- * @LastEditTime: 2023-02-23 12:35:32
+ * @LastEditTime: 2023-02-23 13:37:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,33 +22,25 @@ pub use mode::*;
 // ─────────────────────────────────────────────────────────────────────────────
 //NOTE: not object safe
 pub trait GraphEdit {
-    type Ix;
     type Message;
 
-    fn edit<M: Mode<Self::Message, Ix = Self::Ix>>(&self, mode: M) -> M::Interface<'_>;
+    fn edit<M: Mode<Self::Message>>(&self, mode: M) -> M::Interface<'_>;
 }
 impl<T> GraphEdit for T
 where
     T: GraphEditManyMethod,
 {
-    type Ix = T::Ix;
     type Message = T::Message;
-    fn edit<M: Mode<Self::Message, Ix = Self::Ix>>(&self, mode: M) -> M::Interface<'_> {
+    fn edit<M: Mode<Self::Message>>(&self, mode: M) -> M::Interface<'_> {
         mode.interface(self)
     }
 }
 
 pub trait GraphEditManyMethod {
-    type Ix;
     type Message;
 
     //实例连源枝移动( 某 path edge 原 edge 更改 source node) ,枝上其他node 不动(clone edge?)
-    fn edge_plug_edit(
-        &self,
-        who: &EdgeIndex<Self::Ix>,
-        dir: Direction,
-        to: Self::Ix,
-    ) -> Result<(), Error>;
+    fn edge_plug_edit(&self, who: &EdgeIndex, dir: Direction, to: IdStr) -> Result<(), Error>;
 
     //实例嫁接(实例不连源枝移动 , 某 path node 原 edge 断开, xin edge 接上)
     fn edge_path_node_change_edge(&mut self);
@@ -58,16 +50,12 @@ pub trait GraphEditManyMethod {
 // Editor ─────────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
-pub struct GraphEditor<Message, Ix = IdStr>(pub(crate) Rc<RefCell<GraphType<Message, Ix>>>)
+pub struct GraphEditor<Message>(pub(crate) Rc<RefCell<GraphType<Message>>>)
 where
-    Ix: std::hash::Hash + Clone + Ord + Default + 'static,
     Message: 'static; //for Debug derive
 
-impl<Message, Ix> Deref for GraphEditor<Message, Ix>
-where
-    Ix: std::hash::Hash + Clone + Ord + Default + 'static,
-{
-    type Target = Rc<RefCell<GraphType<Message, Ix>>>;
+impl<Message> Deref for GraphEditor<Message> {
+    type Target = Rc<RefCell<GraphType<Message>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -75,17 +63,13 @@ where
 }
 
 pub trait Mode<Message> {
-    type Ix;
 
     type Interface<'a>
     where
         Self: 'a,
         Message: 'a;
 
-    fn interface(
-        self,
-        g: &dyn GraphEditManyMethod<Message = Message, Ix = Self::Ix>,
-    ) -> Self::Interface<'_>;
+    fn interface(self, g: &dyn GraphEditManyMethod<Message = Message>) -> Self::Interface<'_>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

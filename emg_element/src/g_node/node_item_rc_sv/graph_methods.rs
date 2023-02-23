@@ -18,7 +18,7 @@ use tracing::debug;
 use crate::node_builder::EventMatchsDict;
 
 use super::{EventMatchsSa, GraphType};
-pub trait GraphMethods<Message, Ix = IdStr> {
+pub trait GraphMethods<Message> {
     type SceneCtx;
     fn runtime_prepare(
         &self,
@@ -31,18 +31,13 @@ pub trait GraphMethods<Message, Ix = IdStr> {
     #[allow(clippy::type_complexity)]
     fn get_out_going_event_callbacks(
         &self,
-        nix: &NodeIndex<IdStr>,
+        nix: &NodeIndex,
         events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> Vector<Anchor<Vector<EventMatchsDict<Message>>>>;
 }
 impl<Message> GraphMethods<Message> for GraphType<Message>
 where
-    // Ix: std::hash::Hash
-    //     + std::clone::Clone
-    //     + std::cmp::Ord
-    //     + std::default::Default
-    //     + std::fmt::Debug,
     // SceneCtx: crate::renderer::SceneCtx + Clone + PartialEq + 'static,
     Message: 'static,
 {
@@ -53,7 +48,7 @@ where
     //     let fff =
     //         self.get_node_item_use_ix(ix)
     //             .unwrap()
-    //             .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source(
+    //             .get_view_gelement_sa(&EPath::new(vector![edge_index_no_source(
     //                 ix.clone()
     //             )]));
     //     let xx = self
@@ -66,9 +61,9 @@ where
     //                     let k_c = k.clone();
     //                     v.map(move |vv| (k_c.clone(), vv.clone())).into_anchor()
     //                 })
-    //                 .collect::<Anchor<Vector<(EPath<IdStr>, Rc<GElement<Message>>)>>>()
+    //                 .collect::<Anchor<Vector<(EPath, Rc<GElement<Message>>)>>>()
     //                 .map(
-    //                     |x| -> Dict<EPath<IdStr>, Rc<GElement<Message>>> {
+    //                     |x| -> Dict<EPath, Rc<GElement<Message>>> {
     //                         x.clone().into_iter().collect()
     //                     },
     //                 )
@@ -87,12 +82,10 @@ where
         debug!("runtime prepare start");
         let events = events_sa.clone();
         let cursor_position_clone = cursor_position.clone();
-        let gel_rc_sa =
-            self.get_node_item_use_ix(ix)
-                .unwrap()
-                .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source(
-                    ix.clone()
-                )]));
+        let gel_rc_sa = self
+            .get_node_item_use_ix(ix)
+            .unwrap()
+            .get_view_gelement_sa(&EPath::new(vector![edge_index_no_source(ix.clone())]));
         let self_event_nodes = gel_rc_sa.then(move |gel| {
             //TODO 使用 判断event EventIdentify 类型 来优化
 
@@ -145,7 +138,7 @@ where
 
     fn get_out_going_event_callbacks(
         &self,
-        nix: &NodeIndex<IdStr>,
+        nix: &NodeIndex,
         events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> Vector<Anchor<Vector<EventMatchsDict<Message>>>> {

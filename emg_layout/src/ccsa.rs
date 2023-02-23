@@ -25,15 +25,15 @@ mod ops;
 pub mod svv_process;
 
 #[derive(Debug, Clone, Display, PartialEq, Eq)]
-pub enum NameCharsOrNumber<Ix = IdStr> {
+pub enum NameCharsOrNumber {
     #[display("#{0}")]
-    Id(Ix), // #xxx
+    Id(IdStr), // #xxx
     #[display(".{0}")]
-    Class(Ix), // .xxx
+    Class(IdStr), // .xxx
     #[display("{0}")]
-    Element(Ix), // xxxx
+    Element(IdStr), // xxxx
     #[display("\"{0}\"")]
-    Virtual(Ix), //"xxx"
+    Virtual(IdStr), //"xxx"
     #[display("{0}")]
     Number(NotNan<f64>), // 12 | 12.1
     #[display("{0}:next")]

@@ -1,6 +1,6 @@
 use crate::{error::Error, GTreeBuilderElement};
 use emg::{Direction, EdgeIndex};
-use emg_common::{ResultWithRef, ResultWithSomething};
+use emg_common::{IdStr, ResultWithRef, ResultWithSomething};
 
 use super::{GraphEdit, GraphEditManyMethod, Mode};
 
@@ -8,11 +8,11 @@ use super::{GraphEdit, GraphEditManyMethod, Mode};
 // pub struct EdgeMode<I = ()>(PhantomData<I>);
 
 // impl Mode for EdgeMode {
-//     type Interface<'a, Ix> = EdittingGraphEdge<'a, Ix, Self> where Ix:'a;
+//     type Interface<'a> = EdittingGraphEdge<'a,  Self> ;
 
-//     fn interface<Ix, G>(g: &G) -> Self::Interface<'_, Ix>
+//     fn interface< G>(g: &G) -> Self::Interface<'_>
 //     where
-//         G: GraphEditManyMethod<Ix = Ix>,
+//         G: GraphEditManyMethod<>,
 //     {
 //         let inner = g;
 //         let phantom_data = PhantomData;
@@ -23,15 +23,10 @@ use super::{GraphEdit, GraphEditManyMethod, Mode};
 //     }
 // }
 //@ EdgeMode ─────────────────────────────────────────────────────────────────────────────
-impl<Ix, Message> Mode<Message> for EdgeIndex<Ix> {
-    type Ix = Ix;
+impl<Message> Mode<Message> for EdgeIndex {
+    type Interface<'a> = EdittingGraphEdge<'a, Message> where  Message: 'a;
 
-    type Interface<'a> = EdittingGraphEdge<'a, Ix, Message> where Ix: 'a, Message: 'a;
-
-    fn interface(
-        self,
-        g: &dyn GraphEditManyMethod<Message = Message, Ix = Ix>,
-    ) -> Self::Interface<'_> {
+    fn interface(self, g: &dyn GraphEditManyMethod<Message = Message>) -> Self::Interface<'_> {
         let inner = g;
         // let phantom_data = PhantomData;
         EdittingGraphEdge {
@@ -43,24 +38,23 @@ impl<Ix, Message> Mode<Message> for EdgeIndex<Ix> {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-pub struct EdittingGraphEdge<'a, Ix, Message> {
-    edge: EdgeIndex<Ix>,
-    graph: &'a dyn GraphEditManyMethod<Message = Message, Ix = Ix>,
+pub struct EdittingGraphEdge<'a, Message> {
+    edge: EdgeIndex,
+    graph: &'a dyn GraphEditManyMethod<Message = Message>,
     // pub(crate) phantom_data: PhantomData<Mod>,
 }
 
-impl<'a, Ix, Message> GraphEdit for EdittingGraphEdge<'a, Ix, Message> {
-    type Ix = Ix;
+impl<'a, Message> GraphEdit for EdittingGraphEdge<'a, Message> {
     type Message = Message;
 
     /// &self  will drop , edge drop. return new editor interface
-    fn edit<M: Mode<Message, Ix = Ix>>(&self, mode: M) -> M::Interface<'_> {
+    fn edit<M: Mode<Message>>(&self, mode: M) -> M::Interface<'_> {
         mode.interface(self.graph)
     }
 }
 
-impl<'a, Ix, Message> EdittingGraphEdge<'a, Ix, Message> {
-    pub fn moving(&self, dir: Direction, to: impl Into<Ix>) -> ResultWithRef<Self, (), Error> {
+impl<'a, Message> EdittingGraphEdge<'a, Message> {
+    pub fn moving(&self, dir: Direction, to: impl Into<IdStr>) -> ResultWithRef<Self, (), Error> {
         self.graph
             .edge_plug_edit(&self.edge, dir, to.into())
             .with(self)
@@ -71,17 +65,10 @@ impl<'a, Ix, Message> EdittingGraphEdge<'a, Ix, Message> {
 
 //@ tree builder Mode ─────────────────────────────────────────────────────────────────────────────
 
-impl<Ix, Message> Mode<Message> for GTreeBuilderElement<Message, Ix>
-where
-    Ix: Clone + std::hash::Hash + Ord + Default,
-{
-    type Ix = Ix;
-    type Interface<'a> = EdittingGraphUseTreeBuilder<'a, Ix, Message>;
+impl<Message> Mode<Message> for GTreeBuilderElement<Message> {
+    type Interface<'a> = EdittingGraphUseTreeBuilder<'a, Message>;
 
-    fn interface(
-        self,
-        g: &dyn GraphEditManyMethod<Message = Message, Ix = Ix>,
-    ) -> Self::Interface<'_> {
+    fn interface(self, g: &dyn GraphEditManyMethod<Message = Message>) -> Self::Interface<'_> {
         let inner = g;
         // let phantom_data = PhantomData;
         EdittingGraphUseTreeBuilder {
@@ -92,35 +79,29 @@ where
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-pub struct EdittingGraphUseTreeBuilder<'a, Ix, Message>
+pub struct EdittingGraphUseTreeBuilder<'a, Message>
 where
-    Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
 {
-    node: GTreeBuilderElement<Message, Ix>,
-    graph: &'a dyn GraphEditManyMethod<Message = Message, Ix = Ix>,
+    node: GTreeBuilderElement<Message>,
+    graph: &'a dyn GraphEditManyMethod<Message = Message>,
     // pub(crate) phantom_data: PhantomData<M>,
 }
 
-impl<'a, Ix, Message> GraphEdit for EdittingGraphUseTreeBuilder<'a, Ix, Message>
+impl<'a, Message> GraphEdit for EdittingGraphUseTreeBuilder<'a, Message>
 where
-    Ix: Clone + std::hash::Hash + Ord + Default + 'static,
     Message: 'static,
 {
-    type Ix = Ix;
     type Message = Message;
 
     /// &self  will drop , edge drop. return new editor interface
-    fn edit<M: Mode<Message, Ix = Ix>>(&self, mode: M) -> M::Interface<'_> {
+    fn edit<M: Mode<Message>>(&self, mode: M) -> M::Interface<'_> {
         mode.interface(self.graph)
     }
 }
 
-impl<'a, Ix, Message> EdittingGraphUseTreeBuilder<'a, Ix, Message>
-where
-    Ix: Clone + std::hash::Hash + Ord + Default,
-{
-    pub fn insert(&self, to: impl Into<Ix>) -> ResultWithRef<Self, (), Error> {
+impl<'a, Message> EdittingGraphUseTreeBuilder<'a, Message> {
+    pub fn insert(&self, to: impl Into<IdStr>) -> ResultWithRef<Self, (), Error> {
         todo!()
         // self.graph
         // self.graph

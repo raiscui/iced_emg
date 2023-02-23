@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:01:09
- * @LastEditTime: 2023-02-05 19:42:24
+ * @LastEditTime: 2023-02-23 13:35:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,38 +20,20 @@ use emg_state::{CloneStateAnchor, Dict, StateAnchor};
 
 const POOL_SIZE: usize = 1;
 
-// pub type GelType<Message> = GElement<Message>;
-// pub type NItem<Message> = StateAnchor<GelType<Message>>;
-// pub type N<Message, Ix> = EmgNodeItem<NItem<Message>, GelType<Message>, Ix>;
-// pub type E<Ix> = EmgEdgeItem<Ix>;
-// pub type GraphType<Message, Ix = IdStr> = Graph<N<Message, Ix>, E<Ix>, Ix>;
+type PathDictAsSets = Dict<EPath, ()>;
 
-type PathDictAsSets<Ix> = Dict<EPath<Ix>, ()>;
-
-// type CurrentPathChildrenEixGElSA<Message> =
-// StateAnchor<(EdgeIndex<IdStr>, Either<GelType<Message>, GelType<Message>>)>;
-
-// type GElement<Message> = Either<GelType<Message>, GelType<Message>>;
-
-pub struct EmgNodeItem<NItem, GelType, Ix = IdStr>
-where
-    // Message: 'static + Clone + std::cmp::PartialEq,
-    // Ix: std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::default::Default,
-    Ix: std::clone::Clone,
-    // Dict<EPath<Ix>, EmgNodeItem<Message, Ix>>: PartialEq,
-{
+pub struct EmgNodeItem<NItem, GelType> {
     gel_sa: NItem,
     //TODO maybe indexSet
-    // paths_sa: StateAnchor<Vector<EPath<Ix>>>, //NOTE: has self
-    paths_sa: StateAnchor<PathDictAsSets<Ix>>, //NOTE: has self
-    // incoming_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
-    // outgoing_eix_sa: StateAnchor<NodeEdgeCollect<Ix>>,
-    paths_view_gel: StateAnchor<Dict<EPath<Ix>, GelType>>,
+    // paths_sa: StateAnchor<Vector<EPath>>, //NOTE: has self
+    paths_sa: StateAnchor<PathDictAsSets>, //NOTE: has self
+    // incoming_eix_sa: StateAnchor<NodeEdgeCollect>,
+    // outgoing_eix_sa: StateAnchor<NodeEdgeCollect>,
+    paths_view_gel: StateAnchor<Dict<EPath, GelType>>,
 }
 
-impl<NItem: Display, GelType: Display, Ix: Display> Display for EmgNodeItem<NItem, GelType, Ix>
+impl<NItem: Display, GelType: Display> Display for EmgNodeItem<NItem, GelType>
 where
-    Ix: std::clone::Clone + Ord + 'static,
     GelType: 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -78,11 +60,9 @@ where
     }
 }
 
-impl<NItem: std::fmt::Debug, GelType: std::fmt::Debug, Ix: std::fmt::Debug> std::fmt::Debug
-    for EmgNodeItem<NItem, GelType, Ix>
+impl<NItem: std::fmt::Debug, GelType: std::fmt::Debug> std::fmt::Debug
+    for EmgNodeItem<NItem, GelType>
 where
-    // Message: 'static + Clone + std::cmp::PartialEq,
-    Ix: Ord + Clone + 'static,
     GelType: Clone + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -95,10 +75,8 @@ where
     }
 }
 
-impl<NItem, GelType, Ix> Clone for EmgNodeItem<NItem, GelType, Ix>
+impl<NItem, GelType> Clone for EmgNodeItem<NItem, GelType>
 where
-    // Message: 'static + Clone + std::cmp::PartialEq,
-    Ix: std::clone::Clone,
     NItem: std::clone::Clone,
 {
     fn clone(&self) -> Self {

@@ -146,14 +146,13 @@ impl<Message> Checkbox<Message>
 impl<Message> GTreeInit<Message> for Checkbox<Message>
 where
     Message: Clone + PartialEq + for<'a> emg_common::any::MessageTid<'a>,
-    // Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default,
 {
     #[topo::nested]
     #[allow(clippy::useless_conversion)]
     fn tree_init(
         mut self,
         id: &IdStr,
-        _es: &[Rc<dyn Shaping<EmgEdgeItem<IdStr>>>],
+        _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
     ) -> InitTree<Message> {
         use crate::gtree_macro_prelude::*;
