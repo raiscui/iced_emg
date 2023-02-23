@@ -30,6 +30,7 @@ members = [
     "examples/moving_edge",
     "examples/checkbox",
     "examples/emg_editor",
+    "examples/add_nodes",
 ]
 exclude = ["tests", "emg_web"]
 

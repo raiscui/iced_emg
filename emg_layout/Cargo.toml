@@ -11,6 +11,7 @@ default = ["gpu"]
 gpu = ["emg_native"]
 pool = []
 debug = []
+insta = []
 
 
 [profile.dev]

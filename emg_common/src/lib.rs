@@ -27,8 +27,9 @@ use better_any::Tid;
 pub use compact_str as id_str;
 pub use compact_str::CompactString as IdStr;
 pub use dyn_partial_eq;
-// #[macro_use(vector)]
-pub extern crate im_rc as im;
+
+// pub extern crate im_rc as im;
+pub extern crate imbl as im;
 pub use im::Vector;
 pub use layout::*;
 pub use measures::*;

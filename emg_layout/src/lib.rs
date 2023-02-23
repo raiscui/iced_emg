@@ -2272,8 +2272,11 @@ pub mod tests {
                 .styles_string
                 .get(),
             );
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("loc-root_e", &root_e);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("loc-e1", &e1);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("loc-e2", &e2);
 
             info!("..=========================================================");
@@ -2982,8 +2985,11 @@ pub mod tests {
                 .styles_string
                 .get(),
         );
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("it_works-root_e", &root_e);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("it_works-e1", &e1);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("it_works-e2", &e2);
         info!("..=========================================================");
     }

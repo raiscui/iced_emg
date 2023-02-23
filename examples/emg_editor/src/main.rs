@@ -139,10 +139,7 @@ impl Sandbox for Counter {
             Message::DecrementPressed => {
                 self.value -= 1;
             }
-            Message::Empty => {
-                // insta::assert_display_snapshot!("graph_def", graph.borrow());
-                // insta::assert_debug_snapshot!("graph_debug_def", graph.borrow());
-            }
+            Message::Empty => {}
         }
     }
 

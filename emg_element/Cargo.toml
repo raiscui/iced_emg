@@ -13,6 +13,7 @@ split-debuginfo = "unpacked"
 default = ["gpu"]
 # gpu = ["emg_native", "emg_piet_gpu", "emg_layout/gpu"]
 gpu = ["emg_native", "emg_vello", "emg_layout/gpu"]
+insta = []
 
 
 [dependencies]

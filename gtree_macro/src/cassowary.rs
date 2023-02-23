@@ -5,7 +5,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-02-21 19:52:57
+ * @LastEditTime: 2023-02-22 16:14:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -2281,29 +2281,31 @@ mod tests {
 
         insta::with_settings!({snapshot_path => Path::new("./vfl_snap")}, {
 
-            debug!("=========== parse \n {:?}\n",&input);
+                    debug!("=========== parse \n {:?}\n",&input);
 
-            match syn::parse_str::<VFLStatement>(input) {
-                Ok(ok) => {
-                    println!("=============\n{:#?}\n", &ok);
-                    // insta::assert_debug_snapshot!(name.to_string()+"_prase", &ok);
+                    match syn::parse_str::<VFLStatement>(input) {
+                        Ok(ok) => {
+                            println!("=============\n{:#?}\n", &ok);
 
-                    // ok.build();
-                    println!("=================== build \n {:#?}\n", ok.ccsss);
-                    // insta::assert_debug_snapshot!(name.to_string()+"_ccss", &ok.ccsss);
-                    let disp = VecDisp(ok.ccsss);
-                    println!("=================== build---display \n {}\n", &disp);
 
-                    insta::assert_display_snapshot!(name.to_string()+"_ccss_display", disp);
+                            // ok.build();
+                            println!("=================== build \n {:#?}\n", ok.ccsss);
+                             #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!(name.to_string()+"_ccss", &ok.ccsss);
+                            let disp = VecDisp(ok.ccsss);
+                            println!("=================== build---display \n {}\n", &disp);
 
-                    // let x = format!("{}", ok.to_token_stream());
-                    // println!("===================\n {}\n", x);
+                            #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string()+"_ccss_display", disp);
 
-                    // assert_eq!(x.as_str(), r#"NameCharsOrNumber :: Id (IdStr :: new ("button"))"#)
-                }
-                Err(error) => panic!("...{error:?}"),
-            }
-        });
+                            // let x = format!("{}", ok.to_token_stream());
+                            // println!("===================\n {}\n", x);
+
+                            // assert_eq!(x.as_str(), r#"NameCharsOrNumber :: Id (IdStr :: new ("button"))"#)
+                        }
+                        Err(error) => panic!("...{error:?}"),
+                    }
+                });
     }
 
     #[test]

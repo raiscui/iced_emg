@@ -56,14 +56,12 @@ impl ID {
         self.0.as_ref().map_or_else(
             || {
                 let id = make_id(def_name);
-                // println!("id:{}", &id);
 
-                // quote!(String::from(#id))
-                if id.len() <= 12usize {
-                    quote!(IdStr::new_inline(#id))
-                } else {
-                    quote!(IdStr::new(#id))
-                }
+                // if id.len() <= 12usize {
+                // quote!(IdStr::new_inline(#id))
+                // } else {
+                quote!(IdStr::new(#id))
+                // }
             },
             |id| {
                 // let id_string = id.to_string();
@@ -78,12 +76,13 @@ impl ID {
 
                 if let Expr::Lit(lit) = id {
                     if let syn::Lit::Str(lit_str) = &lit.lit {
-                        let id_string = lit_str.value();
-                        if id_string.len() <= 12usize {
-                            quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
-                        } else {
-                            quote_spanned!(id.span()=>IdStr::new(#id_string))
-                        }
+                        // let id_string = lit_str.value();
+                        // if id_string.len() <= 12usize {
+                        // quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
+                        // } else {
+                        // quote_spanned!(id.span()=>IdStr::new(#id_string))
+                        quote_spanned!(id.span()=>IdStr::new(#lit_str))
+                        // }
                     } else {
                         quote_spanned!(id.span()=>IdStr::from(#id))
                     }
@@ -1237,6 +1236,7 @@ mod tests {
 
             match parse_str {
                 Ok(ok) => {
+                    #[cfg(feature = "insta")]
                     insta::assert_display_snapshot!("test_new_skip_init", ok.to_token_stream());
                     println!("===>{}", ok.to_token_stream());
                 }
@@ -1260,6 +1260,7 @@ mod tests {
 
             match parse_str {
                 Ok(ok) => {
+                    #[cfg(feature = "insta")]
                     insta::assert_display_snapshot!("test_new_not_builder", ok.to_token_stream());
                     println!("===>{}", ok.to_token_stream());
                 }
@@ -1283,6 +1284,7 @@ mod tests {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => {
+                    #[cfg(feature = "insta")]
                     insta::assert_display_snapshot!("test_vfl_1", ok.to_token_stream());
                     println!("===>{}", ok.to_token_stream());
                 }

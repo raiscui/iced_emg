@@ -15,10 +15,10 @@ bench = false
 
 [features]
 default = []
-pool = ["im-rc/pool"]
+# pool = ["imbl/pool"]
+insta = []
 
 [dependencies]
-im-rc = { version = "15.1.0" }
 # imbl = { path = "../imbl" }
 # smallvec = { version = "1.8.0", features = ["const_generics"] }
 indexmap = "1.9"

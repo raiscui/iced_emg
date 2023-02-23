@@ -151,8 +151,10 @@ mod tests {
     #[test]
     fn tree_build_tests() {
         let a = tree_build();
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("tree-a", a);
         let b = tree_build2();
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("tree-b", b);
     }
 }

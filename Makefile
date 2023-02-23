@@ -1,7 +1,13 @@
+# RUSTFLAGS="-Z sanitizer=leak"
+
 editor:
 	cargo run --package emg_editor --bin emg_editor --features gpu
 moving_edge:
 	INSTA_FORCE_PASS=1 cargo run --package moving_edge --bin moving_edge --features gpu
+moving_edge-dhat:
+	cargo run --package moving_edge --bin moving_edge --features gpu --features dhat-heap
+moving_edge-release:
+	INSTA_FORCE_PASS=1 cargo run --package moving_edge --bin moving_edge --features gpu --release
 counter:
 	cargo run --package counter --bin counter --features gpu
 counter-time:
@@ -20,3 +26,5 @@ test-native:
 	cargo test --workspace --exclude emg_web
 test-xx:
 	cargo test --package my_package -- --skip my_test
+miri:
+	INSTA_UPDATE="no" INSTA_OUTPUT="none" MIRIFLAGS="-Zmiri-disable-isolation" cargo miri test

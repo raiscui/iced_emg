@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-02-21 23:33:05
+ * @LastEditTime: 2023-02-23 11:18:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -37,6 +37,11 @@ where
     Gel(GElement<Message>),
 }
 
+type EdgesAndChildren<Message, Ix> = (
+    Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
+    Vec<GTreeBuilderElement<Message, Ix>>,
+);
+
 impl<Message, Ix> InitTree<Message, Ix>
 where
     Ix: Clone + std::hash::Hash + Ord + Default,
@@ -46,10 +51,7 @@ where
         mut o_es: Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
         opt_children: Option<Vec<GTreeBuilderElement<Message, Ix>>>,
         mut o_children: Vec<GTreeBuilderElement<Message, Ix>>,
-    ) -> (
-        Vec<Rc<dyn Shaping<EmgEdgeItem<Ix>>>>,
-        Vec<GTreeBuilderElement<Message, Ix>>,
-    ) {
+    ) -> EdgesAndChildren<Message, Ix> {
         let new_es = opt_es
             .map(|mut es| {
                 es.append(&mut o_es);

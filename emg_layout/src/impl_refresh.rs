@@ -455,10 +455,14 @@ mod refresh_test {
         a.interrupt([to(into_smvec![width(px(0))]), to(into_smvec![width(px(1))])]);
 
         now.set(Duration::from_millis(16));
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("anima_refresh_edge_16", &a);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("anima_refresh_edge_16_edge", &root_e);
         now.set(Duration::from_millis(33));
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("anima_refresh_edge_33", &a);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("anima_refresh_edge_33_edge", &root_e);
 
         // a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));

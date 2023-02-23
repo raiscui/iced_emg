@@ -1,5 +1,5 @@
 [package]
-name = "moving_edge"
+name = "add_nodes"
 version = "0.1.0"
 authors = ["Rais"]
 edition = "2021"

@@ -1,14 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-02-21 23:51:34
+ * @LastEditTime: 2023-02-23 11:18:35
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg::{Direction, EdgeIndex};
+use emg_common::IdStr;
 
-use crate::error::Error;
+use crate::{error::Error, GTreeBuilderElement};
 
 use super::{GraphEditManyMethod, GraphEditor};
 
@@ -30,11 +31,9 @@ use super::{GraphEditManyMethod, GraphEditor};
 //     }
 // }
 
-impl<Message, Ix> GraphEditManyMethod for GraphEditor<Message, Ix>
-where
-    Ix: std::hash::Hash + Clone + Ord + Default + std::fmt::Debug,
-{
-    type Ix = Ix;
+impl<Message> GraphEditManyMethod for GraphEditor<Message> {
+    type Ix = IdStr;
+    type Message = Message;
     fn edge_plug_edit(&self, who: &EdgeIndex<Ix>, dir: Direction, to: Ix) -> Result<(), Error> {
         self.borrow()
             .edge_plug_edit(who, dir, to)
@@ -43,6 +42,10 @@ where
 
     fn edge_path_node_change_edge(&mut self) {
         todo!("edge_path_node_change_edge")
+    }
+
+    fn insert_node_in_topo(&self, tree_element: &'_ GTreeBuilderElement<Message>) {
+        self.handle_children_in_topo
     }
 }
 
@@ -60,7 +63,7 @@ mod test {
 
     use crate::{
         g_tree_builder::{GraphEdgeBuilder, GraphNodeBuilder},
-        graph_edit::{EdgeMode, GraphEdit},
+        graph_edit::GraphEdit,
         widget::Layer,
         GTreeBuilderFn, GraphType,
     };
@@ -73,107 +76,109 @@ mod test {
 
     fn test_edge_path_change_source() {
         insta::with_settings!({snapshot_path => Path::new("./insta")},{
-         let emg_graph = GraphType::<Message>::default();
-         let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
+                 let emg_graph = GraphType::<Message>::default();
+                 let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
 
-         // ────────────────────────────────────────────────────────────────────────────────
-         let root_id = IdStr::new_inline("root");
-         let root_edge_ix = edge_index_no_source(root_id.clone());
-         // node ────────────────────────────────────────────────────────────────────────────────
+                 // ────────────────────────────────────────────────────────────────────────────────
+                 let root_id = IdStr::new_inline("root");
+                 let root_edge_ix = edge_index_no_source(root_id.clone());
+                 // node ────────────────────────────────────────────────────────────────────────────────
 
-         GraphNodeBuilder::new(root_id.clone())
-             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
-                 Layer::<Message>::new(root_id.clone()).into(),
-             ))))
-             .with_incoming_eix_set([root_edge_ix.clone()].into_iter().collect())
-             .with_outgoing_eix_set_with_default_capacity(5)
-             .build_in_topo(&emg_graph_rc_refcell);
-         // edge ─────────────────────────────────────────────────────
+                 GraphNodeBuilder::new(root_id.clone())
+                     .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
+                         Layer::<Message>::new(root_id.clone()).into(),
+                     ))))
+                     .with_incoming_eix_set([root_edge_ix.clone()].into_iter().collect())
+                     .with_outgoing_eix_set_with_default_capacity(5)
+                     .build_in_topo(&emg_graph_rc_refcell);
+                 // edge ─────────────────────────────────────────────────────
 
-         let  _root_ei = GraphEdgeBuilder::new(root_edge_ix)
-             .with_size((px(1000), px(1000)))
-             .build_in_topo(&emg_graph_rc_refcell)
-             .unwrap();
+                 let  _root_ei = GraphEdgeBuilder::new(root_edge_ix)
+                     .with_size((px(1000), px(1000)))
+                     .build_in_topo(&emg_graph_rc_refcell)
+                     .unwrap();
 
-         // =======================================================
-         // ────────────────────────────────────────────────────────────────────────────────
-         let id = IdStr::new_inline("a");
-         let edge_ix = edge_index("root", "a");
-         // node ────────────────────────────────────────────────────────────────────────────────
+                 // =======================================================
+                 // ────────────────────────────────────────────────────────────────────────────────
+                 let id = IdStr::new_inline("a");
+                 let edge_ix = edge_index("root", "a");
+                 // node ────────────────────────────────────────────────────────────────────────────────
 
-         GraphNodeBuilder::new(id.clone())
-             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
-                 Layer::<Message>::new(id.clone()).into(),
-             ))))
-             .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
-             .with_outgoing_eix_set_with_default_capacity(5)
-             .build_in_topo(&emg_graph_rc_refcell);
-         // edge ─────────────────────────────────────────────────────
+                 GraphNodeBuilder::new(id.clone())
+                     .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
+                         Layer::<Message>::new(id.clone()).into(),
+                     ))))
+                     .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
+                     .with_outgoing_eix_set_with_default_capacity(5)
+                     .build_in_topo(&emg_graph_rc_refcell);
+                 // edge ─────────────────────────────────────────────────────
 
-         let _e_item = GraphEdgeBuilder::new(edge_ix)
-         .with_size((px(100), px(100)))
-             .build_in_topo(&emg_graph_rc_refcell)
-             .unwrap();
-         // ─────────────────────────────────────────────────────────────────────────────
+                 let _e_item = GraphEdgeBuilder::new(edge_ix)
+                 .with_size((px(100), px(100)))
+                     .build_in_topo(&emg_graph_rc_refcell)
+                     .unwrap();
+                 // ─────────────────────────────────────────────────────────────────────────────
 
-         // =======================================================
-         // ────────────────────────────────────────────────────────────────────────────────
-         let id = IdStr::new_inline("b");
-         let edge_ix = edge_index("root", "b");
-         // node ────────────────────────────────────────────────────────────────────────────────
+                 // =======================================================
+                 // ────────────────────────────────────────────────────────────────────────────────
+                 let id = IdStr::new_inline("b");
+                 let edge_ix = edge_index("root", "b");
+                 // node ────────────────────────────────────────────────────────────────────────────────
 
-         GraphNodeBuilder::new(id.clone())
-             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
-                 Layer::<Message>::new(id.clone()).into(),
-             ))))
-             .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
-             .with_outgoing_eix_set_with_default_capacity(5)
-             .build_in_topo(&emg_graph_rc_refcell);
-         // edge ─────────────────────────────────────────────────────
+                 GraphNodeBuilder::new(id.clone())
+                     .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
+                         Layer::<Message>::new(id.clone()).into(),
+                     ))))
+                     .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
+                     .with_outgoing_eix_set_with_default_capacity(5)
+                     .build_in_topo(&emg_graph_rc_refcell);
+                 // edge ─────────────────────────────────────────────────────
 
-         let _e_item = GraphEdgeBuilder::new(edge_ix)
-         .with_size((px(200), px(200)))
-             .build_in_topo(&emg_graph_rc_refcell)
-             .unwrap();
-         // ─────────────────────────────────────────────────────────────────────────────
+                 let _e_item = GraphEdgeBuilder::new(edge_ix)
+                 .with_size((px(200), px(200)))
+                     .build_in_topo(&emg_graph_rc_refcell)
+                     .unwrap();
+                 // ─────────────────────────────────────────────────────────────────────────────
 
-         // =======================================================
-         // ────────────────────────────────────────────────────────────────────────────────
-         let id = IdStr::new_inline("c");
-         let edge_ix = edge_index("a", "c");
-         // node ────────────────────────────────────────────────────────────────────────────────
+                 // =======================================================
+                 // ────────────────────────────────────────────────────────────────────────────────
+                 let id = IdStr::new_inline("c");
+                 let edge_ix = edge_index("a", "c");
+                 // node ────────────────────────────────────────────────────────────────────────────────
 
-         GraphNodeBuilder::new(id.clone())
-             .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
-                 Layer::<Message>::new(id.clone()).into(),
-             ))))
-             .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
-             .with_outgoing_eix_set_with_default_capacity(5)
-             .build_in_topo(&emg_graph_rc_refcell);
-         // edge ─────────────────────────────────────────────────────
+                 GraphNodeBuilder::new(id.clone())
+                     .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
+                         Layer::<Message>::new(id.clone()).into(),
+                     ))))
+                     .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
+                     .with_outgoing_eix_set_with_default_capacity(5)
+                     .build_in_topo(&emg_graph_rc_refcell);
+                 // edge ─────────────────────────────────────────────────────
 
-         let _e_item = GraphEdgeBuilder::new(edge_ix)
-         .with_size((px(30), px(30)))
-             .build_in_topo(&emg_graph_rc_refcell)
-             .unwrap();
-         // ─────────────────────────────────────────────────────────────────────────────
-        { let x = &*emg_graph_rc_refcell.borrow();
-         insta::assert_display_snapshot!("graph_new",x);
+                 let _e_item = GraphEdgeBuilder::new(edge_ix)
+                 .with_size((px(30), px(30)))
+                     .build_in_topo(&emg_graph_rc_refcell)
+                     .unwrap();
+                 // ─────────────────────────────────────────────────────────────────────────────
+                { let x = &*emg_graph_rc_refcell.borrow();
+                 #[cfg(feature="insta")]
+        insta::assert_display_snapshot!("graph_new",x);
 
-        }
-         {
-            //NOTE a->c to b->c
+                }
+                 {
+                    //NOTE a->c to b->c
 
-            emg_graph_rc_refcell.editor()
-             .edit::<EdgeMode>()
-             .moving(edge_index("a", "c"),Incoming, "b").unwrap();
-         }
-         // ─────────────────────────────────────────────────────
+                    emg_graph_rc_refcell.editor()
+                     .edit(edge_index("a", "c"))
+                     .moving(Incoming, "b").unwrap();
+                 }
+                 // ─────────────────────────────────────────────────────
 
-         // println!("{:#?}", &emg_graph_rc_refcell);
-         let x = &*emg_graph_rc_refcell.borrow();
-        //  println!("{}", x);
-             insta::assert_display_snapshot!("graph_moved",x);
-         });
+                 // println!("{:#?}", &emg_graph_rc_refcell);
+                 let x = &*emg_graph_rc_refcell.borrow();
+                //  println!("{}", x);
+                     #[cfg(feature="insta")]
+        insta::assert_display_snapshot!("graph_moved",x);
+                 });
     }
 }

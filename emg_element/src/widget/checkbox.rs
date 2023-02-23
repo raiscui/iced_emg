@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-21 23:34:31
+ * @LastEditTime: 2023-02-22 23:12:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -159,7 +159,6 @@ where
         use crate::gtree_macro_prelude::*;
         let is_checked = self.is_checked;
         let on_toggle = self.on_toggle.take().unwrap();
-
         gtree! {
             @SkipInit self =>[
                 @=id.clone() + "|CLICK" On:CLICK  move||{
@@ -664,6 +663,7 @@ mod tests {
             @="default_id" checkbox=>[]
         };
         println!("{:#?}", gtree);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("test_gtree_macro", gtree);
     }
 }

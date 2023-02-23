@@ -32,30 +32,32 @@ mod code_test {
 
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
 
-                    info!("=========== parse \n {:?}\n",&input);
+                            info!("=========== parse \n {:?}\n",&input);
 
-                    match syn::parse_str::<VFLStatement>(input) {
-                        Ok( ok) => {
-                            info!("=============VFLStatement ok \n{:#?}\n", &ok);
-
-
-                            let macro_disp = VecDisp(ok.ccsss.clone());
-                            info!("=================== display--macro-build \n {}\n", &macro_disp);
-
-                            let rust_code = format!("{}", ok.to_token_stream());
-                            info!("=================== rust_code \n {}\n", &rust_code);
-        // ─────────────────────────────────────────────────────────────────────────────
+                            match syn::parse_str::<VFLStatement>(input) {
+                                Ok( ok) => {
+                                    info!("=============VFLStatement ok \n{:#?}\n", &ok);
 
 
-                            insta::assert_display_snapshot!(name.to_string()+"_build_display", &macro_disp);
-                            insta::assert_display_snapshot!(name.to_string()+"_code", rust_code);
-                            macro_disp_string = format!("{}",macro_disp);
+                                    let macro_disp = VecDisp(ok.ccsss.clone());
+                                    info!("=================== display--macro-build \n {}\n", &macro_disp);
+
+                                    let rust_code = format!("{}", ok.to_token_stream());
+                                    info!("=================== rust_code \n {}\n", &rust_code);
+                // ─────────────────────────────────────────────────────────────────────────────
 
 
-                        }
-                        Err(error) => panic!("...{:?}", error),
-                    }
-                });
+                                    #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string()+"_build_display", &macro_disp);
+                                    #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string()+"_code", rust_code);
+                                    macro_disp_string = format!("{}",macro_disp);
+
+
+                                }
+                                Err(error) => panic!("...{:?}", error),
+                            }
+                        });
         macro_disp_string
     }
 
@@ -66,20 +68,21 @@ mod code_test {
         tracing::subscriber::set_global_default(subscriber).ok();
 
         insta::with_settings!({snapshot_path => Path::new("./vfl_code_snap")}, {
-            debug!("=========== parse \n {:?}\n", &input);
+                    debug!("=========== parse \n {:?}\n", &input);
 
-            match syn::parse_str::<T>(input) {
-                Ok(ok) => {
-                    println!("============= parsed\n{:#?}\n", &ok);
+                    match syn::parse_str::<T>(input) {
+                        Ok(ok) => {
+                            println!("============= parsed\n{:#?}\n", &ok);
 
-                    let rust_code = format!("{}", ok.to_token_stream());
-                    println!("token_stream result:\n{}", rust_code);
-                    insta::assert_display_snapshot!(name.to_string() + "_ccss_code", rust_code);
-                    rust_code
-                }
-                Err(error) => panic!("...{:?}", error),
-            }
-        })
+                            let rust_code = format!("{}", ok.to_token_stream());
+                            println!("token_stream result:\n{}", rust_code);
+                            #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string() + "_ccss_code", rust_code);
+                            rust_code
+                        }
+                        Err(error) => panic!("...{:?}", error),
+                    }
+                })
     }
 
     #[test]
@@ -196,8 +199,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
-            insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                    #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
+                });
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
         assert_eq!(parsed_macro_disp, format!("{}", res_disp));
@@ -263,8 +267,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
@@ -495,8 +500,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
@@ -592,8 +598,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
@@ -725,8 +732,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
@@ -854,8 +862,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
@@ -950,8 +959,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);

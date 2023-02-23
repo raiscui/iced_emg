@@ -17,6 +17,7 @@ split-debuginfo = "unpacked"
 default = ["gpu", "debug"]
 gpu = ["emg_bind/gpu"]
 debug = ["emg_bind/debug"]
+insta = []
 
 
 [dependencies.emg_bind]

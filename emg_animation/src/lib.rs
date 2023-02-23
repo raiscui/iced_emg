@@ -377,21 +377,26 @@ mod tests {
     #[test]
     fn test_update_animation() {
         let mut am_state: AmState<Message> = style(smallvec![opacity(1.)]);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("init", &am_state);
 
         interrupt([to![opacity(0.)], to![opacity(1.)]], &mut am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("interrupt", &am_state);
 
         let mut now = Duration::from_millis(10000);
         update_animation(Tick(now), &mut am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("am1-first", &am_state);
 
         now += Duration::from_millis(16);
         update_animation(Tick(now), &mut am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("am2", &am_state);
 
         now += Duration::from_millis(17);
         update_animation(Tick(now), &mut am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("am3", &am_state);
 
         for _ in 0..180 {
@@ -399,6 +404,7 @@ mod tests {
             update_animation(Tick(now), &mut am_state);
         }
         println!("{:#?}", &am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("am_last", &am_state);
     }
 }

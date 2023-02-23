@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-19 17:43:32
- * @LastEditTime: 2023-02-21 23:46:42
+ * @LastEditTime: 2023-02-23 12:35:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,30 +13,35 @@ mod mode;
 
 use std::{cell::RefCell, ops::Deref, rc::Rc};
 
-use crate::{error::Error, GraphType};
+use crate::{error::Error, GTreeBuilderElement, GraphType};
 use emg::{Direction, EdgeIndex};
 use emg_common::IdStr;
 pub use impls::*;
 pub use mode::*;
 
 // ─────────────────────────────────────────────────────────────────────────────
-
+//NOTE: not object safe
 pub trait GraphEdit {
     type Ix;
-    fn edit<M: Mode>(&self) -> M::Interface<'_, Self::Ix>;
+    type Message;
+
+    fn edit<M: Mode<Self::Message, Ix = Self::Ix>>(&self, mode: M) -> M::Interface<'_>;
 }
 impl<T> GraphEdit for T
 where
     T: GraphEditManyMethod,
 {
     type Ix = T::Ix;
-    fn edit<M: Mode>(&self) -> M::Interface<'_, Self::Ix> {
-        M::interface(self)
+    type Message = T::Message;
+    fn edit<M: Mode<Self::Message, Ix = Self::Ix>>(&self, mode: M) -> M::Interface<'_> {
+        mode.interface(self)
     }
 }
 
 pub trait GraphEditManyMethod {
     type Ix;
+    type Message;
+
     //实例连源枝移动( 某 path edge 原 edge 更改 source node) ,枝上其他node 不动(clone edge?)
     fn edge_plug_edit(
         &self,
@@ -47,6 +52,7 @@ pub trait GraphEditManyMethod {
 
     //实例嫁接(实例不连源枝移动 , 某 path node 原 edge 断开, xin edge 接上)
     fn edge_path_node_change_edge(&mut self);
+    fn insert_node_in_topo(&self, tree_element: &'_ GTreeBuilderElement<Self::Message>);
 }
 
 // Editor ─────────────────────────────────────────────────────────────────────────────
@@ -68,14 +74,18 @@ where
     }
 }
 
-pub trait Mode {
-    type Interface<'a, Ix>
-    where
-        Ix: 'a;
+pub trait Mode<Message> {
+    type Ix;
 
-    fn interface<Ix, G>(g: &G) -> Self::Interface<'_, Ix>
+    type Interface<'a>
     where
-        G: GraphEditManyMethod<Ix = Ix>;
+        Self: 'a,
+        Message: 'a;
+
+    fn interface(
+        self,
+        g: &dyn GraphEditManyMethod<Message = Message, Ix = Self::Ix>,
+    ) -> Self::Interface<'_>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

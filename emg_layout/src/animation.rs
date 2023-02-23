@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-02-21 12:08:47
+ * @LastEditTime: 2023-02-22 16:13:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -919,7 +919,9 @@ mod tests {
         sv_now.set(Duration::from_millis(33));
         debug!("a 33====:\n {:#?}", a.inside.props[0].get());
         debug!("b 33====:\n {:#?}", b.inside.props[0].get());
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("many-33-a", &a);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("many-33-b", &b);
     }
 
@@ -1070,9 +1072,12 @@ mod tests {
 
             let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![opacity(1.)]);
             // println!("a:{:#?}", &a);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("new", &a);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("new2", &a);
             assert!(!a.running.get());
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("get_running", &a);
             // println!("now set interrupt");
             a.interrupt([
@@ -1081,7 +1086,9 @@ mod tests {
             ]);
             // println!("over interrupt");
 
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("interrupt", &a);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("interrupt2", &a);
             // println!("over interrupt insta");
 
@@ -1091,6 +1098,7 @@ mod tests {
             // ────────────────────────────────────────────────────────────────────────────────
 
             sv_now.set(Duration::from_millis(16));
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("set16", &a);
             // a.update();
             // println!("set timing 16");
@@ -1099,7 +1107,9 @@ mod tests {
 
             // println!("1**{:?}", a.inside.props.get());
 
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("updated_16_a_0", &a);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("updated_16_a_1", &a);
             // println!("set timing 16-- insta");
             // ────────────────────────────────────────────────────────────────────────────────
@@ -1107,37 +1117,42 @@ mod tests {
             // a.update();
             // println!("set timing 16-2");
 
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("updated_16_b_0", &a);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("updated_16_b_1", &a);
             // println!("set timing 16-- insta-2");
             // ─────────────────────────────────────────────────────────────────
 
             sv_now.set(Duration::from_millis(33));
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("set33", &a);
             // a.update();
             // println!("set timing 33");
 
             // println!("....set 2 ");
 
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("updated_33_0", &a);
 
             // println!("set timing 33 -- update 1");
 
             // a.update();
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("updated_33_1", &a);
 
             // println!("set timing 33 -- update 2");
 
             // println!("2**{:?}", a.inside.props.get());
 
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("snap_updated_33_0", &a);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("snap_updated_33_1", &a);
             // println!("set timing 33 -- insta  ");
 
             // sv_now.set(Duration::from_millis(2));
             // a.update_animation();
-            // insta::assert_debug_snapshot!("updated_back_0", &a);
-            // insta::assert_debug_snapshot!("updated_back_1", &a);
 
             for i in 3..200 {
                 sv_now.set(Duration::from_millis(i * 16));
@@ -1147,7 +1162,9 @@ mod tests {
                 // println!("3***{:?}", a.inside.props.get());
                 a.inside.props[0].get();
             }
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("updated_end_0", &a);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("updated_end_1", &a);
 
             // // println!("{:?}", a.revised_props.get());
@@ -1167,192 +1184,209 @@ mod tests {
 
         insta::with_settings!({snapshot_path => Path::new("./layout_am")}, {
 
-            let css_w: StateVar<CssWidth> = use_state(||width(px(1)));
+                    let css_w: StateVar<CssWidth> = use_state(||width(px(1)));
 
-            // let span = trace_span!("am-test");
-            // let _guard = span.enter();
-            // trace!("fff");
+                    // let span = trace_span!("am-test");
+                    // let _guard = span.enter();
+                    // trace!("fff");
 
-            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+                    let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
 
-            let root_e_source =use_state(|| None);
-            let root_e_target = use_state(||Some(node_index("root")));
-            let  root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
-            // e_dict_sv.set_with(|d|{
-            //     let mut nd = d .clone();
-            //     nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
-            //     nd
-            // });
+                    let root_e_source =use_state(|| None);
+                    let root_e_target = use_state(||Some(node_index("root")));
+                    let  root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+                    // e_dict_sv.set_with(|d|{
+                    //     let mut nd = d .clone();
+                    //     nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
+                    //     nd
+                    // });
 
-            // let e1_source =use_state(|| Some(node_index("root")));
-            // let e1_target = use_state(||Some(node_index("1")));
-            // let e1 = EmgEdgeItem::new_in_topo(
-            //         e1_source.watch(),
-            //         e1_target.watch(),
-            //     e_dict_sv.watch(),
-            //     (px(50).into(), px(50).into()),
-            //      (pc(0).into(), pc(0).into(), pc(0).into()),
-            //       (pc(50).into(), pc(50).into(), pc(50).into()),
-            // );
+                    // let e1_source =use_state(|| Some(node_index("root")));
+                    // let e1_target = use_state(||Some(node_index("1")));
+                    // let e1 = EmgEdgeItem::new_in_topo(
+                    //         e1_source.watch(),
+                    //         e1_target.watch(),
+                    //     e_dict_sv.watch(),
+                    //     (px(50).into(), px(50).into()),
+                    //      (pc(0).into(), pc(0).into(), pc(0).into()),
+                    //       (pc(50).into(), pc(50).into(), pc(50).into()),
+                    // );
 
-            // e_dict_sv.set_with(|d|{
-            //     let mut nd = d .clone();
-            //     nd.insert(edge_index("root","1"), Edge::new(e1_source, e1_target, e1.clone()));
-            //     nd
-            // });
+                    // e_dict_sv.set_with(|d|{
+                    //     let mut nd = d .clone();
+                    //     nd.insert(edge_index("root","1"), Edge::new(e1_source, e1_target, e1.clone()));
+                    //     nd
+                    // });
 
-            // ─────────────────────────────────────────────────────────────────
+                    // ─────────────────────────────────────────────────────────────────
 
-            let ew = root_e.layout.w;
-            // debug!("e->{}",&e1);
-            insta::assert_debug_snapshot!("layout-am-edge", &root_e);
+                    let ew = root_e.layout.w;
+                    // debug!("e->{}",&e1);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("layout-am-edge", &root_e);
 
-            css_w.set(width(px(99)));
+                    css_w.set(width(px(99)));
 
-            let edge_style_string_sa = root_e
-                    .edge_nodes
-                    .get()
-                    .get(&EPath(vector![edge_index_no_source("root")]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                            .unwrap()
-                            .styles_string.clone();
-                            // .get();
-            // let edge_style_string_sa = e1
-            //         .node
-            //         .get()
-            //         .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
-            //         .and_then(EdgeItemNode::as_edge_data)
-            //                 .unwrap()
-            //                 .styles_string.clone();
-            //                 // .get();
+                    let edge_style_string_sa = root_e
+                            .edge_nodes
+                            .get()
+                            .get(&EPath(vector![edge_index_no_source("root")]))
+                            .and_then(EdgeItemNode::as_edge_data)
+                                    .unwrap()
+                                    .styles_string.clone();
+                                    // .get();
+                    // let edge_style_string_sa = e1
+                    //         .node
+                    //         .get()
+                    //         .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+                    //         .and_then(EdgeItemNode::as_edge_data)
+                    //                 .unwrap()
+                    //                 .styles_string.clone();
+                    //                 // .get();
 
-            let sv_now = global_clock();
-            sv_now.set(Duration::from_millis(0));
+                    let sv_now = global_clock();
+                    sv_now.set(Duration::from_millis(0));
 
-            let a: AnimationE< Message> =
-                // AnimationEdge::new_in_topo(into_smvec![width(px(1))], e1, sv_now);
-                AnimationE::new_in_topo(into_smvec![css_w]);
-                a.effecting_edge_path( &root_e,EPath(vector![edge_index_no_source("root")]));
-            // println!("a:{:#?}", &a);
-            insta::assert_debug_snapshot!("new", &a);
-            insta::assert_debug_snapshot!("new2", &a);
-            let new1 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new.snap")).unwrap();
-            let new2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new2.snap")).unwrap();
-            assert_eq!(new1.contents(),new2.contents());
+                    let a: AnimationE< Message> =
+                        // AnimationEdge::new_in_topo(into_smvec![width(px(1))], e1, sv_now);
+                        AnimationE::new_in_topo(into_smvec![css_w]);
+                        a.effecting_edge_path( &root_e,EPath(vector![edge_index_no_source("root")]));
+                    // println!("a:{:#?}", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("new", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("new2", &a);
+                    let new1 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new.snap")).unwrap();
+                    let new2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new2.snap")).unwrap();
+                    assert_eq!(new1.contents(),new2.contents());
 
-            assert!(!a.running.get());
-            insta::assert_debug_snapshot!("get_running", &a);
-            // println!("now set interrupt");
-            a.interrupt([
-                to(into_smvec![width(px(0))]),
-                to(into_smvec![width(px(1))])
-            ]);
-            // println!("over interrupt");
+                    assert!(!a.running.get());
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("get_running", &a);
+                    // println!("now set interrupt");
+                    a.interrupt([
+                        to(into_smvec![width(px(0))]),
+                        to(into_smvec![width(px(1))])
+                    ]);
+                    // println!("over interrupt");
 
-            insta::assert_debug_snapshot!("interrupt", &a);
-            // insta::assert_debug_snapshot!("interrupt2", &a);
-            // println!("over interrupt insta");
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("interrupt", &a);
 
-            assert!(a.running.get());
-            // println!("over interrupt running.get()");
-            // a.update_animation();
-            // ────────────────────────────────────────────────────────────────────────────────
+                    // println!("over interrupt insta");
 
-            sv_now.set(Duration::from_millis(16));
-            // println!("set timing 16");
-            insta::assert_debug_snapshot!("set16", &a);
+                    assert!(a.running.get());
+                    // println!("over interrupt running.get()");
+                    // a.update_animation();
+                    // ────────────────────────────────────────────────────────────────────────────────
 
-            // a.update();
-            // println!("set timing 16-- update");
+                    sv_now.set(Duration::from_millis(16));
+                    // println!("set timing 16");
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("set16", &a);
 
-            // println!("1**{:?}", a.inside.props.get());
+                    // a.update();
+                    // println!("set timing 16-- update");
 
-            insta::assert_debug_snapshot!("updated_16_0", &a);
-            insta::assert_debug_snapshot!("updated_16_0-edge", &root_e);
-            // insta::assert_debug_snapshot!("updated_16_1", &a);
-            // println!("set timing 16-- insta");
-            // ────────────────────────────────────────────────────────────────────────────────
-            sv_now.set(Duration::from_millis(16));
-            // println!("set timing 16-2");
+                    // println!("1**{:?}", a.inside.props.get());
 
-            // a.update();
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_16_0", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_16_0-edge", &root_e);
 
-            insta::assert_debug_snapshot!("updated_16_0-2", &a);
-            // insta::assert_debug_snapshot!("updated_16_1-2", &a);
-            // println!("set timing 16-- insta-2");
-            let u16 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0.snap")).unwrap();
-            let u16_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0-2.snap")).unwrap();
-            assert_eq!(u16.contents(),u16_2.contents());
-            // ─────────────────────────────────────────────────────────────────
+                    // println!("set timing 16-- insta");
+                    // ────────────────────────────────────────────────────────────────────────────────
+                    sv_now.set(Duration::from_millis(16));
+                    // println!("set timing 16-2");
 
-            sv_now.set(Duration::from_millis(33));
-            // println!("set timing 33");
+                    // a.update();
 
-            // println!("....set 2 ");
-            insta::assert_debug_snapshot!("set33", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_16_0-2", &a);
 
-            // a.update();
-            insta::assert_debug_snapshot!("updated_33_0", &a);
-            insta::assert_debug_snapshot!("updated_33_0-edge", &root_e);
+                    // println!("set timing 16-- insta-2");
+                    let u16 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0.snap")).unwrap();
+                    let u16_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0-2.snap")).unwrap();
+                    assert_eq!(u16.contents(),u16_2.contents());
+                    // ─────────────────────────────────────────────────────────────────
 
-            // println!("set timing 33 -- update 1");
+                    sv_now.set(Duration::from_millis(33));
+                    // println!("set timing 33");
 
-            // a.update();
-            insta::assert_debug_snapshot!("updated_33_1", &a);
+                    // println!("....set 2 ");
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("set33", &a);
 
-            // println!("set timing 33 -- update 2");
+                    // a.update();
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_33_0", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_33_0-edge", &root_e);
 
-            // println!("2**{:?}", a.inside.props.get());
+                    // println!("set timing 33 -- update 1");
 
-            insta::assert_debug_snapshot!("snap_updated_33_0", &a);
-            // insta::assert_debug_snapshot!("snap_updated_33_1", &a);
-            // println!("set timing 33 -- insta  ");
-            let f33 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_33_1.snap")).unwrap();
-            let f33_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__snap_updated_33_0.snap")).unwrap();
-            assert_eq!(f33.contents(),f33_2.contents());
+                    // a.update();
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_33_1", &a);
 
-            // sv_now.set(Duration::from_millis(2));
-            // a.update_animation();
-            // insta::assert_debug_snapshot!("updated_back_0", &a);
-            // insta::assert_debug_snapshot!("updated_back_1", &a);
+                    // println!("set timing 33 -- update 2");
 
-            for i in 3..200 {
-                println!("===========================================================");
-                if i == 50{
-                    println!(" 50-> : current width:{}",&css_w);
+                    // println!("2**{:?}", a.inside.props.get());
+
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("snap_updated_33_0", &a);
+
+                    // println!("set timing 33 -- insta  ");
+                    let f33 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_33_1.snap")).unwrap();
+                    let f33_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__snap_updated_33_0.snap")).unwrap();
+                    assert_eq!(f33.contents(),f33_2.contents());
+
+                    // sv_now.set(Duration::from_millis(2));
+                    // a.update_animation();
+
+
+                    for i in 3..200 {
+                        println!("===========================================================");
+                        if i == 50{
+                            println!(" 50-> : current width:{}",&css_w);
+                            css_w.set(width(px(20)));
+
+                        }
+                        sv_now.set(Duration::from_millis(i * 16));
+
+                        // println!("in ------ i:{}", &i);
+                        // a.timing.get();´ß
+                        // a.update();
+
+                        println!("***-- {:?} | \new:-> {:?}, \n style:-> {:?}",CssWidth::from( a.inside.props[0].get()),ew,edge_style_string_sa);
+
+                        println!("===========================================================");
+
+                        //  a.inside.props[0].get();
+                    }
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_end_0", &a);
+
+
+                    // // println!("{:?}", a.revised_props.get());
+                    // // state_store().borrow().engine_mut().stabilize();
+                    // println!("end : {:?}", a.inside.props.get());
+                    // println!("{:?}", a);
+                    // a.inside.props[0].get();
+                    // ─────────────────────────────────────────────────────────────────
+
                     css_w.set(width(px(20)));
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("end_set1", &a);
+                    sv_now.set(sv_now.get() + Duration::from_millis(16));
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("end_set2-settime", &a);
+                    // a.update();
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("end_set3-update", &a);
 
-                }
-                sv_now.set(Duration::from_millis(i * 16));
-
-                // println!("in ------ i:{}", &i);
-                // a.timing.get();´ß
-                // a.update();
-
-                println!("***-- {:?} | \new:-> {:?}, \n style:-> {:?}",CssWidth::from( a.inside.props[0].get()),ew,edge_style_string_sa);
-
-                println!("===========================================================");
-
-                //  a.inside.props[0].get();
-            }
-            insta::assert_debug_snapshot!("updated_end_0", &a);
-            // insta::assert_debug_snapshot!("updated_end_1", &a);
-
-            // // println!("{:?}", a.revised_props.get());
-            // // state_store().borrow().engine_mut().stabilize();
-            // println!("end : {:?}", a.inside.props.get());
-            // println!("{:?}", a);
-            // a.inside.props[0].get();
-            // ─────────────────────────────────────────────────────────────────
-
-            css_w.set(width(px(20)));
-            insta::assert_debug_snapshot!("end_set1", &a);
-            sv_now.set(sv_now.get() + Duration::from_millis(16));
-            insta::assert_debug_snapshot!("end_set2-settime", &a);
-            // a.update();
-            insta::assert_debug_snapshot!("end_set3-update", &a);
-
-        });
+                });
     }
 
     #[bench]
@@ -1425,8 +1459,10 @@ mod tests {
         for i in 1..100 {
             sv_now.set(Duration::from_millis(i * 16));
             if i == 1 {
-                // insta::assert_debug_snapshot!("anima_macro_16", &a);
-                // insta::assert_debug_snapshot!("anima_macro_16_edge", &root_e);
+                #[cfg(feature = "insta")]
+                insta::assert_debug_snapshot!("anima_macro_16", &a);
+                #[cfg(feature = "insta")]
+                insta::assert_debug_snapshot!("anima_macro_16_edge", &root_e);
             }
             // a.update();
             // println!("in ------ i:{}", &i);
@@ -1492,6 +1528,7 @@ mod tests {
         let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
         debug!("will assert_debug_snapshot a");
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("anima_macro_init", &a);
 
         let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
@@ -1506,12 +1543,15 @@ mod tests {
         );
         a.effecting_edge_path(&root_e, EPath(vector![edge_index_no_source("root")]));
         a.interrupt([to(into_smvec![width(px(0))]), to(into_smvec![width(px(1))])]);
-        // insta::assert_debug_snapshot!("anima_macro_interrupt", &a);
+        #[cfg(feature = "insta")]
+        insta::assert_debug_snapshot!("anima_macro_interrupt", &a);
 
         for i in 1..100 {
             sv_now.set(Duration::from_millis(i * 16));
             if i == 1 {
+                #[cfg(feature = "insta")]
                 insta::assert_debug_snapshot!("anima_macro_16", &a);
+                #[cfg(feature = "insta")]
                 insta::assert_debug_snapshot!("anima_macro_16_edge", &root_e);
             }
             // a.update();
@@ -1530,184 +1570,201 @@ mod tests {
 
         insta::with_settings!({snapshot_path => Path::new("./layout_children_am")}, {
 
-            let css_w: StateVar<CssWidth> = use_state(||width(px(1)));
+                    let css_w: StateVar<CssWidth> = use_state(||width(px(1)));
 
-            // let span = trace_span!("am-test");
-            // let _guard = span.enter();
-            // trace!("fff");
+                    // let span = trace_span!("am-test");
+                    // let _guard = span.enter();
+                    // trace!("fff");
 
-            let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
+                    let e_dict_sv:StateVar<GraphEdgesDict<IdStr>> = use_state(Dict::new);
 
-            let root_e_source =use_state(|| None);
-            let root_e_target = use_state(||Some(node_index("root")));
-            let root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
-            e_dict_sv.set_with_once(|d|{
-                let mut nd = d .clone();
-                nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
-                nd
-            });
+                    let root_e_source =use_state(|| None);
+                    let root_e_target = use_state(||Some(node_index("root")));
+                    let root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+                    e_dict_sv.set_with_once(|d|{
+                        let mut nd = d .clone();
+                        nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
+                        nd
+                    });
 
-            let e1_source =use_state(|| Some(node_index("root")));
-            let e1_target = use_state(||Some(node_index("1")));
-            let e1 = EmgEdgeItem::new_in_topo(
-                    e1_source.watch(),
-                    e1_target.watch(),
-                e_dict_sv.watch(),
-                (px(50), px(50)),
-                 (pc(0), pc(0), pc(0)),
-                  (pc(50), pc(50), pc(50)),
-            );
+                    let e1_source =use_state(|| Some(node_index("root")));
+                    let e1_target = use_state(||Some(node_index("1")));
+                    let e1 = EmgEdgeItem::new_in_topo(
+                            e1_source.watch(),
+                            e1_target.watch(),
+                        e_dict_sv.watch(),
+                        (px(50), px(50)),
+                         (pc(0), pc(0), pc(0)),
+                          (pc(50), pc(50), pc(50)),
+                    );
 
-            e_dict_sv.set_with_once(|d|{
-                let mut nd = d .clone();
-                nd.insert(edge_index("root","1"), Edge::new(e1_source, e1_target, e1.clone()));
-                nd
-            });
+                    e_dict_sv.set_with_once(|d|{
+                        let mut nd = d .clone();
+                        nd.insert(edge_index("root","1"), Edge::new(e1_source, e1_target, e1.clone()));
+                        nd
+                    });
 
-            // ─────────────────────────────────────────────────────────────────
+                    // ─────────────────────────────────────────────────────────────────
 
-            let ew = root_e.layout.w;
-            // debug!("e->{}",&e1);
-            insta::assert_debug_snapshot!("layout-am-edge", &e1);
+                    let ew = root_e.layout.w;
+                    // debug!("e->{}",&e1);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("layout-am-edge", &e1);
 
-            css_w.set(width(px(99)));
+                    css_w.set(width(px(99)));
 
-            let edge_style_string_sa = e1
-                    .edge_nodes
-                    .get()
-                    .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
-                    .and_then(EdgeItemNode::as_edge_data)
-                            .unwrap()
-                            .styles_string.clone();
-            //                 // .get();
+                    let edge_style_string_sa = e1
+                            .edge_nodes
+                            .get()
+                            .get(&EPath(vector![edge_index_no_source("root"),edge_index("root","1")]))
+                            .and_then(EdgeItemNode::as_edge_data)
+                                    .unwrap()
+                                    .styles_string.clone();
+                    //                 // .get();
 
-            let sv_now = global_clock();
-            sv_now.set(Duration::from_millis(0));
+                    let sv_now = global_clock();
+                    sv_now.set(Duration::from_millis(0));
 
-            let a: AnimationE< Message> =
-                // AnimationEdge::new_in_topo(into_smvec![width(px(1))], e1, sv_now);
-                AnimationE::new_in_topo(into_smvec![css_w]);
-                a.effecting_edge_path(&e1,EPath(vector![edge_index_no_source("root"),edge_index("root","1")]));
+                    let a: AnimationE< Message> =
+                        // AnimationEdge::new_in_topo(into_smvec![width(px(1))], e1, sv_now);
+                        AnimationE::new_in_topo(into_smvec![css_w]);
+                        a.effecting_edge_path(&e1,EPath(vector![edge_index_no_source("root"),edge_index("root","1")]));
 
-            // println!("a:{:#?}", &a);
-            insta::assert_debug_snapshot!("new", &a);
-            insta::assert_debug_snapshot!("new2", &a);
-            let new1 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new.snap")).unwrap();
-            let new2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new2.snap")).unwrap();
-            assert_eq!(new1.contents(),new2.contents());
+                    // println!("a:{:#?}", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("new", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("new2", &a);
+                    let new1 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new.snap")).unwrap();
+                    let new2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__new2.snap")).unwrap();
+                    assert_eq!(new1.contents(),new2.contents());
 
-            assert!(!a.running.get());
-            insta::assert_debug_snapshot!("get_running", &a);
-            // println!("now set interrupt");
-            a.interrupt([
-                to(into_smvec![width(px(0))]),
-                to(into_smvec![width(px(1))])
-            ]);
-            // println!("over interrupt");
+                    assert!(!a.running.get());
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("get_running", &a);
+                    // println!("now set interrupt");
+                    a.interrupt([
+                        to(into_smvec![width(px(0))]),
+                        to(into_smvec![width(px(1))])
+                    ]);
+                    // println!("over interrupt");
 
-            insta::assert_debug_snapshot!("interrupt", &a);
-            // insta::assert_debug_snapshot!("interrupt2", &a);
-            // println!("over interrupt insta");
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("interrupt", &a);
 
-            assert!(a.running.get());
-            // println!("over interrupt running.get()");
-            // a.update_animation();
-            // ────────────────────────────────────────────────────────────────────────────────
+                    // println!("over interrupt insta");
 
-            sv_now.set(Duration::from_millis(16));
-            // println!("set timing 16");
-            insta::assert_debug_snapshot!("set16", &a);
+                    assert!(a.running.get());
+                    // println!("over interrupt running.get()");
+                    // a.update_animation();
+                    // ────────────────────────────────────────────────────────────────────────────────
 
-            // a.update();
-            // println!("set timing 16-- update");
+                    sv_now.set(Duration::from_millis(16));
+                    // println!("set timing 16");
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("set16", &a);
 
-            // println!("1**{:?}", a.inside.props.get());
+                    // a.update();
+                    // println!("set timing 16-- update");
 
-            insta::assert_debug_snapshot!("updated_16_0", &a);
-            insta::assert_debug_snapshot!("updated_16_0-edge", &e1);
-            // insta::assert_debug_snapshot!("updated_16_1", &a);
-            // println!("set timing 16-- insta");
-            // ────────────────────────────────────────────────────────────────────────────────
-            sv_now.set(Duration::from_millis(16));
-            // println!("set timing 16-2");
+                    // println!("1**{:?}", a.inside.props.get());
 
-            // a.update();
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_16_0", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_16_0-edge", &e1);
 
-            insta::assert_debug_snapshot!("updated_16_0-2", &a);
-            // insta::assert_debug_snapshot!("updated_16_1-2", &a);
-            // println!("set timing 16-- insta-2");
-            let u16 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0.snap")).unwrap();
-            let u16_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0-2.snap")).unwrap();
-            assert_eq!(u16.contents(),u16_2.contents());
-            // ─────────────────────────────────────────────────────────────────
+                    // println!("set timing 16-- insta");
+                    // ────────────────────────────────────────────────────────────────────────────────
+                    sv_now.set(Duration::from_millis(16));
+                    // println!("set timing 16-2");
 
-            sv_now.set(Duration::from_millis(33));
-            // println!("set timing 33");
+                    // a.update();
 
-            // println!("....set 2 ");
-            insta::assert_debug_snapshot!("set33", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_16_0-2", &a);
 
-            // a.update();
-            insta::assert_debug_snapshot!("updated_33_0", &a);
-            insta::assert_debug_snapshot!("updated_33_0-edge", &e1);
+                    // println!("set timing 16-- insta-2");
+                    let u16 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0.snap")).unwrap();
+                    let u16_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_16_0-2.snap")).unwrap();
+                    assert_eq!(u16.contents(),u16_2.contents());
+                    // ─────────────────────────────────────────────────────────────────
 
-            // println!("set timing 33 -- update 1");
+                    sv_now.set(Duration::from_millis(33));
+                    // println!("set timing 33");
 
-            // a.update();
-            insta::assert_debug_snapshot!("updated_33_1", &a);
+                    // println!("....set 2 ");
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("set33", &a);
 
-            // println!("set timing 33 -- update 2");
+                    // a.update();
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_33_0", &a);
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_33_0-edge", &e1);
 
-            // println!("2**{:?}", a.inside.props.get());
+                    // println!("set timing 33 -- update 1");
 
-            insta::assert_debug_snapshot!("snap_updated_33_0", &a);
-            // insta::assert_debug_snapshot!("snap_updated_33_1", &a);
-            // println!("set timing 33 -- insta  ");
-            let f33 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_33_1.snap")).unwrap();
-            let f33_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__snap_updated_33_0.snap")).unwrap();
-            assert_eq!(f33.contents(),f33_2.contents());
+                    // a.update();
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_33_1", &a);
 
-            // sv_now.set(Duration::from_millis(2));
-            // a.update_animation();
-            // insta::assert_debug_snapshot!("updated_back_0", &a);
-            // insta::assert_debug_snapshot!("updated_back_1", &a);
+                    // println!("set timing 33 -- update 2");
 
-            for i in 3..200 {
-                println!("===========================================================");
-                if i == 50{
-                    println!(" 50-> : current width:{}",&css_w);
+                    // println!("2**{:?}", a.inside.props.get());
+
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("snap_updated_33_0", &a);
+
+                    // println!("set timing 33 -- insta  ");
+                    let f33 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__updated_33_1.snap")).unwrap();
+                    let f33_2 = insta::Snapshot::from_file(Path::new("./src/layout_am/emg_layout__animation__tests__snap_updated_33_0.snap")).unwrap();
+                    assert_eq!(f33.contents(),f33_2.contents());
+
+                    // sv_now.set(Duration::from_millis(2));
+                    // a.update_animation();
+
+
+                    for i in 3..200 {
+                        println!("===========================================================");
+                        if i == 50{
+                            println!(" 50-> : current width:{}",&css_w);
+                            css_w.set(width(px(20)));
+
+                        }
+                        sv_now.set(Duration::from_millis(i * 16));
+
+                        // println!("in ------ i:{}", &i);
+                        // a.timing.get();´ß
+                        // a.update();
+
+                        println!("***-- {:?} | \new:-> {:?}, \n style:-> {:?}",CssWidth::from( a.inside.props[0].get()),ew,edge_style_string_sa);
+
+                        println!("===========================================================");
+
+                        //  a.inside.props[0].get();
+                    }
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("updated_end_0", &a);
+
+
+                    // // println!("{:?}", a.revised_props.get());
+                    // // state_store().borrow().engine_mut().stabilize();
+                    // println!("end : {:?}", a.inside.props.get());
+                    // println!("{:?}", a);
+                    // a.inside.props[0].get();
+                    // ─────────────────────────────────────────────────────────────────
+
                     css_w.set(width(px(20)));
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("end_set1", &a);
+                    sv_now.set(sv_now.get() + Duration::from_millis(16));
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("end_set2-settime", &a);
+                    // a.update();
+                    #[cfg(feature="insta")]
+        insta::assert_debug_snapshot!("end_set3-update", &a);
 
-                }
-                sv_now.set(Duration::from_millis(i * 16));
-
-                // println!("in ------ i:{}", &i);
-                // a.timing.get();´ß
-                // a.update();
-
-                println!("***-- {:?} | \new:-> {:?}, \n style:-> {:?}",CssWidth::from( a.inside.props[0].get()),ew,edge_style_string_sa);
-
-                println!("===========================================================");
-
-                //  a.inside.props[0].get();
-            }
-            insta::assert_debug_snapshot!("updated_end_0", &a);
-            // insta::assert_debug_snapshot!("updated_end_1", &a);
-
-            // // println!("{:?}", a.revised_props.get());
-            // // state_store().borrow().engine_mut().stabilize();
-            // println!("end : {:?}", a.inside.props.get());
-            // println!("{:?}", a);
-            // a.inside.props[0].get();
-            // ─────────────────────────────────────────────────────────────────
-
-            css_w.set(width(px(20)));
-            insta::assert_debug_snapshot!("end_set1", &a);
-            sv_now.set(sv_now.get() + Duration::from_millis(16));
-            insta::assert_debug_snapshot!("end_set2-settime", &a);
-            // a.update();
-            insta::assert_debug_snapshot!("end_set3-update", &a);
-
-        });
+                });
     }
 }

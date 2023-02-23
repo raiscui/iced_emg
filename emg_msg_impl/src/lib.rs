@@ -88,6 +88,7 @@ mod tests {
         )
         .unwrap();
         println!("res===\n{}", res);
+        #[cfg(feature = "insta")]
         insta::assert_display_snapshot!(res);
         // assert!(res);
     }

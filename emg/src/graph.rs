@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-02-21 01:02:21
+ * @LastEditTime: 2023-02-22 17:55:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,15 +12,13 @@ mod edges;
 mod iter_format;
 mod neighbors;
 
-use crate::{
-    error::Error,
-    im::{
-        hashmap::{self, Entry},
-        HashMap,
-    },
-};
+use crate::error::Error;
 pub use edges::NodeEdgesIter;
 use emg_common::display::DictDisplay;
+use emg_common::im::{
+    hashmap::{self, Entry},
+    HashMap,
+};
 use emg_state::{
     state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor,
     StateVar,
@@ -1829,8 +1827,10 @@ mod graph_test_mod {
             assert_eq!(xx_ww_edge, g1_xx_ww_edge);
 
             // @ remove node ─────────────────────────────────────────────────────────────────
+            #[cfg(feature="insta")]
             insta::assert_display_snapshot!("graph_a",g1);
             g1.remove_node_and_edge_and_disconnect(node_index(String::from("ww")));
+            #[cfg(feature="insta")]
             insta::assert_display_snapshot!("graph_a_removed",g1);
 
 
