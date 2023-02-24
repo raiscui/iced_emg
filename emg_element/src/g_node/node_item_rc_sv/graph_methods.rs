@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-02-01 20:56:52
+ * @LastEditTime: 2023-02-24 21:32:55
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,7 @@ use emg_common::{im::vector, IdStr, Pos, Vector};
 use emg_layout::EPath;
 use emg_native::{EventWithFlagType, PaintCtx, Widget};
 use emg_state::{Anchor, AnchorMultiAnchor, Dict, StateAnchor};
-use tracing::debug;
+use tracing::{debug, debug_span};
 
 use crate::node_builder::EventMatchsDict;
 

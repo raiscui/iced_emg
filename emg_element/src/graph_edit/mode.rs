@@ -1,6 +1,8 @@
 use crate::{error::Error, GTreeBuilderElement};
 use emg::{Direction, EdgeIndex};
 use emg_common::{IdStr, ResultWithRef, ResultWithSomething};
+use emg_state::topo;
+use tracing::{debug, debug_span};
 
 use super::{GraphEdit, GraphEditManyMethod, Mode};
 
@@ -101,8 +103,12 @@ where
 }
 
 impl<'a, Message> EdittingGraphUseTreeBuilder<'a, Message> {
+    #[topo::nested]
     pub fn insert(&self, to: impl Into<IdStr>) -> ResultWithRef<Self, (), Error> {
-        todo!()
+        let _span = debug_span!("editor", action = "insert").entered();
+
+        self.graph.insert_node_in_topo(&self.node, to.into());
+        Ok(()).with(self)
         // self.graph
         // self.graph
         //     .edge_plug_edit(&self.edge, dir, to.into())

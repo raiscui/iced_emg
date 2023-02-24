@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-02-23 13:16:25
+ * @LastEditTime: 2023-02-23 16:33:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -246,9 +246,9 @@ where
                             let gel_l_r = {
                                 if v_child_gel.is_event_() {
                                     //NOTE : Left is  event
-                                    (current_child_ei_no_self.clone(), Left(v_child_gel.clone()))
+                                    (current_child_ei_no_self, Left(v_child_gel.clone()))
                                 } else {
-                                    (current_child_ei_no_self.clone(), Right(v_child_gel.clone()))
+                                    (current_child_ei_no_self, Right(v_child_gel.clone()))
                                 }
                             };
                             Some(gel_l_r)

@@ -1,7 +1,7 @@
 ---
-source: examples/moving_edge/src/main.rs
-assertion_line: 161
-expression: graph.borrow()
+source: examples/add_nodes/src/main.rs
+assertion_line: 196
+expression: graph.graph()
 ---
 Graph {
     nodes:{
@@ -72,14 +72,34 @@ Graph {
                Node {
                    item: EmgNodeItem {
                        gel: ✦ (⚓ (Layer_)) ,
-                       paths_sa: ⚓ [⚬-▣ root => ▣ x => ▣ m => ▣ b],
+                       paths_sa: ⚓ [⚬-▣ root => ▣ x => ▣ a => ▣ b],
                        paths_view_gel ⚓ {
-                           [⚬-▣ root => ▣ x => ▣ m => ▣ b] : Builder_
+                           [⚬-▣ root => ▣ x => ▣ a => ▣ b] : Builder_
                        }
 
                    }
                    incoming:[
-                             ├─ ▣ m => ▣ b 
+                             ├─ ▣ a => ▣ b 
+                   ]
+                   outgoing:[
+                             ├─ ▣ b => ▣ b-check 
+                   ]
+
+               }
+
+           ,
+           b-check|CLICK:
+               Node {
+                   item: EmgNodeItem {
+                       gel: ✦ (⚓ (Event_)) ,
+                       paths_sa: ⚓ [⚬-▣ root => ▣ x => ▣ a => ▣ b => ▣ b-check => ▣ b-check|CLICK],
+                       paths_view_gel ⚓ {
+                           [⚬-▣ root => ▣ x => ▣ a => ▣ b => ▣ b-check => ▣ b-check|CLICK] : Event_
+                       }
+
+                   }
+                   incoming:[
+                             ├─ ▣ b-check => ▣ b-check|CLICK 
                    ]
                    outgoing:[
                    ]
@@ -125,6 +145,26 @@ Graph {
                }
 
            ,
+           b-check:
+               Node {
+                   item: EmgNodeItem {
+                       gel: ✦ (⚓ (Generic_)) ,
+                       paths_sa: ⚓ [⚬-▣ root => ▣ x => ▣ a => ▣ b => ▣ b-check],
+                       paths_view_gel ⚓ {
+                           [⚬-▣ root => ▣ x => ▣ a => ▣ b => ▣ b-check] : Builder_
+                       }
+
+                   }
+                   incoming:[
+                             ├─ ▣ b => ▣ b-check 
+                   ]
+                   outgoing:[
+                             ├─ ▣ b-check => ▣ b-check|CLICK 
+                   ]
+
+               }
+
+           ,
            m:
                Node {
                    item: EmgNodeItem {
@@ -139,7 +179,6 @@ Graph {
                              ├─ ▣ x => ▣ m 
                    ]
                    outgoing:[
-                             ├─ ▣ m => ▣ b 
                    ]
 
                }
@@ -179,6 +218,7 @@ Graph {
                              ├─ ▣ x => ▣ a 
                    ]
                    outgoing:[
+                             ├─ ▣ a => ▣ b 
                    ]
 
                }
@@ -326,11 +366,11 @@ Graph {
                      target_nix: ▣ root ,
 
                }
-               ├─ ▣ m => ▣ b  : Edge {
+               ├─ ▣ a => ▣ b  : Edge {
                      item: EmgEdgeItem {
-                         id: ✦ (⚓ (├─ ▣ m => ▣ b ))
+                         id: ✦ (⚓ (├─ ▣ a => ▣ b ))
                          paths: ⚓<Dict> {
-                             [⚬-▣ root => ▣ x => ▣ m] : EdgeData {
+                             [⚬-▣ root => ▣ x => ▣ a] : EdgeData {
                                  calculated: LayoutCalculated {
                                      cass_or_calc_size: ⚓ (
                                        ┌     ┐
@@ -341,21 +381,21 @@ Graph {
                                      )
                                      origin: ⚓ (Translation {
 
-                                       ┌         ┐
-                                       │   0.000 │
-                                       │ -30.000 │
-                                       │   0.000 │
-                                       └         ┘
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
 
                                      }
                                      )
                                      align: ⚓ (Translation {
 
-                                       ┌         ┐
-                                       │  20.000 │
-                                       │ 120.000 │
-                                       │   0.000 │
-                                       └         ┘
+                                       ┌        ┐
+                                       │ 20.000 │
+                                       │  0.000 │
+                                       │  0.000 │
+                                       └        ┘
 
                                      }
                                      )
@@ -363,7 +403,7 @@ Graph {
 
                                        ┌        ┐
                                        │ 20.000 │
-                                       │ 90.000 │
+                                       │  0.000 │
                                        │  0.000 │
                                        └        ┘
 
@@ -373,7 +413,7 @@ Graph {
 
                                        ┌        ┐
                                        │ 20.000 │
-                                       │ 90.000 │
+                                       │  0.000 │
                                        │  0.000 │
                                        └        ┘
 
@@ -392,21 +432,21 @@ Graph {
                                      matrix: ⚓ (
                                        ┌             ┐
                                        │  1  0  0 20 │
-                                       │  0  1  0 90 │
+                                       │  0  1  0  0 │
                                        │  0  0  1  0 │
                                        │  0  0  0  1 │
                                        └             ┘
 
                                      )
                                      loc_styles: ⚓ (Style {
-                                         transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,20,90,0,1);
+                                         transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,20,0,0,1);
 
                                      };)
                                      world: ⚓ (Translation {
 
                                        ┌         ┐
                                        │ 320.000 │
-                                       │  90.000 │
+                                       │   0.000 │
                                        │   0.000 │
                                        └         ┘
 
@@ -414,7 +454,7 @@ Graph {
                                      )
                                  }
                                  styles_string: String {
-                                     ⚓ (transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,20,90,0,1);
+                                     ⚓ (transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,20,0,0,1);
                                       width: 120px;
                                      height: 60px;
                                      )
@@ -452,7 +492,7 @@ Graph {
 
                          };)
                          edge_nodes: ⚓<Dict> {
-                             [⚬-▣ root => ▣ x => ▣ m => ▣ b] : EdgeData {
+                             [⚬-▣ root => ▣ x => ▣ a => ▣ b] : EdgeData {
                                  calculated: LayoutCalculated {
                                      cass_or_calc_size: ⚓ (
                                        ┌    ┐
@@ -528,7 +568,7 @@ Graph {
 
                                        ┌         ┐
                                        │ 350.000 │
-                                       │  97.500 │
+                                       │   7.500 │
                                        │   0.000 │
                                        └         ┘
 
@@ -547,8 +587,458 @@ Graph {
                          }
 
                      } ,
-                     source_nix: ▣ m ,
+                     source_nix: ▣ a ,
                      target_nix: ▣ b ,
+
+               }
+               ├─ ▣ b => ▣ b-check  : Edge {
+                     item: EmgEdgeItem {
+                         id: ✦ (⚓ (├─ ▣ b => ▣ b-check ))
+                         paths: ⚓<Dict> {
+                             [⚬-▣ root => ▣ x => ▣ a => ▣ b] : EdgeData {
+                                 calculated: LayoutCalculated {
+                                     cass_or_calc_size: ⚓ (
+                                       ┌    ┐
+                                       │ 60 │
+                                       │ 45 │
+                                       └    ┘
+
+                                     )
+                                     origin: ⚓ (Translation {
+
+                                       ┌         ┐
+                                       │ -30.000 │
+                                       │ -22.500 │
+                                       │   0.000 │
+                                       └         ┘
+
+                                     }
+                                     )
+                                     align: ⚓ (Translation {
+
+                                       ┌        ┐
+                                       │ 60.000 │
+                                       │ 30.000 │
+                                       │  0.000 │
+                                       └        ┘
+
+                                     }
+                                     )
+                                     translation: ⚓ (Translation {
+
+                                       ┌        ┐
+                                       │ 30.000 │
+                                       │  7.500 │
+                                       │  0.000 │
+                                       └        ┘
+
+                                     }
+                                     )
+                                     coordinates_trans: ⚓ (Translation {
+
+                                       ┌        ┐
+                                       │ 30.000 │
+                                       │  7.500 │
+                                       │  0.000 │
+                                       └        ┘
+
+                                     }
+                                     )
+                                     cass_trans: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     matrix: ⚓ (
+                                       ┌                 ┐
+                                       │   1   0   0  30 │
+                                       │   0   1   0 7.5 │
+                                       │   0   0   1   0 │
+                                       │   0   0   0   1 │
+                                       └                 ┘
+
+                                     )
+                                     loc_styles: ⚓ (Style {
+                                         transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,30,7.5,0,1);
+
+                                     };)
+                                     world: ⚓ (Translation {
+
+                                       ┌         ┐
+                                       │ 350.000 │
+                                       │   7.500 │
+                                       │   0.000 │
+                                       └         ┘
+
+                                     }
+                                     )
+                                 }
+                                 styles_string: String {
+                                     ⚓ (transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,30,7.5,0,1);
+                                      width: 60px;
+                                     height: 45px;
+                                     )
+                                 }
+                                 more... 
+
+                             }
+                         }
+                         layout: Layout {
+                             size:{
+                                 w:✦ (⚓ (50px))
+                                 h:✦ (⚓ (50px))
+
+                             }
+                             origin:{
+                                 x:✦ (⚓ (None))
+                                 y:✦ (⚓ (None))
+                                 z:✦ (⚓ (None))
+
+                             }
+                             align:{
+                                 x:✦ (⚓ (None))
+                                 y:✦ (⚓ (None))
+                                 z:✦ (⚓ (None))
+
+                             }
+
+                         }
+                         styles: ⚓{}
+                         path_styles: ✦<HashMap> {
+                         }
+                         path_layouts: ✦<HashMap> {
+                         }
+                         other_css_styles:✦ (Style {
+
+                         };)
+                         edge_nodes: ⚓<Dict> {
+                             [⚬-▣ root => ▣ x => ▣ a => ▣ b => ▣ b-check] : EdgeData {
+                                 calculated: LayoutCalculated {
+                                     cass_or_calc_size: ⚓ (
+                                       ┌    ┐
+                                       │ 50 │
+                                       │ 50 │
+                                       └    ┘
+
+                                     )
+                                     origin: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     align: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     translation: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     coordinates_trans: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     cass_trans: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     matrix: ⚓ (
+                                       ┌         ┐
+                                       │ 1 0 0 0 │
+                                       │ 0 1 0 0 │
+                                       │ 0 0 1 0 │
+                                       │ 0 0 0 1 │
+                                       └         ┘
+
+                                     )
+                                     loc_styles: ⚓ (Style {
+                                         transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
+
+                                     };)
+                                     world: ⚓ (Translation {
+
+                                       ┌         ┐
+                                       │ 350.000 │
+                                       │   7.500 │
+                                       │   0.000 │
+                                       └         ┘
+
+                                     }
+                                     )
+                                 }
+                                 styles_string: String {
+                                     ⚓ (transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
+                                      width: 50px;
+                                     height: 50px;
+                                     )
+                                 }
+                                 more... 
+
+                             }
+                         }
+
+                     } ,
+                     source_nix: ▣ b ,
+                     target_nix: ▣ b-check ,
+
+               }
+               ├─ ▣ b-check => ▣ b-check|CLICK  : Edge {
+                     item: EmgEdgeItem {
+                         id: ✦ (⚓ (├─ ▣ b-check => ▣ b-check|CLICK ))
+                         paths: ⚓<Dict> {
+                             [⚬-▣ root => ▣ x => ▣ a => ▣ b => ▣ b-check] : EdgeData {
+                                 calculated: LayoutCalculated {
+                                     cass_or_calc_size: ⚓ (
+                                       ┌    ┐
+                                       │ 50 │
+                                       │ 50 │
+                                       └    ┘
+
+                                     )
+                                     origin: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     align: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     translation: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     coordinates_trans: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     cass_trans: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     matrix: ⚓ (
+                                       ┌         ┐
+                                       │ 1 0 0 0 │
+                                       │ 0 1 0 0 │
+                                       │ 0 0 1 0 │
+                                       │ 0 0 0 1 │
+                                       └         ┘
+
+                                     )
+                                     loc_styles: ⚓ (Style {
+                                         transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
+
+                                     };)
+                                     world: ⚓ (Translation {
+
+                                       ┌         ┐
+                                       │ 350.000 │
+                                       │   7.500 │
+                                       │   0.000 │
+                                       └         ┘
+
+                                     }
+                                     )
+                                 }
+                                 styles_string: String {
+                                     ⚓ (transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
+                                      width: 50px;
+                                     height: 50px;
+                                     )
+                                 }
+                                 more... 
+
+                             }
+                         }
+                         layout: Layout {
+                             size:{
+                                 w:✦ (⚓ (None))
+                                 h:✦ (⚓ (None))
+
+                             }
+                             origin:{
+                                 x:✦ (⚓ (None))
+                                 y:✦ (⚓ (None))
+                                 z:✦ (⚓ (None))
+
+                             }
+                             align:{
+                                 x:✦ (⚓ (None))
+                                 y:✦ (⚓ (None))
+                                 z:✦ (⚓ (None))
+
+                             }
+
+                         }
+                         styles: ⚓{}
+                         path_styles: ✦<HashMap> {
+                         }
+                         path_layouts: ✦<HashMap> {
+                         }
+                         other_css_styles:✦ (Style {
+
+                         };)
+                         edge_nodes: ⚓<Dict> {
+                             [⚬-▣ root => ▣ x => ▣ a => ▣ b => ▣ b-check => ▣ b-check|CLICK] : EdgeData {
+                                 calculated: LayoutCalculated {
+                                     cass_or_calc_size: ⚓ (
+                                       ┌   ┐
+                                       │ 0 │
+                                       │ 0 │
+                                       └   ┘
+
+                                     )
+                                     origin: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     align: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     translation: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     coordinates_trans: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     cass_trans: ⚓ (Translation {
+
+                                       ┌       ┐
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       │ 0.000 │
+                                       └       ┘
+
+                                     }
+                                     )
+                                     matrix: ⚓ (
+                                       ┌         ┐
+                                       │ 1 0 0 0 │
+                                       │ 0 1 0 0 │
+                                       │ 0 0 1 0 │
+                                       │ 0 0 0 1 │
+                                       └         ┘
+
+                                     )
+                                     loc_styles: ⚓ (Style {
+                                         transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
+
+                                     };)
+                                     world: ⚓ (Translation {
+
+                                       ┌         ┐
+                                       │ 350.000 │
+                                       │   7.500 │
+                                       │   0.000 │
+                                       └         ┘
+
+                                     }
+                                     )
+                                 }
+                                 styles_string: String {
+                                     ⚓ (transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
+                                      width: -0px;
+                                     height: -0px;
+                                     )
+                                 }
+                                 more... 
+
+                             }
+                         }
+
+                     } ,
+                     source_nix: ▣ b-check ,
+                     target_nix: ▣ b-check|CLICK ,
 
                }
                ├─ ▣ root => ▣ x  : Edge {

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-02-23 15:36:41
+ * @LastEditTime: 2023-02-24 22:22:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -841,8 +841,9 @@ where
         self.nodes.get_mut(a.index()).map(|n| &mut n.item)
     }
 
+    #[cfg(test)]
     #[topo::nested]
-    pub fn insert_node_in_topo(&mut self, key: impl Into<IdStr>, item: N) -> NodeIndex {
+    pub fn insert_node_in_topo_only(&mut self, key: impl Into<IdStr>, item: N) -> NodeIndex {
         let id = key.into();
         let node = Node::new_in_topo(item);
         let node_idx = node_index(id.clone());
@@ -1095,11 +1096,13 @@ where
 
         // 断开 node 进出 连接,删除 edge
         for n_in_e_ix in incoming.get_rc().iter() {
-            self.disconnect_plug_in_node_with_dir(n_in_e_ix.source_nix(), Outgoing, n_in_e_ix);
+            self.disconnect_plug_in_node_with_dir(n_in_e_ix.source_nix(), Outgoing, n_in_e_ix)
+                .unwrap();
             self.remove_edge_only(n_in_e_ix).unwrap();
         }
         for n_out_e_ix in outgoing.get_rc().iter() {
-            self.disconnect_plug_in_node_with_dir(n_out_e_ix.target_nix(), Incoming, n_out_e_ix);
+            self.disconnect_plug_in_node_with_dir(n_out_e_ix.target_nix(), Incoming, n_out_e_ix)
+                .unwrap();
             self.remove_edge_only(n_out_e_ix).unwrap();
         }
 
@@ -1120,7 +1123,7 @@ where
         nix: &NodeIndex,
         dir: Direction,
     ) -> NodeNeighborsIter<NodeEdgesConsumingIter> {
-        NodeNeighborsIter::new(self.deprecated_edges_consuming_iter(nix, dir))
+        NodeNeighborsIter::new(self.edges_consuming_iter(nix, dir))
     }
     // pub fn neighbors_iter(&self, nix: &NodeIndex, dir: Direction) -> NodeNeighborsIter {
     //     let node = self
@@ -1135,7 +1138,7 @@ where
 
     /// ## 迭代 NodeIndex 的 edge
     /// * return: edgeIndex
-    pub fn deprecated_edges_consuming_iter(
+    pub fn edges_consuming_iter(
         &self,
         nix: &IdStr,
         dir: Direction,
@@ -1476,7 +1479,7 @@ mod graph_test_mod {
         //     .with_indent_lines(true)
         //     .with_indent_amount(4)
         //     .with_targets(true)
-        //     .with_filter(EnvFilter::new("[event_matching...]=debug"));
+        //     .with_filter(EnvFilter::new("[event_matching]=debug"));
 
         // #[cfg(feature = "debug")]
         // let touch_layer = tracing_tree::HierarchicalLayer::new(2)
@@ -1603,7 +1606,7 @@ mod graph_test_mod {
                 g1.get_node_item(&ww_nix).unwrap().clone()
             );
 
-            let xx_nix = g1.insert_node_in_topo(IdStr::from("xx"), IdStr::from("xx_item"));
+            let xx_nix = g1.insert_node_in_topo_only(IdStr::from("xx"), IdStr::from("xx_item"));
 
             // @ add edge ─────────────────────────────────────────────────────────────────
 
@@ -1681,7 +1684,7 @@ mod graph_test_mod {
 
             let mut g2: Graph<IdStr, &'static str> = Graph::empty();
 
-            g2.insert_node_in_topo(IdStr::from("xx"), IdStr::from("xx_item"));
+            g2.insert_node_in_topo_only(IdStr::from("xx"), IdStr::from("xx_item"));
 
             debug!("=======================================================");
             debug!("g1{:?}", &g1);
@@ -1699,7 +1702,7 @@ mod graph_test_mod {
     #[test]
     fn hashmap_index() {
         let mut g: Graph<&str, &str> = Graph::empty();
-        let l1_nix = g.insert_node_in_topo("1", "1");
+        let l1_nix = g.insert_node_in_topo_only("1", "1");
 
         let n = &mut g[&l1_nix];
 
@@ -1714,22 +1717,22 @@ mod graph_test_mod {
     #[allow(unused)]
     fn from_nodes_and_edges() {
         let mut g = Graph::empty();
-        let l1_nix = g.insert_node_in_topo("1", "1");
-        let l1_1_nix = g.insert_node_in_topo("1.1", "1.1");
-        let l1_2_nix = g.insert_node_in_topo("1.2", "1.2");
-        let l1_3_nix = g.insert_node_in_topo("1.3", "1.3");
+        let l1_nix = g.insert_node_in_topo_only("1", "1");
+        let l1_1_nix = g.insert_node_in_topo_only("1.1", "1.1");
+        let l1_2_nix = g.insert_node_in_topo_only("1.2", "1.2");
+        let l1_3_nix = g.insert_node_in_topo_only("1.3", "1.3");
 
-        let l1_1_1_nix = g.insert_node_in_topo("1.1.1", "1.1.1");
-        let l1_1_2_nix = g.insert_node_in_topo("1.1.2", "1.1.2");
-        let l1_1_3_nix = g.insert_node_in_topo("1.1.3", "1.1.3");
+        let l1_1_1_nix = g.insert_node_in_topo_only("1.1.1", "1.1.1");
+        let l1_1_2_nix = g.insert_node_in_topo_only("1.1.2", "1.1.2");
+        let l1_1_3_nix = g.insert_node_in_topo_only("1.1.3", "1.1.3");
 
-        let l1_2_1_nix = g.insert_node_in_topo("1.2.1", "1.2.1");
-        let l1_2_2_nix = g.insert_node_in_topo("1.2.2", "1.2.2");
-        let l1_2_3_nix = g.insert_node_in_topo("1.2.3", "1.2.3");
+        let l1_2_1_nix = g.insert_node_in_topo_only("1.2.1", "1.2.1");
+        let l1_2_2_nix = g.insert_node_in_topo_only("1.2.2", "1.2.2");
+        let l1_2_3_nix = g.insert_node_in_topo_only("1.2.3", "1.2.3");
 
-        let l1_3_1_nix = g.insert_node_in_topo("1.3.1", "1.3.1");
-        let l1_3_2_nix = g.insert_node_in_topo("1.3.2", "1.3.2");
-        let l1_3_3_nix = g.insert_node_in_topo("1.3.3", "1.3.3");
+        let l1_3_1_nix = g.insert_node_in_topo_only("1.3.1", "1.3.1");
+        let l1_3_2_nix = g.insert_node_in_topo_only("1.3.2", "1.3.2");
+        let l1_3_3_nix = g.insert_node_in_topo_only("1.3.3", "1.3.3");
         // ─────────────────────────────────────────────────────────────────
         // ────────────────────────────────────────────────────────────────────────────────
 

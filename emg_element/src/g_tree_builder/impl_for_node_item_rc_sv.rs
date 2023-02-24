@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-02-23 13:37:57
+ * @LastEditTime: 2023-02-24 15:48:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -112,8 +112,7 @@ where
     }
 }
 
-pub struct GraphEdgeBuilder
-{
+pub struct GraphEdgeBuilder {
     edge_ix: EdgeIndex,
     opt_size: Option<(GenericSizeAnchor, GenericSizeAnchor)>,
     opt_origin: Option<(GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor)>,

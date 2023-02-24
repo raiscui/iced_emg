@@ -3,7 +3,7 @@ use crate::im::Vector;
 /*
  * @Author: Rais
  * @Date: 2022-07-19 22:11:46
- * @LastEditTime: 2023-02-22 18:09:23
+ * @LastEditTime: 2023-02-23 17:14:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -34,6 +34,7 @@ where
     }
 }
 
+#[must_use = "this `Result` may be an `Err` variant, which should be handled"]
 pub enum ResultWithRef<'a, W, T, E> {
     Ok(&'a W, T),
     Err(&'a W, E),

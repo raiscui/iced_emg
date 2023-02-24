@@ -59,7 +59,7 @@ fn tracing_init() -> Result<(), Report> {
     //     .with_indent_lines(true)
     //     .with_indent_amount(4)
     //     .with_targets(true)
-    //     .with_filter(EnvFilter::new("[event_matching...]=debug"));
+    //     .with_filter(EnvFilter::new("[event_matching]=debug"));
 
     // #[cfg(feature = "debug")]
     // let touch_layer = tracing_tree::HierarchicalLayer::new(2)

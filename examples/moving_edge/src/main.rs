@@ -69,7 +69,7 @@ fn tracing_init() -> Result<(), Report> {
     //     .with_indent_lines(true)
     //     .with_indent_amount(4)
     //     .with_targets(true)
-    //     .with_filter(EnvFilter::new("[event_matching...]=debug"));
+    //     .with_filter(EnvFilter::new("[event_matching]=debug"));
 
     // #[cfg(feature = "debug")]
     // let touch_layer = tracing_tree::HierarchicalLayer::new(2)
@@ -178,15 +178,14 @@ impl Sandbox for App {
         gtree! {
             @="root" Layer [
                 @E=[
-
-                origin_x(px(0)),
-                origin_y(px(0)),
-                align_x(px(0)),
-                align_y(px(0)),
-                w(pc(40)),h(pc(40)),
-                b_width(px(2)),
-                b_color(rgb(0,0,1)),
-                fill(rgba(0, 0, 1, 1))
+                    origin_x(px(0)),
+                    origin_y(px(0)),
+                    align_x(px(0)),
+                    align_y(px(0)),
+                    w(pc(40)),h(pc(40)),
+                    b_width(px(2)),
+                    b_color(rgb(0,0,1)),
+                    fill(rgba(0, 0, 1, 1))
                 ]
                 @="y" Layer [
                     // node_ref("b")
@@ -234,12 +233,7 @@ impl Sandbox for App {
 
 
                             @E=[
-                                // origin_x(px(0)),align_x(px(250)),
-                                // origin_y(px(0)),align_y(px(250)),
                                 w(px(50)),h(px(50)),
-                                // fill(rgba(1., 1.,1., 1)),
-                                // b_width(px(1)),
-                                // b_color(rgb(1,0,0))
                             ]
                             @="b-check" Checkbox::new(false,"b-abcd",|_|{})=>[
                             ],

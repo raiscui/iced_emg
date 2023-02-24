@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-21 12:23:58
+ * @LastEditTime: 2023-02-23 22:47:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -434,18 +434,6 @@ impl GStateStore {
         );
 
         if let Some(k) = self.id_to_key_map.get(current_id).copied() {
-            #[cfg(debug_assertions)]
-            {
-                let loc = Location::caller();
-
-                warn!( "this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {}",
-                        &std::any::type_name::<T>(),
-                        &loc,
-                        // id,
-                        // &old_v
-                    );
-            }
-
             self.get_mut_secondarymap::<T>().map_or_else(
                 || {
                     panic!("panic current using find why here 2");
@@ -1410,7 +1398,7 @@ where
         &self,
     ) -> StateVar<B> {
         let v = self.get();
-        let b: StateVar<B> = use_state(|| v.into());
+        let b: StateVar<B> = use_state(|| v.clone().into());
         insert_before_fn_common_in_topo(
             self,
             Box::new(move |skip, _current, value| {
@@ -1430,7 +1418,7 @@ where
         T: std::fmt::Debug,
     {
         let v = self.get();
-        let b: StateVar<B> = use_state(|| v.into());
+        let b: StateVar<B> = use_state(|| v.clone().into());
 
         let this = *self;
 
@@ -2045,13 +2033,16 @@ fn or_insert_var_with_topo_id<F: FnOnce() -> T, T: 'static + std::fmt::Debug>(
     func: F,
     current_id: TopoKey,
 ) {
-    state_store_with(|g_state_store_refcell| {
-        trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
+    state_store_with(
+        #[track_caller]
+        |g_state_store_refcell| {
+            trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
 
-        g_state_store_refcell
-            .borrow_mut()
-            .or_insert_var_with_key::<F, T>(func, &StorageKey::TopoKey(current_id));
-    });
+            g_state_store_refcell
+                .borrow_mut()
+                .or_insert_var_with_key::<F, T>(func, &StorageKey::TopoKey(current_id));
+        },
+    );
 }
 
 fn read_val_with_topo_id<F: FnOnce(&T) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {
@@ -2267,36 +2258,39 @@ pub fn get_caller_location2() {
     get_caller_location();
 }
 
+/// # Panics
+/// new old not eq
 #[must_use]
-#[topo::nested]
+// #[topo::nested]
+#[track_caller]
 pub fn use_state<F: FnOnce() -> T, T>(func: F) -> StateVar<T>
 where
     T: 'static + std::fmt::Debug,
 {
-    trace!("use_state::({}) \n", &std::any::type_name::<T>(),);
+    let loc = Location::caller();
 
-    let id = topo::CallId::current();
-    let id = TopoKey { id };
-    trace!("use_state::TopoKey:\n{:#?}", &id);
+    topo::call(move || {
+        trace!("use_state::({}) \n", &std::any::type_name::<T>(),);
+        let id = topo::CallId::current();
+        let id = TopoKey { id };
+        trace!("use_state::TopoKey:\n{:#?}", &id);
+        #[cfg(debug_assertions)]
+        {
+            if state_exists_for_topo_id::<T>(id) {
+                let old = StateVar::<T>::new(id);
+                let old_v = old.get_rc();
+                let v = func();
 
-    // if !state_exists_for_topo_id::<T>(id) {
-    //     insert_var_with_topo_id::<T>(Var::new(data), id);
-    // } else {
-    //     #[cfg(debug_assertions)]
-    //     {
-    //         let old = StateVar::<T>::new(id);
-    //         let old_v = old.get_rc();
-    //         warn!( "this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {}, \n v:{:?},\n old_v:{:?}",
-    //             &std::any::type_name::<T>(),
-    //             &loc,
-    //             // id,
-    //             &data,
-    //             &old_v
-    //         );
-    //     }
-    // }
-    or_insert_var_with_topo_id(func, id);
-    StateVar::new(id)
+                warn!("this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {},\n old_v:{:?},\n new V:{:?}",std::any::type_name::<T>(),loc,old_v,v);
+                if format!("{old_v:?}") != format!("{v:?}") {
+                    warn!("val changed !!!!!!!!!!!!!!!!!!!!!!!!");
+                }
+                return StateVar::new(id);
+            }
+        }
+        or_insert_var_with_topo_id(func, id);
+        StateVar::new(id)
+    })
 }
 
 #[must_use]
@@ -2583,7 +2577,7 @@ mod state_test {
     fn sa_in_sv() {
         let x = use_state(|| 1);
         let xw = x.watch();
-        let a = use_state(|| xw);
+        let a = use_state(|| xw.clone());
         println!("{a}");
         println!("{}", a.get());
         assert_eq!(1, a.get());

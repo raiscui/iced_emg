@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-02-23 13:36:46
+ * @LastEditTime: 2023-02-24 17:28:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,8 +10,13 @@ use crate::{
     graph_edit::{GraphEdit, GraphEditManyMethod},
     EventNode, GElement,
 };
+
 use derive_more::From;
-use emg_common::{better_any::Tid, im::HashSet, IdStr};
+use emg_common::{
+    better_any::{Tid, TidAble},
+    im::HashSet,
+    IdStr,
+};
 use emg_hasher::CustomHasher;
 use emg_layout::EmgEdgeItem;
 use emg_shaping::{EqShaping, Shaping};
@@ -29,7 +34,7 @@ pub use impl_for_node_item_rc_sv::{GraphEdgeBuilder, GraphNodeBuilder};
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[derive(From)]
-pub enum InitTree<Message: 'static> {
+pub enum InitdTree<Message: 'static> {
     Builder(GTreeBuilderElement<Message>),
     Gel(GElement<Message>),
 }
@@ -39,7 +44,7 @@ type EdgesAndChildren<Message> = (
     Vec<GTreeBuilderElement<Message>>,
 );
 
-impl<Message> InitTree<Message> {
+impl<Message> InitdTree<Message> {
     fn merge_es_and_children(
         opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem>>>>,
         mut o_es: Vec<Rc<dyn Shaping<EmgEdgeItem>>>,
@@ -62,6 +67,7 @@ impl<Message> InitTree<Message> {
     }
 
     //TODO work here make fn with_id_edge_children
+    ///NOTE gtree macro will call this
     pub fn with_id_edge_children(
         self,
         id: IdStr,
@@ -69,10 +75,10 @@ impl<Message> InitTree<Message> {
         opt_children: Option<Vec<GTreeBuilderElement<Message>>>,
     ) -> GTreeBuilderElement<Message> {
         match self {
-            InitTree::Gel(gel) => {
+            InitdTree::Gel(gel) => {
                 GTreeBuilderElement::GElementTree(id, opt_es.unwrap(), gel, opt_children.unwrap())
             }
-            InitTree::Builder(b) => match b {
+            InitdTree::Builder(b) => match b {
                 // GTreeBuilderElement::Layer(_, o_es, o_children) => {
                 //     unreachable!("deprecated");
                 //     // let (new_es, new_children) =
@@ -80,9 +86,10 @@ impl<Message> InitTree<Message> {
 
                 //     // GTreeBuilderElement::Layer(id, new_es, new_children)
                 // }
-                GTreeBuilderElement::GElementTree(_, o_es, gel, o_children) => {
+                GTreeBuilderElement::GElementTree(_init_id, o_es, gel, o_children) => {
                     let (new_es, new_children) =
                         Self::merge_es_and_children(opt_es, o_es, opt_children, o_children);
+                    //TODO check if id is not defined ,then use self id
                     GTreeBuilderElement::GElementTree(id, new_es, gel, new_children)
                 }
                 GTreeBuilderElement::ShapingUse(_, _) => todo!(),
@@ -100,7 +107,7 @@ pub trait GTreeInit<Message> {
         _id: &IdStr,
         _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
-    ) -> InitTree<Message>;
+    ) -> InitdTree<Message>;
 }
 pub trait GtreeInitCall<Message> {
     //NOTE for the loopback check
@@ -109,7 +116,7 @@ pub trait GtreeInitCall<Message> {
         _id: &IdStr,
         _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
-    ) -> InitTree<Message>;
+    ) -> InitdTree<Message>;
 }
 
 type TypeIdSets = HashSet<TypeId, BuildHasherDefault<CustomHasher>>;
@@ -119,14 +126,15 @@ where
     // Message: Clone + PartialEq + for<'a> emg_common::any::MessageTid<'a>,
     T: GTreeInit<Message> + for<'a> Tid<'a>,
 {
-    //NOTE for the loopback check
+    ///NOTE for the loopback check
+    ///NOTE gtree macro will call this
     #[track_caller]
     fn tree_init_calling(
         self,
-        _id: &IdStr,
-        _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
-        _children: &[GTreeBuilderElement<Message>],
-    ) -> InitTree<Message> {
+        id: &IdStr,
+        es: &[Rc<dyn Shaping<EmgEdgeItem>>],
+        children: &[GTreeBuilderElement<Message>],
+    ) -> InitdTree<Message> {
         let new_type_sets = if let Some(type_sets) = illicit::get::<TypeIdSets>().ok().as_deref() {
             let self_id = self.self_id();
 
@@ -147,10 +155,11 @@ where
 
         illicit::Layer::new()
             .offer(new_type_sets)
-            .enter(|| self.tree_init(_id, _es, _children))
+            .enter(|| self.tree_init(id, es, children))
     }
 }
 
+#[derive(Tid)]
 pub enum GTreeBuilderElement<Message>
 where
     Message: 'static,
@@ -190,6 +199,20 @@ where
     // )
 }
 
+impl<Message> GTreeInit<Message> for GTreeBuilderElement<Message>
+where
+    Message: 'static,
+{
+    fn tree_init(
+        self,
+        _id: &IdStr,
+        _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
+        _children: &[GTreeBuilderElement<Message>],
+    ) -> InitdTree<Message> {
+        self.into()
+    }
+}
+
 impl<Message> Clone for GTreeBuilderElement<Message>
 where
     Message: 'static,
@@ -202,7 +225,7 @@ where
             }
             Self::ShapingUse(arg0, arg1) => Self::ShapingUse(arg0.clone(), arg1.clone()),
             Self::Cl(arg0, arg1) => Self::Cl(arg0.clone(), arg1.clone()),
-            Self::Dyn(arg0, arg1, arg2) => Self::Dyn(arg0.clone(), arg1.clone(), arg2.clone()),
+            Self::Dyn(arg0, arg1, arg2) => Self::Dyn(arg0.clone(), arg1.clone(), *arg2),
             Self::Event(a, b) => Self::Event(a.clone(), b.clone()),
         }
     }

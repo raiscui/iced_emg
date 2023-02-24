@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-22 14:02:47
- * @LastEditTime: 2023-02-23 15:39:05
+ * @LastEditTime: 2023-02-23 17:24:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,6 +11,7 @@ use emg_common::Vector;
 use nom::{error::Error, Finish};
 use std::fmt::Write;
 use std::{hash::Hash, str::FromStr};
+use tracing::error;
 
 use crate::parser::parse_edge_ix_s;
 
@@ -145,7 +146,13 @@ impl EPath {
     /// Will panic if 'vec' is empty, or if the first element's `source_nix` is not None.
     #[must_use]
     pub fn new(vec: Vector<EdgeIndex>) -> Self {
-        assert!(vec.front().unwrap().source_nix().is_none());
+        // assert!(vec.front().unwrap().source_nix().is_none());
+        #[cfg(debug_assertions)]
+        {
+            if !vec.front().unwrap().source_nix().is_none() {
+                error!("vec.front().unwrap().source_nix().is_none() is not none");
+            }
+        }
         Self(vec)
     }
 

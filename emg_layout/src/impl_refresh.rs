@@ -264,12 +264,10 @@ impl Shaping<EmgEdgeItem> for AlignY {
     }
 }
 
-
 /// using at tree building
-impl< Message> Shaping<EmgEdgeItem> for AnimationE<Message>
+impl<Message> Shaping<EmgEdgeItem> for AnimationE<Message>
 where
     Message: Clone + std::fmt::Debug + 'static + PartialEq,
-
 {
     fn shaping(&self, edge: &mut EmgEdgeItem) -> bool {
         //NOTE 当 tree 宏 中 在 edge中使用 am类型
@@ -277,6 +275,7 @@ where
             "AnimationE  Shaping EmgEdgeItem snapshot: \n{:#?}",
             illicit::Snapshot::get()
         );
+        //TODO 默认 动画 需要通 其他 类型一样 应用到全部path 只有特别指定 才会单独一条path
         illicit::get::<EPath>().map_or_else(
             |e| {
                 panic!(" cannot get illicit env EPath for animationE::effecting_edge_path,e:{e:?}");
@@ -286,6 +285,7 @@ where
                 let p = (*path).clone();
 
                 //TODO 当 P不存在了,动画会怎样?
+                //TODO 测试,有可能是应用到了全部 layout
                 self.effecting_edge_path(&*edge, p);
             },
         );

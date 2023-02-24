@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-22 23:12:24
+ * @LastEditTime: 2023-02-24 17:21:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@
 use gtree::gtree;
 
 use crate::{
-    g_element::DynGElement, g_tree_builder::GTreeInit, GElement, GTreeBuilderElement, InitTree,
+    g_element::DynGElement, g_tree_builder::GTreeInit, GElement, GTreeBuilderElement, InitdTree,
     IntoOptionMs,
 };
 
@@ -154,11 +154,12 @@ where
         id: &IdStr,
         _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
-    ) -> InitTree<Message> {
+    ) -> InitdTree<Message> {
         use crate::gtree_macro_prelude::*;
         let is_checked = self.is_checked;
         let on_toggle = self.on_toggle.take().unwrap();
         gtree! {
+            //TODO add str default id
             @SkipInit self =>[
                 @=id.clone() + "|CLICK" On:CLICK  move||{
 
@@ -168,7 +169,7 @@ where
                     //   *v =new_v;
                     //   (on_toggle)(new_v)
                     // })
-
+                    let _span = debug_span!("checkbox", at = "click").entered();
                     is_checked.set_with_once(|v| !*v);
                       (on_toggle)(is_checked.get())
 

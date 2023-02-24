@@ -1,6 +1,8 @@
 #![feature(specialization)]
 #![feature(negative_impls)]
 #![feature(auto_traits)]
+#![feature(closure_track_caller)]
+
 mod error;
 
 mod graph;

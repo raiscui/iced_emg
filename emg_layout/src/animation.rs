@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-02-23 13:40:24
+ * @LastEditTime: 2023-02-23 16:41:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -230,9 +230,7 @@ where
     /// Will return `Err` if `self.edge` is None
     /// permission to read it.
     //TODO return bool changed or not
-    pub fn effecting_edge_path(&self, edge: &EmgEdgeItem, for_path: EPath)
-
-    {
+    pub fn effecting_edge_path(&self, edge: &EmgEdgeItem, for_path: EPath) {
         edge.build_path_layout(|mut l| {
             // • • • • •
 

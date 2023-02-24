@@ -98,10 +98,10 @@ mod neighbors_test {
     #[allow(unused)]
     fn neighbors() {
         let mut g1: Graph<IdStr, &'static str> = Graph::empty();
-        let ww_nix = g1.insert_node_in_topo(IdStr::from("ww"), IdStr::from("ww_item"));
-        let xx_nix = g1.insert_node_in_topo(IdStr::from("xx"), IdStr::from("xx_item"));
-        let xx_nix2 = g1.insert_node_in_topo(IdStr::from("xx2"), IdStr::from("xx_item2"));
-        let xx_nix3 = g1.insert_node_in_topo(IdStr::from("xx3"), IdStr::from("xx_item3"));
+        let ww_nix = g1.insert_node_in_topo_only(IdStr::from("ww"), IdStr::from("ww_item"));
+        let xx_nix = g1.insert_node_in_topo_only(IdStr::from("xx"), IdStr::from("xx_item"));
+        let xx_nix2 = g1.insert_node_in_topo_only(IdStr::from("xx2"), IdStr::from("xx_item2"));
+        let xx_nix3 = g1.insert_node_in_topo_only(IdStr::from("xx3"), IdStr::from("xx_item3"));
         // ─────────────────────────────────────────────────────────────────
         // ────────────────────────────────────────────────────────────────────────────────
 
@@ -136,7 +136,7 @@ mod neighbors_test {
         println!("======================");
 
         println!("======================");
-        let mut edge_it = g1.deprecated_edges_consuming_iter(&ww_nix, Outgoing);
+        let mut edge_it = g1.edges_consuming_iter(&ww_nix, Outgoing);
 
         println!("edge 1     {:?}", &edge_it.next());
         let e1node = &edge_it.node().unwrap();
@@ -162,22 +162,22 @@ mod neighbors_test {
     #[allow(unused)]
     fn neighbors2() {
         let mut g = Graph::empty();
-        let l1_nix = g.insert_node_in_topo("1", "1");
-        let l1_1_nix = g.insert_node_in_topo("1.1", "1.1");
-        let l1_2_nix = g.insert_node_in_topo("1.2", "1.2");
-        let l1_3_nix = g.insert_node_in_topo("1.3", "1.3");
+        let l1_nix = g.insert_node_in_topo_only("1", "1");
+        let l1_1_nix = g.insert_node_in_topo_only("1.1", "1.1");
+        let l1_2_nix = g.insert_node_in_topo_only("1.2", "1.2");
+        let l1_3_nix = g.insert_node_in_topo_only("1.3", "1.3");
 
-        let l1_1_1_nix = g.insert_node_in_topo("1.1.1", "1.1.1");
-        let l1_1_2_nix = g.insert_node_in_topo("1.1.2", "1.1.2");
-        let l1_1_3_nix = g.insert_node_in_topo("1.1.3", "1.1.3");
+        let l1_1_1_nix = g.insert_node_in_topo_only("1.1.1", "1.1.1");
+        let l1_1_2_nix = g.insert_node_in_topo_only("1.1.2", "1.1.2");
+        let l1_1_3_nix = g.insert_node_in_topo_only("1.1.3", "1.1.3");
 
-        let l1_2_1_nix = g.insert_node_in_topo("1.2.1", "1.2.1");
-        let l1_2_2_nix = g.insert_node_in_topo("1.2.2", "1.2.2");
-        let l1_2_3_nix = g.insert_node_in_topo("1.2.3", "1.2.3");
+        let l1_2_1_nix = g.insert_node_in_topo_only("1.2.1", "1.2.1");
+        let l1_2_2_nix = g.insert_node_in_topo_only("1.2.2", "1.2.2");
+        let l1_2_3_nix = g.insert_node_in_topo_only("1.2.3", "1.2.3");
 
-        let l1_3_1_nix = g.insert_node_in_topo("1.3.1", "1.3.1");
-        let l1_3_2_nix = g.insert_node_in_topo("1.3.2", "1.3.2");
-        let l1_3_3_nix = g.insert_node_in_topo("1.3.3", "1.3.3");
+        let l1_3_1_nix = g.insert_node_in_topo_only("1.3.1", "1.3.1");
+        let l1_3_2_nix = g.insert_node_in_topo_only("1.3.2", "1.3.2");
+        let l1_3_3_nix = g.insert_node_in_topo_only("1.3.3", "1.3.3");
         // ─────────────────────────────────────────────────────────────────
         // ────────────────────────────────────────────────────────────────────────────────
 
@@ -229,7 +229,6 @@ mod neighbors_test {
         }
         println!("======================");
         let mut it = g.neighbors_consuming_iter(&l1_nix, Outgoing);
-
         println!("1:{:?}", &it.next());
         let n2 = &it.next().unwrap();
         println!("2:{:?}", n2);
@@ -245,7 +244,7 @@ mod neighbors_test {
         println!("======================");
 
         println!("======================");
-        let mut edge_it = g.deprecated_edges_consuming_iter(&l1_nix, Outgoing);
+        let mut edge_it = g.edges_consuming_iter(&l1_nix, Outgoing);
 
         println!("edge 1     {:?}", &edge_it.next());
         let e1node = &edge_it.node().unwrap();

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-02-20 13:31:45
+ * @LastEditTime: 2023-02-24 21:17:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,11 +13,10 @@
 use indented::indented;
 use std::fmt::Write;
 mod event_builder;
-use derive_more::From;
 
 use emg_common::{mouse, IdStr, Pos, TypeName, Vector};
 use emg_layout::EdgeCtx;
-use emg_native::{event::EventFlag, renderer::Rect, Event, WidgetState};
+use emg_native::{renderer::Rect, Event, WidgetState};
 use emg_shaping::EqShapingWithDebug;
 use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, debug_span, info, info_span, instrument, Span};
@@ -25,289 +24,7 @@ use tracing::{debug, debug_span, info, info_span, instrument, Span};
 use crate::GElement;
 use std::{fmt::Display, rc::Rc, string::String};
 
-pub use self::event_builder::EventListener;
-
-/// EventIdentify(emg_native::event::EventFlag::X,X::EventFlag)
-/// EventIdentify(Level1,Level2)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct EventIdentify(u32, u32);
-
-impl EventIdentify {
-    #[inline]
-    pub const fn contains(&self, other: Self) -> bool {
-        self.0 == other.0 && (self.1 & other.1) == other.1
-    }
-}
-
-impl From<mouse::EventFlag> for EventIdentify {
-    fn from(x: mouse::EventFlag) -> Self {
-        Self(emg_native::event::MOUSE.bits(), x.bits())
-    }
-}
-
-impl From<(EventFlag, u32)> for EventIdentify {
-    fn from(x: (EventFlag, u32)) -> Self {
-        Self(x.0.bits(), x.1)
-    }
-}
-
-// Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>;
-//TODO in web, EventCallbackFn has 3 arg, native need same arg
-type EventCallbackFn<Message> = Rc<dyn Fn(&mut i32) -> Option<Message>>;
-type EventMessageFn<Message> = Rc<dyn Fn() -> Option<Message>>;
-
-/// 3 arg event callback
-pub struct EventCallback<Message>(EventIdentify, EventCallbackFn<Message>);
-
-impl<Message> std::fmt::Debug for EventCallback<Message> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("EventCallback")
-            .field(&self.0)
-            .field(&"EventCallbackFn<Message>")
-            .finish()
-    }
-}
-
-impl<Message> Clone for EventCallback<Message> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone())
-    }
-}
-
-impl<Message> PartialEq for EventCallback<Message>
-// where
-//     Message: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        if self.0 == other.0 {
-            debug_assert_eq!(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            );
-
-            debug_assert!(std::ptr::eq(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            ));
-            true
-        } else {
-            debug_assert_ne!(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            );
-            debug_assert!(!std::ptr::eq(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            ));
-            false
-        }
-    }
-}
-
-impl<Message> EventCallback<Message> {
-    #[must_use]
-    pub fn new(name: EventIdentify, cb: EventCallbackFn<Message>) -> Self {
-        Self(name, cb)
-    }
-}
-
-pub struct EventMessage<Message>(EventIdentify, EventMessageFn<Message>);
-
-impl<Message> std::fmt::Debug for EventMessage<Message> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("EventMessage")
-            .field(&self.0)
-            .field(&"EventMessageFn<Message>")
-            .finish()
-    }
-}
-
-impl<Message> Clone for EventMessage<Message> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone())
-    }
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-
-auto trait MsgMarker {}
-impl !MsgMarker for () {}
-impl<Message> !MsgMarker for Option<Message> {}
-
-pub trait IntoOptionMs<Message> {
-    fn into_option(self) -> Option<Message>;
-}
-
-impl<Message: MsgMarker> IntoOptionMs<Message> for Message {
-    fn into_option(self) -> Option<Message> {
-        Some(self)
-    }
-}
-
-impl<Message> IntoOptionMs<Message> for () {
-    fn into_option(self) -> Option<Message> {
-        Option::<Message>::None
-    }
-}
-
-impl<Message> IntoOptionMs<Message> for Option<Message> {
-    fn into_option(self) -> Option<Message> {
-        self
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
-
-impl<Message: 'static> EventMessage<Message> {
-    pub fn new<T: IntoOptionMs<Message>>(
-        name: EventIdentify,
-        cb: impl Fn() -> T + 'static,
-        // cb: impl FnOnce() -> T + Clone + 'static,
-    ) -> Self {
-        Self(name, Rc::new(move || cb().into_option()))
-    }
-}
-
-// impl<Message> EventMessage<Message>
-// where
-//     Message: 'static,
-// {
-//     #[must_use]
-//     pub fn new<MsU: 'static, F: Fn() -> MsU + 'static>(name: EventNameString, cb: F) -> Self {
-//         let rc_callback = map_fn_callback_return_to_option_ms!(
-//             dyn Fn() -> Option<Message>,
-//             (),
-//             cb,
-//             "Callback can return only Msg, Option<Msg> or ()!",
-//             Rc
-//         );
-//         Self(name, rc_callback)
-//     }
-// }
-
-impl<Message> PartialEq for EventMessage<Message>
-// where
-//     Message: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        // self.0 == other.0
-
-        //FIXME comparing trait object pointers compares a non-unique vtable address
-        //comparing trait object pointers compares a non-unique vtable address
-        // consider extracting and comparing data pointers only
-        // for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#vtable_address_comparisons
-        //
-        // && Rc::ptr_eq(&self.1, &other.1)
-
-        if self.0 == other.0 {
-            debug_assert_eq!(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            );
-
-            debug_assert!(std::ptr::eq(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            ));
-            true
-        } else {
-            debug_assert_ne!(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            );
-            debug_assert!(!std::ptr::eq(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            ));
-            false
-        }
-    }
-}
-#[derive(From)]
-pub enum EventNode<Message> {
-    // no arg
-    Cb(EventCallback<Message>),
-    // 3 arg
-    CbMessage(EventMessage<Message>),
-}
-
-impl<Message> EventNode<Message> {
-    pub fn get_identify(&self) -> EventIdentify {
-        match self {
-            EventNode::Cb(x) => x.0.clone(),
-            EventNode::CbMessage(x) => x.0.clone(),
-        }
-    }
-    pub fn call(&self) -> Option<Message> {
-        match self {
-            EventNode::Cb(x) => {
-                info!("EventNode::Cb call");
-                //TODO real 3 arg
-                (x.1)(&mut 1)
-            }
-            EventNode::CbMessage(x) => (x.1)(),
-        }
-    }
-}
-
-impl<Message> PartialEq for EventNode<Message> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Cb(l0), Self::Cb(r0)) => l0 == r0,
-            (Self::CbMessage(l0), Self::CbMessage(r0)) => l0 == r0,
-            _ => false,
-        }
-    }
-}
-impl<Message> Eq for EventNode<Message> where Message: PartialEq {}
-
-impl<Message> Clone for EventNode<Message> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Cb(arg0) => Self::Cb(arg0.clone()),
-            Self::CbMessage(arg0) => Self::CbMessage(arg0.clone()),
-        }
-    }
-}
-// impl<Message> PartialEq for EventNode<Message>
-// where
-//     Message: PartialEq,
-// {
-//     fn eq(&self, other: &Self) -> bool {
-//         match (self, other) {
-//             (Self::Cb(l0), Self::Cb(r0)) => l0 == r0,
-//             (Self::CbMessage(l0), Self::CbMessage(r0)) => l0 == r0,
-//             (EventNode::Cb(_), EventNode::Cb(_)) => todo!(),
-//             (EventNode::Cb(_), EventNode::CbMessage(_)) => todo!(),
-//             (EventNode::CbMessage(_), EventNode::Cb(_)) => todo!(),
-//             (EventNode::CbMessage(_), EventNode::CbMessage(_)) => todo!(),
-//         }
-//     }
-// }
-// impl<Message> From<(EventNameString, Box<dyn EventCbClone>)> for EventNode<Message> {
-//     fn from(v: (EventNameString, Box<dyn EventCbClone>)) -> Self {
-//         Self::Cb(EventCallback(v.0, v.1))
-//     }
-// }
-
-// impl<Message> From<(EventNameString, Box<dyn EventMessageCbClone<Message>>)>
-//     for EventNode<Message>
-// {
-//     fn from(v: (EventNameString, Box<dyn EventMessageCbClone<Message>>)) -> Self {
-//         Self::CbMessage(EventMessage(v.0, v.1))
-//     }
-// }
-
-impl<Message> std::fmt::Debug for EventNode<Message>
-// where
-//     Message: std::fmt::Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            EventNode::Cb(x) => f.debug_tuple("EventNode<Message>").field(x).finish(),
-            EventNode::CbMessage(x) => f.debug_tuple("EventNode<Message>").field(x).finish(),
-        }
-    }
-}
+pub use self::event_builder::*;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct NodeBuilderWidget<Message> {
@@ -458,7 +175,7 @@ where
                         WidgetState::new(
                             (w, h),
                             trans,
-                            Rc::new(world.clone()),
+                            Rc::new(*world),
                             Rc::new(children_layout_override.clone()),
                         )
                     })
@@ -580,9 +297,10 @@ where
         //TODO move event_callbacks into sa map 不会变更, 是否考虑变更?
         let cursor_position_clone = cursor_position.clone();
         let id = self.id.clone();
+        let _span = debug_span!("event_matching", at = "event_matching pre run", ?id).entered();
 
         (events_sa, &self.widget_state).then(move |events, state| {
-            let _span = debug_span!("event_matching...", ?id).entered();
+            // let _span = debug_span!("event_matching", ?id).entered();
 
             let size = state.size();
 

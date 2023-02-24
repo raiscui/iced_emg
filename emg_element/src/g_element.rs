@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-02-21 23:33:28
+ * @LastEditTime: 2023-02-24 17:22:53
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@
 use crate::{
     node_builder::EventNode,
     widget::{Layer, Widget},
-    GTreeBuilderElement, GTreeInit, InitTree, NodeBuilderWidget,
+    GTreeBuilderElement, GTreeInit, InitdTree, NodeBuilderWidget,
 };
 use dyn_clone::DynClone;
 use emg_state::{StateAnchor, StateMultiAnchor};
@@ -134,7 +134,7 @@ impl<Message> GTreeInit<Message> for GElement<Message> {
         _es: &[Rc<dyn Shaping<emg_layout::EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
         //TODO use either like <GTreeBuilderElement,GElement> for speed??
-    ) -> InitTree<Message> {
+    ) -> InitdTree<Message> {
         self.into()
     }
 }

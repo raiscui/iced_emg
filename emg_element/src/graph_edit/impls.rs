@@ -1,15 +1,16 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-02-23 15:43:32
+ * @LastEditTime: 2023-02-23 17:32:51
  * @LastEditors: Rais
  * @Description:
  */
 
-use emg::{Direction, EdgeIndex};
+use emg::{node_index, Direction, EdgeIndex};
 use emg_common::IdStr;
+use emg_state::topo;
 
-use crate::{error::Error, GTreeBuilderElement};
+use crate::{error::Error, GTreeBuilderElement, GTreeBuilderFn};
 
 use super::{GraphEditManyMethod, GraphEditor};
 
@@ -29,7 +30,8 @@ use super::{GraphEditManyMethod, GraphEditor};
 impl<Message> GraphEditManyMethod for GraphEditor<Message> {
     type Message = Message;
     fn edge_plug_edit(&self, who: &EdgeIndex, dir: Direction, to: IdStr) -> Result<(), Error> {
-        self.borrow()
+        self.0
+            .borrow()
             .edge_plug_edit(who, dir, to)
             .map_err(|e| e.into())
     }
@@ -38,9 +40,12 @@ impl<Message> GraphEditManyMethod for GraphEditor<Message> {
         todo!("edge_path_node_change_edge")
     }
 
-    fn insert_node_in_topo(&self, tree_element: &'_ GTreeBuilderElement<Message>) {
+    #[topo::nested]
+    fn insert_node_in_topo(&self, tree_element: &'_ GTreeBuilderElement<Message>, to: IdStr) {
+        illicit::Layer::new().offer(node_index(to)).enter(|| {
+            self.0.handle_children_in_topo(None, tree_element);
+        })
         // self.handle_children_in_topo
-        todo!()
     }
 }
 

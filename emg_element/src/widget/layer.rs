@@ -9,7 +9,7 @@ use emg_shaping::Shaping;
 use emg_state::{Anchor, StateAnchor, StateMultiAnchor};
 use tracing::{info, Span};
 
-use crate::{g_tree_builder::GTreeInit, GElement, InitTree};
+use crate::{g_tree_builder::GTreeInit, GElement, InitdTree};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -112,7 +112,7 @@ where
         _id: &IdStr,
         _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
         _children: &[crate::GTreeBuilderElement<Message>],
-    ) -> InitTree<Message> {
+    ) -> InitdTree<Message> {
         GElement::Layer_(self).into()
     }
 }

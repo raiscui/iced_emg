@@ -20,7 +20,7 @@ pub mod widget;
 pub use g_element::{node_ref, GElement};
 pub use g_node::{EventMatchsSa, GelType, GraphMethods, GraphType, NItem, E, N};
 
-pub use g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn, GTreeInit, InitTree};
+pub use g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn, GTreeInit, InitdTree};
 pub use graph_program::{EventAndCtx, GraphProgram};
 pub use node_builder::{EventCallback, EventMessage, EventNode, IntoOptionMs, NodeBuilderWidget};
 pub use widget::Widget;
@@ -34,7 +34,7 @@ use emg_vello::SceneFrag;
 pub mod prelude {
     pub use crate::{
         error::Error as ElementError, graph_edit, node_ref, widget::*, EventCallback, EventMessage,
-        GElement, GTreeBuilderElement, GelType, GraphType,
+        GElement, GTreeBuilderElement, GelType, GraphType, InitdTree,
     };
 }
 pub mod gtree_macro_prelude {

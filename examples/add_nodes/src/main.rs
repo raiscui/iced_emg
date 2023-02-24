@@ -13,8 +13,7 @@ use emg_bind::{
     runtime::OrdersContainer,
     Sandbox, Settings,
 };
-use std::{cell::Cell, rc::Rc};
-use tracing::{debug_span, instrument};
+use tracing::{debug_span, info, instrument, warn};
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
@@ -27,8 +26,17 @@ fn tracing_init() -> Result<(), Report> {
     //     .with_indent_amount(4)
     //     .with_targets(true)
     //     .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
-    //         |metadata, _cx| {
-    //             tracing::debug!(target: "tracing", "metadata.level() = {:?}, metadata.is_span() = {:?}, metadata.name() = {:?}", metadata.level(), metadata.is_span(), metadata.name());
+    //         |metadata, cx| {
+    //             if let Some(current_span) = cx.lookup_current() {
+    //                 return current_span.name() == "interesting_span";
+    //             }
+    // println!(
+    //     "metadata.level() = {:?}, metadata.is_span() = {:?}, metadata.name() = {:?}",
+    //     metadata.level(),
+    //     metadata.is_span(),
+    //     metadata.name()
+    // );
+    //             // tracing::debug!(target: "tracing", "metadata.level() = {:?}, metadata.is_span() = {:?}, metadata.name() = {:?}", metadata.level(), metadata.is_span(), metadata.name());
     //             // if metadata.level() <= &tracing::Level::DEBUG{
     //             //     // If this *is* "interesting_span", make sure to enable it.
     //             //     if metadata.is_span() && metadata.name() == "LayoutOverride" {
@@ -51,9 +59,9 @@ fn tracing_init() -> Result<(), Report> {
     //                 && !metadata.target().contains("cassowary")
     //                 && !metadata.target().contains("wgpu")
     //                 && metadata.level() <= &tracing::Level::INFO // global tracing level
-    //             // && !metadata.target().contains("winit event")
-    //             // && !metadata.fields().field("event").map(|x|x.to_string())
-    //             // && !metadata.target().contains("winit event: DeviceEvent")
+    //                                                              // && !metadata.target().contains("winit event")
+    //                                                              // && !metadata.fields().field("event").map(|x|x.to_string())
+    //                                                              // && !metadata.target().contains("winit event: DeviceEvent")
     //         },
     //     ));
 
@@ -69,7 +77,7 @@ fn tracing_init() -> Result<(), Report> {
     //     .with_indent_lines(true)
     //     .with_indent_amount(4)
     //     .with_targets(true)
-    //     .with_filter(EnvFilter::new("[event_matching...]=debug"));
+    //     .with_filter(EnvFilter::new("[event_matching]=debug"));
 
     // #[cfg(feature = "debug")]
     // let touch_layer = tracing_tree::HierarchicalLayer::new(2)
@@ -78,9 +86,7 @@ fn tracing_init() -> Result<(), Report> {
     //     .with_targets(true)
     //     .with_filter(EnvFilter::new("[Touch]=debug"));
 
-    //NOTE emg_layout
-    #[cfg(feature = "debug")]
-    let emg_layout_layer = tracing_tree::HierarchicalLayer::new(2)
+    let filter_layer = tracing_tree::HierarchicalLayer::new(2)
         .with_indent_lines(true)
         .with_indent_amount(4)
         .with_targets(true)
@@ -88,9 +94,31 @@ fn tracing_init() -> Result<(), Report> {
             // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
             // "[GElement-shaping]=debug",
             // "error,[sa gel in map clone]=debug",
-            "error",
+            // "[event_matching]=debug,[editor]=debug,[checkbox]=debug",
+            "[event_matching]=debug",
             // "error",
+        ))
+        .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
+            |metadata, _cx| {
+                let skip_target = ["emg_state"];
+                for t in skip_target {
+                    if metadata.target().contains(t) {
+                        return false;
+                    }
+                }
+
+                // if metadata.is_span() && spans.contains(&metadata.name()) {
+                //     return true;
+                // }
+
+                // if let Some(current_span) = cx.lookup_current() {
+                //     return spans.contains(&current_span.name());
+                // }
+
+                true
+            },
         ));
+
     // ─────────────────────────────────────────────────────────────────────────────
 
     tracing_subscriber::registry()
@@ -98,7 +126,7 @@ fn tracing_init() -> Result<(), Report> {
         // .with(event_matching_layer)
         // .with(touch_layer)
         .with(error_layer)
-        // .with(emg_layout_layer)
+        .with(filter_layer)
         // .with(out_layer)
         .init();
 
@@ -142,7 +170,7 @@ impl Sandbox for App {
         // graph: Self::GraphEditor,
         graph: GraphEditor<Self::Message>,
         // orders: &Self::Orders,
-        orders: &OrdersContainer<Self::Message>,
+        _orders: &OrdersContainer<Self::Message>,
         message: Self::Message,
     ) {
         match message {
@@ -152,28 +180,48 @@ impl Sandbox for App {
             Message::DecrementPressed => {
                 self.value -= 1;
             }
-            Message::Empty => graph
-                .edit(edge_index("a", "b"))
-                .moving(Incoming, "m")
-                .or_else(|editor, e| match e {
-                    ElementError::GraphError(ee) => match ee {
-                        emg_bind::emg::Error::CanNotGetEdge => editor
-                            .edit(edge_index("m", "b"))
-                            .moving(Incoming, "a")
-                            .into_result(),
+            Message::Empty => {
+                use crate::gtree_macro_prelude::*;
 
-                        _ => todo!(),
-                    },
-                })
-                .unwrap(),
+                let builder = {
+                    gtree! {
+
+                            @E=[
+                                w(px(50)),h(px(50)),
+                            ]
+                            @="b-check" Checkbox::new(false,"b-abcd",|_|{
+                                println!("b checkbox");
+                            })
+
+
+                    }
+                };
+
+                graph.edit(builder).insert("b").unwrap();
+                insta::assert_display_snapshot!("graph", graph.graph());
+            }
         }
     }
 
-    fn tree_build(&self, orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
+    fn tree_build(&self, _orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
         use emg_bind::gtree_macro_prelude::*;
 
-        let n = Rc::new(Cell::new(100));
-        let ww = use_state(|| w(px(100)));
+        let builder: GTreeBuilderElement<Message> = {
+            gtree! {
+
+                    @E=[
+                        w(px(50)),h(px(50)),
+                    ]
+                    @="b-check" Checkbox::new(false,"b-abcd",|_|{
+                        println!("b checkbox");
+                        Message::IncrementPressed
+
+                    })
+
+
+            }
+        };
+
         let fill_var = use_state(|| fill(hsl(150, 100, 30)));
         gtree! {
             @="root" Layer [
@@ -205,8 +253,9 @@ impl Sandbox for App {
                 @="x" Layer [
 
                     @="x_click" On:CLICK  ||{
-                        let _span = debug_span!("Moving", "on [x] click, moving a->b to m->b")
+                        let _span = debug_span!("CLICK", "on [x] click, moving a->b to m->b")
                                 .entered();
+
                         Message::Empty
                     },
 
@@ -233,16 +282,7 @@ impl Sandbox for App {
                         @="b" Layer [
 
 
-                            @E=[
-                                // origin_x(px(0)),align_x(px(250)),
-                                // origin_y(px(0)),align_y(px(250)),
-                                w(px(50)),h(px(50)),
-                                // fill(rgba(1., 1.,1., 1)),
-                                // b_width(px(1)),
-                                // b_color(rgb(1,0,0))
-                            ]
-                            @="b-check" Checkbox::new(false,"b-abcd",|_|{})=>[
-                            ],
+                            // @="fb"  builder
 
                         ],
                     ],
