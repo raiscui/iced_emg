@@ -3,7 +3,7 @@ use std::rc::Rc;
 /*
  * @Author: Rais
  * @Date: 2022-06-14 11:38:22
- * @LastEditTime: 2023-02-22 16:36:13
+ * @LastEditTime: 2023-02-27 15:42:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,6 +15,12 @@ use crate::StateAnchor;
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(PartialEq, Eq, Clone)]
 pub struct StateVarLit<T>(Var<T>);
+
+impl<T: Default + 'static> Default for StateVarLit<T> {
+    fn default() -> Self {
+        Self(Var::new(Default::default()))
+    }
+}
 
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVarLit<T> {
     default fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

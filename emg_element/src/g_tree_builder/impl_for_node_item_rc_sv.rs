@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-02-24 15:48:09
+ * @LastEditTime: 2023-02-27 16:46:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -422,7 +422,7 @@ where
                     },
                     GElement::EvolutionaryFactor(evo) => {
                         let mut g = self.borrow_mut();
-                        let parent_item = g.get_mut_node_item(&parent_nix.expect("parent nix must have in EvolutionaryFactor builder")).unwrap();
+                        let parent_item = g.get_node_item(&parent_nix.expect("parent nix must have in EvolutionaryFactor builder")).unwrap();
                         let rc_sa_rc_parent = parent_item.get_gel_rc_sa();
                         warn!("---- parent anchor: {}",&rc_sa_rc_parent);
                         let gel_sa = evo.evolution(&*rc_sa_rc_parent);
