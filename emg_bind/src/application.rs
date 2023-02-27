@@ -1,19 +1,20 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-02-21 12:38:44
+ * @LastEditTime: 2023-02-27 14:59:37
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive cross-platform applications.
 
+use emg::EdgeIndex;
 use emg_common::{IdStr, Pos, Vector};
 use emg_element::{
     graph_edit::{GraphEdit, GraphEditManyMethod},
     GTreeBuilderFn, GraphMethods,
 };
 use emg_orders::Orders;
-use emg_state::StateAnchor;
+use emg_state::{state_lit::StateVarLit, StateAnchor};
 use tracing::instrument;
 
 use crate::{element, window, Command, Executor, Settings};
@@ -81,7 +82,7 @@ pub trait Application: Sized {
     // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
     // fn view(&mut self) -> GElement<Self::Message>;
 
-    fn root_id(&self) -> &str;
+    fn root_eix(&self) -> EdgeIndex;
 
     // fn ctx(
     //     &self,
@@ -197,7 +198,7 @@ pub trait Application: Sized {
     }
 }
 
-pub struct Instance<A: Application>(A);
+pub struct Instance<A: Application>(A, StateVarLit<Option<EdgeIndex>>);
 
 impl<A> crate::runtime::Program for Instance<A>
 where
@@ -256,8 +257,8 @@ where
         emg_graph_rc_refcell
     }
 
-    fn root_id(&self) -> &str {
-        self.0.root_id()
+    fn root_eix(&self) -> EdgeIndex {
+        self.0.root_eix()
     }
 
     // #[instrument(skip(self, g))]
@@ -274,10 +275,10 @@ where
         painter: &StateAnchor<crate::runtime::PaintCtx>,
         events: &StateAnchor<Vector<crate::runtime::EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> crate::runtime::EventAndCtx<Self::Message,Self::Renderer> {
-        let root_id = self.root_id();
+    ) -> crate::runtime::EventAndCtx<Self::Message, Self::Renderer> {
+        self.1.set(Some(self.root_eix()));
 
-        g.runtime_prepare(&IdStr::new(root_id), painter, events, cursor_position)
+        g.runtime_prepare(self.1.watch(), painter, events, cursor_position)
     }
 }
 
@@ -301,8 +302,7 @@ where
 
     fn new(flags: Self::Flags) -> (Self, Command<<A as Application>::Message>) {
         let (app, command) = A::new(flags);
-
-        (Self(app), command)
+        (Self(app, StateVarLit::new(None)), command)
     }
 
     fn title(&self) -> String {

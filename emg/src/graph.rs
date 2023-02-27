@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-02-24 22:22:01
+ * @LastEditTime: 2023-02-27 11:43:52
  * @LastEditors: Rais
  * @Description:
  */
@@ -1138,11 +1138,7 @@ where
 
     /// ## 迭代 NodeIndex 的 edge
     /// * return: edgeIndex
-    pub fn edges_consuming_iter(
-        &self,
-        nix: &IdStr,
-        dir: Direction,
-    ) -> NodeEdgesConsumingIter {
+    pub fn edges_consuming_iter(&self, nix: &IdStr, dir: Direction) -> NodeEdgesConsumingIter {
         let node = self
             .nodes
             .get(nix)

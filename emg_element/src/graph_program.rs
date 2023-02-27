@@ -1,11 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2023-02-21 12:36:36
+ * @LastEditTime: 2023-02-27 15:00:27
  * @LastEditors: Rais
  * @Description:
  */
 
+use emg::EdgeIndex;
 use emg_common::{Pos, Vector};
 use emg_native::{event::EventWithFlagType, renderer::Renderer, Program};
 use emg_state::StateAnchor;
@@ -35,7 +36,8 @@ pub trait GraphProgram: Program {
     ) -> Self::GTreeWithBuilder;
 
     // fn view(&self, g: &Self::GraphType) -> Self::RefedGelType;
-    fn root_id(&self) -> &str;
+    fn root_eix(&self) -> EdgeIndex;
+
     fn build_ctx(
         &self,
         g: &Self::GraphType,

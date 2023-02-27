@@ -155,7 +155,7 @@ where
     // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message> {
     //     T::view(self, g)
     // }
-    fn root_id(&self) -> &str {
+    fn root_eix(&self) -> &str {
         SB::root_id(self)
     }
 

@@ -8,7 +8,7 @@
 
 use std::rc::Rc;
 
-use emg::{edge_index_no_source, NodeIndex, Outgoing};
+use emg::{edge_index_no_source, EdgeIndex, NodeIndex, Outgoing};
 use emg_common::{im::vector, IdStr, Pos, Vector};
 use emg_layout::EPath;
 use emg_native::{EventWithFlagType, PaintCtx, Widget};
@@ -22,7 +22,7 @@ pub trait GraphMethods<Message> {
     type SceneCtx;
     fn runtime_prepare(
         &self,
-        ix: &IdStr,
+        root_eix: StateAnchor<Option<EdgeIndex>>,
         painter: &StateAnchor<PaintCtx>,
         events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
@@ -71,10 +71,10 @@ where
     //         .filter_map(move |_k, gel| gel.as_builder().map(|nb| nb.event_matchs(&events)));
     // }
 
-    #[tracing::instrument(skip(self, events_sa, painter, cursor_position))]
+    #[tracing::instrument(skip_all)]
     fn runtime_prepare(
         &self,
-        ix: &IdStr,
+        root_eix_sa: StateAnchor<Option<EdgeIndex>>,
         painter: &StateAnchor<PaintCtx>,
         events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
