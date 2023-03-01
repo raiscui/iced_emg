@@ -3,7 +3,7 @@ use std::rc::Rc;
 /*
  * @Author: Rais
  * @Date: 2022-06-14 11:38:22
- * @LastEditTime: 2023-02-27 15:42:15
+ * @LastEditTime: 2023-02-27 18:16:52
  * @LastEditors: Rais
  * @Description:
  */
@@ -59,13 +59,19 @@ impl<T: 'static> StateVarLit<T> {
         self.0.set(val);
     }
 
-    pub fn update<F: FnOnce(&mut T)>(&self, func: F)
+    //todo can true false update
+
+    pub fn update<F: FnOnce(&mut T) -> R, R>(&self, func: F) -> R
     where
         T: Clone,
     {
         let mut v = self.0.get().as_ref().clone();
-        func(&mut v);
+        let r = func(&mut v);
         self.0.set(v);
+        r
+    }
+    pub fn set_with<F: FnOnce(&T) -> T>(&self, func: F) {
+        self.set(func(self.0.get().as_ref()));
     }
 
     #[must_use]

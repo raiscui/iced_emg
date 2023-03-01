@@ -54,8 +54,8 @@ where
     }
 }
 
-impl Iterator for NodeNeighborsIter<NodeEdgesIter<'_>> {
-    type Item = NodeIndex;
+impl<'a> Iterator for NodeNeighborsIter<NodeEdgesIter<'a>> {
+    type Item = &'a NodeIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.edge_iter

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-02-23 22:47:35
+ * @LastEditTime: 2023-03-01 01:23:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,7 +16,7 @@ use anchors::{
     expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
     singlethread::MultiAnchor,
 };
-use emg_common::{smallvec, SVec::ToSmallVec, SmallVec, TypeCheck, TypeName};
+use emg_common::{smallvec, SVec::ToSmallVec, SmallVec, TypeCheck, TypeName, Vector};
 use tracing::{debug, debug_span, instrument, warn};
 
 use std::{
@@ -1515,6 +1515,33 @@ where
     }
 }
 
+impl<I, V> From<StateAnchor<Dict<I, Anchor<V>>>> for StateAnchor<Dict<I, V>>
+where
+    V: std::clone::Clone + 'static,
+    I: 'static + Clone + std::cmp::Ord,
+    // Dict<I, V>: std::cmp::Eq,
+{
+    fn from(value: StateAnchor<Dict<I, Anchor<V>>>) -> Self {
+        value.then(|v| {
+            anchors::collections::ord_map_collect::OrdMapCollect::new_to_anchor(v.clone())
+        })
+    }
+}
+impl<I, V> From<StateAnchor<Dict<I, Anchor<V>>>> for StateAnchor<Vector<V>>
+where
+    V: std::clone::Clone + 'static,
+    I: 'static + Clone + std::cmp::Ord,
+    // Dict<I, V>: std::cmp::Eq,
+{
+    fn from(value: StateAnchor<Dict<I, Anchor<V>>>) -> Self {
+        value.then(|v| {
+            anchors::collections::vector::VectorCollect::new_to_anchor(
+                v.values().cloned().collect(),
+            )
+        })
+    }
+}
+
 pub trait CloneStateAnchor<T>
 where
     T: Clone + 'static,
@@ -1596,31 +1623,72 @@ where
 impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> StateAnchor<Dict<K, V>> {
     #[track_caller]
     #[must_use]
-    pub fn filter<F: FnMut(&K, &V) -> bool + 'static>(&self, mut f: F) -> Self {
-        self.0
-            .filter_map(move |k, v| if f(k, v) { Some(v.clone()) } else { None })
-            .into()
+    #[inline]
+    pub fn filter<F: FnMut(&K, &V) -> bool + 'static>(&self, f: F) -> Self {
+        self.0.filter(f).into()
+    }
+    #[track_caller]
+    #[must_use]
+    #[inline]
+    pub fn filter_with_anchor<A, F>(&self, anchor: &StateAnchor<A>, f: F) -> Self
+    where
+        A: 'static + std::cmp::PartialEq + std::clone::Clone,
+        F: FnMut(&A, &K, &V) -> bool + 'static,
+    {
+        self.0.filter_with_anchor(anchor.anchor(), f).into()
     }
 
     #[track_caller]
+    #[must_use]
+    #[inline]
     pub fn map_<F: FnMut(&K, &V) -> T + 'static, T: Clone + PartialEq + 'static>(
         &self,
-        mut f: F,
+        f: F,
     ) -> StateAnchor<Dict<K, T>> {
-        self.0.filter_map(move |k, v| Some(f(k, v))).into()
+        self.0.map_(f).into()
+    }
+    #[track_caller]
+    #[must_use]
+    #[inline]
+    pub fn map_with_anchor<A, F, T>(&self, anchor: &StateAnchor<A>, f: F) -> StateAnchor<Dict<K, T>>
+    where
+        A: 'static + std::cmp::PartialEq + Clone,
+        F: FnMut(&A, &K, &V) -> T + 'static,
+        T: Clone + PartialEq + 'static,
+    {
+        self.0.map_with_anchor(anchor.anchor(), f).into()
     }
 
     #[track_caller]
+    #[must_use]
+    #[inline]
     pub fn filter_map<F: FnMut(&K, &V) -> Option<T> + 'static, T: Clone + PartialEq + 'static>(
         &self,
         f: F,
     ) -> StateAnchor<Dict<K, T>> {
         self.0.filter_map(f).into()
     }
+    #[track_caller]
+    #[must_use]
+    #[inline]
+    pub fn filter_map_with_anchor<A, F, T>(
+        &self,
+        anchor: &StateAnchor<A>,
+        f: F,
+    ) -> StateAnchor<Dict<K, T>>
+    where
+        A: 'static + std::cmp::PartialEq + Clone,
+        F: FnMut(&A, &K, &V) -> Option<T> + 'static,
+        T: Clone + PartialEq + 'static,
+    {
+        self.0.filter_map_with_anchor(anchor.anchor(), f).into()
+    }
 
     /// Dict 增加/更新 K V 会增量执行 function f , 用于更新 out,
     /// Dict 移除 K V 并不会触发 out 的更新,
     #[track_caller]
+    #[must_use]
+    #[inline]
     pub fn increment_reduction<
         F: FnMut(&mut T, &K, &V) + 'static,
         T: Clone + PartialEq + 'static,
@@ -1635,6 +1703,8 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
     /// Dict 增加/更新 K V 会增量执行 function f , 用于更新 out,
     /// Dict 移除 K V 也会执行 remove f,
     #[track_caller]
+    #[must_use]
+    #[inline]
     pub fn reduction<
         F: FnMut(&mut T, &K, &V) -> bool + 'static,
         Fu: FnMut(&mut T, (&K, &V), &K, &V) -> bool + 'static,
@@ -1656,27 +1726,34 @@ where
     T: 'static,
 {
     #[track_caller]
+    #[inline]
+    #[allow(clippy::missing_const_for_fn)]
     pub fn constant(val: T) -> Self {
         state_store_with(|_g_state_store_refcell| {});
         Self(Anchor::constant(val))
     }
 
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
+    #[inline]
     pub fn into_anchor(self) -> Anchor<T> {
         self.0
     }
 
     #[must_use]
+    #[inline]
     pub const fn anchor(&self) -> &Anchor<T> {
         &self.0
     }
     #[must_use]
+    #[inline]
     pub fn get_anchor(&self) -> Anchor<T> {
         self.0.clone()
     }
     // ────────────────────────────────────────────────────────────────────────────────
 
     #[track_caller]
+    #[inline]
     pub fn map<Out, F>(&self, f: F) -> StateAnchor<Out>
     where
         Out: 'static,
@@ -1686,6 +1763,7 @@ where
         self.0.map(f).into()
     }
     #[track_caller]
+    #[inline]
     pub fn map_mut<Out, F>(&self, initial: Out, f: F) -> StateAnchor<Out>
     where
         Out: 'static,
@@ -1696,6 +1774,7 @@ where
     }
 
     #[track_caller]
+    #[inline]
     pub fn then<Out, F>(&self, f: F) -> StateAnchor<Out>
     where
         F: 'static,
@@ -1706,6 +1785,7 @@ where
     }
 
     #[track_caller]
+    #[inline]
     pub fn refmap<F, Out>(&self, f: F) -> StateAnchor<Out>
     where
         Out: 'static,
@@ -1715,6 +1795,7 @@ where
         self.0.refmap(f).into()
     }
     #[track_caller]
+    #[inline]
     pub fn cutoff<F, Out>(&self, f: F) -> StateAnchor<Out>
     where
         Out: 'static,
@@ -1940,7 +2021,7 @@ pub enum StorageKey {
 
 impl StorageKey {
     #[must_use]
-    pub fn as_topo_key(&self) -> Option<&TopoKey> {
+    pub const fn as_topo_key(&self) -> Option<&TopoKey> {
         if let Self::TopoKey(v) = self {
             Some(v)
         } else {

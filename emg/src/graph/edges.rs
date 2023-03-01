@@ -26,9 +26,8 @@ impl<'a> NodeEdgesIter<'a> {
         }
     }
 
-    pub fn node(&self) -> Option<NodeIndex> {
-        self.current_next
-            .and_then(|e| e.nix_by_dir(self.dir()).clone())
+    pub fn node(&self) -> Option<&NodeIndex> {
+        self.current_next.and_then(|e| e.nix_by_dir(self.dir()))
     }
 }
 
@@ -72,7 +71,7 @@ impl NodeEdgesConsumingIter {
     pub fn node(&self) -> Option<NodeIndex> {
         self.current_next
             .as_ref()
-            .and_then(|e| e.nix_by_dir(self.dir()).clone())
+            .and_then(|e| e.nix_by_dir(self.dir()).cloned())
     }
 }
 

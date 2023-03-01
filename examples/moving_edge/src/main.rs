@@ -280,7 +280,7 @@ impl Sandbox for App {
         }
     }
 
-    fn root_id(&self) -> &str {
+    fn root_eix(&self) -> &str {
         "root"
     }
 

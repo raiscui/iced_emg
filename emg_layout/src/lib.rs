@@ -899,14 +899,14 @@ impl EmgEdgeItem {
 
                 let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:eid_sa_inner change ",edge_index=?i).entered();
 
-                i.source_nix().clone()
+                i.source_nix().cloned()
             }).into()
         });
 
         let opt_self_target_node_nix_sa_re_get: StateAnchor<Option<NodeIndex>> =
             id_sv.watch().then(|eid_sa_inner| {
                 eid_sa_inner
-                    .map(|i: &EdgeIndex| i.target_nix().clone())
+                    .map(|i: &EdgeIndex| i.target_nix().cloned())
                     .into()
             });
 
@@ -932,7 +932,7 @@ impl EmgEdgeItem {
 
 
                             debug!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&some_source_nix);
-                            if   someone_eix.target_nix().as_ref()? == &some_source_nix {
+                            if   someone_eix.target_nix()? == &some_source_nix {
 
                                 Some(e.item.edge_nodes.clone())
 
@@ -973,7 +973,7 @@ impl EmgEdgeItem {
                         .filter_map(move |child_eix, v| {
                             //NOTE  edge source is self_target, this is children
 
-                            if child_eix.source_nix().as_ref()? == &self_target_nix {
+                            if child_eix.source_nix()? == &self_target_nix {
                                 Some(v.edge_nodes.clone())
                             } else {
                                 None

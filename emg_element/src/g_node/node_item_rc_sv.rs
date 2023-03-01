@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-02-23 16:33:21
+ * @LastEditTime: 2023-03-01 13:18:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,7 @@ use std::{cell::RefCell, rc::Rc};
 
 // use cfg_if::cfg_if;
 use either::Either::{self, Left, Right};
-use emg::{EdgeCollect, EdgeIndex, Graph};
+use emg::{EdgeIndex, EdgePlugsCollect, Graph};
 use emg_common::{
     im::{ordmap::OrdMapPool, vector},
     IdStr, Vector,
@@ -61,8 +61,8 @@ where
     pub fn new(
         nix: IdStr,
         gel_sa: NItem<Message>,
-        incoming_eix_sa: &StateAnchor<EdgeCollect>,
-        outgoing_eix_sa: &StateAnchor<EdgeCollect>,
+        incoming_eix_sa: &StateAnchor<EdgePlugsCollect>,
+        outgoing_eix_sa: &StateAnchor<EdgePlugsCollect>,
         graph_rc: Rc<RefCell<GraphType<Message>>>,
     ) -> Self {
         let graph_rc2 = graph_rc.clone();
@@ -186,7 +186,7 @@ where
                             .paths_view_gel
                             .filter(move |path, _gel| {
                                 path.last()
-                                    .and_then(|p| p.source_nix().as_ref())
+                                    .and_then(|p| p.source_nix())
                                     .map(emg::NodeIndex::index)
                                     .unwrap()//child source nix
                                     == &nix4
@@ -228,6 +228,7 @@ where
 
             let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 
+            //TODO 使用 cutoff 优化, children_view_gel_sa变化 时, 重新计算的this_path_children_sa不一定变化
             let this_path_children_sa: StateAnchor<Dict<EdgeIndex, GElEither<Message>>> =
                 children_view_gel_sa
                     .filter_map(move |k_child_path, v_child_gel| {
@@ -364,7 +365,7 @@ where
                         graph_rc7
                             .borrow()
                             .get_node_item_use_ix(refs)
-                            .map(|x| x.gel_sa.watch().anchor().then(|aa| aa.clone().into_anchor()))
+                            .map(|x| x.gel_item.watch().anchor().then(|aa| aa.clone().into_anchor()))
                             .unwrap()
                     } else {
                         g_sa2.clone().into_anchor()
@@ -463,7 +464,7 @@ where
         });
 
         Self {
-            gel_sa,
+            gel_item: gel_sa,
             paths_sa,
             // incoming_eix_sa,
             // outgoing_eix_sa,
@@ -489,7 +490,11 @@ where
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn get_view_gelement_sa(&self, eix: &EPath) -> StateAnchor<GelType<Message>> {
+    pub fn get_view_gelement_sa<BK>(&self, eix: &BK) -> StateAnchor<GelType<Message>>
+    where
+        EPath: std::borrow::Borrow<BK>,
+        BK: Ord + ?Sized + Clone + 'static,
+    {
         //TODO make state_anchor eix ;使用 sa的 eix, 动态更新 gel
         let eix_clone = eix.clone();
         //  self.paths_view_gel.get_with(|x|x.get(eix).unwrap().clone());
@@ -500,11 +505,11 @@ where
         //     .get_with(|x| x.get(eix).unwrap().clone())
     }
     pub fn set_gel_sa(&self, gel_sa: StateAnchor<GelType<Message>>) {
-        self.gel_sa.set(gel_sa);
+        self.gel_item.set(gel_sa);
     }
 
     #[must_use]
     pub fn get_gel_rc_sa(&self) -> Rc<StateAnchor<Rc<GElement<Message>>>> {
-        self.gel_sa.get_rc()
+        self.gel_item.get_rc()
     }
 }

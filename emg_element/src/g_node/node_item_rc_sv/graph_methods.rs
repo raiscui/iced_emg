@@ -74,12 +74,13 @@ where
     #[tracing::instrument(skip_all)]
     fn runtime_prepare(
         &self,
-        root_eix_sa: StateAnchor<Option<EdgeIndex>>,
+        opt_root_eix_sa: StateAnchor<Option<EdgeIndex>>,
         painter: &StateAnchor<PaintCtx>,
         events_sa: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> (EventMatchsSa<Message>, StateAnchor<Rc<Self::SceneCtx>>) {
         debug!("runtime prepare start");
+        let root_eix_sa = opt_root_eix_sa.map(|x| x.clone().unwrap());
         let events = events_sa.clone();
         let cursor_position_clone = cursor_position.clone();
         let gel_rc_sa = self

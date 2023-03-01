@@ -1,3 +1,4 @@
+use emg::EdgeIndex;
 use emg_element::{
     graph_edit::{GraphEdit, GraphEditManyMethod, GraphEditor},
     GraphMethods,
@@ -42,7 +43,7 @@ pub trait Sandbox: std::default::Default {
     ///
     /// These widgets can produce __messages__ based on user interaction.
     // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
-    fn root_id(&self) -> &str;
+    fn root_eix(&self) -> EdgeIndex;
 
     // fn ctx(
     //     &self,
@@ -155,8 +156,8 @@ where
     // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message> {
     //     T::view(self, g)
     // }
-    fn root_eix(&self) -> &str {
-        SB::root_id(self)
+    fn root_eix(&self) -> EdgeIndex {
+        SB::root_eix(self)
     }
 
     // fn ctx(

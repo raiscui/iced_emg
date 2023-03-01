@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-22 14:02:47
- * @LastEditTime: 2023-02-23 17:24:42
+ * @LastEditTime: 2023-03-01 13:16:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -149,7 +149,7 @@ impl EPath {
         // assert!(vec.front().unwrap().source_nix().is_none());
         #[cfg(debug_assertions)]
         {
-            if !vec.front().unwrap().source_nix().is_none() {
+            if vec.front().unwrap().source_nix().is_some() {
                 error!("vec.front().unwrap().source_nix().is_none() is not none");
             }
         }
@@ -158,7 +158,7 @@ impl EPath {
 
     #[must_use]
     pub fn last_target(&self) -> Option<&NodeIndex> {
-        self.0.last().and_then(|e| e.target_nix().as_ref())
+        self.0.last().and_then(emg::EdgeIndex::target_nix)
     }
     #[must_use]
     ///除了 `other_added_tail` 的最后一个 nix, 其他全部匹配
@@ -176,14 +176,14 @@ impl EPath {
 
     #[must_use]
     pub fn link_ref(&self, target_nix: NodeIndex) -> Self {
-        let last = self.last().and_then(|e| e.target_nix().as_ref()).cloned();
+        let last = self.last().and_then(emg::EdgeIndex::target_nix).cloned();
         let mut new_e = self.clone();
         new_e.push_back(EdgeIndex::new(last, target_nix));
         new_e
     }
     #[must_use]
     pub fn link(mut self, target_nix: NodeIndex) -> Self {
-        let last = self.last().and_then(|e| e.target_nix().as_ref()).cloned();
+        let last = self.last().and_then(emg::EdgeIndex::target_nix).cloned();
         self.push_back(EdgeIndex::new(last, target_nix));
         self
     }
@@ -203,7 +203,7 @@ impl std::fmt::Display for EPath {
         let mut path = String::new();
         let front = self.0.front();
         if let Some(e) = front {
-            let first_target = e.target_nix().as_ref().unwrap();
+            let first_target = e.target_nix().unwrap();
             write!(path, "⚬-{first_target}")?;
         } else {
             write!(path, "EMPTY!!!!!!!!!!!")?;
@@ -260,7 +260,7 @@ impl FromStr for EPath {
 #[cfg(test)]
 mod test_epath {
     use emg::{edge_index, edge_index_no_source, node_index, NodeIndex};
-    use emg_common::{im::vector, IdStr};
+    use emg_common::im::vector;
 
     use crate::EPath;
 

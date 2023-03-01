@@ -232,7 +232,7 @@ impl Sandbox for Counter {
         }
     }
 
-    fn root_id(&self) -> &str {
+    fn root_eix(&self) -> &str {
         "debug_layer"
     }
 

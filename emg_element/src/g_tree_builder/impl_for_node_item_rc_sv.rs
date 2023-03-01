@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-02-27 16:46:09
+ * @LastEditTime: 2023-03-01 00:50:51
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ use crate::{
     widget::Layer,
     GElement,
 };
-use emg::{edge_index_no_source, node_index, Edge, EdgeCollect, EdgeIndex, NodeIndex};
+use emg::{edge_index_no_source, node_index, Edge, EdgeIndex, EdgePlugsCollect, NodeIndex};
 
 use emg_common::{im::vector, IdStr};
 use emg_hasher::CustomHasher;
@@ -41,8 +41,8 @@ where
     ix: IdStr,
 
     opt_gel_sa: Option<NItem<Message>>,
-    opt_incoming_eix_set: Option<EdgeCollect>,
-    opt_outgoing_eix_set: Option<EdgeCollect>,
+    opt_incoming_eix_set: Option<EdgePlugsCollect>,
+    opt_outgoing_eix_set: Option<EdgePlugsCollect>,
 }
 
 impl<Message> GraphNodeBuilder<Message>
@@ -65,13 +65,13 @@ where
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    pub fn with_incoming_eix_set(mut self, incoming_eix_set: EdgeCollect) -> Self {
+    pub fn with_incoming_eix_set(mut self, incoming_eix_set: EdgePlugsCollect) -> Self {
         self.opt_incoming_eix_set = Some(incoming_eix_set);
         self
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    pub fn with_outgoing_eix_set(mut self, outgoing_eix_set: EdgeCollect) -> Self {
+    pub fn with_outgoing_eix_set(mut self, outgoing_eix_set: EdgePlugsCollect) -> Self {
         self.opt_outgoing_eix_set = Some(outgoing_eix_set);
         self
     }
@@ -172,8 +172,8 @@ impl GraphEdgeBuilder {
 
         g.nodes_connect(&self.edge_ix)?;
         // ─────────────────────────────────────────────────────
-        let source = use_state(|| self.edge_ix.source_nix().clone());
-        let target = use_state(|| self.edge_ix.target_nix().clone());
+        let source = use_state(|| self.edge_ix.source_nix().cloned());
+        let target = use_state(|| self.edge_ix.target_nix().cloned());
         // ─────────────────────────────────────────────────────────────
         let edge_item = EmgEdgeItem::new_in_topo(
             source.watch(),
@@ -221,11 +221,12 @@ where
 
                 let edge_ix = edge_index_no_source(root_id.clone());
                 GraphNodeBuilder::new(root_id.clone())
-                    .with_gel_sa(use_state(|| {
-                        StateAnchor::constant(Rc::new(
-                            Layer::<Message>::new(root_id.clone()).into(),
-                        ))
-                    }))
+                    .with_gel_sa(use_state(|| StateAnchor::constant(Rc::new(gel.clone()))))
+                    // .with_gel_sa(use_state(|| {
+                    //     StateAnchor::constant(Rc::new(
+                    //         Layer::<Message>::new(root_id.clone()).into(),
+                    //     ))
+                    // }))
                     .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                     .with_outgoing_eix_set_with_default_capacity(5)
                     .build_in_topo(self);
@@ -420,6 +421,7 @@ where
                         .with_outgoing_eix_set_with_default()
                         .build_in_topo(self);
                     },
+                    //TODO not dyn ,make it dyn
                     GElement::EvolutionaryFactor(evo) => {
                         let mut g = self.borrow_mut();
                         let parent_item = g.get_node_item(&parent_nix.expect("parent nix must have in EvolutionaryFactor builder")).unwrap();

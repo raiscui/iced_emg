@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-02-27 11:43:52
+ * @LastEditTime: 2023-03-01 13:12:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -52,7 +52,7 @@ use indexmap::IndexSet;
 
 pub type NodeCollect<N> = HashMap<IdStr, Node<N>, BuildHasherDefault<CustomHasher>>;
 // type OutGoingEdgeVec = SmallVec<[EdgeIndex; OUT_EDGES_SIZE]>;
-pub type EdgeCollect = IndexSet<EdgeIndex, BuildHasherDefault<CustomHasher>>;
+pub type EdgePlugsCollect = IndexSet<EdgeIndex, BuildHasherDefault<CustomHasher>>;
 
 // const OUT_EDGES_SIZE: usize = 2;
 pub use Direction::{Incoming, Outgoing};
@@ -91,6 +91,12 @@ impl Direction {
 /// @ NodeIndex ──────────────────────────────────────────────────────────────────────────────────
 #[derive(Clone, Default, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct NodeIndex(IdStr);
+
+impl std::borrow::Borrow<IdStr> for NodeIndex {
+    fn borrow(&self) -> &IdStr {
+        &self.0
+    }
+}
 
 impl Deref for NodeIndex {
     type Target = IdStr;
@@ -233,14 +239,14 @@ impl EdgeIndex {
     //     &self.0
     // }
     #[inline]
-    pub fn source_nix(&self) -> &Option<NodeIndex> {
-        &self.0
+    pub fn source_nix(&self) -> Option<&NodeIndex> {
+        self.0.as_ref()
     }
 
     /// Return the target node index.
     #[inline]
-    pub fn target_nix(&self) -> &Option<NodeIndex> {
-        &self.1
+    pub fn target_nix(&self) -> Option<&NodeIndex> {
+        self.1.as_ref()
     }
 
     pub fn set_incoming(&mut self, nix: OptionNodeIndex) {
@@ -266,16 +272,17 @@ impl EdgeIndex {
     //     self
     // }
 
-    pub fn nix_by_dir(&self, dir: Direction) -> &Option<NodeIndex> {
+    pub fn nix_by_dir(&self, dir: Direction) -> Option<&NodeIndex> {
         match dir {
             Outgoing => &self.1,
             Incoming => &self.0,
         }
+        .as_ref()
     }
 
-    pub fn get_nix_s(&self) -> (&Option<NodeIndex>, &Option<NodeIndex>) {
+    pub fn get_nix_s(&self) -> (Option<&NodeIndex>, Option<&NodeIndex>) {
         let Self(s, t) = self;
-        (s, t)
+        (s.as_ref(), t.as_ref())
     }
     pub fn get_nix_s_unwrap(&self) -> (&NodeIndex, &NodeIndex) {
         let Self(s, t) = self;
@@ -331,8 +338,8 @@ pub struct Node<N> {
     pub item: N,
     /// Next edge in outgoing and incoming edge lists.
     //TODO check 要有序
-    incoming_eix_set: StateVar<EdgeCollect>,
-    outgoing_eix_set: StateVar<EdgeCollect>, //TODO use smvec
+    incoming_eix_set: StateVar<EdgePlugsCollect>,
+    outgoing_eix_set: StateVar<EdgePlugsCollect>, //TODO use smvec
     incoming_len: StateAnchor<usize>,
     outgoing_len: StateAnchor<usize>,
 }
@@ -424,9 +431,9 @@ where
 impl<N> Node<N> {
     #[topo::nested]
     pub fn new_in_topo(item: N) -> Self {
-        let incoming_eix_set: StateVar<EdgeCollect> = use_state(EdgeCollect::default);
+        let incoming_eix_set: StateVar<EdgePlugsCollect> = use_state(EdgePlugsCollect::default);
         let incoming_len = incoming_eix_set.watch().map(|ins| ins.len());
-        let outgoing_eix_set: StateVar<EdgeCollect> = use_state(EdgeCollect::default);
+        let outgoing_eix_set: StateVar<EdgePlugsCollect> = use_state(EdgePlugsCollect::default);
         let outgoing_len = outgoing_eix_set.watch().map(|outs| outs.len());
         Self {
             item,
@@ -438,8 +445,8 @@ impl<N> Node<N> {
     }
     pub fn new(
         item: N,
-        incoming_eix_set: StateVar<EdgeCollect>,
-        outgoing_eix_set: StateVar<EdgeCollect>,
+        incoming_eix_set: StateVar<EdgePlugsCollect>,
+        outgoing_eix_set: StateVar<EdgePlugsCollect>,
     ) -> Self {
         let incoming_len = incoming_eix_set.watch().map(|ins| ins.len());
         let outgoing_len = outgoing_eix_set.watch().map(|outs| outs.len());
@@ -452,17 +459,17 @@ impl<N> Node<N> {
         }
     }
 
-    pub fn edge_out_ixs(&self) -> Rc<EdgeCollect> {
+    pub fn edge_out_ixs(&self) -> Rc<EdgePlugsCollect> {
         self.outgoing_eix_set.get_rc()
     }
-    pub fn edge_ixs(&self, dir: Direction) -> EdgeCollect {
+    pub fn edge_ixs(&self, dir: Direction) -> EdgePlugsCollect {
         match dir {
             // Incoming => self.incoming().clone(),
             Incoming => self.incoming().get(),
             Outgoing => self.outgoing().get(),
         }
     }
-    pub fn edge_ixs_sa(&self, dir: Direction) -> &StateVar<EdgeCollect> {
+    pub fn edge_ixs_sa(&self, dir: Direction) -> &StateVar<EdgePlugsCollect> {
         match dir {
             // Incoming => self.incoming().clone(),
             Incoming => self.incoming(),
@@ -472,16 +479,16 @@ impl<N> Node<N> {
 
     /// Accessor for data structure internals: the first edge in the given direction.
 
-    pub fn incoming(&self) -> &StateVar<EdgeCollect> {
+    pub fn incoming(&self) -> &StateVar<EdgePlugsCollect> {
         &self.incoming_eix_set
     }
-    pub fn outgoing(&self) -> &StateVar<EdgeCollect> {
+    pub fn outgoing(&self) -> &StateVar<EdgePlugsCollect> {
         &self.outgoing_eix_set
     }
-    pub fn incoming_mut_with<F: FnOnce(&mut EdgeCollect)>(&self, func: F) {
+    pub fn incoming_mut_with<F: FnOnce(&mut EdgePlugsCollect)>(&self, func: F) {
         self.incoming_eix_set.update(func)
     }
-    pub fn outgoing_mut_with<F: FnOnce(&mut EdgeCollect)>(&self, func: F) {
+    pub fn outgoing_mut_with<F: FnOnce(&mut EdgePlugsCollect)>(&self, func: F) {
         self.outgoing_eix_set.update(func)
     }
 
@@ -856,8 +863,8 @@ where
         &mut self,
         key: IdStr,
         item: N,
-        incoming_eix_set: StateVar<EdgeCollect>,
-        outgoing_eix_set: StateVar<EdgeCollect>,
+        incoming_eix_set: StateVar<EdgePlugsCollect>,
+        outgoing_eix_set: StateVar<EdgePlugsCollect>,
     ) -> NodeIndex {
         let node = Node::new(item, incoming_eix_set, outgoing_eix_set);
         let node_idx = node_index(key.clone());
@@ -1037,7 +1044,7 @@ where
 
     fn disconnect_plug_in_node_with_dir<'a>(
         &self,
-        opt_n_ix: &Option<NodeIndex>,
+        opt_n_ix: Option<&NodeIndex>,
         dir: Direction,
         e_ix: &'a EdgeIndex,
     ) -> Result<Cow<'a, EdgeIndex>, Error> {
