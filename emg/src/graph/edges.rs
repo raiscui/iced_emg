@@ -1,6 +1,6 @@
 use crate::graph::{dir::HasDir, neighbors::NodeNeighborsIter, Direction, EdgeIndex, NodeIndex};
 use crate::im::vector;
-use std::{clone::Clone, cmp::Eq, hash::Hash};
+use std::clone::Clone;
 
 // type ConsumingIter = vector::ConsumingIter<EdgeIndex>;
 type ConsumingIter = indexmap::set::IntoIter<EdgeIndex>;

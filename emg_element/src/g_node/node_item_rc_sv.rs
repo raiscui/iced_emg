@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-03-01 18:08:28
+ * @LastEditTime: 2023-03-01 21:32:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -49,8 +49,6 @@ pub type EventMatchsSa<Message> = StateAnchor<EventMatchsDict<Message>>;
 
 // ────────────────────────────────────────────────────────────────────────────────
 type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
-
-type CurrentPathChildrenEixGElSA<Message> = StateAnchor<(EdgeIndex, GElEither<Message>)>;
 
 impl<Message> EmgNodeItem<NItem<Message>, GelType<Message>>
 where

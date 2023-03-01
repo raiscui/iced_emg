@@ -1,4 +1,4 @@
-use std::{clone::Clone, cmp::Eq, hash::Hash, iter::Iterator, marker::PhantomData};
+use std::iter::Iterator;
 
 use crate::graph::{dir::HasDir, edges::NodeEdgesIter, Direction, NodeIndex};
 
@@ -58,9 +58,7 @@ impl<'a> Iterator for NodeNeighborsIter<NodeEdgesIter<'a>> {
     type Item = &'a NodeIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.edge_iter
-            .next()
-            .and_then(|e| e.nix_by_dir(self.dir()).clone())
+        self.edge_iter.next().and_then(|e| e.nix_by_dir(self.dir()))
     }
 }
 

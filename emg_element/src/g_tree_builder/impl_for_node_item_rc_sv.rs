@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-03-01 18:24:38
+ * @LastEditTime: 2023-03-01 21:44:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,6 @@ use crate::{
     g_node::{EmgNodeItem, GelType, GraphType, NItem},
     g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn},
     graph_edit::GraphEditor,
-    widget::Layer,
     GElement,
 };
 use emg::{edge_index_no_source, node_index, Edge, EdgeIndex, EdgePlugsCollect, NodeIndex};
@@ -19,20 +18,14 @@ use emg::{edge_index_no_source, node_index, Edge, EdgeIndex, EdgePlugsCollect, N
 use emg_common::{im::vector, IdStr};
 use emg_hasher::CustomHasher;
 use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
-use emg_shaping::{ShapingUse, ShapingUseDyn};
+use emg_shaping::ShapingUseDyn;
 use emg_state::{
     topo::{self, call_in_slot},
-    use_state,
-    use_state_impl::TopoKey,
-    CloneStateVar, StateAnchor,
+    use_state, CloneStateVar, StateAnchor,
 };
 use indexmap::IndexSet;
-use std::{
-    cell::{Ref, RefCell, RefMut},
-    hash::BuildHasherDefault,
-    rc::Rc,
-};
-use tracing::{debug, info, info_span, instrument, trace, trace_span, warn};
+use std::{cell::RefCell, hash::BuildHasherDefault, rc::Rc};
+use tracing::{debug, info, instrument, trace, trace_span, warn};
 
 pub struct GraphNodeBuilder<Message>
 where
@@ -420,7 +413,7 @@ where
                     },
                     //TODO not dyn ,make it dyn
                     GElement::EvolutionaryFactor(evo) => {
-                        let mut g = self.borrow_mut();
+                        let g = self.borrow();
                         let parent_item = g.get_node_item(&parent_nix.expect("parent nix must have in EvolutionaryFactor builder")).unwrap();
                         let rc_sa_rc_parent = parent_item.get_gel_rc_sa();
                         warn!("---- parent anchor: {}",&rc_sa_rc_parent);
@@ -513,9 +506,7 @@ where
 
                 // let parent_nix = (*illicit::expect::<NodeIndex>()).clone();
                 // let update_id = TopoKey::new(topo::CallId::current());
-                let update_id = TopoKey::new(topo::root(|| {
-                    topo::call_in_slot(sa_dict_gbe.id(), topo::CallId::current)
-                }));
+
                 //TODO move it , for  use StateAnchor
                 sa_dict_gbe.insert_before_fn_in_topo(
                     // update_id,
@@ -752,7 +743,7 @@ mod tests {
             .with_gel_sa(use_state(|| {
                 StateAnchor::constant(Rc::new(Layer::<Message>::new(root_id.clone()).into()))
             }))
-            .with_incoming_eix_set([root_edge_ix.clone()].into_iter().collect())
+            .with_incoming_eix_set([root_edge_ix].into_iter().collect())
             .with_outgoing_eix_set_with_default_capacity(5)
             .build_in_topo(&emg_graph_rc_refcell);
     }

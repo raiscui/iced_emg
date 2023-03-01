@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-03-01 16:25:07
+ * @LastEditTime: 2023-03-01 21:47:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -1363,7 +1363,7 @@ where
     //TODO 回环检测 , 当两个或者两个以上 有 di关系的 StateVar  set的时候 会再次互相调用set -回环
     /// 添加不添加 deps 都不会使 after before func 循环,
     /// 但是添加deps 可以 在 deps-TopoKey 的StateVar drop时候 将该func drop,
-    /// 同时如果 运行func时刻, skip有deps的key,则不会运行该func
+    //
     /// 如果 deps is some , 则返回 none , Rc储存在deps中
     #[must_use]
     #[topo::nested]
@@ -2031,10 +2031,9 @@ pub enum StorageKey {
 impl StorageKey {
     #[must_use]
     pub const fn as_topo_key(&self) -> Option<&TopoKey> {
-        if let Self::TopoKey(v) = self {
-            Some(v)
-        } else {
-            None
+        match self {
+            Self::TopoKey(v) => Some(v),
+            _ => None,
         }
     }
 }
@@ -2424,6 +2423,7 @@ where
 #[allow(clippy::let_unit_value)]
 #[allow(clippy::fallible_impl_from)]
 #[allow(clippy::disallowed_types)]
+#[allow(unused)]
 mod state_test {
 
     use crate::topo;
@@ -2546,7 +2546,7 @@ mod state_test {
         let update_id_a_2 = TopoKey::new(topo::call(topo::CallId::current));
         trace!("update_id_a_2:{:#?}", &update_id_a_2);
         a_2.insert_before_fn_in_topo(
-            move |skip, current, value| {
+            move |_skip, _current, _value| {
                 // println!("current:{:?}", &current);
                 // println!("value:{}", value);
                 // assert_eq!(current, &Some(Rc::new(1)));
@@ -2559,7 +2559,7 @@ mod state_test {
         // a_2.set(2);
         trace!("==================build_bi_similar_use_into_in_topo========================");
 
-        let b = a.build_bi_similar_use_into_in_topo::<TT>();
+        let _b = a.build_bi_similar_use_into_in_topo::<TT>();
     }
     #[test]
     // #[wasm_bindgen_test]
@@ -2572,7 +2572,7 @@ mod state_test {
         let update_id_a_2 = TopoKey::new(topo::call(topo::CallId::current));
 
         a_2.insert_before_fn_in_topo(
-            move |skip, current, value| {
+            move |_skip, current, value| {
                 println!("current:{:?}", &current);
                 println!("value:{value}");
                 assert_eq!(current, &Some(Rc::new(1)));
@@ -2588,7 +2588,7 @@ mod state_test {
         let c = b.build_similar_use_into_in_topo::<i32>();
         let d = b.build_similar_use_into_in_topo::<i32>();
         d.insert_before_fn_in_topo(
-            move |skip, current, value| {
+            move |skip, _current, value| {
                 c.seting_in_b_a_callback(skip, || *value);
             },
             true,

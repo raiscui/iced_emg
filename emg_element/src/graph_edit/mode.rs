@@ -2,7 +2,7 @@ use crate::{error::Error, GTreeBuilderElement};
 use emg::{Direction, EdgeIndex};
 use emg_common::{IdStr, ResultWithRef, ResultWithSomething};
 use emg_state::topo;
-use tracing::{debug, debug_span};
+use tracing::debug_span;
 
 use super::{GraphEdit, GraphEditManyMethod, Mode};
 

@@ -160,7 +160,7 @@ mod test {
                      .build_in_topo(&emg_graph_rc_refcell)
                      .unwrap();
                  // ─────────────────────────────────────────────────────────────────────────────
-                { let x = &*emg_graph_rc_refcell.borrow();
+                { let _x = &*emg_graph_rc_refcell.borrow();
                  #[cfg(feature="insta")]
         insta::assert_display_snapshot!("graph_new",x);
 
@@ -175,7 +175,7 @@ mod test {
                  // ─────────────────────────────────────────────────────
 
                  // println!("{:#?}", &emg_graph_rc_refcell);
-                 let x = &*emg_graph_rc_refcell.borrow();
+                 let _x = &*emg_graph_rc_refcell.borrow();
                 //  println!("{}", x);
                      #[cfg(feature="insta")]
         insta::assert_display_snapshot!("graph_moved",x);

@@ -1,27 +1,21 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-03-01 17:59:44
+ * @LastEditTime: 2023-03-01 23:46:57
  * @LastEditors: Rais
  * @Description:
  */
 
 use std::{cell::RefCell, rc::Rc};
 
-use emg::{edge_index_no_source, EdgeIndex, NodeIndex, Outgoing};
-use emg_common::{
-    im::{vector, OrdSet},
-    IdStr, Pos, Vector,
-};
-use emg_layout::{EPath, EdgeItemNode};
-use emg_native::{Event, EventWithFlagType, PaintCtx, Widget};
-use emg_state::{Anchor, AnchorMultiAnchor, Dict, StateAnchor, StateMultiAnchor};
+use emg::{edge_index_no_source, EdgeIndex};
+use emg_common::{im::vector, Pos, Vector};
+use emg_layout::EPath;
+use emg_native::{EventWithFlagType, PaintCtx, Widget};
+use emg_state::{Dict, StateAnchor};
 use tracing::{debug, debug_span};
 
-use crate::{
-    node_builder::{EventIdentify, EventMatchsDict},
-    EventNode,
-};
+use crate::node_builder::EventMatchsDict;
 
 use super::{EventMatchsSa, GraphType};
 pub trait GraphMethods<Message> {
@@ -128,6 +122,12 @@ where
             .edges
             .watch()
             .filter_map_with_anchor(&root_eix_sa, move |root_eix, eix, _| {
+                let span = debug_span!(
+                    "event_matching",
+                    at = "graph edges changed or root eix changed",
+                    %eix
+                )
+                .entered();
                 let borrow = self_clone2.borrow();
                 let root_eix = root_eix.clone();
 
@@ -140,6 +140,12 @@ where
                         let f: StateAnchor<Vector<EventMatchsDict<Message>>> = item
                             .paths_view_gel
                             .filter_map(move |ep, gel| {
+                                let _span = debug_span!(
+                                    "event_matching",
+                                    at = "paths_view_gel changed",
+                                    %ep
+                                )
+                                .entered();
                                 if !ep.contains(&root_eix) {
                                     return None;
                                 }
@@ -163,7 +169,7 @@ where
             })
             .into();
         let event_matchs: EventMatchsSa<Message> = event_matchs.map(|vv| {
-            Dict::unions_with(vv.into_iter().cloned().flatten(), |mut old, new| {
+            Dict::unions_with(vv.into_iter().flatten().cloned(), |mut old, new| {
                 assert_eq!(old.0, new.0);
                 old.1.append(new.1);
                 old

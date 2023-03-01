@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:01:09
- * @LastEditTime: 2023-03-01 00:19:37
+ * @LastEditTime: 2023-03-01 21:45:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ pub use node_item_rc_sv::GraphMethods;
 pub use node_item_rc_sv::{EventMatchsSa, GelType, GraphType, NItem, E, N};
 use std::fmt::Display;
 
-use emg_common::{display::DictDisplay, IdStr};
+use emg_common::display::DictDisplay;
 use emg_layout::EPath;
 use emg_state::{CloneStateAnchor, Dict, StateAnchor};
 

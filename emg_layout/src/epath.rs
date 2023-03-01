@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-22 14:02:47
- * @LastEditTime: 2023-03-01 13:16:30
+ * @LastEditTime: 2023-03-01 21:52:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 use emg::{edge_index, edge_index_no_source, EdgeIndex, NodeIndex};
 use emg_common::Vector;
 use nom::{error::Error, Finish};
-use std::fmt::Write;
+use std::{fmt::Write, panic::Location};
 use std::{hash::Hash, str::FromStr};
 use tracing::error;
 
@@ -144,13 +144,18 @@ impl EPath {
     /// # Panics
     ///
     /// Will panic if 'vec' is empty, or if the first element's `source_nix` is not None.
+    #[track_caller]
     #[must_use]
     pub fn new(vec: Vector<EdgeIndex>) -> Self {
         // assert!(vec.front().unwrap().source_nix().is_none());
         #[cfg(debug_assertions)]
         {
             if vec.front().unwrap().source_nix().is_some() {
-                error!("vec.front().unwrap().source_nix().is_none() is not none");
+                let loc = Location::caller();
+                error!(
+                    "vec.front().unwrap().source_nix().is_none() is not none :{:?}\n{}",
+                    vec, loc
+                );
             }
         }
         Self(vec)

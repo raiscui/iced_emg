@@ -11,7 +11,7 @@ mod mode;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{error::Error, GTreeBuilderElement, GraphType};
 use emg::{Direction, EdgeIndex};

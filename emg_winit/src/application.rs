@@ -1,14 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-01 18:24:47
+ * @LastEditTime: 2023-03-01 21:50:27
  * @LastEditors: Rais
  * @Description:
  */
 //! Create interactive, native cross-platform applications.
 mod state;
-
-use std::{cell::RefCell, rc::Rc};
 
 use emg_common::Vector;
 use emg_orders::Orders;
@@ -30,8 +28,8 @@ use emg_graphics_backend::window::{
     Compositor,
 };
 use emg_native::{event::EventWithFlagType, renderer::Renderer, Bus, Program};
+use emg_state::state_lit::StateVarLit;
 use emg_state::CloneStateAnchor;
-use emg_state::{state_lit::StateVarLit, topo};
 use tracing::{debug_span, info, info_span, instrument};
 
 // use emg_native::user_interface::{self, UserInterface};

@@ -99,23 +99,29 @@ fn tracing_init() -> Result<(), Report> {
             // "error",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
-            |metadata, _cx| {
-                let skip_target = ["emg_state"];
+            |metadata, cx| {
+                let skip_target = ["emg_state", "winit event"];
                 for t in skip_target {
                     if metadata.target().contains(t) {
                         return false;
                     }
                 }
 
-                // if metadata.is_span() && spans.contains(&metadata.name()) {
-                //     return true;
-                // }
+                let keep_target = ["emg_element"];
+                if !keep_target.iter().any(|t| metadata.target().starts_with(t)) {
+                    return false;
+                }
+
+                let keep_span = ["event_matching"];
+                if metadata.is_span() && keep_span.contains(&metadata.name()) {
+                    return true;
+                }
 
                 // if let Some(current_span) = cx.lookup_current() {
-                //     return spans.contains(&current_span.name());
+                //     return keep_span.contains(&current_span.name());
                 // }
 
-                true
+                false
             },
         ));
 
@@ -198,29 +204,13 @@ impl Sandbox for App {
                 };
 
                 graph.edit(builder).insert("b").unwrap();
-                insta::assert_display_snapshot!("graph", graph.graph());
+                // insta::assert_display_snapshot!("graph", graph.graph());
             }
         }
     }
 
     fn tree_build(&self, _orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
         use emg_bind::gtree_macro_prelude::*;
-
-        let builder: GTreeBuilderElement<Message> = {
-            gtree! {
-
-                    @E=[
-                        w(px(50)),h(px(50)),
-                    ]
-                    @="b-check" Checkbox::new(false,"b-abcd",|_|{
-                        println!("b checkbox");
-                        Message::IncrementPressed
-
-                    })
-
-
-            }
-        };
 
         let fill_var = use_state(|| fill(hsl(150, 100, 30)));
         gtree! {
