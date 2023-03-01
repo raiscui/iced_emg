@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-02-01 15:28:33
+ * @LastEditTime: 2023-03-01 18:24:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,7 +22,7 @@ use crate::{
     orders::OrdersContainer,
 };
 use crate::{Command, Debug, Executor, FutureRuntime, Mode, Proxy, Settings};
-use emg_element::{GTreeBuilderFn, GraphMethods, GraphProgram, GraphType};
+use emg_element::{GTreeBuilderFn, GraphProgram};
 use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
 use emg_graphics_backend::window::{
@@ -334,7 +334,7 @@ async fn run_instance<A, E, C>(
     // let native_events: StateVar<Vector<EventWithFlagType>> = use_state(||Vector::new());
     let native_events: StateVarLit<Vector<EventWithFlagType>> = StateVarLit::new(Vector::new());
     let (event_matchs_sa, ctx_sa) = application.build_ctx(
-        &g.graph(),
+        g.graph(),
         &painter,
         &native_events.watch(),
         state.cursor_position(),

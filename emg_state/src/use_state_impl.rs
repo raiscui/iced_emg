@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-03-01 01:23:50
+ * @LastEditTime: 2023-03-01 16:25:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -1539,6 +1539,15 @@ where
                 v.values().cloned().collect(),
             )
         })
+    }
+}
+
+impl<V> From<StateAnchor<Vector<Anchor<V>>>> for StateAnchor<Vector<V>>
+where
+    V: std::clone::Clone + 'static,
+{
+    fn from(value: StateAnchor<Vector<Anchor<V>>>) -> Self {
+        value.then(|v| anchors::collections::vector::VectorCollect::new_to_anchor(v.clone()))
     }
 }
 

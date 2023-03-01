@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-03-01 00:50:51
+ * @LastEditTime: 2023-03-01 18:24:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -198,18 +198,15 @@ where
     Message: 'static,
     //     Message: std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug,
 {
-    type GraphType = GraphType<Message>;
+    type GraphType = Rc<RefCell<GraphType<Message>>>;
     type GraphEditor = GraphEditor<Message>;
 
     fn editor(&self) -> Self::GraphEditor {
         GraphEditor(self.clone())
     }
 
-    fn graph(&self) -> Ref<GraphType<Message>> {
-        self.borrow()
-    }
-    fn graph_mut(&mut self) -> RefMut<GraphType<Message>> {
-        self.borrow_mut()
+    fn graph(&self) -> &Self::GraphType {
+        self
     }
 
     #[topo::nested]

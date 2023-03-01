@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-02-24 17:28:42
+ * @LastEditTime: 2023-03-01 18:24:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,7 +23,7 @@ use emg_shaping::{EqShaping, Shaping};
 use emg_state::{Dict, StateVar};
 use std::{
     any::TypeId,
-    cell::{Ref, RefMut},
+    cell::{Ref, RefCell, RefMut},
     hash::BuildHasherDefault,
     panic::Location,
     rc::Rc,
@@ -310,8 +310,7 @@ pub trait GTreeBuilderFn<Message> {
 
     fn editor(&self) -> Self::GraphEditor;
 
-    fn graph(&self) -> Ref<Self::GraphType>;
-    fn graph_mut(&mut self) -> RefMut<Self::GraphType>;
+    fn graph(&self) -> &Self::GraphType;
 
     // #[deprecated = 直接使用handle_children_in_topo]
     fn handle_root_in_topo(&self, tree_element: &GTreeBuilderElement<Message>);

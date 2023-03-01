@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use emg::EdgeIndex;
 use emg_element::{
     graph_edit::{GraphEdit, GraphEditManyMethod, GraphEditor},
@@ -10,8 +12,7 @@ use crate::{application::Instance, element, Application, Command, Settings};
 pub trait Sandbox: std::default::Default {
     /// The type of __messages__ your [`Sandbox`] will produce.
     type Message: std::fmt::Debug + Send + 'static;
-    type GraphType = element::GraphType<Self::Message>;
-    // type GraphType: GraphMethods<Self::Message> + Default;
+    type GraphType = Rc<RefCell<element::GraphType<Self::Message>>>;
     type Orders = crate::runtime::OrdersContainer<Self::Message>;
     type GraphEditor: GraphEdit + GraphEditManyMethod = GraphEditor<Self::Message>;
 
@@ -119,7 +120,7 @@ impl<SB> Application for SB
 where
     SB: Sandbox,
     <SB as Sandbox>::Message: 'static,
-    <SB as Sandbox>::GraphType: GraphMethods<<SB as Sandbox>::Message> + Default,
+    <SB as Sandbox>::GraphType: GraphMethods<<SB as Sandbox>::Message> + Default + Clone,
     <SB as Sandbox>::Orders: Orders<<SB as Sandbox>::Message>,
     <SB as Sandbox>::GraphEditor: GraphEdit + GraphEditManyMethod, // <SB as Sandbox>::RcRefCellGraphType: GraphEdit + GraphEditManyMethod,
 {

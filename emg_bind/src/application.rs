@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-02-27 14:59:37
+ * @LastEditTime: 2023-03-01 18:21:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -40,7 +40,7 @@ pub trait Application: Sized {
     /// The data needed to initialize your [`Application`].
     type Flags;
 
-    type GraphType: GraphMethods<Self::Message> + Default;
+    type GraphType: GraphMethods<Self::Message> + Default + Clone;
     type GraphEditor: GraphEdit + GraphEditManyMethod;
     type Orders: Orders<Self::Message>;
 
@@ -234,7 +234,7 @@ where
     // ─────────────────────────────────────────────────────────────────────
     <A as Application>::Message: 'static,
     // ─────────────────────────────────────────────────────────────────────
-    Rc<RefCell<<A as Application>::GraphType>>: GTreeBuilderFn<
+    <A as Application>::GraphType: GTreeBuilderFn<
         <A as Application>::Message,
         GraphType = <A as Application>::GraphType,
         GraphEditor = <A as Application>::GraphEditor,
@@ -243,7 +243,7 @@ where
 {
     type Renderer = crate::Renderer;
 
-    type GTreeWithBuilder = Rc<RefCell<<A as Application>::GraphType>>;
+    type GTreeWithBuilder = <A as Application>::GraphType;
 
     fn graph_setup(
         &self,
@@ -252,7 +252,7 @@ where
     ) -> Self::GTreeWithBuilder {
         let emg_graph = <Self::GraphType>::default();
         let tree = self.0.tree_build(orders);
-        let emg_graph_rc_refcell: Self::GTreeWithBuilder = Rc::new(RefCell::new(emg_graph));
+        let emg_graph_rc_refcell: Self::GTreeWithBuilder = emg_graph;
         emg_graph_rc_refcell.handle_root_in_topo(&tree);
         emg_graph_rc_refcell
     }
@@ -292,7 +292,7 @@ where
         SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
     >,
 
-    Rc<RefCell<<A as Application>::GraphType>>: GTreeBuilderFn<
+    <A as Application>::GraphType: GTreeBuilderFn<
         <A as Application>::Message,
         GraphType = <A as Application>::GraphType,
         GraphEditor = <A as Application>::GraphEditor,

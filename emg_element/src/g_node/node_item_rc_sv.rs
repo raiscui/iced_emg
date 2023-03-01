@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-03-01 13:18:24
+ * @LastEditTime: 2023-03-01 18:08:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -171,7 +171,7 @@ where
             .then(move |outs| {
                 let children_ord_map_pool = children_ord_map_pool_0.clone();
                 outs.iter()
-                    .filter_map(|out_eix| out_eix.target_nix().as_ref())
+                    .filter_map(|out_eix| out_eix.target_nix())
                     .filter_map(|out_target_nix| {
                         graph_rc3
                             .borrow()

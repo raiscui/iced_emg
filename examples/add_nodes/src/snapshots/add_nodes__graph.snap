@@ -1,6 +1,6 @@
 ---
 source: examples/add_nodes/src/main.rs
-assertion_line: 196
+assertion_line: 201
 expression: graph.graph()
 ---
 Graph {
@@ -16,11 +16,11 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▢ => ▣ root
+                             ├─ ▢ => ▣ root 
                    ]
                    outgoing:[
-                             ├─ ▣ root => ▣ y
-                             ├─ ▣ root => ▣ x
+                             ├─ ▣ root => ▣ y 
+                             ├─ ▣ root => ▣ x 
                    ]
 
                }
@@ -37,7 +37,7 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ x => ▣ x_click
+                             ├─ ▣ x => ▣ x_click 
                    ]
                    outgoing:[
                    ]
@@ -56,13 +56,13 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ root => ▣ x
+                             ├─ ▣ root => ▣ x 
                    ]
                    outgoing:[
-                             ├─ ▣ x => ▣ x_click
-                             ├─ ▣ x => ▣ a
-                             ├─ ▣ x => ▣ m
-                             ├─ ▣ x => ▣ w
+                             ├─ ▣ x => ▣ x_click 
+                             ├─ ▣ x => ▣ a 
+                             ├─ ▣ x => ▣ m 
+                             ├─ ▣ x => ▣ w 
                    ]
 
                }
@@ -79,10 +79,10 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ a => ▣ b
+                             ├─ ▣ a => ▣ b 
                    ]
                    outgoing:[
-                             ├─ ▣ b => ▣ b-check
+                             ├─ ▣ b => ▣ b-check 
                    ]
 
                }
@@ -99,7 +99,7 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ b-check => ▣ b-check|CLICK
+                             ├─ ▣ b-check => ▣ b-check|CLICK 
                    ]
                    outgoing:[
                    ]
@@ -118,7 +118,7 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ w => ▣ ref_x_click
+                             ├─ ▣ w => ▣ ref_x_click 
                    ]
                    outgoing:[
                    ]
@@ -137,7 +137,7 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ root => ▣ y
+                             ├─ ▣ root => ▣ y 
                    ]
                    outgoing:[
                    ]
@@ -156,10 +156,10 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ b => ▣ b-check
+                             ├─ ▣ b => ▣ b-check 
                    ]
                    outgoing:[
-                             ├─ ▣ b-check => ▣ b-check|CLICK
+                             ├─ ▣ b-check => ▣ b-check|CLICK 
                    ]
 
                }
@@ -176,7 +176,7 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ x => ▣ m
+                             ├─ ▣ x => ▣ m 
                    ]
                    outgoing:[
                    ]
@@ -195,10 +195,10 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ x => ▣ w
+                             ├─ ▣ x => ▣ w 
                    ]
                    outgoing:[
-                             ├─ ▣ w => ▣ ref_x_click
+                             ├─ ▣ w => ▣ ref_x_click 
                    ]
 
                }
@@ -215,10 +215,10 @@ Graph {
 
                    }
                    incoming:[
-                             ├─ ▣ x => ▣ a
+                             ├─ ▣ x => ▣ a 
                    ]
                    outgoing:[
-                             ├─ ▣ a => ▣ b
+                             ├─ ▣ a => ▣ b 
                    ]
 
                }
@@ -356,7 +356,7 @@ Graph {
                                      height: 600px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -459,7 +459,7 @@ Graph {
                                      height: 60px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -581,7 +581,7 @@ Graph {
                                      height: 45px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -684,7 +684,7 @@ Graph {
                                      height: 45px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -806,7 +806,7 @@ Graph {
                                      height: 50px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -909,7 +909,7 @@ Graph {
                                      height: 50px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -1031,7 +1031,7 @@ Graph {
                                      height: -0px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -1138,7 +1138,7 @@ Graph {
                                      height: 600px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -1260,7 +1260,7 @@ Graph {
                                      height: 240px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -1367,7 +1367,7 @@ Graph {
                                      height: 600px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -1489,7 +1489,7 @@ Graph {
                                      height: 240px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -1592,7 +1592,7 @@ Graph {
                                      height: 60px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -1714,7 +1714,7 @@ Graph {
                                      height: -0px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -1817,7 +1817,7 @@ Graph {
                                      height: 240px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -1939,7 +1939,7 @@ Graph {
                                      height: 60px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -2042,7 +2042,7 @@ Graph {
                                      height: 240px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -2164,7 +2164,7 @@ Graph {
                                      height: 60px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -2267,7 +2267,7 @@ Graph {
                                      height: 240px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -2389,7 +2389,7 @@ Graph {
                                      height: 60px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -2492,7 +2492,7 @@ Graph {
                                      height: 240px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
@@ -2614,7 +2614,7 @@ Graph {
                                      height: -0px;
                                      )
                                  }
-                                 more...
+                                 more... 
 
                              }
                          }
