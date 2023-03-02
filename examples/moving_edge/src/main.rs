@@ -6,10 +6,11 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 use color_eyre::{eyre::Report, eyre::Result, eyre::WrapErr};
 use emg_bind::{
     element::*,
-    emg::{edge_index, Direction::Incoming},
+    emg::{edge_index, edge_index_no_source, Direction::Incoming},
     emg_msg,
     emg_msg_macro_prelude::*,
     graph_edit::*,
+    layout::EdgeIndex,
     runtime::OrdersContainer,
     Sandbox, Settings,
 };
@@ -280,8 +281,8 @@ impl Sandbox for App {
         }
     }
 
-    fn root_eix(&self) -> &str {
-        "root"
+    fn root_eix(&self) -> EdgeIndex {
+        edge_index_no_source("root")
     }
 
     // #[instrument(skip(self, g), ret)]

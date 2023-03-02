@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2023-02-03 18:09:01
+ * @LastEditTime: 2023-03-02 12:07:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -440,7 +440,7 @@ impl Virtual {
         };
 
         for p in VIRTUAL_PROPS {
-            let _ = gvs_map.remove(p);
+            gvs_map.remove(p);
         }
 
         (gvs_match_props, vars_constraints, gvs_map)

@@ -1,7 +1,7 @@
 use color_eyre::{eyre::Report, eyre::WrapErr};
 use emg_bind::{
-    element::*, emg_msg_macro_prelude::*, graph_edit::*, runtime::OrdersContainer, Sandbox,
-    Settings,
+    element::*, emg::edge_index_no_source, emg_msg_macro_prelude::*, graph_edit::*,
+    layout::EdgeIndex, runtime::OrdersContainer, Sandbox, Settings,
 };
 use std::{cell::Cell, rc::Rc};
 use tracing::{debug_span, info, instrument};
@@ -232,8 +232,8 @@ impl Sandbox for Counter {
         }
     }
 
-    fn root_eix(&self) -> &str {
-        "debug_layer"
+    fn root_eix(&self) -> EdgeIndex {
+        edge_index_no_source("debug_layer")
     }
 
     // #[instrument(skip(self, g), ret)]
