@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-24 17:21:09
+ * @LastEditTime: 2023-03-02 19:42:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -151,7 +151,7 @@ where
     #[allow(clippy::useless_conversion)]
     fn tree_init(
         mut self,
-        id: &IdStr,
+        id: &IdStr, //outSide generated id
         _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
         _children: &[GTreeBuilderElement<Message>],
     ) -> InitdTree<Message> {

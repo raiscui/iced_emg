@@ -64,7 +64,7 @@ impl<Message> InitdTree<Message> {
     ///NOTE gtree macro will call this
     pub fn with_id_edge_children(
         self,
-        id: IdStr,
+        id: IdStr, //outSide generated id
         opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem>>>>,
         opt_children: Option<Vec<GTreeBuilderElement<Message>>>,
     ) -> GTreeBuilderElement<Message> {
@@ -80,7 +80,7 @@ impl<Message> InitdTree<Message> {
 
                 //     // GTreeBuilderElement::Layer(id, new_es, new_children)
                 // }
-                GTreeBuilderElement::GElementTree(_init_id, o_es, gel, o_children) => {
+                GTreeBuilderElement::GElementTree(_inside_generated_id, o_es, gel, o_children) => {
                     let (new_es, new_children) =
                         Self::merge_es_and_children(opt_es, o_es, opt_children, o_children);
                     //TODO check if id is not defined ,then use self id
