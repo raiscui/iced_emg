@@ -37,5 +37,15 @@ insta = "1"
 # https://docs.rs/dhat/latest/dhat/
 dhat = "0.3.2"
 
+
 [profile.release]
-debug = 1
+opt-level = 3
+#NOTE for dhat-heap need true
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = false

@@ -2,6 +2,8 @@
 
 editor:
 	cargo run --package emg_editor --bin emg_editor --features gpu
+add_nodes-release:
+	cargo run --package add_nodes --bin add_nodes --features gpu --release
 add_nodes:
 	RUST_BACKTRACE=full cargo run --package add_nodes --bin add_nodes --features gpu
 moving_edge:

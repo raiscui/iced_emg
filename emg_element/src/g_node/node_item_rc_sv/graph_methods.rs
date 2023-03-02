@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-03-01 23:46:57
+ * @LastEditTime: 2023-03-02 12:05:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -176,48 +176,6 @@ where
             })
         });
 
-        // let self_event_nodes = gel_rc_sa.then(move |gel| {
-        //     //TODO 使用 判断event EventIdentify 类型 来优化
-
-        //     let builder = gel.as_builder().unwrap();
-        //     if builder.has_event_callback() {
-        //         builder
-        //             .event_matching(&events, &cursor_position_clone)
-        //             .into_anchor()
-        //     } else {
-        //         //NOTE check if Panics , can not use constant, do Dict::new() in fn event_matching
-        //         Anchor::constant(Dict::new())
-        //     }
-        // });
-
-        // let children_event_matchs = self
-        //     .get_out_going_event_callbacks(&NodeIndex::new(ix.clone()), events_sa, cursor_position)
-        //     .into_iter()
-        //     .collect::<Anchor<Vector<_>>>();
-
-        // let event_matchs: EventMatchsSa<Message> =
-        //     (self_event_nodes.anchor(), &children_event_matchs)
-        //         .map(|self_event_nodes_dict, children| {
-        //             debug!("child EventMatchsSa start");
-
-        //             let mut self_add_children = children.clone();
-        //             self_add_children.push_front(vector![self_event_nodes_dict.clone()]);
-
-        //             let self_and_children_event_nodes_dict = Dict::unions_with(
-        //                 self_add_children.into_iter().flatten(),
-        //                 |mut old, new| {
-        //                     assert_eq!(old.0, new.0);
-        //                     old.1.append(new.1);
-        //                     old
-        //                 },
-        //             );
-
-        //             debug!("child EventMatchsSa end");
-
-        //             self_and_children_event_nodes_dict
-        //         })
-        //         .into();
-
         let painter_clone = painter.clone();
 
         let ctx_sa = gel_rc_sa.then(move |gel| gel.paint_sa(&painter_clone).into_anchor());
@@ -225,45 +183,4 @@ where
 
         (event_matchs, ctx_sa)
     }
-
-    // fn get_out_going_event_callbacks(
-    //     &self,
-    //     nix: &NodeIndex,
-    //     events_sa: &StateAnchor<Vector<EventWithFlagType>>,
-    //     cursor_position: &StateAnchor<Option<Pos>>,
-    // ) -> Vector<Anchor<Vector<EventMatchsDict<Message>>>> {
-    //     let out_goings = self.neighbors_consuming_iter(nix, Outgoing);
-    //     out_goings.fold(Vector::default(), |mut vec, node| {
-    //         let events = events_sa.clone();
-    //         let cursor_position_clone = cursor_position.clone();
-    //         let one_node_item = self.get_node_item(&node).unwrap();
-    //         let event_cbs = one_node_item
-    //             .paths_view_gel
-    //             .filter_map(move |_k, gel| {
-    //                 gel.as_builder()
-    //                     .filter(|gel| gel.has_event_callback())
-    //                     .map(|nb_widget| {
-    //                         //TODO 使用 判断event EventIdentify 类型 来优化
-    //                         nb_widget
-    //                             .event_matching(&events, &cursor_position_clone)
-    //                             .into_anchor()
-    //                     })
-    //             })
-    //             .then(|dict| {
-    //                 dict.values().collect::<Anchor<Vector<_>>>()
-    //                 // .map(|vec_dict_event_nodes| {
-    //                 //     Dict::unions_with(vec_dict_event_nodes.clone(), |mut old, new| {
-    //                 //         old.append(new);
-    //                 //         old
-    //                 //     })
-    //                 // })
-    //             })
-    //             .into_anchor();
-    //         vec.push_back(event_cbs);
-    //         let children_event_nodes =
-    //             self.get_out_going_event_callbacks(&node, events_sa, cursor_position);
-    //         vec.append(children_event_nodes);
-    //         vec
-    //     })
-    // }
 }
