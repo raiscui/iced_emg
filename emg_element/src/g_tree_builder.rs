@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:52:26
- * @LastEditTime: 2023-03-01 21:45:12
+ * @LastEditTime: 2023-03-02 20:23:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -40,24 +40,16 @@ type EdgesAndChildren<Message> = (
 
 impl<Message> InitdTree<Message> {
     fn merge_es_and_children(
-        opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem>>>>,
+        mut outside_es: Vec<Rc<dyn Shaping<EmgEdgeItem>>>,
         mut o_es: Vec<Rc<dyn Shaping<EmgEdgeItem>>>,
-        opt_children: Option<Vec<GTreeBuilderElement<Message>>>,
+        mut outside_children: Vec<GTreeBuilderElement<Message>>,
         mut o_children: Vec<GTreeBuilderElement<Message>>,
     ) -> EdgesAndChildren<Message> {
-        let new_es = opt_es
-            .map(|mut es| {
-                es.append(&mut o_es);
-                es
-            })
-            .unwrap_or_else(|| o_es);
-        let new_children = opt_children
-            .map(|mut children| {
-                children.append(&mut o_children);
-                children
-            })
-            .unwrap_or_else(|| o_children);
-        (new_es, new_children)
+        outside_es.append(&mut o_es);
+
+        outside_children.append(&mut o_children);
+
+        (outside_es, outside_children)
     }
 
     //TODO work here make fn with_id_edge_children
@@ -65,12 +57,12 @@ impl<Message> InitdTree<Message> {
     pub fn with_id_edge_children(
         self,
         id: IdStr, //outSide generated id
-        opt_es: Option<Vec<Rc<dyn Shaping<EmgEdgeItem>>>>,
-        opt_children: Option<Vec<GTreeBuilderElement<Message>>>,
+        outside_es: Vec<Rc<dyn Shaping<EmgEdgeItem>>>,
+        outside_children: Vec<GTreeBuilderElement<Message>>,
     ) -> GTreeBuilderElement<Message> {
         match self {
             InitdTree::Gel(gel) => {
-                GTreeBuilderElement::GElementTree(id, opt_es.unwrap(), gel, opt_children.unwrap())
+                GTreeBuilderElement::GElementTree(id, outside_es, gel, outside_children)
             }
             InitdTree::Builder(b) => match b {
                 // GTreeBuilderElement::Layer(_, o_es, o_children) => {
@@ -82,7 +74,7 @@ impl<Message> InitdTree<Message> {
                 // }
                 GTreeBuilderElement::GElementTree(_inside_generated_id, o_es, gel, o_children) => {
                     let (new_es, new_children) =
-                        Self::merge_es_and_children(opt_es, o_es, opt_children, o_children);
+                        Self::merge_es_and_children(outside_es, o_es, outside_children, o_children);
                     //TODO check if id is not defined ,then use self id
                     GTreeBuilderElement::GElementTree(id, new_es, gel, new_children)
                 }
