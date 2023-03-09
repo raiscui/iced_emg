@@ -6,6 +6,7 @@
 pub mod bus;
 pub mod clipboard;
 pub mod command;
+pub mod drag;
 pub mod event;
 pub mod future_runtime;
 pub mod keyboard;

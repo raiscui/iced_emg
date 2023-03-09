@@ -1,7 +1,7 @@
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use vello::{
     util::{DeviceHandle, RenderContext as VelloRenderContext, RenderSurface},
-    Scene, SceneBuilder,
+    RendererOptions, Scene, SceneBuilder,
 };
 
 use emg_graphics_backend::{window::compositor as compositor_arch, Error};
@@ -71,7 +71,12 @@ impl Compositor {
 
     /// Creates a new rendering [`Backend`] for this [`Compositor`].
     pub fn create_backend(&self) -> Result<Backend, Error> {
-        Backend::new(self.device_handle())
+        Backend::new(
+            self.device_handle(),
+            &RendererOptions {
+                surface_format: Some(self.surface.format),
+            },
+        )
     }
 }
 
@@ -99,7 +104,6 @@ impl compositor_arch::Compositor for Compositor {
     where
         W: HasRawWindowHandle + HasRawDisplayHandle,
     {
-        ()
     }
 
     fn configure_surface(&mut self, _surface: &mut Self::Surface, width: u32, height: u32) {

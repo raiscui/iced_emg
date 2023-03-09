@@ -63,7 +63,4 @@ pub trait SceneBuilder {
 
     /// Appends a fragment to the scene.
     fn append(&mut self, fragment: &Self::SceneCtx, transform: Option<Affine>);
-
-    /// Completes construction and finalizes the underlying scene.
-    fn finish(self);
 }

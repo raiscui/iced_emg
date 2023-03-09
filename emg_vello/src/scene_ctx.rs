@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-12-22 16:18:38
- * @LastEditTime: 2023-01-31 21:27:12
+ * @LastEditTime: 2023-03-09 14:46:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -107,9 +107,5 @@ impl<'a> emg_native::renderer::SceneBuilder for SceneBuilder<'a> {
 
     fn append(&mut self, fragment: &Self::SceneCtx, transform: Option<Affine>) {
         self.0.append(fragment, transform)
-    }
-
-    fn finish(self) {
-        self.0.finish()
     }
 }

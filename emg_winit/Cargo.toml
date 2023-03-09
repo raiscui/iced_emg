@@ -35,10 +35,8 @@ thiserror = "1.0"
 #for orders
 indexmap = "1.9.2"
 #--------------
+winit = "0.28.2"
 
-
-[dependencies.winit]
-version = "0.28.1"
 
 [dependencies.sysinfo]
 version = "0.23"

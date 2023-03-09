@@ -41,7 +41,7 @@ fn tracing_init() -> Result<(), Report> {
     //                 && !metadata.target().contains("cassowary")
     //                 && !metadata.target().contains("wgpu")
     //                 && metadata.level() <= &tracing::Level::INFO // global tracing level
-    //             // && !metadata.target().contains("winit event")
+    //             // && !metadata.target().contains("winit_event")
     //             // && !metadata.fields().field("event").map(|x|x.to_string())
     //             // && !metadata.target().contains("winit event: DeviceEvent")
     //         },

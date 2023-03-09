@@ -1,11 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2023-02-01 15:21:27
+ * @LastEditTime: 2023-03-09 14:45:51
  * @LastEditors: Rais
  * @Description:
  */
-use vello::{util::RenderSurface as VelloRenderSurface, Renderer as VelloRenderer};
+use vello::{
+    util::RenderSurface as VelloRenderSurface, Renderer as VelloRenderer, RendererOptions,
+};
 use vello::{
     util::{block_on_wgpu, DeviceHandle},
     Scene,
@@ -23,8 +25,11 @@ pub struct Backend {
 
 impl Backend {
     /// Creates a new [`Backend`].
-    pub fn new(device_handle: &DeviceHandle) -> Result<Self, Error> {
-        let renderer = VelloRenderer::new(&device_handle.device)
+    pub fn new(
+        device_handle: &DeviceHandle,
+        render_options: &RendererOptions,
+    ) -> Result<Self, Error> {
+        let renderer = VelloRenderer::new(&device_handle.device, render_options)
             .map_err(|e| Error::BackendError(e.to_string()))?;
 
         Ok(Self { renderer })
@@ -37,6 +42,13 @@ impl Backend {
         scene: &Scene,
         surface: &VelloRenderSurface,
     ) {
+        //TODO not crate everytime
+        let render_params = vello::RenderParams {
+            base_color: vello::peniko::Color::BLACK,
+            width: surface.config.width,
+            height: surface.config.height,
+        };
+
         let surface_texture = surface
             .surface
             .get_current_texture()
@@ -62,8 +74,7 @@ impl Backend {
                     &device_handle.queue,
                     scene,
                     &surface_texture,
-                    surface.config.width,
-                    surface.config.height,
+                    &render_params,
                 ),
             )
             .expect("failed to render to surface");

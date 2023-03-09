@@ -31,6 +31,7 @@ members = [
     "examples/checkbox",
     "examples/emg_editor",
     "examples/add_nodes",
+    "examples/drag_node",
 ]
 exclude = ["tests", "emg_web"]
 
@@ -39,3 +40,6 @@ split-debuginfo = "unpacked"
 
 [patch.crates-io]
 window_clipboard = { path = "../window_clipboard" }
+
+[patch."https://github.com/linebender/peniko"]
+peniko = { path = "../peniko" }

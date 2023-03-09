@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-03-02 19:42:20
+ * @LastEditTime: 2023-03-09 14:47:04
  * @LastEditors: Rais
  * @Description:
  */
@@ -261,7 +261,6 @@ where
 
             // ─────────────────────────────────────────────
 
-            builder.finish();
             Rc::new(sc)
         })
     }

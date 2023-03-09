@@ -6,6 +6,8 @@ add_nodes-release:
 	cargo run --package add_nodes --bin add_nodes --features gpu --release
 add_nodes:
 	RUST_BACKTRACE=full cargo run --package add_nodes --bin add_nodes --features gpu
+drag_node:
+	RUST_BACKTRACE=full cargo run --package drag_node --bin drag_node --features gpu
 moving_edge:
 	INSTA_FORCE_PASS=1 cargo run --package moving_edge --bin moving_edge --features gpu
 moving_edge-dhat:

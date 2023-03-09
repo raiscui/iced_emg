@@ -8,6 +8,7 @@ mod tools;
 pub mod animation;
 pub mod any;
 pub mod display;
+pub mod drag;
 pub mod keyboard;
 pub mod measures;
 pub mod mouse;
@@ -15,8 +16,9 @@ pub mod time;
 pub mod touch;
 pub mod window;
 // ────────────────────────────────────────────────────────────────────────────────
-pub type Pos<T = Precision> = na::Point2<T>;
 pub type Precision = f32;
+pub type Pos<T = Precision> = na::Point2<T>;
+pub type Affine<T = Precision> = na::Affine2<T>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -28,8 +30,8 @@ pub use compact_str as id_str;
 pub use compact_str::CompactString as IdStr;
 pub use dyn_partial_eq;
 
-// pub extern crate im_rc as im;
-pub extern crate imbl as im;
+pub extern crate im_rc as im;
+// pub extern crate imbl as im;
 pub use im::Vector;
 pub use layout::*;
 pub use measures::*;

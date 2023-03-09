@@ -1,19 +1,25 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-01 21:50:27
+ * @LastEditTime: 2023-03-10 00:00:14
  * @LastEditors: Rais
  * @Description:
  */
 //! Create interactive, native cross-platform applications.
 mod state;
 
-use emg_common::Vector;
+use std::hash::BuildHasherDefault;
+
+use emg_common::{
+    im::{hashmap::HashMapPool, vector::RRBPool, HashMap},
+    Vector,
+};
+use emg_hasher::CustomHasher;
 use emg_orders::Orders;
 pub use state::State;
 use winit::event_loop::EventLoopBuilder;
 
-use crate::conversion;
+use crate::conversion::{self, ev::EventState};
 use crate::mouse;
 use crate::{
     clipboard::{self, Clipboard},
@@ -30,7 +36,7 @@ use emg_graphics_backend::window::{
 use emg_native::{event::EventWithFlagType, renderer::Renderer, Bus, Program};
 use emg_state::state_lit::StateVarLit;
 use emg_state::CloneStateAnchor;
-use tracing::{debug_span, info, info_span, instrument};
+use tracing::{debug, debug_span, info, info_span, instrument};
 
 // use emg_native::user_interface::{self, UserInterface};
 // ────────────────────────────────────────────────────────────────────────────────
@@ -278,7 +284,7 @@ where
     })
 }
 
-#[instrument(skip_all)]
+// #[instrument(skip_all)]
 async fn run_instance<A, E, C>(
     mut application: A,
     mut compositor: C,
@@ -310,6 +316,7 @@ async fn run_instance<A, E, C>(
     let mut surface = compositor.create_surface(&window);
     let mut state = State::new(&application, &window);
     let mut viewport_version = state.viewport_version();
+    let mut event_state = EventState::default();
 
     // let physical_size = state.physical_size();
 
@@ -328,20 +335,96 @@ async fn run_instance<A, E, C>(
         .map(|sf| crate::PaintCtx::new(*sf));
 
     //view
-
     // let native_events: StateVar<Vector<EventWithFlagType>> = use_state(||Vector::new());
-    let native_events: StateVarLit<Vector<EventWithFlagType>> = StateVarLit::new(Vector::new());
+    let event_vec_pool = RRBPool::new(8);
+    let event_hm_pool = HashMapPool::new(8);
+
+    let native_events: StateVarLit<Vector<EventWithFlagType>> =
+        StateVarLit::new(Vector::with_pool(&event_vec_pool));
+    //
+    let mut latest_event_state: HashMap<
+        (emg_native::event::EventFlag, u32),
+        emg_native::Event,
+        BuildHasherDefault<CustomHasher>,
+    > = HashMap::with_pool_hasher(
+        &event_hm_pool,
+        BuildHasherDefault::<CustomHasher>::default(),
+    );
+    const CURSOR_MOVED: u32 = mouse::CURSOR_MOVED.bits();
+    //
+    let event_debouncer =
+        native_events
+            .watch()
+            .map_mut(Vector::with_pool(&event_vec_pool), move |out, ev_list| {
+                let mut changed = false;
+                if !out.is_empty() {
+                    out.clear();
+                    changed = true;
+                }
+                let iter = ev_list.iter();
+                for (evf@(ef,sub), ev) in iter {
+                    if  ef== &emg_native::event::MOUSE && sub == &CURSOR_MOVED {
+
+                        latest_event_state
+                        .entry(*evf)
+                        .and_modify(|latest_ev| {
+                        debug!(target:"winit_event","has old state,\nevf:{:?}\nold:\n{:?}\nnew:\n{:?}",evf,latest_ev,ev);
+
+                            if latest_ev != ev {
+                                *latest_ev = ev.clone();
+                                out.push_back((*evf, ev.clone()));
+                                changed = true;
+                            }
+                            else{
+                                debug!(target:"winit_event","same,ignored");
+                            }
+                        })
+                        .or_insert_with(|| {
+                            out.push_back((*evf, ev.clone()));
+                            changed = true;
+                            ev.clone()
+                        });
+
+                    }else{
+                        debug!(target:"winit_event",?evf,?ev);
+
+                        out.push_back((*evf, ev.clone()));
+                            changed = true;
+                    }
+
+
+                    // let latest_ev = latest_event_state.get_mut(evf);
+                    // if latest_ev.is_none() {
+                    //     latest_event_state.insert(*evf, ev.clone());
+                    //     out.push_back((*evf, ev.clone()));
+                    //     changed = true;
+                    // } else {
+                    //     let latest_ev = latest_ev.unwrap();
+                    //     if latest_ev != ev {
+                    //         latest_event_state.insert(*evf, ev.clone());
+                    //         out.push_back((*evf, ev.clone()));
+                    //         changed = true;
+                    //     }
+                    // }
+                }
+                info!(target:"winit_event",?changed);
+
+                changed
+            });
+
+    let native_events_is_empty = event_debouncer.map(|v| v.is_empty());
+
     let (event_matchs_sa, ctx_sa) = application.build_ctx(
         g.graph(),
         &painter,
-        &native_events.watch(),
+        &event_debouncer,
+        // &native_events.watch(),
         state.cursor_position(),
     );
     let mut ctx = ctx_sa.get();
     // let mut element = application.view(&g.graph());
 
     let mouse_interaction = mouse::Interaction::default();
-    let native_events_is_empty = native_events.watch().map(|v| v.is_empty());
     let mut messages = Vec::new();
 
     debug.startup_finished();
@@ -356,18 +439,16 @@ async fn run_instance<A, E, C>(
     );
 
     while let Some(winit_event) = receiver.next().await {
-        // info!(target:"winit event", ?winit_event);
-
         match winit_event {
             event::Event::MainEventsCleared => {
-                let _span = info_span!(target:"winit event","MainEventsCleared").entered();
+                let _span = info_span!(target:"winit_event","MainEventsCleared").entered();
 
                 if !native_events_is_empty.get() {
-                    info!(target:"winit event","native_events:{:?}", native_events);
+                    info!(target:"winit_event",?native_events);
                     debug.event_processing_started();
                     let event_matchs = event_matchs_sa.get();
                     //清空 native_events, 因为 event_matchs 已经获得, native_events使用完毕;
-                    native_events.set(Vector::new());
+                    native_events.set(Default::default());
 
                     if !event_matchs.is_empty() {
                         for ev in event_matchs.values().flat_map(|x| x.1.clone()) {
@@ -443,7 +524,7 @@ async fn run_instance<A, E, C>(
                 //     },
                 //     state.cursor_position(),
                 // );
-                info!(target:"winit event","element painting");
+                info!(target:"winit_event","element painting");
                 // element.paint(&mut ctx);
                 // ctx = ctx_sa.get();
 
@@ -466,14 +547,14 @@ async fn run_instance<A, E, C>(
             //     ));
             // }
             event::Event::UserEvent(message) => {
-                // let _span = info_span!(target:"winit event","UserEvent").entered();
-                info!(target:"winit event","UserEvent:{:?}",message);
+                // let _span = info_span!(target:"winit_event","UserEvent").entered();
+                info!(target:"winit_event","UserEvent:{:?}",message);
 
                 messages.push(message);
             }
             event::Event::RedrawRequested(_) => {
-                // let _span = info_span!(target:"winit event","RedrawRequested").entered();
-                info!(target:"winit event","RedrawRequested");
+                // let _span = info_span!(target:"winit_event","RedrawRequested").entered();
+                info!(target:"winit_event","RedrawRequested");
 
                 // if physical_size.x == 0 || physical_size.y == 0 {
                 //     continue;
@@ -557,7 +638,7 @@ async fn run_instance<A, E, C>(
                 }
             }
             event::Event::LoopDestroyed => {
-                let _span = info_span!(target:"winit event","LoopDestroyed").entered();
+                let _span = info_span!(target:"winit_event","LoopDestroyed").entered();
 
                 renderer.on_loop_destroyed();
             }
@@ -566,9 +647,9 @@ async fn run_instance<A, E, C>(
                 event: window_event,
                 ..
             } => {
-                // let _span = info_span!(target:"winit event","WindowEvent").entered();
-                info!(target:"winit event","WindowEvent:{:?}",window_event);
-                // info!(target:"winit event","window.scale_factor():{}",window.scale_factor());//2
+                // let _span = info_span!(target:"winit_event","WindowEvent").entered();
+                info!(target:"winit_event",?window_event);
+                // info!(target:"winit_event","window.scale_factor():{}",window.scale_factor());//2
 
                 if requests_exit(&window_event, state.modifiers()) && exit_on_close_request {
                     break;
@@ -580,9 +661,12 @@ async fn run_instance<A, E, C>(
                     &window_event,
                     state.vp_scale_factor(),
                     state.modifiers(),
+                    &mut event_state,
                 ) {
                     // native_events.push(event);
-                    native_events.update(|ev| ev.push_back(event_with_flag));
+                    native_events.update(
+                        |ev| ev.extend(event_with_flag.iter().cloned()), // ev.push_back(event_with_flag)
+                    );
                 }
 
                 if viewport_version != state.viewport_version() {

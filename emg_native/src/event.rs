@@ -1,18 +1,20 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:22:19
- * @LastEditTime: 2023-01-13 12:16:14
+ * @LastEditTime: 2023-03-09 23:36:28
  * @LastEditors: Rais
  * @Description:
  */
 //! Handle events of a user interface.
 
+use crate::drag;
 use crate::keyboard;
 use crate::mouse;
 use crate::touch;
 use crate::window;
 use bitflags::bitflags;
 
+///u32 是 二级 事件 flag
 pub type EventWithFlagType = ((EventFlag, u32), Event);
 
 // Event bigflags
@@ -24,6 +26,7 @@ bitflags! {
         const WINDOW =              1<<2;
         const TOUCH =               1<<3;
         const PLATFORM_SPECIFIC =   1<<4;
+        const DRAG =                1<<5;
 
     }
 }
@@ -50,21 +53,9 @@ pub enum Event {
 
     /// A platform specific event
     PlatformSpecific(PlatformSpecific),
-}
 
-impl Event {
-    // pub fn to_str(&self) -> IdStr {
-    //     match self {
-    //         Event::Keyboard(_) => todo!(),
-    //         Event::Mouse(x) => match x {
-    //             emg_common::mouse::Event::ButtonReleased(_) => IdStr::new_inline("click"),
-    //             other => other.to_compact_string(),
-    //         },
-    //         Event::Window(_) => IdStr::new_inline("Window"), //TODO  make it right
-    //         Event::Touch(_) => todo!(),
-    //         Event::PlatformSpecific(_) => todo!(),
-    //     }
-    // }
+    /// A drag event
+    Drag(drag::Event),
 }
 
 /// A platform specific event

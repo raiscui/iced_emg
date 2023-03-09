@@ -19,8 +19,6 @@ default = []
 insta = []
 
 [dependencies]
-# imbl = { path = "../imbl" }
-# smallvec = { version = "1.8.0", features = ["const_generics"] }
 indexmap = "1.9"
 
 

@@ -1,10 +1,9 @@
 use crate::conversion;
 use crate::{Application, Debug, Mode, Viewport};
 use emg_common::{na, Pos};
-use emg_graphics_backend::window::Compositor;
 use emg_native::G_POS;
-use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateMultiAnchor, StateVar};
-use std::{cell::Cell, marker::PhantomData, rc::Rc};
+use emg_state::{CloneStateVar, StateAnchor, StateMultiAnchor};
+use std::marker::PhantomData;
 use tracing::debug_span;
 use winit::event::{Touch, WindowEvent};
 use winit::window::Window;

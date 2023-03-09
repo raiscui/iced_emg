@@ -24,38 +24,59 @@ fn tracing_init() -> Result<(), Report> {
         .with_indent_lines(true)
         .with_indent_amount(4)
         .with_targets(true)
-        .with_filter(tracing_subscriber::EnvFilter::new(
-            // "emg_layout=debug,emg_layout[build inherited cassowary_generals_map],emg_layout[LayoutOverride]=error",
-            // "[GElement-shaping]=debug",
-            // "error,[sa gel in map clone]=debug",
-            // "[event_matching]=debug,[editor]=debug,[checkbox]=debug",
-            "[event_matching]=debug",
-            // "error",
-        ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
-                let skip_target = ["emg_state", "winit_event"];
+                let skip_target = ["emg_state"];
                 for t in skip_target {
                     if metadata.target().contains(t) {
                         return false;
                     }
                 }
 
-                let keep_target = ["emg_element"];
-                if !keep_target.iter().any(|t| metadata.target().starts_with(t)) {
-                    return false;
+                let skip_span = ["MainEventsCleared"];
+                for t in skip_span {
+                    if metadata.name().contains(t) {
+                        return false;
+                    }
                 }
 
-                let keep_span = ["event_matching"];
+                let skip_fields = ["native_events"];
+                // let skip_fields = ["window_event"];
+
+                for x in metadata.fields() {
+                    let f_str = format!("{}", x);
+                    if skip_fields.contains(&f_str.as_str()) {
+                        return false;
+                    }
+                }
+
+                // let keep_target = ["emg_element"];
+                // if !keep_target.iter().any(|t| metadata.target().starts_with(t)) {
+                //     return false;
+                // }
+
+                // let keep_span = ["event_matching"];
+                // if metadata.is_span() && keep_span.contains(&metadata.name()) {
+                //     return true;
+                // }
+
+                true
+            },
+        ))
+        .with_filter(tracing_subscriber::EnvFilter::new("winit_event=debug"))
+        .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
+            |metadata, cx| {
+                // let keep_target = ["emg_element"];
+                // if !keep_target.iter().any(|t| metadata.target().starts_with(t)) {
+                //     return false;
+                // }
+
+                let keep_span = [];
                 if metadata.is_span() && keep_span.contains(&metadata.name()) {
                     return true;
                 }
 
-                // if let Some(current_span) = cx.lookup_current() {
-                //     return keep_span.contains(&current_span.name());
-                // }
-
-                false
+                true
             },
         ));
 

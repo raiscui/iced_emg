@@ -13,12 +13,12 @@ bitflags! {
 /// 所以需要一个标志位来表示多重语义的事件
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct EventFlag: u32 {
-        const GENERAL_CLICK =           1<<0;
+        const GENERAL_CLICK =   1<<0;
         const LEFT =            1<<1;
         const RIGHT =           1<<2;
         const PRESSED =         1<<3 | Self::GENERAL_CLICK.bits();
         const RELEASED =        1<<4 | Self::GENERAL_CLICK.bits();
-        const CURSOR_MOVED =    1<<5;
+        const CURSOR_MOVED =    1<<5;//32
         const CURSOR_ENTERED =  1<<6;
         const CURSOR_LEFT =     1<<7;
         const MIDDLE =          1<<8;
