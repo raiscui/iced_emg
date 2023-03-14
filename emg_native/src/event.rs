@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:22:19
- * @LastEditTime: 2023-03-13 16:54:32
+ * @LastEditTime: 2023-03-14 17:54:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,7 +16,7 @@ use bitflags::bitflags;
 pub use ev_identify::*;
 
 ///u32 是 二级 事件 flag
-pub type EventWithFlagType = ((EventFlag, u32), Event);
+pub type EventWithFlagType = (EventIdentify, Event);
 
 // Event bigflags
 bitflags! {
@@ -27,7 +27,7 @@ bitflags! {
         const WINDOW =              1<<2;
         const TOUCH =               1<<3;
         const PLATFORM_SPECIFIC =   1<<4;
-        const DRAG =                1<<5;
+        const DND =                1<<5;//Drag and Drop
 
     }
 }
@@ -57,7 +57,7 @@ pub enum Event {
     PlatformSpecific(PlatformSpecific),
 
     /// A drag event
-    Drag(drag::Event),
+    DragDrop(drag::Event),
 }
 
 /// A platform specific event

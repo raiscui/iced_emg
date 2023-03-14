@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-05 20:56:05
- * @LastEditTime: 2023-03-13 18:14:20
+ * @LastEditTime: 2023-03-14 17:49:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@ use derive_more::From;
 use tracing::{debug, debug_span, info};
 
 use emg_common::Vector;
-use emg_native::event::{EventFlag, EventIdentify};
+use emg_native::event::EventIdentify;
 use emg_state::Dict;
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -10,7 +10,8 @@ use emg_bind::{
     emg_msg,
     emg_msg_macro_prelude::*,
     graph_edit::*,
-    runtime::OrdersContainer,
+    mouse::CLICK,
+    runtime::{drag::DRAG, OrdersContainer},
     Sandbox, Settings,
 };
 use tracing::{debug_span, info, instrument, warn};
@@ -62,7 +63,7 @@ fn tracing_init() -> Result<(), Report> {
             },
         ))
         .with_filter(tracing_subscriber::EnvFilter::new(
-            "winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
+            "[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
@@ -71,12 +72,12 @@ fn tracing_init() -> Result<(), Report> {
                 //     return false;
                 // }
 
-                let keep_span = [];
+                let keep_span = ["DRAG"];
                 if metadata.is_span() && keep_span.contains(&metadata.name()) {
                     return true;
                 }
 
-                true
+                false
             },
         ));
 
@@ -152,7 +153,15 @@ impl Sandbox for App {
                             ]
                             @="b-check" Checkbox::new(false,"b-abcd",|_|{
                                 println!("b checkbox");
-                            })
+                            })=>[
+                                @="b_click2" On:DRAG  ||{
+                                    use nu_ansi_term::Color::Red;
+                                    let _span = debug_span!("DRAG", "{}",Red.paint("on [b-check] drag"))
+                                            .entered();
+
+                                    Message::Empty
+                                },
+                            ]
 
 
                     }

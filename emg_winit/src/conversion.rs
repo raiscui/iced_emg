@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2023-03-10 00:37:45
+ * @LastEditTime: 2023-03-14 23:17:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,9 +14,9 @@
 use emg_common::{na, smallvec, Affine, SmallVec};
 use emg_native::{
     drag,
-    event::{EventFlag, EventWithFlagType},
+    event::{EventFlag, EventIdentify, EventWithFlagType},
 };
-use tracing::debug;
+use tracing::{debug, debug_span};
 
 use crate::keyboard;
 use crate::mouse;
@@ -66,7 +66,7 @@ pub fn window_event(
             let logical_size = new_size.to_logical(scale_factor);
 
             Some(smallvec![(
-                (EventFlag::WINDOW, window::RESIZED.bits()),
+                EventIdentify::new(EventFlag::WINDOW, window::RESIZED),
                 Event::Window(window::Event::Resized {
                     width: logical_size.width,
                     height: logical_size.height,
@@ -77,7 +77,7 @@ pub fn window_event(
             let logical_size = new_inner_size.to_logical(scale_factor);
 
             Some(smallvec![(
-                (EventFlag::WINDOW, window::RESIZED.bits()),
+                EventIdentify::new(EventFlag::WINDOW, window::RESIZED),
                 Event::Window(window::Event::Resized {
                     width: logical_size.width,
                     height: logical_size.height,
@@ -85,7 +85,7 @@ pub fn window_event(
             )])
         }
         WindowEvent::CloseRequested => Some(smallvec![(
-            (EventFlag::WINDOW, window::CLOSE_REQUESTED.bits()),
+            EventIdentify::new(EventFlag::WINDOW, window::CLOSE_REQUESTED),
             Event::Window(window::Event::CloseRequested),
         )]),
         WindowEvent::CursorMoved { position, .. } => {
@@ -97,46 +97,61 @@ pub fn window_event(
 
             //TODO move to event_state function
             if mouse_down {
+                // let pos_is_same = event_state.prior_position.is_some_and(|pp| pp == position);
+                // let _span = debug_span!("DRAG",pos_is_same, %position ).entered();
+
                 if let Some(prior) = event_state.prior_position {
-                    let translation = na::Translation2::<f32>::from(position - prior);
-                    event_state.transform = translation * event_state.transform;
+                    if prior == position {
+                        //按压 静止
+                        if !prior_mouse_down {
+                            let _span = debug_span!("DRAG", "-----start").entered();
 
-                    if !prior_mouse_down {
-                        //first
-
-                        evs.push((
-                            (EventFlag::DRAG, drag::DRAG_START.bits()),
-                            Event::Drag(drag::Event::DragStart {
-                                position,
-                                trans: event_state.transform,
-                            }),
-                        ));
-                        event_state.set_mouse_down(true); // 持续更改 ,prior_mouse_down 变更
+                            evs.push((
+                                EventIdentify::new(EventFlag::DND, drag::DRAG_START),
+                                Event::DragDrop(drag::Event::DragStart { position }),
+                            ));
+                            event_state.set_mouse_down(true); // 持续更改 ,prior_mouse_down 变更
+                        }
                     } else {
-                        evs.push((
-                            (EventFlag::DRAG, drag::DRAG.bits()),
-                            Event::Drag(drag::Event::Drag {
-                                position,
-                                trans: event_state.transform,
-                            }),
-                        ));
+                        event_state.transform =
+                            na::Translation2::<f32>::from(position - prior) * event_state.transform;
+
+                        if !prior_mouse_down {
+                            //fast move , first
+
+                            evs.push((
+                                EventIdentify::new(EventFlag::DND, drag::DRAG_START),
+                                Event::DragDrop(drag::Event::DragStart { position }),
+                            ));
+                            //TODO drag start also emit draging
+                            //TODO drag end when  mouse release
+                            event_state.set_mouse_down(true); // 持续更改 ,prior_mouse_down 变更
+                        } else {
+                            evs.push((
+                                EventIdentify::new(EventFlag::DND, drag::DRAG),
+                                Event::DragDrop(drag::Event::Drag {
+                                    position,
+                                    trans: event_state.transform,
+                                }),
+                            ));
+                        }
                     }
                 }
             }
             event_state.prior_position = Some(position);
 
             evs.push((
-                (EventFlag::MOUSE, mouse::CURSOR_MOVED.bits()),
+                EventIdentify::new(EventFlag::MOUSE, mouse::CURSOR_MOVED),
                 Event::Mouse(mouse::Event::CursorMoved { position }),
             ));
             Some(evs)
             // Some(smallvec![(
-            //     (EventFlag::MOUSE, mouse::CURSOR_MOVED.bits()),
+            //     EventIdentify::new(EventFlag::MOUSE, mouse::CURSOR_MOVED),
             //     Event::Mouse(mouse::Event::CursorMoved { position }),
             // )])
         }
         WindowEvent::CursorEntered { .. } => Some(smallvec![(
-            (EventFlag::MOUSE, mouse::CURSOR_ENTERED.bits()),
+            EventIdentify::new(EventFlag::MOUSE, mouse::CURSOR_ENTERED),
             Event::Mouse(mouse::Event::CursorEntered),
         )]),
         WindowEvent::CursorLeft { .. } => {
@@ -145,7 +160,7 @@ pub fn window_event(
             event_state.prior_position = None;
 
             Some(smallvec![(
-                (EventFlag::MOUSE, mouse::CURSOR_LEFT.bits()),
+                EventIdentify::new(EventFlag::MOUSE, mouse::CURSOR_LEFT),
                 Event::Mouse(mouse::Event::CursorLeft),
             )])
         }
@@ -159,7 +174,7 @@ pub fn window_event(
                     event_state.transform = Default::default();
 
                     smallvec![(
-                        (EventFlag::MOUSE, mouse::LEFT_PRESSED.bits()),
+                        EventIdentify::new(EventFlag::MOUSE, mouse::LEFT_PRESSED),
                         Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)),
                     )]
                 }
@@ -169,39 +184,39 @@ pub fn window_event(
                     event_state.transform = Default::default();
 
                     smallvec![(
-                        (EventFlag::MOUSE, mouse::LEFT_RELEASED.bits()),
+                        EventIdentify::new(EventFlag::MOUSE, mouse::LEFT_RELEASED),
                         Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)),
                     )]
                 }
                 (mouse::Button::Right, winit::event::ElementState::Pressed) => smallvec![(
-                    (EventFlag::MOUSE, mouse::RIGHT_PRESSED.bits()),
+                    EventIdentify::new(EventFlag::MOUSE, mouse::RIGHT_PRESSED),
                     Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)),
                 )],
                 (mouse::Button::Right, winit::event::ElementState::Released) => smallvec![(
-                    (EventFlag::MOUSE, mouse::RIGHT_RELEASED.bits()),
+                    EventIdentify::new(EventFlag::MOUSE, mouse::RIGHT_RELEASED),
                     Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)),
                 )],
                 (mouse::Button::Middle, winit::event::ElementState::Pressed) => smallvec![(
-                    (EventFlag::MOUSE, mouse::MIDDLE_PRESSED.bits()),
+                    EventIdentify::new(EventFlag::MOUSE, mouse::MIDDLE_PRESSED),
                     Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)),
                 )],
                 (mouse::Button::Middle, winit::event::ElementState::Released) => smallvec![(
-                    (EventFlag::MOUSE, mouse::MIDDLE_RELEASED.bits()),
+                    EventIdentify::new(EventFlag::MOUSE, mouse::MIDDLE_RELEASED),
                     Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Middle)),
                 )],
                 (mouse::Button::Other(x), winit::event::ElementState::Pressed) => smallvec![(
-                    (EventFlag::MOUSE, mouse::OTHER_PRESSED.bits()),
+                    EventIdentify::new(EventFlag::MOUSE, mouse::OTHER_PRESSED),
                     Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Other(x))),
                 )],
                 (mouse::Button::Other(x), winit::event::ElementState::Released) => smallvec![(
-                    (EventFlag::MOUSE, mouse::OTHER_RELEASED.bits()),
+                    EventIdentify::new(EventFlag::MOUSE, mouse::OTHER_RELEASED),
                     Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Other(x))),
                 )],
             })
         }
         WindowEvent::MouseWheel { delta, .. } => match delta {
             winit::event::MouseScrollDelta::LineDelta(delta_x, delta_y) => Some(smallvec![(
-                (EventFlag::MOUSE, mouse::WHEEL_SCROLLED.bits()),
+                EventIdentify::new(EventFlag::MOUSE, mouse::WHEEL_SCROLLED),
                 Event::Mouse(mouse::Event::WheelScrolled {
                     delta: mouse::ScrollDelta::Lines {
                         x: *delta_x,
@@ -210,7 +225,7 @@ pub fn window_event(
                 }),
             )]),
             winit::event::MouseScrollDelta::PixelDelta(position) => Some(smallvec![(
-                (EventFlag::MOUSE, mouse::WHEEL_SCROLLED.bits()),
+                EventIdentify::new(EventFlag::MOUSE, mouse::WHEEL_SCROLLED),
                 Event::Mouse(mouse::Event::WheelScrolled {
                     delta: mouse::ScrollDelta::Pixels {
                         x: position.x as f32,
@@ -220,7 +235,7 @@ pub fn window_event(
             )]),
         },
         WindowEvent::ReceivedCharacter(c) if !is_private_use_character(*c) => Some(smallvec![(
-            (EventFlag::KEYBOARD, keyboard::CHARACTER_RECEIVED.bits()),
+            EventIdentify::new(EventFlag::KEYBOARD, keyboard::CHARACTER_RECEIVED),
             Event::Keyboard(keyboard::Event::CharacterReceived(*c)),
         )]),
         WindowEvent::KeyboardInput {
@@ -237,14 +252,14 @@ pub fn window_event(
 
             match state {
                 winit::event::ElementState::Pressed => Some(smallvec![(
-                    (EventFlag::KEYBOARD, keyboard::KEY_PRESSED.bits()),
+                    EventIdentify::new(EventFlag::KEYBOARD, keyboard::KEY_PRESSED),
                     Event::Keyboard(keyboard::Event::KeyPressed {
                         key_code,
                         modifiers,
                     }),
                 )]),
                 winit::event::ElementState::Released => Some(smallvec![(
-                    (EventFlag::KEYBOARD, keyboard::KEY_RELEASED.bits()),
+                    EventIdentify::new(EventFlag::KEYBOARD, keyboard::KEY_RELEASED),
                     Event::Keyboard(keyboard::Event::KeyReleased {
                         key_code,
                         modifiers,
@@ -253,36 +268,32 @@ pub fn window_event(
             }
         }
         WindowEvent::ModifiersChanged(new_modifiers) => Some(smallvec![(
-            (EventFlag::KEYBOARD, keyboard::MODIFIERS_CHANGED.bits()),
+            EventIdentify::new(EventFlag::KEYBOARD, keyboard::MODIFIERS_CHANGED),
             Event::Keyboard(keyboard::Event::ModifiersChanged(self::modifiers(
                 *new_modifiers,
             ))),
         )]),
-        WindowEvent::Focused(focused) => Some(smallvec![(
+        WindowEvent::Focused(focused) => Some(smallvec![if *focused {
             (
-                EventFlag::WINDOW,
-                if *focused {
-                    window::FOCUSED.bits()
-                } else {
-                    window::UNFOCUSED.bits()
-                },
-            ),
-            Event::Window(if *focused {
-                window::Event::Focused
-            } else {
-                window::Event::Unfocused
-            }),
-        )]),
+                EventIdentify::new(EventFlag::WINDOW, window::FOCUSED),
+                Event::Window(window::Event::Focused),
+            )
+        } else {
+            (
+                EventIdentify::new(EventFlag::WINDOW, window::UNFOCUSED),
+                Event::Window(window::Event::Unfocused),
+            )
+        }]),
         WindowEvent::HoveredFile(path) => Some(smallvec![(
-            (EventFlag::WINDOW, window::FILE_HOVERED.bits()),
+            EventIdentify::new(EventFlag::WINDOW, window::FILE_HOVERED),
             Event::Window(window::Event::FileHovered(path.clone())),
         )]),
         WindowEvent::DroppedFile(path) => Some(smallvec![(
-            (EventFlag::WINDOW, window::FILE_DROPPED.bits()),
+            EventIdentify::new(EventFlag::WINDOW, window::FILE_DROPPED),
             Event::Window(window::Event::FileDropped(path.clone())),
         )]),
         WindowEvent::HoveredFileCancelled => Some(smallvec![(
-            (EventFlag::WINDOW, window::FILES_HOVERED_LEFT.bits()),
+            EventIdentify::new(EventFlag::WINDOW, window::FILES_HOVERED_LEFT),
             Event::Window(window::Event::FilesHoveredLeft),
         )]),
         WindowEvent::Touch(touch) => {
@@ -299,7 +310,7 @@ pub fn window_event(
             let winit::dpi::LogicalPosition { x, y } = position.to_logical(scale_factor);
 
             Some(smallvec![(
-                (EventFlag::WINDOW, window::MOVED.bits()),
+                EventIdentify::new(EventFlag::WINDOW, window::MOVED),
                 Event::Window(window::Event::Moved { x, y }),
             )])
         }

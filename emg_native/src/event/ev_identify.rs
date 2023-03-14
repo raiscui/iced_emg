@@ -1,16 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-13 14:41:13
- * @LastEditTime: 2023-03-14 00:01:11
+ * @LastEditTime: 2023-03-14 18:29:25
  * @LastEditors: Rais
  * @Description:
  */
 use integer_hasher::BuildIntHasher;
 
-use crate::mouse;
-use crate::touch;
+use crate::{drag, mouse, touch};
 
-use super::{EventFlag, MOUSE, TOUCH};
+use super::{EventFlag, DND, MOUSE, TOUCH};
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct MultiLevelIdentify {
@@ -95,8 +94,8 @@ impl MultiLevelIdentify {
     // }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct EventIdentify(u32, u32);
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct EventIdentify(pub u32, pub u32);
 
 impl core::ops::BitOr for EventIdentify {
     type Output = MultiLevelIdentify;
@@ -119,6 +118,12 @@ impl std::fmt::Debug for EventIdentify {
 }
 
 impl EventIdentify {
+    pub fn new<F: bitflags::BitFlags<Bits = u32>, G: bitflags::BitFlags<Bits = u32>>(
+        flags: F,
+        flags_sub: G,
+    ) -> Self {
+        EventIdentify(flags.bits(), flags_sub.bits())
+    }
     #[inline]
     pub const fn contains(&self, other: &Self) -> bool {
         self.0 == other.0 && (self.1 & other.1) == other.1
@@ -133,6 +138,11 @@ impl From<mouse::EventFlag> for EventIdentify {
 impl From<touch::EventFlag> for EventIdentify {
     fn from(x: touch::EventFlag) -> Self {
         Self(TOUCH.bits(), x.bits())
+    }
+}
+impl From<drag::EventFlag> for EventIdentify {
+    fn from(x: drag::EventFlag) -> Self {
+        Self(DND.bits(), x.bits())
     }
 }
 

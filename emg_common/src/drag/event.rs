@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-09 22:57:10
- * @LastEditTime: 2023-03-09 23:47:16
+ * @LastEditTime: 2023-03-14 18:50:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,7 +22,7 @@ bitflags! {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Event {
-    DragStart { position: Pos, trans: Affine },
+    DragStart { position: Pos },
 
     Drag { position: Pos, trans: Affine },
 

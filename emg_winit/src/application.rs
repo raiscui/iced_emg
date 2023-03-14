@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-14 15:51:26
+ * @LastEditTime: 2023-03-14 23:08:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -33,7 +33,11 @@ use emg_graphics_backend::window::{
     compositor::{self, CompositorSetting},
     Compositor,
 };
-use emg_native::{event::EventWithFlagType, renderer::Renderer, Bus, Program};
+use emg_native::{
+    event::{EventIdentify, EventWithFlagType},
+    renderer::Renderer,
+    Bus, Program, EVENT_DEBOUNCE,
+};
 use emg_state::state_lit::StateVarLit;
 use emg_state::CloneStateAnchor;
 use tracing::{debug, debug_span, info, info_span, instrument};
@@ -343,14 +347,14 @@ async fn run_instance<A, E, C>(
         StateVarLit::new(Vector::with_pool(&event_vec_pool));
     //
     let mut latest_event_state: HashMap<
-        (emg_native::event::EventFlag, u32),
+        EventIdentify,
         emg_native::Event,
         BuildHasherDefault<CustomHasher>,
     > = HashMap::with_pool_hasher(
         &event_hm_pool,
         BuildHasherDefault::<CustomHasher>::default(),
     );
-    const CURSOR_MOVED: u32 = mouse::CURSOR_MOVED.bits();
+
     //
     let event_debouncer =
         native_events
@@ -362,8 +366,8 @@ async fn run_instance<A, E, C>(
                     changed = true;
                 }
                 let iter = ev_list.iter();
-                for (evf@(ef,sub), ev) in iter {
-                    if  ef== &emg_native::event::MOUSE && sub == &CURSOR_MOVED {
+                for (evf, ev) in iter {
+                    if  EVENT_DEBOUNCE.intersects(evf) {
 
                         latest_event_state
                         .entry(*evf)

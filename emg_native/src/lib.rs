@@ -56,19 +56,41 @@ use static_init::dynamic;
 
 #[dynamic]
 pub static G_POS: emg_state::StateVar<Option<Pos<f64>>> = use_state(|| None);
+
 #[dynamic(lazy)]
 pub static EVENT_HOVER_CHECK: MultiLevelIdentify = {
     let mouse_need_hover_check: EventIdentify =
         (mouse::GENERAL_CLICK | mouse::CURSOR | mouse::WHEEL_SCROLLED).into();
     let touch_need_hover_check: EventIdentify = touch::EventFlag::all().into();
-    mouse_need_hover_check | touch_need_hover_check
+    let dnd_need_hover_check: EventIdentify = drag::EventFlag::all().into();
+    mouse_need_hover_check | touch_need_hover_check | dnd_need_hover_check
+};
+
+#[dynamic(lazy)]
+pub static EVENT_DEBOUNCE: MultiLevelIdentify = {
+    let mouse_e: EventIdentify = (mouse::CURSOR_MOVED).into();
+    let drag_e: EventIdentify = (drag::EventFlag::DRAG_START | drag::EventFlag::DRAG).into();
+
+    mouse_e | drag_e
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
+    use crate::{drag, event::EventIdentify, mouse, EVENT_DEBOUNCE, EVENT_HOVER_CHECK};
 
     #[test]
-    fn it_works() {}
+    fn dyn_static() {
+        let cm = mouse::CURSOR_MOVED.into();
+        let drag_start: EventIdentify = drag::EventFlag::DRAG_START.into();
+
+        assert!(EVENT_DEBOUNCE.intersects(&cm));
+        assert!(EVENT_DEBOUNCE.involve(&cm));
+        assert!(EVENT_DEBOUNCE.intersects(&drag_start));
+        assert!(EVENT_DEBOUNCE.involve(&drag_start));
+
+        assert!(EVENT_HOVER_CHECK.intersects(&mouse::CLICK.into()));
+        // assert!(EVENT_HOVER_CHECK.involve(&mouse::CLICK.into()));
+    }
 }
