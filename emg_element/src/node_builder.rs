@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-03-14 10:16:32
+ * @LastEditTime: 2023-03-14 12:27:16
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,6 +9,7 @@
 #![allow(clippy::borrow_as_ptr)]
 #![allow(clippy::ptr_as_ptr)]
 #![allow(clippy::ptr_eq)]
+use either::Either::{self, Left, Right};
 // ────────────────────────────────────────────────────────────────────────────────
 use indented::indented;
 use std::fmt::Write;
@@ -350,10 +351,8 @@ where
 
         let pool = pool.clone();
 
-        (events_sa, &widget_is_hover).map(move |events, is_hover| {
-            let mut ev_matchs =
-                Vector::<(EventIdentify, Event, Vector<EventNode<Message>>)>::with_pool(&pool);
-            let id3 = id3.clone();
+        let matchs_step1 = (events_sa).map(move |events| {
+            let mut ev_matchs = Vector::<EvMatch<Message>>::with_pool(&pool);
 
             //TODO don't do this many times  ,events change to Dict
             //已经根据event 事件 筛选出来的 callbacks
@@ -361,19 +360,19 @@ where
                 .iter()
                 .flat_map(|(ef, event)| {
                     let ev_id = EventIdentify::from(*ef);
-                    let id3 = id3.clone();
 
                     event_callbacks
                         .iter()
                         .filter_map(move |(cb_ev_id_wide, cb)| {
                             //ev_id 具体, cb_ev_id 宽泛
-                            let intersects = EVENT_HOVER_CHECK.intersects(cb_ev_id_wide);
-                            if ev_id.contains(cb_ev_id_wide) && (*is_hover || !intersects) {
-                                debug!(target :"winit_event",id=?id3, ?intersects,?is_hover);
+                            if ev_id.contains(cb_ev_id_wide) {
                                 Some((ev_id, event.clone(), cb.clone()))
+                                // debug!(target :"winit_event",id=?id3, ?intersects,?is_hover);
                             } else {
                                 None
                             }
+
+                            // ─────────────────────
                         })
                 })
                 // .flatten()
@@ -384,6 +383,35 @@ where
                 "==============================================================="
             );
             ev_matchs
+        });
+
+        //left is need hover check
+        let matchs_step2_split = matchs_step1.map(|x| {
+            x.iter()
+                .cloned()
+                .partition::<Vector<_>, _>(|(cb_ev_id_wide, _, _)| {
+                    EVENT_HOVER_CHECK.intersects(cb_ev_id_wide)
+                })
+        });
+        // let (a, b) = matchs_step2_split.split();
+        let no_need_hover_check_matchs = matchs_step2_split.refmap(|x| &x.1);
+
+        matchs_step2_split.then(move |(need_hover_ck, _)| {
+            if need_hover_ck.is_empty() {
+                matchs_step1.clone().into_anchor()
+            } else {
+                let matchs_step1 = matchs_step1.clone();
+                let no_need_hover_check_matchs = no_need_hover_check_matchs.clone();
+                widget_is_hover
+                    .then(move |&is_hover| {
+                        if is_hover {
+                            matchs_step1.clone().into_anchor()
+                        } else {
+                            no_need_hover_check_matchs.clone().into_anchor()
+                        }
+                    })
+                    .into_anchor()
+            }
         })
     }
 
