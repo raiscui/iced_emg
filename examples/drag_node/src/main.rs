@@ -62,7 +62,7 @@ fn tracing_init() -> Result<(), Report> {
             },
         ))
         .with_filter(tracing_subscriber::EnvFilter::new(
-            "[involve]=debug,winit_event[{id}]=debug,[event_matching]=debug,[LayoutOverride]=debug",
+            "winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {

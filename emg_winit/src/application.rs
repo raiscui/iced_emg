@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-14 00:07:47
+ * @LastEditTime: 2023-03-14 15:51:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -458,8 +458,11 @@ async fn run_instance<A, E, C>(
                         }
                     }
                 }
-                info!(target:"winit_event","============= event processed end =============================");
-
+                {
+                    use nu_ansi_term::Color::Red;
+                    use nu_ansi_term::Style;
+                    info!(target:"winit_event","{}",Style::new().on(Red).paint(  "============= event processed end ============================="));
+                }
                 //NOTE  has events or messages now -------------------
 
                 // for event in events.drain(..).zip(statuses.into_iter()) {
