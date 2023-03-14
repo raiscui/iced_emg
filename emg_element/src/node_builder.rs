@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-03-14 12:27:16
+ * @LastEditTime: 2023-03-14 12:57:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,19 +9,13 @@
 #![allow(clippy::borrow_as_ptr)]
 #![allow(clippy::ptr_as_ptr)]
 #![allow(clippy::ptr_eq)]
-use either::Either::{self, Left, Right};
 // ────────────────────────────────────────────────────────────────────────────────
 use indented::indented;
 use std::fmt::Write;
 mod event_builder;
 
-use emg_common::{
-    im::{
-        self,
-        vector::{self, RRBPool},
-    },
-    mouse, IdStr, Pos, TypeName, Vector,
-};
+use emg_common::im::vector::RRBPool;
+use emg_common::{IdStr, Pos, TypeName, Vector};
 use emg_layout::EdgeCtx;
 use emg_native::{event::EventIdentify, renderer::Rect, Event, WidgetState, EVENT_HOVER_CHECK};
 use emg_shaping::EqShapingWithDebug;
@@ -308,7 +302,6 @@ where
         //TODO move event_callbacks into sa map 不会变更, 是否考虑变更?
         let id = self.id.clone();
         let id2 = self.id.clone();
-        let id3 = self.id.clone();
         let _span = debug_span!("event_matching", at = "event_matching pre run", ?id).entered();
 
         let widget_is_hover = (cursor_position, &self.widget_state).map(move |c_pos, state| {
