@@ -51,10 +51,18 @@ pub use widget::Widget;
 
 // ────────────────────────────────────────────────────────────────────────────────
 use emg_state::use_state;
+use event::{EventIdentify, MultiLevelIdentify};
 use static_init::dynamic;
 
 #[dynamic]
 pub static G_POS: emg_state::StateVar<Option<Pos<f64>>> = use_state(|| None);
+#[dynamic(lazy)]
+pub static EVENT_HOVER_CHECK: MultiLevelIdentify = {
+    let mouse_need_hover_check: EventIdentify =
+        (mouse::GENERAL_CLICK | mouse::CURSOR | mouse::WHEEL_SCROLLED).into();
+    let touch_need_hover_check: EventIdentify = touch::EventFlag::all().into();
+    mouse_need_hover_check | touch_need_hover_check
+};
 
 // ────────────────────────────────────────────────────────────────────────────────
 

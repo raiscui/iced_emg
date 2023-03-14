@@ -1,9 +1,9 @@
-use std::{clone::Clone, rc::Rc};
+use std::{alloc::Global, clone::Clone, rc::Rc};
 
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2023-02-03 17:23:01
+ * @LastEditTime: 2023-03-13 18:56:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -33,9 +33,8 @@ pub auto trait ShapingUseNoWarper {}
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-// impl<Use> !ShapingUseNoWarper for Vec<Use> {}
-impl<Use> !ShapingUseNoWarper for Box<Use> {}
-impl<Use> !ShapingUseNoWarper for Vec<Box<Use>> {}
+impl<Use, A> !ShapingUseNoWarper for Box<Use, A> {}
+impl<Use, A> !ShapingUseNoWarper for Vec<Use, A> {}
 impl<Use> !ShapingUseNoWarper for Rc<Use> {}
 impl<Use> !ShapingUseNoWarper for StateVar<Use> {}
 impl<Use> !ShapingUseNoWarper for StateAnchor<Use> {}

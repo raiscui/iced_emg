@@ -1,18 +1,19 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:22:19
- * @LastEditTime: 2023-03-09 23:36:28
+ * @LastEditTime: 2023-03-13 16:54:32
  * @LastEditors: Rais
  * @Description:
  */
 //! Handle events of a user interface.
-
+mod ev_identify;
 use crate::drag;
 use crate::keyboard;
 use crate::mouse;
 use crate::touch;
 use crate::window;
 use bitflags::bitflags;
+pub use ev_identify::*;
 
 ///u32 是 二级 事件 flag
 pub type EventWithFlagType = ((EventFlag, u32), Event);
@@ -38,6 +39,7 @@ bitflags! {
 ///
 /// [open an issue]: https://github.com/iced-rs/iced/issues
 #[derive(Debug, Clone, PartialEq)]
+//TODO global refpool
 pub enum Event {
     /// A keyboard event
     Keyboard(keyboard::Event),

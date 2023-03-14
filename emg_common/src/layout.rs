@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-09 16:53:34
- * @LastEditTime: 2023-02-23 15:06:20
+ * @LastEditTime: 2023-03-13 22:34:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -177,13 +177,13 @@ impl LayoutOverride {
     #[cfg(feature = "debug")]
     pub fn underlay(&mut self, ix: Option<IdStr>, rect: RectLTRB) {
         let _span = debug_span!("LayoutOverride", ?ix, func = "underlay").entered();
-        debug!(target = "underlay", "self:{:#?}", self);
-        debug!(target = "underlay", "rect:{:#?}", rect);
+        debug!(target: "underlay", "self:{:#?}", self);
+        debug!(target:"underlay", "rect:{:#?}", rect);
 
         if rect.is_completely_wrapped(&self.bbox) {
             //NOTE rect 完全包裹  bb外框
 
-            debug!(target = "underlay", "rect 完全包裹  bb外框");
+            debug!(target: "underlay", "rect 完全包裹  bb外框");
 
             self.bbox = rect;
             self.rect_tree.clear();
@@ -191,14 +191,14 @@ impl LayoutOverride {
         } else if rect.is_completely_disjoint(&self.bbox) {
             //NOTE rect 完全不相交  bb外框
 
-            debug!(target = "underlay", "rect 完全不相交  bb外框");
+            debug!(target: "underlay", "rect 完全不相交  bb外框");
 
             self.rect_tree.insert(rect);
 
             self.bbox = self.bbox.union(rect);
         } else {
             //NOTE rect 与 bb外框 有交集
-            debug!(target = "underlay", "rect 与 bb外框 有交集");
+            debug!(target: "underlay", "rect 与 bb外框 有交集");
             for big in self.rect_tree.range(..=rect) {
                 if big.is_completely_wrapped(&rect) {
                     return;
@@ -219,19 +219,19 @@ impl LayoutOverride {
             self.bbox = self.bbox.union(rect);
         }
 
-        debug!(target = "underlay end", ?self);
+        debug!(target: "underlay end", ?self);
     }
 
     #[cfg(not(feature = "debug"))]
     pub fn underlay(&mut self, rect: RectLTRB) {
         let _span = debug_span!("LayoutOverride", func = "underlay").entered();
-        debug!(target = "underlay", "self:{:#?}", self);
-        debug!(target = "underlay", "rect:{:#?}", rect);
+        debug!(target: "underlay", "self:{:#?}", self);
+        debug!(target: "underlay", "rect:{:#?}", rect);
 
         if rect.is_completely_wrapped(&self.bbox) {
             //NOTE rect 完全包裹  bb外框
 
-            debug!(target = "underlay", "rect 完全包裹  bb外框");
+            debug!(target: "underlay", "rect 完全包裹  bb外框");
 
             self.bbox = rect;
             self.rect_tree.clear();
@@ -239,14 +239,14 @@ impl LayoutOverride {
         } else if rect.is_completely_disjoint(&self.bbox) {
             //NOTE rect 完全不相交  bb外框
 
-            debug!(target = "underlay", "rect 完全不相交  bb外框");
+            debug!(target: "underlay", "rect 完全不相交  bb外框");
 
             self.rect_tree.insert(rect);
 
             self.bbox = self.bbox.union(rect);
         } else {
             //NOTE rect 与 bb外框 有交集
-            debug!(target = "underlay", "rect 与 bb外框 有交集");
+            debug!(target: "underlay", "rect 与 bb外框 有交集");
             for big in self.rect_tree.range(..=rect) {
                 if big.is_completely_wrapped(&rect) {
                     return;
@@ -267,7 +267,7 @@ impl LayoutOverride {
             self.bbox = self.bbox.union(rect);
         }
 
-        debug!(target = "underlay end", ?self);
+        debug!(target: "underlay end", ?self);
     }
 
     // pub fn underlay(mut self, rect: RectLTRB) -> Self {

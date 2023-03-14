@@ -14,16 +14,17 @@ bitflags! {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct EventFlag: u32 {
         const GENERAL_CLICK =   1<<0;
-        const LEFT =            1<<1;
-        const RIGHT =           1<<2;
-        const PRESSED =         1<<3 | Self::GENERAL_CLICK.bits();
-        const RELEASED =        1<<4 | Self::GENERAL_CLICK.bits();
-        const CURSOR_MOVED =    1<<5;//32
-        const CURSOR_ENTERED =  1<<6;
-        const CURSOR_LEFT =     1<<7;
-        const MIDDLE =          1<<8;
-        const OTHER_BUTTOM =    1<<9;
-        const WHEEL_SCROLLED =  1<<10;
+        const CURSOR =          1<<1;
+        const LEFT =            1<<2;
+        const RIGHT =           1<<3;
+        const PRESSED =         1<<4 | Self::GENERAL_CLICK.bits();
+        const RELEASED =        1<<5 | Self::GENERAL_CLICK.bits();
+        const CURSOR_MOVED =    1<<6 | self::CURSOR.bits();
+        const CURSOR_ENTERED =  1<<7 | self::CURSOR.bits();
+        const CURSOR_LEFT =     1<<8 | self::CURSOR.bits();
+        const MIDDLE =          1<<9;
+        const OTHER_BUTTOM =    1<<10;
+        const WHEEL_SCROLLED =  1<<11;
 // ────────────────────────────────────────────────────────────────────────────────
 
         const LEFT_CLICK = Self::GENERAL_CLICK.bits() | Self::LEFT.bits();

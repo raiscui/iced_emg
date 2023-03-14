@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-10 00:00:14
+ * @LastEditTime: 2023-03-14 00:07:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -445,21 +445,20 @@ async fn run_instance<A, E, C>(
 
                 if !native_events_is_empty.get() {
                     info!(target:"winit_event",?native_events);
-                    debug.event_processing_started();
+
                     let event_matchs = event_matchs_sa.get();
                     //清空 native_events, 因为 event_matchs 已经获得, native_events使用完毕;
                     native_events.set(Default::default());
 
                     if !event_matchs.is_empty() {
-                        for ev in event_matchs.values().flat_map(|x| x.1.clone()) {
+                        for ev in event_matchs.iter().flatten().flatten().flat_map(|x| &x.2) {
                             if let Some(msg) = ev.call() {
                                 messages.push(msg);
                             }
                         }
                     }
-
-                    debug.event_processing_finished();
                 }
+                info!(target:"winit_event","============= event processed end =============================");
 
                 //NOTE  has events or messages now -------------------
 

@@ -7,6 +7,7 @@
 // #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
+#![feature(allocator_api)]
 // #![feature(trivial_bounds)]
 #[cfg(test)]
 mod test;

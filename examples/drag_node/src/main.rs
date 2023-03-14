@@ -17,8 +17,6 @@ use tracing::{debug_span, info, instrument, warn};
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
-    let error_layer =
-        tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
 
     let filter_layer = tracing_tree::HierarchicalLayer::new(2)
         .with_indent_lines(true)
@@ -26,7 +24,7 @@ fn tracing_init() -> Result<(), Report> {
         .with_targets(true)
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
-                let skip_target = ["emg_state"];
+                let skip_target = ["emg_state", "underlay", "to_layout_override"];
                 for t in skip_target {
                     if metadata.target().contains(t) {
                         return false;
@@ -63,7 +61,9 @@ fn tracing_init() -> Result<(), Report> {
                 true
             },
         ))
-        .with_filter(tracing_subscriber::EnvFilter::new("winit_event=debug"))
+        .with_filter(tracing_subscriber::EnvFilter::new(
+            "[involve]=debug,winit_event[{id}]=debug,[event_matching]=debug,[LayoutOverride]=debug",
+        ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
                 // let keep_target = ["emg_element"];
@@ -86,7 +86,7 @@ fn tracing_init() -> Result<(), Report> {
         // .with(layout_override_layer)
         // .with(event_matching_layer)
         // .with(touch_layer)
-        .with(error_layer)
+        // .with(tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR))
         .with(filter_layer)
         // .with(out_layer)
         .init();

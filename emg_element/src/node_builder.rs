@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-03-01 23:26:03
+ * @LastEditTime: 2023-03-14 10:16:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,9 +14,15 @@ use indented::indented;
 use std::fmt::Write;
 mod event_builder;
 
-use emg_common::{mouse, IdStr, Pos, TypeName, Vector};
+use emg_common::{
+    im::{
+        self,
+        vector::{self, RRBPool},
+    },
+    mouse, IdStr, Pos, TypeName, Vector,
+};
 use emg_layout::EdgeCtx;
-use emg_native::{renderer::Rect, Event, WidgetState};
+use emg_native::{event::EventIdentify, renderer::Rect, Event, WidgetState, EVENT_HOVER_CHECK};
 use emg_shaping::EqShapingWithDebug;
 use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, debug_span, info, info_span, instrument, Span};
@@ -25,6 +31,8 @@ use crate::GElement;
 use std::{fmt::Display, rc::Rc, string::String};
 
 pub use self::event_builder::*;
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 #[allow(clippy::module_name_repetitions)]
 pub struct NodeBuilderWidget<Message> {
@@ -103,7 +111,8 @@ impl<Message: 'static> std::fmt::Debug for NodeBuilderWidget<Message>
     }
 }
 
-pub type EventMatchsDict<Message> = Dict<EventIdentify, (Event, Vector<EventNode<Message>>)>;
+pub type EvMatch<Message> = (EventIdentify, Event, Vector<EventNode<Message>>);
+pub type EventMatchs<Message> = Vector<EvMatch<Message>>;
 
 // impl<Message> Default for NodeBuilderWidget<Message> {
 //     fn default() -> Self {
@@ -292,140 +301,89 @@ where
         &self,
         events_sa: &StateAnchor<Vector<emg_native::EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> StateAnchor<EventMatchsDict<Message>> {
+        pool: &RRBPool<EvMatch<Message>>,
+    ) -> StateAnchor<EventMatchs<Message>> {
         let event_callbacks = self.event_listener.event_callbacks().clone();
         //TODO move event_callbacks into sa map 不会变更, 是否考虑变更?
-        let cursor_position_clone = cursor_position.clone();
         let id = self.id.clone();
+        let id2 = self.id.clone();
+        let id3 = self.id.clone();
         let _span = debug_span!("event_matching", at = "event_matching pre run", ?id).entered();
 
-        (events_sa, &self.widget_state).then(move |events, state| {
-            // let _span = debug_span!("event_matching",at="then-> events_sa / widget_state changed", ?id).entered();
-
+        let widget_is_hover = (cursor_position, &self.widget_state).map(move |c_pos, state| {
             let size = state.size();
+            let world = &state.world;
+            let rect = Rect::from_origin_size((world.x as f64, world.y as f64), size);
 
-            //TODO don't do this many times
-            let  event_filtered_matchs = events
-                .iter()
-                .map(|(ef, event)| (EventIdentify::from(*ef), event))
-                .filter_map(|(ev_id, event)| {
-                    //FIXME use filter_map instead,because filter can match multiple matches cb
-                    event_callbacks.iter().find_map(|(&cb_ev_id, cb)| {
-                        if ev_id.contains(cb_ev_id) {
-                            Some((cb_ev_id, (event.clone(), cb.clone())))
+            c_pos.is_some_and(|pos| {
+                let _span = debug_span!("LayoutOverride",id=?id,func="event_matching").entered();
+
+                debug!(target:"widget_is_hover",?world,?size,?rect,?pos);
+
+                let pos_p = pos.cast::<f64>();
+
+                if rect.contains(emg_native::renderer::Point::new(pos_p.x, pos_p.y)) {
+                    debug!("⭕️ rect contains pos");
+
+                    if let Some(layout_override) = &*state.children_layout_override {
+                        debug!("⭕️ rect has layout_override");
+                        // debug!("layout_override --> {:#?}", layout_override);
+
+                        if !layout_override.contains(&pos_p) {
+                            debug!("❌ layout_override not contains pos ,not override, 🔔 ");
+                            true
                         } else {
-                            None
+                            debug!("⭕️ layout_override contains pos,override, 🔕 ");
+                            false
                         }
-                    })
-                })
-                .collect::<EventMatchsDict<Message>>();
+                    } else {
+                        debug!("❌ rect no layout_override, 🔔");
+                        true
+                    }
+                } else {
+                    debug!("❌ rect not contains pos, 🔕 ");
 
-            // let mut cb_matchs = event_callbacks
-            //     .iter()
-            //     .filter_map(|(e_name, cb)| {
-            //         if let Some(x)=  e_str_s.iter().find(|(k,v)|) {
-            //             Some((e_name.clone(), cb.clone()))
-            //         } else {
-            //             None
-            //         }
-            //     })
-            //     .collect::<Dict<IdStr, Vector<EventNode<Message>>>>();
+                    false
+                }
+            })
+        });
 
-            // 提取 clicks
-            let (click_group, other_event_cb_matchs): (EventMatchsDict<Message>, EventMatchsDict<Message>) =
-                event_filtered_matchs.into_iter().partition(|(ev_id, _x)| {
-                    ev_id.contains(EventIdentify::from(mouse::EventFlag::CLICK))
-                });
+        let pool = pool.clone();
 
-                // let click_group = cb_matchs.remove_with_key("click");
-            // let cursor_position_clone = cursor_position.clone();
+        (events_sa, &widget_is_hover).map(move |events, is_hover| {
+            let mut ev_matchs =
+                Vector::<(EventIdentify, Event, Vector<EventNode<Message>>)>::with_pool(&pool);
+            let id3 = id3.clone();
 
-            let clicked_a = click_group
-                .into_iter()
-                .map(|(cb_ev_id, (ev_, click_cb_vec))| {
+            //TODO don't do this many times  ,events change to Dict
+            //已经根据event 事件 筛选出来的 callbacks
+            events
+                .iter()
+                .flat_map(|(ef, event)| {
+                    let ev_id = EventIdentify::from(*ef);
+                    let id3 = id3.clone();
 
-                    let id3 = id.clone();
-                    let opt_layout_override2 =state.children_layout_override.clone();
-                    let world =state.world.clone();
-
-
-                        cursor_position_clone
-                        .map(move |c_pos| {
-
-                            let id = id3.clone();
-
-                            let ev = ev_.clone();
-
-                            let click_cb_clone2 = click_cb_vec.clone();
-                            let rect = Rect::from_origin_size((world.x as f64, world.y as f64), size);
-
-
-
-
-                            c_pos.and_then( |pos| {
-                                debug!(target:"event::click",?pos);
-
-                                let _span = debug_span!("LayoutOverride",?id,func="event_matching").entered();
-
-
-                                    debug!(target:"event::click",?world,?size,?rect,?pos);
-
-
-                                let pos_p = pos.cast::<f64>();
-
-                                if rect.contains(emg_native::renderer::Point::new(pos_p.x, pos_p.y))
-                                {
-                                    debug!("⭕️ rect contains pos");
-
-
-                                    if let Some(layout_override) = &*opt_layout_override2 {
-                                        debug!("⭕️ rect has layout_override");
-                                        debug!("layout_override --> {:#?}",layout_override);
-
-                                        if !layout_override.contains(&pos_p) {
-
-                                            debug!("❌ layout_override not contains pos ,not override, 🔔 ");
-                                            Some((cb_ev_id, ev, click_cb_clone2))
-
-                                        } else {
-
-                                            debug!("⭕️ layout_override contains pos,override, 🔕 ");
-                                            None
-                                        }
-                                    } else {
-                                        debug!("❌ rect no layout_override, 🔔");
-                                        Some((cb_ev_id, ev, click_cb_clone2))
-                                    }
-                                } else {
-                                    debug!("❌ rect not contains pos, 🔕 ");
-
-                                    None
-                                }
-                            })
-                        }).into_anchor()
-                })
-                .collect::<Anchor<Vector<Option<(EventIdentify, Event, Vector<EventNode<Message>>)>>>>()
-                .map(|clicked| {
-                    clicked.clone()
-                        .into_iter()
-                        .flatten()
-                        .collect::<Vector<_>>()
-                });
-
-                //TODO clicked_a can make dict_sa?
-                clicked_a
-                    .map(move |clicked| {
-
-                        clicked.clone().into_iter().fold(other_event_cb_matchs.clone(),|cb_matchs_add_x,(cb_ev_id,ev,cb_vec)|{
-                            cb_matchs_add_x.update_with(cb_ev_id, (ev,cb_vec), |(old_ev,mut old_cb_vec),(new_ev,new_cb_vec)|{
-                                assert_eq!(old_ev, new_ev);
-                                old_cb_vec.extend(new_cb_vec);
-                                (old_ev,old_cb_vec)
-                            })
+                    event_callbacks
+                        .iter()
+                        .filter_map(move |(cb_ev_id_wide, cb)| {
+                            //ev_id 具体, cb_ev_id 宽泛
+                            let intersects = EVENT_HOVER_CHECK.intersects(cb_ev_id_wide);
+                            if ev_id.contains(cb_ev_id_wide) && (*is_hover || !intersects) {
+                                debug!(target :"winit_event",id=?id3, ?intersects,?is_hover);
+                                Some((ev_id, event.clone(), cb.clone()))
+                            } else {
+                                None
+                            }
                         })
-                    })
-
-
+                })
+                // .flatten()
+                .collect_into(&mut ev_matchs);
+            debug!(target :"winit_event",id=?id2, ?ev_matchs);
+            debug!(
+                target : "winit_event",
+                "==============================================================="
+            );
+            ev_matchs
         })
     }
 

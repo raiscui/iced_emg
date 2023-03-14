@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-05 20:56:05
- * @LastEditTime: 2023-02-24 16:40:49
+ * @LastEditTime: 2023-03-13 18:14:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,8 +10,8 @@ use std::rc::Rc;
 use derive_more::From;
 use tracing::{debug, debug_span, info};
 
-use emg_common::{mouse, Vector};
-use emg_native::event::EventFlag;
+use emg_common::Vector;
+use emg_native::event::{EventFlag, EventIdentify};
 use emg_state::Dict;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,28 +20,6 @@ use emg_state::Dict;
 //TODO use TopoKey for PartialEq
 type EventCallbackFn<Message> = Rc<dyn Fn(&mut i32) -> Option<Message>>;
 type EventMessageFn<Message> = Rc<dyn Fn() -> Option<Message>>;
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct EventIdentify(u32, u32);
-
-impl EventIdentify {
-    #[inline]
-    pub const fn contains(&self, other: Self) -> bool {
-        self.0 == other.0 && (self.1 & other.1) == other.1
-    }
-}
-
-impl From<mouse::EventFlag> for EventIdentify {
-    fn from(x: mouse::EventFlag) -> Self {
-        Self(emg_native::event::MOUSE.bits(), x.bits())
-    }
-}
-
-impl From<(EventFlag, u32)> for EventIdentify {
-    fn from(x: (EventFlag, u32)) -> Self {
-        Self(x.0.bits(), x.1)
-    }
-}
 
 /// 3 arg event callback
 pub struct EventCallback<Message>(EventIdentify, EventCallbackFn<Message>);
@@ -128,6 +106,7 @@ impl<Message> PartialEq for EventMessage<Message>
     fn eq(&self, other: &Self) -> bool {
         // self.0 == other.0
 
+        //NOTE refpool
         //FIXME comparing trait object pointers compares a non-unique vtable address
         //comparing trait object pointers compares a non-unique vtable address
         // consider extracting and comparing data pointers only

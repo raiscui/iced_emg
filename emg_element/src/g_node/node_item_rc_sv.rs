@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-03-01 21:32:47
+ * @LastEditTime: 2023-03-14 00:07:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -30,7 +30,7 @@ use emg_state::{Anchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, Stat
 use tracing::{debug, debug_span, error, info, info_span, trace, trace_span, warn};
 // use vec_string::VecString;
 
-use crate::{node_builder::EventMatchsDict, GElement, NodeBuilderWidget};
+use crate::{node_builder::EventMatchs, GElement, NodeBuilderWidget};
 
 use super::{EmgNodeItem, PathDictAsSets};
 
@@ -45,7 +45,8 @@ pub type E = EmgEdgeItem;
 pub type GraphType<Message> = Graph<N<Message>, E>;
 // ─────────────────────────────────────────────────────────────────────────────
 
-pub type EventMatchsSa<Message> = StateAnchor<EventMatchsDict<Message>>;
+// pub type EventMatchsSa<Message> = StateAnchor<EventMatchs<Message>>;
+pub type EventMatchsSa<Message> = StateAnchor<Vector<Vector<EventMatchs<Message>>>>;
 
 // ────────────────────────────────────────────────────────────────────────────────
 type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;

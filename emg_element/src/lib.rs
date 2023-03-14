@@ -4,7 +4,8 @@
 //
 #![feature(auto_traits)]
 #![feature(negative_impls)] //for event callback;
-
+#![feature(is_some_and)]
+#![feature(iter_collect_into)]
 //
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,8 @@ pub mod gtree_macro_prelude {
     pub use emg_shaping::{EqShaping, Shaper, Shaping, ShapingUse};
     pub use emg_state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor};
 }
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 // #[macro_export]

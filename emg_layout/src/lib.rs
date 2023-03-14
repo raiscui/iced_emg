@@ -440,14 +440,14 @@ impl EdgeCtx {
                     || {
                         let _span = debug_span!("LayoutOverride", func = "to_layout_override-def")
                             .entered();
-                        debug!("rect:{:#?}", &rect);
+                        debug!(target:"to_layout_override",?rect);
                         LayoutOverride::new(rect)
                     },
                     |mut lo| {
                         let _span =
                             debug_span!("LayoutOverride", func = "to_layout_override").entered();
-                        debug!("lo:{:#?}", &lo);
-                        debug!("rect:{:#?}", &rect);
+                        debug!(target:"to_layout_override", "lo:{:#?}", &lo);
+                        debug!(target:"to_layout_override", "rect:{:#?}", &rect);
 
                         lo.underlay(rect);
                         lo
