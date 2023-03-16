@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:22:19
- * @LastEditTime: 2023-03-14 17:54:29
+ * @LastEditTime: 2023-03-15 14:54:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,6 +13,7 @@ use crate::mouse;
 use crate::touch;
 use crate::window;
 use bitflags::bitflags;
+use emg_common::Affine;
 pub use ev_identify::*;
 
 ///u32 是 二级 事件 flag
@@ -58,6 +59,29 @@ pub enum Event {
 
     /// A drag event
     DragDrop(drag::Event),
+}
+
+impl Event {
+    #[must_use]
+    pub fn as_drag_drop(&self) -> Option<&drag::Event> {
+        if let Self::DragDrop(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+    pub fn get_drag_offset(&self) -> &Affine {
+        self.as_drag_drop()
+            .and_then(|x| x.as_drag())
+            .map(|x| x.offset())
+            .unwrap()
+    }
+    pub fn get_drag_trans(&self) -> &Affine {
+        self.as_drag_drop()
+            .and_then(|x| x.as_drag())
+            .map(|x| x.trans())
+            .unwrap()
+    }
 }
 
 /// A platform specific event

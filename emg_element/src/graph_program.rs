@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 11:49:02
- * @LastEditTime: 2023-03-01 18:22:07
+ * @LastEditTime: 2023-03-15 13:17:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -41,7 +41,7 @@ pub trait GraphProgram: Program {
     fn build_ctx(
         &self,
         g: &Self::GraphType,
-        paint: &StateAnchor<crate::PaintCtx>,
+        paint: &StateAnchor<crate::platform::PaintCtx>,
         events: &StateAnchor<Vector<EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> EventAndCtx<Self::Message, Self::Renderer>;

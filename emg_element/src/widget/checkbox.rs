@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-03-09 14:47:04
+ * @LastEditTime: 2023-03-15 13:16:47
  * @LastEditors: Rais
  * @Description:
  */
@@ -181,7 +181,7 @@ where
 }
 
 #[cfg(all(feature = "gpu"))]
-use crate::renderer::*;
+use crate::platform::renderer::*;
 #[cfg(all(feature = "gpu"))]
 impl<Message> crate::Widget for Checkbox<Message>
 where
@@ -190,7 +190,7 @@ where
     type SceneCtxType = crate::SceneFrag;
     fn paint_sa(
         &self,
-        painter: &StateAnchor<crate::PaintCtx>,
+        painter: &StateAnchor<crate::platform::PaintCtx>,
     ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let span = illicit::expect::<Span>();
 

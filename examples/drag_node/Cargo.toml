@@ -41,13 +41,18 @@ nu-ansi-term = "0.47"
 
 
 [profile.release]
-opt-level = 3
 #NOTE for dhat-heap need true
-debug = false
-rpath = false
-lto = true
-debug-assertions = false
-codegen-units = 1
-panic = 'abort'
-incremental = false
-overflow-checks = false
+debug = 1
+
+
+# [profile.release]
+# opt-level = 3
+# #NOTE for dhat-heap need true
+# debug = false
+# rpath = false
+# lto = true
+# debug-assertions = false
+# codegen-units = 1
+# panic = 'abort'
+# incremental = false
+# overflow-checks = false

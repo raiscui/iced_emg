@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2023-03-14 23:17:49
+ * @LastEditTime: 2023-03-16 14:48:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -113,8 +113,8 @@ pub fn window_event(
                             event_state.set_mouse_down(true); // 持续更改 ,prior_mouse_down 变更
                         }
                     } else {
-                        event_state.transform =
-                            na::Translation2::<f32>::from(position - prior) * event_state.transform;
+                        let offset = na::Translation2::<f32>::from(position - prior);
+                        event_state.transform = offset * event_state.transform;
 
                         if !prior_mouse_down {
                             //fast move , first
@@ -129,10 +129,11 @@ pub fn window_event(
                         } else {
                             evs.push((
                                 EventIdentify::new(EventFlag::DND, drag::DRAG),
-                                Event::DragDrop(drag::Event::Drag {
+                                Event::DragDrop(drag::Event::Drag(drag::Drag {
                                     position,
                                     trans: event_state.transform,
-                                }),
+                                    offset: na::convert(offset),
+                                })),
                             ));
                         }
                     }

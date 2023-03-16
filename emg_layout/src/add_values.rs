@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-04-25 19:56:42
- * @LastEditTime: 2022-05-16 15:46:27
+ * @LastEditTime: 2023-03-16 12:53:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,6 +11,8 @@ use seed_style_macros::AddStyleMacro;
 use crate::{styles::LogicLength, GenericSize};
 use derive_more::Display;
 use derive_more::From;
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 #[derive(Display, Clone, Debug, From, AddStyleMacro)]
 #[display(fmt = "{}")]
@@ -65,7 +67,7 @@ impl From<OriginY> for GenericSize {
         }
     }
 }
-#[derive(Display, Clone, Debug, From, AddStyleMacro)]
+#[derive(Display, Clone, Debug, From, AddStyleMacro, PartialEq, Eq)]
 #[display(fmt = "{}")]
 pub enum AlignX {
     #[display(fmt = "auto")]
@@ -77,6 +79,82 @@ pub enum AlignX {
     Inherit,
     StringValue(String),
     Gs(GenericSize),
+}
+
+// impl core::ops::Add for &AlignX {
+//     type Output = AlignX;
+
+//     fn add(self, rhs: Self) -> Self::Output {
+//         AlignX::Gs(GenericSize::from(self.clone()) + GenericSize::from(rhs.clone()))
+//     }
+// }
+// impl core::ops::Add for AlignX {
+//     type Output = AlignX;
+
+//     fn add(self, rhs: Self) -> Self::Output {
+//         AlignX::Gs(GenericSize::from(self) + GenericSize::from(rhs))
+//     }
+// }
+// impl core::ops::Add<&Self> for AlignX {
+//     type Output = AlignX;
+
+//     fn add(self, rhs: &Self) -> Self::Output {
+//         AlignX::Gs(GenericSize::from(self) + GenericSize::from(rhs.clone()))
+//     }
+// }
+
+#[cfg(test)]
+mod add_test_mod {
+    use emg_common::{pc, px, GenericSize};
+
+    use super::*;
+
+    #[test]
+    fn align_x_add() {
+        let a = AlignX::Gs(GenericSize::Length(px(10)));
+        let b = align_x(pc(100));
+        let c = a + &b;
+        println!("{c:?}");
+        let d = b + align_x(px(100));
+        println!("{d:?}");
+        let d = d + align_x(px(100));
+        println!("{d:?}");
+        let d = d + align_x(px(100));
+        println!("{d:?}");
+        let d = d + align_x(px(100));
+        println!("{d:?}");
+        let res = align_x(pc(100)) + align_x(px(400));
+        assert_eq!(d, res);
+    }
+    #[test]
+    fn align_x_add2() {
+        let a = align_x(pc(100));
+        let b = align_x(px(100));
+        // ─────────────────────────────────────────────────────────────
+
+        let c = a.clone() + &b;
+        let c = c + &b;
+        let c = c + &b;
+        let c = c + &b;
+        println!("{c:?}");
+
+        let c = &b + &a;
+        let c = c + &a;
+        let c = c + &a;
+        let c = c + &a;
+        println!("{c:?}");
+
+        let c = &a + &b;
+        let c = &b + &c;
+        let c = &b + &c;
+        let c = &b + &c;
+        println!("{c:?}");
+        let c = &a + &b;
+        let c = &c + &b;
+        let c = &c + &b;
+        let c = &c + &b;
+        println!("{c:?}");
+    }
 }
 impl From<AlignX> for GenericSize {
     fn from(v: AlignX) -> Self {
@@ -115,3 +193,5 @@ impl From<AlignY> for GenericSize {
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────

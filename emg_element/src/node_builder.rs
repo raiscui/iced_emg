@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-03-14 12:57:19
+ * @LastEditTime: 2023-03-15 13:17:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -423,7 +423,7 @@ where
     #[instrument(skip(self, painter), name = "NodeBuilderWidget paint")]
     fn paint_sa(
         &self,
-        painter: &StateAnchor<crate::PaintCtx>,
+        painter: &StateAnchor<crate::platform::PaintCtx>,
     ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id1 = self.id.clone();
         let opt_span = illicit::get::<Span>().ok();

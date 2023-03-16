@@ -1,3 +1,6 @@
+#![feature(specialization)]
+#![feature(box_patterns)]
+#![feature(let_chains)]
 // ─────────────────────────────────────────────────────────────────────────────
 
 mod func;
@@ -62,7 +65,7 @@ impl<T> TypeCheckObjectSafeTid for T where T: for<'a> Tid<'a> + TypeCheckObjectS
 
 // // use derive_more::Into;
 //TODO full this  "-,/" op
-#[derive(Display, Clone, Debug, PartialEq, PartialOrd, Eq)]
+#[derive(Display, Copy, Clone, Debug, PartialEq, PartialOrd, Eq)]
 pub enum CalcOp<T>
 where
     T: Clone + std::fmt::Debug + PartialEq + PartialOrd + Eq,
@@ -85,6 +88,22 @@ where
         Self::Mul {
             a,
             b: NotNan::new(b.as_()).unwrap(),
+        }
+    }
+}
+impl CalcOp<LogicLength> {
+    pub fn has_add_unit(&self, unit: crate::measures::Unit) -> bool {
+        match self {
+            Self::Add { a, b } => a.has_add_unit(unit) || b.has_add_unit(unit),
+            Self::Mul { a, b: _ } => false,
+        }
+    }
+}
+impl CalcOp<GenericSize> {
+    pub fn has_add_unit(&self, unit: crate::measures::Unit) -> bool {
+        match self {
+            Self::Add { a, b } => a.has_add_unit(unit) || b.has_add_unit(unit),
+            Self::Mul { a, b: _ } => false,
         }
     }
 }
@@ -149,8 +168,18 @@ pub enum GenericSize {
 }
 
 impl GenericSize {
+    pub fn add_directly(l: Self, r: Self) -> Self {
+        Self::Calculation(Box::new(CalcOp::add(l, r)))
+    }
     pub fn zero() -> Self {
         Self::Length(px(0))
+    }
+    pub fn has_add_unit(&self, unit: crate::measures::Unit) -> bool {
+        match self {
+            Self::Length(v) => v.has_add_unit(unit),
+            Self::Calculation(v) => v.has_add_unit(unit),
+            _ => false,
+        }
     }
 }
 
@@ -196,11 +225,185 @@ where
 
 impl<T> ::core::ops::Add<T> for GenericSize
 where
-    T: Into<Self>,
+    T: Into<GenericSize>,
 {
     type Output = GenericSize;
-    fn add(self, rhs: T) -> GenericSize {
+    default fn add(self, rhs: T) -> GenericSize {
         Self::Calculation(Box::new(CalcOp::add(self, rhs.into())))
+    }
+}
+impl ::core::ops::Add for GenericSize {
+    fn add(self, rhs: GenericSize) -> GenericSize {
+        // Self::Calculation(Box::new(CalcOp::add(self, rhs)))
+        match (self, rhs) {
+            (Self::Length(l), Self::Length(r)) => Self::Length(l + r),
+            (Self::Length(l), calculation) => calculation + l,
+            (calculation, Self::Length(r)) => calculation + r,
+            (Self::Calculation(l), Self::Calculation(r)) => {
+                Self::add_directly(Self::Calculation(l), Self::Calculation(r))
+            }
+            (a, b) => Self::add_directly(a, b),
+        }
+    }
+}
+
+impl ::core::ops::Add<LogicLength> for GenericSize {
+    fn add(self, rhs: LogicLength) -> GenericSize {
+        match self {
+            Self::Length(l) => Self::Length(l + rhs),
+            Self::Calculation(x) => {
+                if let Some(unit) = rhs.get_unit() && x.has_add_unit(unit) {
+                    match *x {
+                        CalcOp::Add { a, b } => {
+                            if a.has_add_unit(unit) {
+                                return a + rhs + b
+                            }
+                            if b.has_add_unit(unit) {
+                                return a + (b + rhs);
+                            }
+                            unreachable!("...");
+                        }
+                        CalcOp::Mul { .. } => {
+                            unreachable!("...");
+                        }
+                    }
+                } else {
+                    Self::add_directly(Self::Calculation(x), Self::Length(rhs))
+                }
+            }
+            other => {
+                Self::add_directly(other, Self::Length(rhs))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod generic_size_test {
+    use ordered_float::NotNan;
+
+    use crate::{pc, px, vh, CalcOp, ExactLengthSimplex, GenericSize, LogicLength, Unit};
+
+    #[test]
+    fn add_test2() {
+        let a: GenericSize = GenericSize::Auto;
+        let b: GenericSize = pc(100).into();
+        let end = a + b;
+        println!("{end:?}");
+
+        let end = end + GenericSize::StringValue("xx".to_string());
+        println!("{end:?}");
+
+        let end = end + pc(50);
+        let x: GenericSize = pc(100).into();
+        println!("{end:?}");
+
+        let end = end + x;
+
+        println!("{end:?}");
+        let res = GenericSize::add_directly(
+            GenericSize::add_directly(GenericSize::Auto, pc(250).into()),
+            GenericSize::StringValue("xx".to_string()),
+        );
+        assert_eq!(end, res);
+    }
+
+    #[test]
+    fn add_test() {
+        let a: GenericSize = px(11).into();
+        let b: GenericSize = pc(100).into();
+        let end = a + b;
+        // let res assert  match eq the end
+        let res = LogicLength::Calculation(Box::new(CalcOp::Add {
+            a: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Px,
+                value: NotNan::new(11.0).unwrap(),
+            }),
+            b: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Pc,
+                value: NotNan::new(100.0).unwrap(),
+            }),
+        }))
+        .into();
+        assert_eq!(end, res);
+
+        let c = vh(20);
+        let end = end + c;
+        // let res assert  match eq the end
+        let res = LogicLength::Calculation(Box::new(CalcOp::Add {
+            a: LogicLength::Calculation(Box::new(CalcOp::Add {
+                a: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Px,
+                    value: NotNan::new(11.0).unwrap(),
+                }),
+                b: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Pc,
+                    value: NotNan::new(100.0).unwrap(),
+                }),
+            })),
+            b: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Vh,
+                value: NotNan::new(20.0).unwrap(),
+            }),
+        }))
+        .into();
+        assert_eq!(end, res);
+
+        let c = pc(200);
+        let end = end + c;
+        // let res assert  match eq the end
+        let res = LogicLength::Calculation(Box::new(CalcOp::Add {
+            a: LogicLength::Calculation(Box::new(CalcOp::Add {
+                a: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Px,
+                    value: NotNan::new(11.0).unwrap(),
+                }),
+                b: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Pc,
+                    value: NotNan::new(300.0).unwrap(),
+                }),
+            })),
+            b: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Vh,
+                value: NotNan::new(20.0).unwrap(),
+            }),
+        }))
+        .into();
+        assert_eq!(end, res);
+
+        let c = px(10);
+        let end = end + c;
+        // let res assert  match eq the end
+        let res = LogicLength::Calculation(Box::new(CalcOp::Add {
+            a: LogicLength::Calculation(Box::new(CalcOp::Add {
+                a: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Px,
+                    value: NotNan::new(21.0).unwrap(),
+                }),
+                b: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Pc,
+                    value: NotNan::new(300.0).unwrap(),
+                }),
+            })),
+            b: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Vh,
+                value: NotNan::new(20.0).unwrap(),
+            }),
+        }))
+        .into();
+        assert_eq!(end, res);
+
+        let end = end.clone() + end;
+        // println!("{end:?}");
+
+        let a: GenericSize = px(11).into();
+        let b: LogicLength = pc(100);
+        let end = a + b;
+        let end = end.clone() + end;
+        // println!("{end:?}");
+        let a: LogicLength = px(11);
+        let end = end + a;
+        println!("{end:?}");
     }
 }
 

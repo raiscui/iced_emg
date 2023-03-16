@@ -6,12 +6,11 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 use color_eyre::{eyre::Report, eyre::Result, eyre::WrapErr};
 use emg_bind::{
     element::*,
-    emg::{edge_index, edge_index_no_source, Direction::Incoming, EdgeIndex},
+    emg::{edge_index_no_source, EdgeIndex},
     emg_msg,
     emg_msg_macro_prelude::*,
     graph_edit::*,
-    mouse::CLICK,
-    runtime::{drag::DRAG, OrdersContainer},
+    runtime::{drag::DRAG, Affine, OrdersContainer, Pos},
     Sandbox, Settings,
 };
 use tracing::{debug_span, info, instrument, warn};
@@ -63,7 +62,8 @@ fn tracing_init() -> Result<(), Report> {
             },
         ))
         .with_filter(tracing_subscriber::EnvFilter::new(
-            "[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
+            // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
+            "shaping=warn,[DRAG]=debug",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
@@ -72,12 +72,12 @@ fn tracing_init() -> Result<(), Report> {
                 //     return false;
                 // }
 
-                let keep_span = ["DRAG"];
+                let keep_span = [];
                 if metadata.is_span() && keep_span.contains(&metadata.name()) {
                     return true;
                 }
 
-                false
+                keep_span.is_empty()
             },
         ));
 
@@ -145,19 +145,62 @@ impl Sandbox for App {
             Message::Empty => {
                 use crate::gtree_macro_prelude::*;
 
+                // let width = use_state(|| w(px(50)));
+                let ax = use_state(|| align_x(pc(50)));
+                let ay = use_state(|| align_y(pc(50)));
+
+                // let x = Affine::default();
+                // let pos = Pos::default();
+                // let xx = x * pos;
+
+                // ax.set_with(|x| align_x(pc(3)) + x );
+                // width.set_with(|x| match x {
+                //     CssWidth::Auto => todo!(),
+                //     CssWidth::Length(ll) => (px(10) + ll).into(),
+                //     CssWidth::Initial => todo!(),
+                //     CssWidth::Inherit => todo!(),
+                //     CssWidth::StringValue(_) => todo!(),
+                //     CssWidth::Gs(_) => todo!(),
+                // });
+
                 let builder = {
                     gtree! {
 
                             @E=[
-                                w(px(50)),h(px(50)),
+                                w(px(50)),
+                                // width,
+                                h(px(50)),
+                                ax,
+                                ay,
                             ]
                             @="b-check" Checkbox::new(false,"b-abcd",|_|{
                                 println!("b checkbox");
                             })=>[
-                                @="b_click2" On:DRAG  ||{
+                                @="b_click2" On:DRAG  move|ev|{
                                     use nu_ansi_term::Color::Red;
-                                    let _span = debug_span!("DRAG", "{}",Red.paint("on [b-check] drag"))
+                                    let _span = debug_span!("DRAG", "{} -> ev:{:?}",Red.paint("on [b-check] drag"),ev)
                                             .entered();
+                                        let drag_offset = ev.get_drag_offset();
+                                        let trans = drag_offset * Pos::default();
+                                        // let d_trans = ev.get_drag_trans();
+                                        // let trans = d_trans * Pos::default();
+
+                                        let const_ax = align_x(pc(50));
+
+                                        // ax.set_with(|x| align_x(px(trans.x)) + const_ax.clone() );
+                                        ax.set_with(|v| align_x(px(trans.x)) + v);
+                                        ay.set_with(|v| align_y(px(trans.y)) + v);
+
+                                        // width.set_with(|x| match x {
+                                        //     CssWidth::Auto => todo!(),
+                                        //     CssWidth::Length(ll) => (px(10) + ll).into(),
+                                        //     CssWidth::Initial => todo!(),
+                                        //     CssWidth::Inherit => todo!(),
+                                        //     CssWidth::StringValue(_) => todo!(),
+                                        //     CssWidth::Gs(_) => todo!(),
+                                        // });
+
+
 
                                     Message::Empty
                                 },
@@ -177,6 +220,11 @@ impl Sandbox for App {
         use emg_bind::gtree_macro_prelude::*;
 
         let fill_var = use_state(|| fill(hsl(150, 100, 30)));
+
+        let ax = use_state(|| align_x(pc(50)));
+        let ay = use_state(|| align_y(pc(50)));
+        let width = use_state(|| w(px(50)));
+
         gtree! {
             @="root" Layer [
                 @E=[
@@ -206,12 +254,12 @@ impl Sandbox for App {
                     ]
                 @="x" Layer [
 
-                    @="x_click" On:CLICK  ||{
-                        let _span = debug_span!("CLICK", "on [x] click, moving a->b to m->b")
-                                .entered();
+                    // @="x_click" On:CLICK  ||{
+                    //     let _span = debug_span!("CLICK", "on [x] click, moving a->b to m->b")
+                    //             .entered();
 
-                        Message::Empty
-                    },
+                    //     Message::Empty
+                    // },
 
                     @E=[
                         origin_x(px(0)),
@@ -236,7 +284,59 @@ impl Sandbox for App {
                         @="b" Layer [
 
 
-                            // @="fb"  builder
+                            //   builder
+
+                            @E=[
+                                // w(px(50)),
+                                width,
+                                h(px(50)),
+                                ax,
+                                ay,
+                            ]
+                            @="b-check" Checkbox::new(false,"b-abcd",move|_|{
+                                println!("b checkbox");
+
+                                width.set_with(|x| match x {
+                                    CssWidth::Auto => todo!(),
+                                    CssWidth::Length(ll) => (px(10) + ll).into(),
+                                    CssWidth::Initial => todo!(),
+                                    CssWidth::Inherit => todo!(),
+                                    CssWidth::StringValue(_) => todo!(),
+                                    CssWidth::Gs(_) => todo!(),
+                                });
+
+                            })=>[
+                                @="b_click2" On:DRAG  move|ev|{
+                                println!("b drag");
+
+                                    use nu_ansi_term::Color::Red;
+                                    let _span = debug_span!("DRAG", "{} -> ev:{:?}",Red.paint("on [b-check] drag"),ev)
+                                            .entered();
+                                        let drag_offset = ev.get_drag_offset();
+                                        let trans = drag_offset * Pos::default();
+                                        // let d_trans = ev.get_drag_trans();
+                                        // let trans = d_trans * Pos::default();
+
+                                        let const_ax = align_x(pc(50));
+
+                                        // ax.set_with(|x| align_x(px(trans.x)) + const_ax.clone() );
+                                        ax.set_with(|v| align_x(px(trans.x)) + v);
+                                        ay.set_with(|v| align_y(px(trans.y)) + v);
+
+                                        width.set_with(|x| match x {
+                                            CssWidth::Auto => todo!(),
+                                            CssWidth::Length(ll) => (px(10) + ll).into(),
+                                            CssWidth::Initial => todo!(),
+                                            CssWidth::Inherit => todo!(),
+                                            CssWidth::StringValue(_) => todo!(),
+                                            CssWidth::Gs(_) => todo!(),
+                                        });
+
+
+
+                                    Message::Empty
+                                },
+                            ]
 
                         ],
                     ],
@@ -272,7 +372,7 @@ impl Sandbox for App {
                         //     h(pc(15)),
                         //     fill(rgba(0, 1, 0, 1))
                         // ]
-                        @="ref_x_click" node_ref("x_click")
+                        // @="ref_x_click" node_ref("x_click")
                     ],
                 ],
 

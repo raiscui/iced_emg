@@ -39,15 +39,16 @@ thiserror = "1.0"
 indented = "0.1.0"
 
 #------
-emg_native = { path = "../emg_native", optional = true }
+
 
 #------------------
 bevy_reflect = "0.9.1"
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-# emg_piet_gpu = { path = "../emg_piet_gpu", optional = true }
+emg_native = { path = "../emg_native", optional = true }
 emg_vello = { path = "../emg_vello", optional = true }
+
 
 [dev-dependencies]
 insta = "1"

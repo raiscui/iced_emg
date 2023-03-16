@@ -11,9 +11,12 @@
 use cassowary::Cassowary;
 
 use proc_macro2::TokenStream;
+use proc_macro_error::{
+    abort, abort_call_site, emit_call_site_error, emit_error, proc_macro_error,
+};
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
-use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
+use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token, ExprClosure};
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
     Expr,
@@ -341,10 +344,21 @@ impl Parse for GOnEvent {
 
         let event_name = input.parse::<Ident>()?;
 
+        let closure: ExprClosure = input.parse()?;
+
+        if !(closure.inputs.is_empty() || closure.inputs.len() == 1) {
+            //TODO for web , need closure.inputs.len() == 3
+
+            return Err(syn::Error::new(
+                closure.span(),
+                "event callback argument size is must empty or one(native) / three",
+            ));
+        }
+
         Ok(Self {
             id,
             event_name,
-            closure: input.parse()?,
+            closure,
         })
     }
 }
@@ -355,14 +369,16 @@ impl ToTokens for GOnEvent {
             event_name,
             closure,
         } = self;
+
         let id_token = id.get(format!("Ev-{event_name}").as_str()); //just emg graph node id
 
         let token = if closure.inputs.is_empty() {
             quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new((#event_name).into(), #closure ).into()) )
-        } else if closure.inputs.len() == 3 {
-            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new((#event_name).into(),std::rc::Rc::new(#closure)).into()) )
+        } else if closure.inputs.len() == 1 {
+            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new((#event_name).into(), #closure ).into()) )
         } else {
-            panic!("event callback argument size is must empty or three")
+            //TODO for web , need closure.inputs.len() == 3
+            unreachable!("event callback argument size is must empty or three")
         };
         token.to_tokens(tokens);
     }

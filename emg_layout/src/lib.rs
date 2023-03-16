@@ -3,6 +3,7 @@
 #![warn(clippy::nursery)]
 #![warn(clippy::non_ascii_literal)]
 #![allow(clippy::used_underscore_binding)]
+#![feature(cell_update)]
 //for display attr
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ use tracing::{
 
 // ─────────────────────────────────────────────────────────────────────────────
 mod calc;
+mod css_calc_op;
 mod epath;
 mod impl_refresh;
 mod parser;

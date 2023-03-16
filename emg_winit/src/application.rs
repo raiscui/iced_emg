@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-14 23:08:39
+ * @LastEditTime: 2023-03-16 12:18:13
  * @LastEditors: Rais
  * @Description:
  */
@@ -455,9 +455,11 @@ async fn run_instance<A, E, C>(
                     native_events.set(Default::default());
 
                     if !event_matchs.is_empty() {
-                        for ev in event_matchs.iter().flatten().flatten().flat_map(|x| &x.2) {
-                            if let Some(msg) = ev.call() {
-                                messages.push(msg);
+                        for (_ei, ev, en_list) in event_matchs.iter().flatten().flatten() {
+                            for en in en_list {
+                                if let Some(msg) = en.call(ev) {
+                                    messages.push(msg);
+                                }
                             }
                         }
                     }

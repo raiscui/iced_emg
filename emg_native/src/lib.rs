@@ -31,6 +31,7 @@ pub use command::Command;
 pub use debug::Debug;
 // pub use element::Element;
 pub use emg_common::time;
+pub use emg_common::Affine;
 pub use emg_common::Pos;
 pub use emg_futures::{executor, futures};
 pub use event::Event;
@@ -70,6 +71,7 @@ pub static EVENT_HOVER_CHECK: MultiLevelIdentify = {
 pub static EVENT_DEBOUNCE: MultiLevelIdentify = {
     let mouse_e: EventIdentify = (mouse::CURSOR_MOVED).into();
     let drag_e: EventIdentify = (drag::EventFlag::DRAG_START | drag::EventFlag::DRAG).into();
+    // let drag_e: EventIdentify = drag::EventFlag::empty().into();
 
     mouse_e | drag_e
 };

@@ -1,7 +1,7 @@
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use vello::{
     util::{DeviceHandle, RenderContext as VelloRenderContext, RenderSurface},
-    RendererOptions, Scene, SceneBuilder,
+    RenderParams, RendererOptions, Scene, SceneBuilder,
 };
 
 use emg_graphics_backend::{window::compositor as compositor_arch, Error};
@@ -18,6 +18,7 @@ pub struct Compositor {
     render_cx: VelloRenderContext,
     scene: Scene,
     surface: RenderSurface,
+    render_params: RenderParams,
 }
 
 impl Compositor {
@@ -57,11 +58,18 @@ impl Compositor {
             )
             .await;
 
+        let render_params = RenderParams {
+            base_color: vello::peniko::Color::BLACK,
+            width: surface.config.width,
+            height: surface.config.height,
+        };
+
         Ok(Compositor {
             settings,
             render_cx,
             scene,
             surface,
+            render_params,
         })
     }
 
@@ -143,7 +151,12 @@ impl compositor_arch::Compositor for Compositor {
         // render_cx: &VelloRenderContext,
         // scene: &Scene,
         // surface: &RenderSurface,
-        backend.present(self.device_handle(), &self.scene, &self.surface);
+        backend.present(
+            self.device_handle(),
+            &self.scene,
+            &self.surface,
+            &self.render_params,
+        );
         Ok(())
     }
 }

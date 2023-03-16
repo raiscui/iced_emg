@@ -1,3 +1,9 @@
+use std::{
+    cell::Cell,
+    rc::{Rc, Weak},
+};
+
+use either::Either::{self, Left, Right};
 use emg_animation::{models::Property, Debuggable};
 use emg_state::{topo, use_state, CloneStateVar, StateVar};
 // use emg_state::{state_store, topo, use_state, CloneStateVar, StateVar, StorageKey};
@@ -5,36 +11,52 @@ use tracing::{debug, debug_span, trace};
 
 use crate::GenericSizeAnchor;
 
+#[derive(Debug, PartialEq, Eq)]
+struct StateVarPropertyDropMark;
 /// 第一个 [`StateVarProperty`] Drop 将会 Drop 内部StateVar,以及相关依赖 `before_fn` `after_fn`,
 /// clone的其他 [`StateVarProperty`] drop将没有任何额外操作
 /// *建议 第一个用来 储存 和使用 ,clone的仅用来 使用
 // TODO change to enum :DropEffect/ DropNoneEffect
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct StateVarProperty {
     prop_sv: StateVar<Property>,
-    // ref_count: Rc<Cell<usize>>,
+
+    drop_mark: Either<Rc<StateVarPropertyDropMark>, Weak<StateVarPropertyDropMark>>,
     trace_id: usize,
+}
+
+impl Eq for StateVarProperty {}
+
+impl PartialEq for StateVarProperty {
+    fn eq(&self, other: &Self) -> bool {
+        self.prop_sv == other.prop_sv
+    }
 }
 
 impl Clone for StateVarProperty {
     fn clone(&self) -> Self {
         let _span = debug_span!("StateVarProperty clone").entered();
 
-        // self.ref_count.set(self.ref_count.get() + 1);
+        // self.ref_count.update(|x| x + 1);
+        let drop_mark = match &self.drop_mark {
+            Either::Left(l) => Rc::downgrade(l),
+            Right(r) => r.clone(),
+        };
 
         Self {
             prop_sv: self.prop_sv,
-            // ref_count: self.ref_count.clone(),
+
+            drop_mark: Right(drop_mark),
             trace_id: self.trace_id + 1,
         }
     }
 }
 
 impl StateVarProperty {
-    const fn new(prop_sv: StateVar<Property>) -> Self {
+    fn new(prop_sv: StateVar<Property>) -> Self {
         Self {
             prop_sv,
-            // ref_count: Rc::new(Cell::new(1)),
+            drop_mark: Left(Rc::new(StateVarPropertyDropMark)),
             trace_id: 1,
         }
     }
@@ -42,6 +64,10 @@ impl StateVarProperty {
 
 impl Drop for StateVarProperty {
     fn drop(&mut self) {
+        // let mut ref_count = self.ref_count.get();
+        // let _span =
+        //     debug_span!("StateVarProperty drop",ref_count=%ref_count,trace_id=%self.trace_id)
+        //         .entered();
         let _span = debug_span!("StateVarProperty drop",trace_id=%self.trace_id).entered();
 
         // let new_count = self.ref_count.get() - 1;
@@ -55,12 +81,33 @@ impl Drop for StateVarProperty {
         //     self.ref_count.set(new_count);
         // }
 
+        //TODO if weak StateVarProperty , when get set , check can upgrade some (master is drop or not) like this.
+        // match &self.ref_count {
+        //     Left(l) => {
+        //         debug!("will use sv var manually_drop");
+        //         self.prop_sv.manually_drop();
+        //     }
+        //     Right(_) => (),
+
+        // }
+
         if self.trace_id == 1 {
             debug!("will use sv var manually_drop");
             self.prop_sv.manually_drop();
-        } else {
-            debug!("skip drop trace_id:{}", self.trace_id);
         }
+
+        // if ref_count == 1 {
+        //     debug!("will use sv var manually_drop");
+        //     self.prop_sv.manually_drop();
+        // } else {
+        //     debug!(
+        //         "skip drop ref_count:{} trace_id:{}",
+        //         ref_count, self.trace_id
+        //     );
+        //     ref_count -= 1;
+
+        //     self.ref_count.set(ref_count);
+        // }
     }
 }
 

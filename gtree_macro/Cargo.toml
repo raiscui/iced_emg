@@ -30,7 +30,7 @@ tracing = "0.1"
 parse-display = "0.8.0"
 
 proc-macro-crate = "1.3.1"
-
+proc-macro-error = "1.0.4"
 emg_hasher = { path = "../emg_hasher" }
 
 [dev-dependencies]

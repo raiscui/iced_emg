@@ -1,10 +1,12 @@
 // #![feature(proc_macro_diagnostic)]
 extern crate proc_macro;
+use proc_macro_error::proc_macro_error;
 // use proc_macro_error::*;
 // use proc_quote::quote;
 use syn::parse_macro_input;
 
 // #![feature(proc_macro_diagnostic)]
+#[proc_macro_error]
 #[proc_macro]
 pub fn gtree(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let item = parse_macro_input!(input as proc_macro2::TokenStream);

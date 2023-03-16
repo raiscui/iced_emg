@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-05 20:56:05
- * @LastEditTime: 2023-03-14 17:49:41
+ * @LastEditTime: 2023-03-15 13:29:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,23 +10,27 @@ use std::rc::Rc;
 use derive_more::From;
 use tracing::{debug, debug_span, info};
 
+use crate::platform::{event::EventIdentify, Event};
 use emg_common::Vector;
-use emg_native::event::EventIdentify;
 use emg_state::Dict;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 //TODO in web, EventCallbackFn has 3 arg, native need same arg
 //TODO use TopoKey for PartialEq
-type EventCallbackFn<Message> = Rc<dyn Fn(&mut i32) -> Option<Message>>;
+type EventCallbackFn<Message> = Rc<dyn Fn(&Event) -> Option<Message>>;
 type EventMessageFn<Message> = Rc<dyn Fn() -> Option<Message>>;
 
 /// 3 arg event callback
 pub struct EventCallback<Message>(EventIdentify, EventCallbackFn<Message>);
 impl<Message> EventCallback<Message> {
     #[must_use]
-    pub fn new(name: EventIdentify, cb: EventCallbackFn<Message>) -> Self {
-        Self(name, cb)
+    pub fn new<T: IntoOptionMs<Message>>(
+        name: EventIdentify,
+        cb: impl Fn(&Event) -> T + 'static,
+        // cb: impl FnOnce() -> T + Clone + 'static,
+    ) -> Self {
+        Self(name, Rc::new(move |ev| cb(ev).into_option()))
     }
 }
 impl<Message> std::fmt::Debug for EventCallback<Message> {
@@ -76,6 +80,7 @@ impl<Message> PartialEq for EventCallback<Message>
 
 pub struct EventMessage<Message>(EventIdentify, EventMessageFn<Message>);
 impl<Message: 'static> EventMessage<Message> {
+    #[must_use]
     pub fn new<T: IntoOptionMs<Message>>(
         name: EventIdentify,
         cb: impl Fn() -> T + 'static,
@@ -176,18 +181,19 @@ pub enum EventNode<Message> {
 }
 
 impl<Message> EventNode<Message> {
+    #[inline]
     pub fn get_identify(&self) -> EventIdentify {
         match self {
             EventNode::Cb(x) => x.0,
             EventNode::CbMessage(x) => x.0,
         }
     }
-    pub fn call(&self) -> Option<Message> {
+    pub fn call(&self, event: &Event) -> Option<Message> {
         match self {
             EventNode::Cb(x) => {
                 info!("EventNode::Cb call");
                 //TODO real 3 arg
-                (x.1)(&mut 1)
+                (x.1)(event)
             }
             EventNode::CbMessage(x) => (x.1)(),
         }

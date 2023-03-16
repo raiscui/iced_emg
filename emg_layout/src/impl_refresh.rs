@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2023-02-23 13:41:45
+ * @LastEditTime: 2023-03-16 10:58:26
  * @LastEditors: Rais
  * @Description:
  */
@@ -51,7 +51,7 @@ where
     #[track_caller]
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!(
-            "!!!!!!!!!!!!!!-> Shaping<EdgeItem> for Box<(dyn Shaping<EdgeItem> + 'static)>"
+            "!!!!!!!!!!!!!!-> Shaping<EdgeItem> for Rc<(dyn Shaping<EdgeItem> + 'static)>"
         )
         .entered();
         // let ii = i.as_ref();
@@ -66,7 +66,7 @@ where
 {
     default fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let rc_v = self.get_var_with(emg_state::Var::get);
-        warn!("Edge [default!!] Refresh use StateVar current value !!!");
+        warn!(target:"shaping","Edge [default!!] Refresh use StateVar current value !!!");
         who.shaping_use_dyn(&*rc_v)
     }
 }

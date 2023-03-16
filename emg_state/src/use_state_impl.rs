@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-03-14 10:34:48
+ * @LastEditTime: 2023-03-15 12:16:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -25,6 +25,7 @@ use std::{
     ops::Deref,
     panic::Location,
     rc::Weak,
+    thread::AccessError,
 };
 // use im::HashMap;
 use std::{cell::RefCell, clone::Clone, marker::PhantomData, rc::Rc};
@@ -921,9 +922,8 @@ where
         debug!("StateVar<{}> drop .. ", std::any::type_name::<T>(),);
 
         // let store = state_store();
-        debug!("a");
         state_store_with(|g_state_store_refcell| {
-            debug!("b");
+            debug!("in store");
             let mut store = g_state_store_refcell.borrow_mut();
 
             let topo_key = StorageKey::TopoKey(self.id);
@@ -951,6 +951,7 @@ where
             //     }
             // }
         });
+        // .ok();
     }
 
     #[must_use]
@@ -1122,6 +1123,10 @@ where
     fn build_bi_similar_use_into_in_topo<B: Clone + From<T> + Into<T> + 'static + std::fmt::Debug>(
         &self,
     ) -> StateVar<B>
+    where
+        T: std::fmt::Debug;
+
+    fn bi<B: Clone + From<T> + Into<T> + 'static + std::fmt::Debug>(&self, b: StateVar<B>)
     where
         T: std::fmt::Debug;
 
@@ -1395,6 +1400,7 @@ where
     }
 
     #[topo::nested]
+    ///if self change , B will change too;
     fn build_similar_use_into_in_topo<B: Clone + From<T> + 'static + std::fmt::Debug>(
         &self,
     ) -> StateVar<B> {
@@ -1411,6 +1417,33 @@ where
         b
     }
 
+    fn bi<B: Clone + From<T> + Into<T> + 'static + std::fmt::Debug>(&self, b: StateVar<B>)
+    where
+        T: std::fmt::Debug,
+    {
+        let v = self.get();
+        b.set(v.into());
+        let this = *self;
+
+        insert_before_fn_common_in_topo(
+            self,
+            Box::new(move |skip, _current, value| {
+                b.seting_in_b_a_callback(skip, || value.clone().into());
+            }),
+            false,
+            &[b.id],
+        );
+
+        insert_before_fn_common_in_topo(
+            &b,
+            Box::new(move |skip, _current, value| {
+                this.seting_in_b_a_callback(skip, || value.clone().into());
+            }),
+            false,
+            &[this.id],
+        );
+    }
+
     #[topo::nested]
     fn build_bi_similar_use_into_in_topo<B: Clone + From<T> + Into<T> + 'static + std::fmt::Debug>(
         &self,
@@ -1419,7 +1452,7 @@ where
         T: std::fmt::Debug,
     {
         let v = self.get();
-        let b: StateVar<B> = use_state(|| v.clone().into());
+        let b: StateVar<B> = use_state(|| v.into());
 
         let this = *self;
 
@@ -1444,6 +1477,7 @@ where
         // .expect("insert_before_fn error");
         b
     }
+    //手动 连接 statevar 与 function key , when statevar drop,then fk drop
     fn link_callback_drop(&self, fk: Rc<StorageKey>) {
         let state_store = state_store();
         let mut store = state_store.borrow_mut();
@@ -2319,6 +2353,14 @@ where
     F: FnOnce(&Rc<RefCell<GStateStore>>) -> R,
 {
     G_STATE_STORE.with(f)
+}
+#[inline]
+#[instrument(name = "G_STATE_STORE try with", skip_all)]
+pub fn state_store_try_with<F, R>(f: F) -> Result<R, AccessError>
+where
+    F: FnOnce(&Rc<RefCell<GStateStore>>) -> R,
+{
+    G_STATE_STORE.try_with(f)
 }
 
 // fn read_var_with_topo_id_old<F: FnOnce(&Var<T>) -> R, T: 'static, R>(id: TopoKey, func: F) -> R {

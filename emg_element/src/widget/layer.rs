@@ -118,14 +118,17 @@ where
 }
 
 #[cfg(all(feature = "gpu"))]
-use crate::renderer::*;
+use crate::platform::renderer::*;
 #[cfg(all(feature = "gpu"))]
 impl<Message> crate::Widget for Layer<Message>
 where
     Message: 'static,
 {
     type SceneCtxType = crate::SceneFrag;
-    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
+    fn paint_sa(
+        &self,
+        ctx: &StateAnchor<crate::platform::PaintCtx>,
+    ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id = self.id.clone();
         let span = illicit::expect::<Span>();
 

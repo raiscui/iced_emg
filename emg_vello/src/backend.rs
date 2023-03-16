@@ -1,12 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2023-03-09 14:45:51
+ * @LastEditTime: 2023-03-16 12:42:58
  * @LastEditors: Rais
  * @Description:
  */
 use vello::{
-    util::RenderSurface as VelloRenderSurface, Renderer as VelloRenderer, RendererOptions,
+    util::RenderSurface as VelloRenderSurface, RenderParams, Renderer as VelloRenderer,
+    RendererOptions,
 };
 use vello::{
     util::{block_on_wgpu, DeviceHandle},
@@ -41,14 +42,8 @@ impl Backend {
         device_handle: &DeviceHandle,
         scene: &Scene,
         surface: &VelloRenderSurface,
+        render_params: &RenderParams,
     ) {
-        //TODO not crate everytime
-        let render_params = vello::RenderParams {
-            base_color: vello::peniko::Color::BLACK,
-            width: surface.config.width,
-            height: surface.config.height,
-        };
-
         let surface_texture = surface
             .surface
             .get_current_texture()
@@ -74,10 +69,20 @@ impl Backend {
                     &device_handle.queue,
                     scene,
                     &surface_texture,
-                    &render_params,
+                    render_params,
                 ),
             )
             .expect("failed to render to surface");
+
+            // self.renderer
+            //     .render_to_surface(
+            //         &device_handle.device,
+            //         &device_handle.queue,
+            //         scene,
+            //         &surface_texture,
+            //         render_params,
+            //     )
+            //     .expect("failed to render to surface");
         }
         // Note: in the wasm case, we're currently not running the robust
         // pipeline, as it requires more async wiring for the readback.
