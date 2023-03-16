@@ -18,10 +18,7 @@ pub mod mouse;
 pub mod time;
 pub mod touch;
 pub mod window;
-// ────────────────────────────────────────────────────────────────────────────────
-pub type Precision = f32;
-pub type Pos<T = Precision> = na::Point2<T>;
-pub type Affine<T = Precision> = na::Affine2<T>;
+pub use nalgebra as na;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -38,7 +35,6 @@ pub extern crate im_rc as im;
 pub use im::Vector;
 pub use layout::*;
 pub use measures::*;
-pub use nalgebra as na;
 use num_traits::AsPrimitive;
 
 pub use num_traits;
@@ -53,6 +49,11 @@ use derive_more::{Display, From};
 
 // pub use tinyvec::{tiny_vec, TinyVec};
 // ────────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
+pub type Precision = f32;
+pub type Pos<T = Precision> = na::Point2<T>;
+pub type Affine<T = Precision> = na::Affine2<T>;
+
 pub trait TypeCheck {
     const TYPE_NAME: TypeName;
     // fn static_type_name() -> TypeName;
@@ -282,7 +283,7 @@ impl ::core::ops::Add<LogicLength> for GenericSize {
 mod generic_size_test {
     use ordered_float::NotNan;
 
-    use crate::{pc, px, vh, CalcOp, ExactLengthSimplex, GenericSize, LogicLength, Unit};
+    use crate::{pc, px, vh, Affine, CalcOp, ExactLengthSimplex, GenericSize, LogicLength, Unit};
 
     #[test]
     fn add_test2() {
@@ -448,7 +449,7 @@ impl GenericSize {
 mod tests {
     use std::rc::Rc;
 
-    use crate::Vector;
+    use crate::{Affine, Vector};
 
     use crate::into_vector;
 
@@ -473,6 +474,8 @@ mod tests {
     #[allow(clippy::vtable_address_comparisons)]
 
     fn it_works() {
+        let f = Affine::<f32>::default();
+        println!("{f:?}");
         assert_eq!(2 + 2, 4);
         let _f: Vector<i32> = into_vector![1, 2, 3];
 

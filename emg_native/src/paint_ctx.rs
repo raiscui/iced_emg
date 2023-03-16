@@ -188,6 +188,7 @@ pub struct WidgetState {
     pub translation: Translation3<Precision>,
     pub world: Rc<Translation3<Precision>>,
     // pub background_color: CssBackgroundColor,
+    //TODO 区分 fill 和 bg color
     pub fill: Option<CssFill>,
     pub border_width: Option<CssBorderWidth>,
     pub border_color: Option<CssBorderColor>,

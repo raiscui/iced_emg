@@ -626,6 +626,7 @@ pub type GraphEdgesDict = Dict<EdgeIndex, Edge<EmgEdgeItem>>;
 // use rustc_hash::FxHasher as CustomHasher;
 
 type PathVarMap<T> = HashMap<EPath, T, BuildHasherDefault<CustomHasher>>;
+//TODO use GenericSizeAnchor for kv's -> v
 pub type StylesDict =
     Dict<TypeName, StateAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
 

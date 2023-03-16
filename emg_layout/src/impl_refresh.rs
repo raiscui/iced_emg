@@ -1,19 +1,19 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2023-03-16 10:58:26
+ * @LastEditTime: 2023-03-16 17:56:11
  * @LastEditors: Rais
  * @Description:
  */
 mod native;
-
 use emg_shaping::{Shaping, ShapingUseDyn, ShapingUseNoWarper, ShapingWhoNoWarper};
+use nu_ansi_term::Color::Red;
 use std::{any::Any, panic::Location, rc::Rc};
 
 use emg_state::{CloneStateVar, StateAnchor, StateVar};
 pub use seed_styles as styles;
 use styles::{CssHeight, CssValueTrait, CssWidth, UpdateStyle};
-use tracing::{debug, trace, trace_span, warn};
+use tracing::{debug, error, trace, trace_span, warn};
 
 use crate::{
     add_values::{AlignX, AlignY, OriginX, OriginY},
@@ -26,50 +26,53 @@ use crate::{
 //TODO lifetime
 impl ShapingWhoNoWarper for EmgEdgeItem {}
 
-//TODO this is warper , try not write this way
+//TODO (check can disable this line )this is warper , try not write this way
 impl<T> ShapingUseNoWarper for Css<T> where T: CssValueTrait + Clone + 'static {}
 
-impl Shaping<EmgEdgeItem> for Box<dyn Shaping<EmgEdgeItem>>
-where
-    EmgEdgeItem: ShapingWhoNoWarper,
-{
-    #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
-        let _g = trace_span!(
-            "!!!!!!!!!!!!!!-> Shaping<EdgeItem> for Box<(dyn Shaping<EdgeItem> + 'static)>"
-        )
-        .entered();
-        // let ii = i.as_ref();
-        who.shaping_use_dyn(self.as_ref())
-    }
-}
+//NOTE no need , in Shaping crate, has default impl
+// impl Shaping<EmgEdgeItem> for Box<dyn Shaping<EmgEdgeItem>>
+// where
+//     EmgEdgeItem: ShapingWhoNoWarper,
+// {
+//     #[track_caller]
+//     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+//         let _g = trace_span!(
+//             "!!!!!!!!!!!!!!-> Shaping<EdgeItem> for Box<(dyn Shaping<EdgeItem> + 'static)>"
+//         )
+//         .entered();
+//         // let ii = i.as_ref();
+//         who.shaping_use_dyn(self.as_ref())
+//     }
+// }
 
-impl Shaping<EmgEdgeItem> for Rc<dyn Shaping<EmgEdgeItem>>
-where
-    EmgEdgeItem: ShapingWhoNoWarper,
-{
-    #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
-        let _g = trace_span!(
-            "!!!!!!!!!!!!!!-> Shaping<EdgeItem> for Rc<(dyn Shaping<EdgeItem> + 'static)>"
-        )
-        .entered();
-        // let ii = i.as_ref();
-        who.shaping_use_dyn(self.as_ref())
-    }
-}
+//NOTE no need , in Shaping crate, has default impl
+// impl Shaping<EmgEdgeItem> for Rc<dyn Shaping<EmgEdgeItem>>
+// where
+//     EmgEdgeItem: ShapingWhoNoWarper,
+// {
+//     #[track_caller]
+//     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+//         let _g = trace_span!(
+//             "!!!!!!!!!!!!!!-> Shaping<EdgeItem> for Rc<(dyn Shaping<EdgeItem> + 'static)>"
+//         )
+//         .entered();
+//         // let ii = i.as_ref();
+//         who.shaping_use_dyn(self.as_ref())
+//     }
+// }
 
-impl<Use> Shaping<EmgEdgeItem> for StateVar<Use>
-where
-    EmgEdgeItem: ShapingWhoNoWarper,
-    Use: ShapingUseNoWarper + Shaping<EmgEdgeItem> + Clone + 'static,
-{
-    default fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
-        let rc_v = self.get_var_with(emg_state::Var::get);
-        warn!(target:"shaping","Edge [default!!] Refresh use StateVar current value !!!");
-        who.shaping_use_dyn(&*rc_v)
-    }
-}
+// impl<Use> Shaping<EmgEdgeItem> for StateVar<Use>
+// where
+//     EmgEdgeItem: ShapingWhoNoWarper,
+//     Use: ShapingUseNoWarper + Shaping<EmgEdgeItem> + Clone + 'static,
+// {
+//     default fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+//         let rc_v = self.get_var_with(emg_state::Var::get);
+
+//         warn!(target:"shaping","Edge [default!!] Refresh use StateVar current value !!!, {} {}",Red.paint("this is only once shaping") ,std::any::type_name::<Use>());
+//         who.shaping_use_dyn(&*rc_v)
+//     }
+// }
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
 impl Shaping<EmgEdgeItem> for StateVar<CssWidth>
@@ -81,81 +84,145 @@ where
 
         who.layout.w.set(self.watch().into());
 
-        // who.shaping_use(&*rc_var);
         true
     }
 }
 impl Shaping<EmgEdgeItem> for StateAnchor<CssWidth>
 where
     EmgEdgeItem: ShapingWhoNoWarper,
-    // Use: ShapingUseNoWarper + Shaping<EmgEdgeItem> + Clone + 'static,
 {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateAnchor<CssWidth>");
 
         who.layout.w.set(self.clone().into());
 
-        // who.shaping_use(&*rc_var);
         true
     }
 }
 impl Shaping<EmgEdgeItem> for StateVar<CssHeight>
 where
     EmgEdgeItem: ShapingWhoNoWarper,
-    // Use: ShapingUseNoWarper + Shaping<EmgEdgeItem> + Clone + 'static,
 {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssHeight>");
 
         who.layout.h.set(self.watch().into());
 
-        // who.shaping_use(&*rc_var);
         true
     }
 }
 impl Shaping<EmgEdgeItem> for StateAnchor<CssHeight>
 where
     EmgEdgeItem: ShapingWhoNoWarper,
-    // Use: ShapingUseNoWarper + Shaping<EmgEdgeItem> + Clone + 'static,
 {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateAnchor<CssHeight>");
 
         who.layout.h.set(self.clone().into());
 
-        // who.shaping_use(&*rc_var);
         true
     }
 }
+impl Shaping<EmgEdgeItem> for StateVar<AlignX>
+where
+    EmgEdgeItem: ShapingWhoNoWarper,
+{
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+        warn!(target:"shaping","Edge  Refresh use StateVar<CssWidth>");
 
+        who.layout.align_x.set(self.watch().into());
+
+        true
+    }
+}
+impl Shaping<EmgEdgeItem> for StateAnchor<AlignX>
+where
+    EmgEdgeItem: ShapingWhoNoWarper,
+{
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+        warn!(target:"shaping","Edge  Refresh use StateAnchor<CssWidth>");
+
+        who.layout.align_x.set(self.clone().into());
+
+        true
+    }
+}
+impl Shaping<EmgEdgeItem> for StateVar<AlignY>
+where
+    EmgEdgeItem: ShapingWhoNoWarper,
+{
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+        warn!(target:"shaping","Edge  Refresh use StateVar<CssWidth>");
+
+        who.layout.align_y.set(self.watch().into());
+
+        true
+    }
+}
+impl Shaping<EmgEdgeItem> for StateAnchor<AlignY>
+where
+    EmgEdgeItem: ShapingWhoNoWarper,
+{
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+        warn!(target:"shaping","Edge  Refresh use StateAnchor<CssWidth>");
+
+        who.layout.align_y.set(self.clone().into());
+
+        true
+    }
+}
+impl Shaping<EmgEdgeItem> for StateVar<OriginX>
+where
+    EmgEdgeItem: ShapingWhoNoWarper,
+{
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+        warn!("Edge  Refresh use StateVar<CssWidth>");
+
+        who.layout.origin_x.set(self.watch().into());
+
+        true
+    }
+}
+impl Shaping<EmgEdgeItem> for StateAnchor<OriginX>
+where
+    EmgEdgeItem: ShapingWhoNoWarper,
+{
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+        warn!("Edge  Refresh use StateAnchor<CssWidth>");
+
+        who.layout.origin_x.set(self.clone().into());
+
+        true
+    }
+}
+impl Shaping<EmgEdgeItem> for StateVar<OriginY>
+where
+    EmgEdgeItem: ShapingWhoNoWarper,
+{
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+        warn!("Edge  Refresh use StateVar<CssWidth>");
+
+        who.layout.origin_y.set(self.watch().into());
+
+        true
+    }
+}
+impl Shaping<EmgEdgeItem> for StateAnchor<OriginY>
+where
+    EmgEdgeItem: ShapingWhoNoWarper,
+{
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
+        warn!("Edge  Refresh use StateAnchor<CssWidth>");
+
+        who.layout.origin_y.set(self.clone().into());
+
+        true
+    }
+}
 // ────────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────────
 
-// impl Shaping<EmgEdgeItem> for Vec<Box<(dyn Shaping<EmgEdgeItem> + 'static)>>
-// {
-//     #[track_caller]
-//     fn shaping(&self, who: &mut EmgEdgeItem) {
-//         for i in self {
-//             let _g = trace_span!(
-//                 "-> Shaping<EdgeItem> for Vec<Box<(dyn Shaping<EdgeItem> + 'static)>>"
-//             )
-//             .entered();
-//             // let ii = i.as_ref();
-//             who.shaping_use(i.as_ref());
-//         }
-//     }
-// }
-// impl Shaping<EdgeData> for Vec<Box<(dyn Shaping<EdgeData> + 'static)>> {
-//     #[track_caller]
-//     fn shaping(&self, _who: &mut EdgeData) {
-//         panic!("!!!!!!");
-//         // for i in self {
-//         //     // let ii = i.as_ref();
-//         //     who.shaping_use(i.as_ref());
-//         // }
-//     }
-// }
-//TODO 做 不是refresh 版本的
+//TODO 移除,因为使用了 impl_refresh/native.rs ,但是要考虑 other_css_styles如何处理
 #[track_caller]
 fn css_refresh_edgedata<Use>(css: &Css<Use>, ei: &mut EmgEdgeItem) -> bool
 where
@@ -249,7 +316,6 @@ impl Shaping<EmgEdgeItem> for AlignX {
     #[track_caller]
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for AlignX").entered();
-
         who.layout.align_x.set(self.clone().into());
         true
     }

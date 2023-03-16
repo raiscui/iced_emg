@@ -87,7 +87,7 @@ fn tracing_init() -> Result<(), Report> {
         // .with(layout_override_layer)
         // .with(event_matching_layer)
         // .with(touch_layer)
-        // .with(tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR))
+        .with(tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR))
         .with(filter_layer)
         // .with(out_layer)
         .init();
@@ -149,9 +149,9 @@ impl Sandbox for App {
                 let ax = use_state(|| align_x(pc(50)));
                 let ay = use_state(|| align_y(pc(50)));
 
-                // let x = Affine::default();
-                // let pos = Pos::default();
-                // let xx = x * pos;
+                let x = Affine::<f32>::default();
+                let pos = Pos::<f32>::default();
+                let xx = x * pos;
 
                 // ax.set_with(|x| align_x(pc(3)) + x );
                 // width.set_with(|x| match x {
@@ -184,8 +184,6 @@ impl Sandbox for App {
                                         let trans = drag_offset * Pos::default();
                                         // let d_trans = ev.get_drag_trans();
                                         // let trans = d_trans * Pos::default();
-
-                                        let const_ax = align_x(pc(50));
 
                                         // ax.set_with(|x| align_x(px(trans.x)) + const_ax.clone() );
                                         ax.set_with(|v| align_x(px(trans.x)) + v);
@@ -231,8 +229,8 @@ impl Sandbox for App {
 
                 origin_x(px(0)),
                 origin_y(px(0)),
-                align_x(px(0)),
-                align_y(px(0)),
+                // align_x(px(0)),
+                // align_y(px(0)),
                 w(pc(40)),h(pc(40)),
                 b_width(px(2)),
                 b_color(rgb(0,0,1)),
@@ -240,6 +238,36 @@ impl Sandbox for App {
                 ]
                 @="y" Layer [
                     // node_ref("b")
+
+                    @E=[
+                                w(px(50)),
+                                // width,
+                                h(px(50)),
+                                ax,
+                                ay,
+                                fill(rgb(1,0,0))
+
+
+                            ]
+                            @="b-check" Checkbox::new(false,"b-abcd",move|_|{
+                                println!("b checkbox");
+                            })=>[
+                                @="b_click2" On:DRAG  move|ev|{
+                                    use nu_ansi_term::Color::Red;
+                                    let _span = debug_span!("DRAG", "{} -> ev:{:?}",Red.paint("on [b-check] drag"),ev)
+                                            .entered();
+                                        let drag_offset = ev.get_drag_offset();
+                                        let offset_trans = drag_offset * Pos::default();
+
+
+                                        ax.set_with(|v| align_x(px(offset_trans.x)) + v);
+                                        ay.set_with(|v| align_y(px(offset_trans.y)) + v);
+
+
+                                    // Message::Empty
+                                },
+                            ]
+
                 ],
                 // ─────────────────────────────────────────────
 
@@ -253,6 +281,8 @@ impl Sandbox for App {
                         b_color(rgb(1,0,0))
                     ]
                 @="x" Layer [
+
+
 
                     // @="x_click" On:CLICK  ||{
                     //     let _span = debug_span!("CLICK", "on [x] click, moving a->b to m->b")
@@ -286,57 +316,7 @@ impl Sandbox for App {
 
                             //   builder
 
-                            @E=[
-                                // w(px(50)),
-                                width,
-                                h(px(50)),
-                                ax,
-                                ay,
-                            ]
-                            @="b-check" Checkbox::new(false,"b-abcd",move|_|{
-                                println!("b checkbox");
 
-                                width.set_with(|x| match x {
-                                    CssWidth::Auto => todo!(),
-                                    CssWidth::Length(ll) => (px(10) + ll).into(),
-                                    CssWidth::Initial => todo!(),
-                                    CssWidth::Inherit => todo!(),
-                                    CssWidth::StringValue(_) => todo!(),
-                                    CssWidth::Gs(_) => todo!(),
-                                });
-
-                            })=>[
-                                @="b_click2" On:DRAG  move|ev|{
-                                println!("b drag");
-
-                                    use nu_ansi_term::Color::Red;
-                                    let _span = debug_span!("DRAG", "{} -> ev:{:?}",Red.paint("on [b-check] drag"),ev)
-                                            .entered();
-                                        let drag_offset = ev.get_drag_offset();
-                                        let trans = drag_offset * Pos::default();
-                                        // let d_trans = ev.get_drag_trans();
-                                        // let trans = d_trans * Pos::default();
-
-                                        let const_ax = align_x(pc(50));
-
-                                        // ax.set_with(|x| align_x(px(trans.x)) + const_ax.clone() );
-                                        ax.set_with(|v| align_x(px(trans.x)) + v);
-                                        ay.set_with(|v| align_y(px(trans.y)) + v);
-
-                                        width.set_with(|x| match x {
-                                            CssWidth::Auto => todo!(),
-                                            CssWidth::Length(ll) => (px(10) + ll).into(),
-                                            CssWidth::Initial => todo!(),
-                                            CssWidth::Inherit => todo!(),
-                                            CssWidth::StringValue(_) => todo!(),
-                                            CssWidth::Gs(_) => todo!(),
-                                        });
-
-
-
-                                    Message::Empty
-                                },
-                            ]
 
                         ],
                     ],

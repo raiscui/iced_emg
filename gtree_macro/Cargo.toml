@@ -37,5 +37,5 @@ emg_hasher = { path = "../emg_hasher" }
 emg_layout = { path = "../emg_layout" }
 emg_common = { path = "../emg_common" }
 tracing-subscriber = "0.3"
-tracing-tree = { path = "../../tracing-tree" }
+tracing-tree = "0.2.2"
 insta = "1"

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-29 23:19:00
- * @LastEditTime: 2023-02-23 13:47:03
+ * @LastEditTime: 2023-03-16 17:02:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,7 @@ use crate::EmgEdgeItem;
 use emg_common::TypeCheck;
 use emg_native::WidgetState;
 use emg_shaping::{EqShapingWithDebug, Shaping, ShapingWhoNoWarper};
-use emg_state::StateTypeCheck;
+use emg_state::{use_state, StateTypeCheck};
 use emg_state::{CloneStateVar, StateAnchor, StateVar};
 #[allow(clippy::wildcard_imports)]
 use seed_styles::*;
@@ -44,6 +44,7 @@ where
         true
     }
 }
+
 impl Shaping<EmgEdgeItem> for StateAnchor<CssBackgroundAttachment>
 where
     EmgEdgeItem: ShapingWhoNoWarper,

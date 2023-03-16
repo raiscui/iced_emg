@@ -31,7 +31,7 @@ features = [
 [dependencies]
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-tracing-tree = { path = "../../../tracing-tree" }
+tracing-tree = "0.2.2"
 color-eyre = "0.6.2"
 insta = "1"
 # https://docs.rs/dhat/latest/dhat/

@@ -41,4 +41,4 @@ anyhow = "1.0.69"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 color-eyre = "0.6.2"
 insta = "1"
-tracing-tree = { path = "../../tracing-tree" }
+tracing-tree = "0.2.2"
