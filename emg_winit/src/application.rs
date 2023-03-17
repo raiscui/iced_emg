@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-16 12:18:13
+ * @LastEditTime: 2023-03-17 10:46:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -40,7 +40,7 @@ use emg_native::{
 };
 use emg_state::state_lit::StateVarLit;
 use emg_state::CloneStateAnchor;
-use tracing::{debug, debug_span, info, info_span, instrument};
+use tracing::{debug, debug_span, info, info_span, instrument, warn};
 
 // use emg_native::user_interface::{self, UserInterface};
 // ────────────────────────────────────────────────────────────────────────────────
@@ -380,7 +380,7 @@ async fn run_instance<A, E, C>(
                                 changed = true;
                             }
                             else{
-                                debug!(target:"winit_event","same,ignored");
+                                warn!(target:"winit_event","same,ignored");
                             }
                         })
                         .or_insert_with(|| {
@@ -416,13 +416,14 @@ async fn run_instance<A, E, C>(
                 changed
             });
 
+    // let native_events_is_empty = native_events.watch().map(|v| v.is_empty());
     let native_events_is_empty = event_debouncer.map(|v| v.is_empty());
 
     let (event_matchs_sa, ctx_sa) = application.build_ctx(
         g.graph(),
         &painter,
-        &event_debouncer,
         // &native_events.watch(),
+        &event_debouncer,
         state.cursor_position(),
     );
     let mut ctx = ctx_sa.get();
