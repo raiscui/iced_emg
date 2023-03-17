@@ -97,6 +97,8 @@ pub mod ccsa_macro_prelude {
 
 static CURRENT_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 1.5;
 static CHILD_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 0.9;
+pub const EDGES_POOL_SIZE: usize = 16;
+pub const CHILDREN_POOL_SIZE: usize = 2;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -926,7 +928,7 @@ impl EmgEdgeItem {
                         |some_source_nix|{
 
 
-                        edges.filter_map(move|someone_eix, e| {
+                        edges.filter_map(EDGES_POOL_SIZE,move|someone_eix, e| {
 
 
                             debug!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&some_source_nix);
@@ -968,7 +970,7 @@ impl EmgEdgeItem {
                 || Anchor::constant(Dict::<EPath, EdgeItemNode>::default()),
                 |self_target_nix| {
                     edges2
-                        .filter_map(move |child_eix, v| {
+                        .filter_map(EDGES_POOL_SIZE, move |child_eix, v| {
                             //NOTE  edge source is self_target, this is children
 
                             if child_eix.source_nix()? == &self_target_nix {
@@ -998,7 +1000,7 @@ impl EmgEdgeItem {
 
             id_sa.then(move |eid:&EdgeIndex|{
 
-            let children_nodes3 = children_nodes2.clone();
+                let children_nodes3 = children_nodes2.clone();
 
                 let eid_clone = eid.clone();
 
@@ -1015,10 +1017,10 @@ impl EmgEdgeItem {
                         })
                         .collect::<Dict<EPath, EdgeItemNode>>()
 
-                }) .map_( move |self_path:&EPath, p_path_edge_item_node:&EdgeItemNode| {
+                }).map_( 1,move |self_path:&EPath, p_path_edge_item_node:&EdgeItemNode| {
 
-//@=====    each    path    edge    prosess     ============================================================================================================================================
-//
+                    //@=====    each    path    edge    prosess     ============================================================================================================================================
+                    //
                     //@ current var=>ix ix=>var cassowary_map
                     let current_cassowary_map = Rc::new(CassowaryMap::new());
 
@@ -1070,7 +1072,7 @@ impl EmgEdgeItem {
                     };
 
                     //NOTE children cassowary_map
-                    let (children_layout_override_sa_a,children_cass_maps_sa) = children_nodes3.filter_map(move |child_path,child_node|{
+                    let (children_layout_override_sa_a,children_cass_maps_sa) = children_nodes3.filter_map(CHILDREN_POOL_SIZE,move |child_path,child_node|{
                         let _span = debug_span!("LayoutOverride",step=0, func = "will except_tail_match")
                                     .entered();
                                     // debug!("self_path3:{}",&self_path3);
@@ -1104,7 +1106,7 @@ impl EmgEdgeItem {
                     .map(|x|{
                         #[cfg(feature = "debug")]
                         {
-                             debug_span!("LayoutOverride",step=2,func = "EdgeItem new_in_top",info="to_layout_override之后 ... debug..").in_scope(||{
+                                debug_span!("LayoutOverride",step=2,func = "EdgeItem new_in_top",info="to_layout_override之后 ... debug..").in_scope(||{
                                 for (k,_) in x.iter(){
                                     debug!("child path---------:{:?}",k,);
                                 }
@@ -1146,15 +1148,15 @@ impl EmgEdgeItem {
                                 los.clone().into_iter().fold(Option::<LayoutOverride>::None,|acc,(ix,lo)|{
                                     debug!("ix:{:?}   acc:{:#?}",ix,&acc);
                                     debug!("lo:{:#?}",&lo);
-                                     if let Some(old_lo) = acc {
+                                        if let Some(old_lo) = acc {
                                             debug!("acc is some, will + ");
                                             let x = Some(old_lo + lo);
                                             debug!("comb---:{:#?}",&x);
                                             x
 
-                                     }else{
+                                        }else{
                                         Some(lo)
-                                     }
+                                        }
                                 })
 
                             }
@@ -1165,7 +1167,7 @@ impl EmgEdgeItem {
                                 los.clone().into_iter().reduce(|acc,lo|{
                                     // debug!("acc:{:#?}",&acc);
                                     // debug!("lo:{:#?}",&lo);
-                                     acc + lo
+                                        acc + lo
                                 })
                             }
 
@@ -1279,45 +1281,45 @@ impl EmgEdgeItem {
 
                     });
 
-// ────────────────────────────────────────────────────────────────────────────────
-// let children_cass_maps_no_val_sa = children_cass_maps_sa.map_(|_ix,(map,..)|{
-//     map.clone()
-// });
-let children_cass_size_constraints_sa = children_cass_maps_sa.then(|d|{
-    d.values().map(|(_,sa)|sa.get_anchor()).collect::<Vec<_>>().into_iter().collect::<Anchor<Vector<Vec<Constraint>>>>()
-});
-// let current_cassowary_map3 = current_cassowary_map.clone();
+                    // ────────────────────────────────────────────────────────────────────────────────
+                    // let children_cass_maps_no_val_sa = children_cass_maps_sa.map_(|_ix,(map,..)|{
+                    //     map.clone()
+                    // });
+                    let children_cass_size_constraints_sa = children_cass_maps_sa.then(|d|{
+                        d.values().map(|(_,sa)|sa.get_anchor()).collect::<Vec<_>>().into_iter().collect::<Anchor<Vector<Vec<Constraint>>>>()
+                    });
+                    // let current_cassowary_map3 = current_cassowary_map.clone();
 
-// let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa,&children_cass_size_constraints_sa).map(move |cass_maps,children_size_constraints|{
-let children_for_current_addition_constants_sa =  children_cass_size_constraints_sa.map(move |children_size_constraints|{
-
-
-    let mut  res_exprs = OrdSet::new();
-
-    //NOTE add some each child custom  cassowary map to current constants map
-
-    // for (_,map) in cass_maps {
-
-    //     res_exprs.extend([
-    //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("left").unwrap()+map.var("width").unwrap(),
-    //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("top").unwrap() + map.var("height").unwrap(),
-
-    //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("right").unwrap(),
-    //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("bottom").unwrap(),
-
-    //     ]);
+                    // let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa,&children_cass_size_constraints_sa).map(move |cass_maps,children_size_constraints|{
+                    let children_for_current_addition_constants_sa =  children_cass_size_constraints_sa.map(move |children_size_constraints|{
 
 
-    // }
+                        let mut  res_exprs = OrdSet::new();
 
-    res_exprs.extend(children_size_constraints.clone().into_iter().flatten());
+                        //NOTE add some each child custom  cassowary map to current constants map
+
+                        // for (_,map) in cass_maps {
+
+                        //     res_exprs.extend([
+                        //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("left").unwrap()+map.var("width").unwrap(),
+                        //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("top").unwrap() + map.var("height").unwrap(),
+
+                        //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("right").unwrap(),
+                        //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("bottom").unwrap(),
+
+                        //     ]);
 
 
-    res_exprs
+                        // }
+
+                        res_exprs.extend(children_size_constraints.clone().into_iter().flatten());
 
 
-});
-// ────────────────────────────────────────────────────────────────────────────────
+                        res_exprs
+
+
+                    });
+                    // ────────────────────────────────────────────────────────────────────────────────
 
                     let mut last_observation_constants:OrdSet<Constraint>  =  OrdSet::new();
                     let mut last_observation_current_props:Dict<IdStr, NotNan<Precision>> =  Dict::new();
@@ -1560,10 +1562,10 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                             //TODO remove get id if release
                             for (var,v) in changed_vars.iter() {
                                 let id_prop_str =   children_cass_maps.iter().find_map(|(id,(cassowary_map ,..))|{
-                                     cassowary_map.prop(var).map(|prop|{
+                                    cassowary_map.prop(var).map(|prop|{
                                         let vv:IdStr = format!("{} |=> #{:?}[{}]",&self_path4, &id,&prop).into();
                                         vv
-                                     })
+                                    })
                                 }).or_else(||{
                                     current_cassowary_map3.prop(var).map(|prop|{
                                         let vv:IdStr = format!("{}[{}] ",&self_path4,&prop).into();
@@ -1647,7 +1649,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 
 
 
-// ────────────────────────────────────────────────────────────────────────────────
+                    // ────────────────────────────────────────────────────────────────────────────────
 
                     let world = layout_calculated.world.clone();
 

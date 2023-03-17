@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2023-03-17 10:36:56
+ * @LastEditTime: 2023-03-17 11:45:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -54,7 +54,7 @@ pub mod ev {
 
 /// Converts a winit window event into an iced event.
 pub fn window_event(
-    event: &winit::event::WindowEvent<'_>,
+    event: winit::event::WindowEvent<'_>,
     scale_factor: f64,
     modifiers: winit::event::ModifiersState,
     event_state: &mut ev::EventState,
@@ -166,7 +166,7 @@ pub fn window_event(
             )])
         }
         WindowEvent::MouseInput { button, state, .. } => {
-            let button = mouse_button(*button);
+            let button = mouse_button(button);
             //TODO 当前使用 flag 也使用 event::ButtonPressed 等, 可能不需要同时使用
             Some(match (button, state) {
                 (mouse::Button::Left, winit::event::ElementState::Pressed) => {
@@ -220,8 +220,8 @@ pub fn window_event(
                 EventIdentify::new(EventFlag::MOUSE, mouse::WHEEL_SCROLLED),
                 Event::Mouse(mouse::Event::WheelScrolled {
                     delta: mouse::ScrollDelta::Lines {
-                        x: *delta_x,
-                        y: *delta_y,
+                        x: delta_x,
+                        y: delta_y,
                     },
                 }),
             )]),
@@ -235,9 +235,9 @@ pub fn window_event(
                 }),
             )]),
         },
-        WindowEvent::ReceivedCharacter(c) if !is_private_use_character(*c) => Some(smallvec![(
+        WindowEvent::ReceivedCharacter(c) if !is_private_use_character(c) => Some(smallvec![(
             EventIdentify::new(EventFlag::KEYBOARD, keyboard::CHARACTER_RECEIVED),
-            Event::Keyboard(keyboard::Event::CharacterReceived(*c)),
+            Event::Keyboard(keyboard::Event::CharacterReceived(c)),
         )]),
         WindowEvent::KeyboardInput {
             input:
@@ -248,7 +248,7 @@ pub fn window_event(
                 },
             ..
         } => {
-            let key_code = key_code(*virtual_keycode);
+            let key_code = key_code(virtual_keycode);
             let modifiers = self::modifiers(modifiers);
 
             match state {
@@ -271,10 +271,10 @@ pub fn window_event(
         WindowEvent::ModifiersChanged(new_modifiers) => Some(smallvec![(
             EventIdentify::new(EventFlag::KEYBOARD, keyboard::MODIFIERS_CHANGED),
             Event::Keyboard(keyboard::Event::ModifiersChanged(self::modifiers(
-                *new_modifiers,
+                new_modifiers,
             ))),
         )]),
-        WindowEvent::Focused(focused) => Some(smallvec![if *focused {
+        WindowEvent::Focused(focused) => Some(smallvec![if focused {
             (
                 EventIdentify::new(EventFlag::WINDOW, window::FOCUSED),
                 Event::Window(window::Event::Focused),
@@ -287,25 +287,25 @@ pub fn window_event(
         }]),
         WindowEvent::HoveredFile(path) => Some(smallvec![(
             EventIdentify::new(EventFlag::WINDOW, window::FILE_HOVERED),
-            Event::Window(window::Event::FileHovered(path.clone())),
+            Event::Window(window::Event::FileHovered(path)),
         )]),
         WindowEvent::DroppedFile(path) => Some(smallvec![(
             EventIdentify::new(EventFlag::WINDOW, window::FILE_DROPPED),
-            Event::Window(window::Event::FileDropped(path.clone())),
+            Event::Window(window::Event::FileDropped(path)),
         )]),
         WindowEvent::HoveredFileCancelled => Some(smallvec![(
             EventIdentify::new(EventFlag::WINDOW, window::FILES_HOVERED_LEFT),
             Event::Window(window::Event::FilesHoveredLeft),
         )]),
-        WindowEvent::Touch(touch) => {
+        WindowEvent::Touch(_touch) => {
             // let (touch_flag, touch_event) = touch_event(*touch, scale_factor);
             // Some(((EventFlag::TOUCH, touch_flag), Event::Touch(touch_event)))
             todo!()
         }
         WindowEvent::TouchpadPressure {
-            device_id,
-            pressure,
-            stage,
+            device_id: _,
+            pressure: _,
+            stage: _,
         } => None,
         WindowEvent::Moved(position) => {
             let winit::dpi::LogicalPosition { x, y } = position.to_logical(scale_factor);

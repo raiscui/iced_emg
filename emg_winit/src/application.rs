@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-17 10:53:10
+ * @LastEditTime: 2023-03-17 11:17:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -380,7 +380,7 @@ async fn run_instance<A, E, C>(
                                 changed = true;
                             }
                             else{
-                                warn!(target:"winit_event","same,ignored");
+                                debug!(target:"winit_event","same,ignored");
                             }
                         })
                         .or_insert_with(|| {
@@ -411,7 +411,7 @@ async fn run_instance<A, E, C>(
                     //     }
                     // }
                 }
-                info!(target:"winit_event",?changed);
+                debug!(target:"winit_event",?changed);
 
                 changed
             });
@@ -469,7 +469,7 @@ async fn run_instance<A, E, C>(
                 {
                     use nu_ansi_term::Color::Red;
                     use nu_ansi_term::Style;
-                    info!(target:"winit_event","{}",Style::new().on(Red).paint(  "============= event processed end ============================="));
+                    debug!(target:"winit_event","{}",Style::new().on(Red).paint(  "============= event processed end ============================="));
                 }
                 //NOTE  has events or messages now -------------------
 
@@ -525,6 +525,7 @@ async fn run_instance<A, E, C>(
                     continue;
                 } else {
                     ctx = new_ctx;
+                    info!(target:"winit_event","has element repaint");
                 }
 
                 debug.draw_started();
@@ -536,7 +537,6 @@ async fn run_instance<A, E, C>(
                 //     },
                 //     state.cursor_position(),
                 // );
-                info!(target:"winit_event","element painting");
                 // element.paint(&mut ctx);
                 // ctx = ctx_sa.get();
 
@@ -659,8 +659,8 @@ async fn run_instance<A, E, C>(
                 event: window_event,
                 ..
             } => {
-                // let _span = info_span!(target:"winit_event","WindowEvent").entered();
-                info!(target:"winit_event",?window_event);
+                let _span = info_span!(target:"winit_event","WindowEvent").entered();
+                debug!(target:"winit_event",?window_event);
                 // info!(target:"winit_event","window.scale_factor():{}",window.scale_factor());//2
 
                 if requests_exit(&window_event, state.modifiers()) && exit_on_close_request {
@@ -670,10 +670,10 @@ async fn run_instance<A, E, C>(
                 state.update(&window, &window_event, &mut debug);
 
                 if let Some(event_with_flag) = conversion::window_event(
-                    &window_event,
+                    window_event,
                     state.vp_scale_factor(),
                     state.modifiers(),
-                    &mut event_state,
+                    &mut event_state, //TODO move to state
                 ) {
                     // native_events.push(event);
                     native_events.update(
@@ -682,6 +682,8 @@ async fn run_instance<A, E, C>(
                 }
 
                 if viewport_version != state.viewport_version() {
+                    info!(target:"winit_event","new viewport_version");
+
                     window.request_redraw();
                 }
             }

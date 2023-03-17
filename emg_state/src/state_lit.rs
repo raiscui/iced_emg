@@ -3,7 +3,7 @@ use std::rc::Rc;
 /*
  * @Author: Rais
  * @Date: 2022-06-14 11:38:22
- * @LastEditTime: 2023-02-27 18:16:52
+ * @LastEditTime: 2023-03-17 11:41:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -104,7 +104,7 @@ mod state_var_lit_test {
         assert_eq!(a.get(), b.get());
         println!("{} {}", a.get(), b.get());
         let f = Rc::new(FF("a".to_string()));
-        let f2 = f.clone();
+        let f2 = Rc::clone(&f);
         assert_eq!(f, f2);
 
         assert!(Rc::ptr_eq(&f, &f2));

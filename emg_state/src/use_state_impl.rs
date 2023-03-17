@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-03-15 12:16:33
+ * @LastEditTime: 2023-03-17 15:50:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,6 @@ pub use anchors::singlethread::Engine;
 pub use anchors::singlethread::Var;
 use anchors::{
     expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
-    im,
     singlethread::MultiAnchor,
 };
 use emg_common::{smallvec, SVec::ToSmallVec, SmallVec, TypeCheck, TypeName, Vector};
@@ -1668,18 +1667,20 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
     #[track_caller]
     #[must_use]
     #[inline]
-    pub fn filter<F: FnMut(&K, &V) -> bool + 'static>(&self, f: F) -> Self {
-        self.0.filter(f).into()
+    pub fn filter<F: FnMut(&K, &V) -> bool + 'static>(&self, pool_size: usize, f: F) -> Self {
+        self.0.filter(pool_size, f).into()
     }
     #[track_caller]
     #[must_use]
     #[inline]
-    pub fn filter_with_anchor<A, F>(&self, anchor: &StateAnchor<A>, f: F) -> Self
+    pub fn filter_with_anchor<A, F>(&self, pool_size: usize, anchor: &StateAnchor<A>, f: F) -> Self
     where
         A: 'static + std::cmp::PartialEq + std::clone::Clone,
         F: FnMut(&A, &K, &V) -> bool + 'static,
     {
-        self.0.filter_with_anchor(anchor.anchor(), f).into()
+        self.0
+            .filter_with_anchor(pool_size, anchor.anchor(), f)
+            .into()
     }
 
     #[track_caller]
@@ -1687,20 +1688,26 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
     #[inline]
     pub fn map_<F: FnMut(&K, &V) -> T + 'static, T: Clone + PartialEq + 'static>(
         &self,
+        pool_size: usize,
         f: F,
     ) -> StateAnchor<Dict<K, T>> {
-        self.0.map_(f).into()
+        self.0.map_(pool_size, f).into()
     }
     #[track_caller]
     #[must_use]
     #[inline]
-    pub fn map_with_anchor<A, F, T>(&self, anchor: &StateAnchor<A>, f: F) -> StateAnchor<Dict<K, T>>
+    pub fn map_with_anchor<A, F, T>(
+        &self,
+        pool_size: usize,
+        anchor: &StateAnchor<A>,
+        f: F,
+    ) -> StateAnchor<Dict<K, T>>
     where
         A: 'static + std::cmp::PartialEq + Clone,
         F: FnMut(&A, &K, &V) -> T + 'static,
         T: Clone + PartialEq + 'static,
     {
-        self.0.map_with_anchor(anchor.anchor(), f).into()
+        self.0.map_with_anchor(pool_size, anchor.anchor(), f).into()
     }
 
     #[track_caller]
@@ -1708,15 +1715,17 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
     #[inline]
     pub fn filter_map<F: FnMut(&K, &V) -> Option<T> + 'static, T: Clone + PartialEq + 'static>(
         &self,
+        pool_size: usize,
         f: F,
     ) -> StateAnchor<Dict<K, T>> {
-        self.0.filter_map(f).into()
+        self.0.filter_map(pool_size, f).into()
     }
     #[track_caller]
     #[must_use]
     #[inline]
     pub fn filter_map_with_anchor<A, F, T>(
         &self,
+        pool_size: usize,
         anchor: &StateAnchor<A>,
         f: F,
     ) -> StateAnchor<Dict<K, T>>
@@ -1725,7 +1734,9 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
         F: FnMut(&A, &K, &V) -> Option<T> + 'static,
         T: Clone + PartialEq + 'static,
     {
-        self.0.filter_map_with_anchor(anchor.anchor(), f).into()
+        self.0
+            .filter_map_with_anchor(pool_size, anchor.anchor(), f)
+            .into()
     }
 
     /// Dict 增加/更新 K V 会增量执行 function f , 用于更新 out,
@@ -2773,7 +2784,7 @@ mod state_test {
         let a_node2 = use_state(|| 2);
         let a_node0 = use_state(|| 0);
 
-        let b = a.watch().map_(|_, x: &StateVar<i32>| {
+        let b = a.watch().map_(1, |_, x: &StateVar<i32>| {
             x.set(x.get() + 1);
             *x
         });
@@ -2812,7 +2823,9 @@ mod state_test {
         let a_node2 = use_state(|| 2);
         let a_node0 = use_state(|| 0);
 
-        let b = a.watch().map_(|_, x: &StateAnchor<i32>| x.map(|xx| xx + 1));
+        let b = a
+            .watch()
+            .map_(1, |_, x: &StateAnchor<i32>| x.map(|xx| xx + 1));
 
         dict.insert("a".to_string(), a_node1.watch());
         dict.insert("b".to_string(), a_node2.watch());

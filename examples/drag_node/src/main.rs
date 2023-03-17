@@ -31,7 +31,7 @@ fn tracing_init() -> Result<(), Report> {
                     }
                 }
 
-                let skip_span = ["MainEventsCleared"];
+                let skip_span = ["xxx"];
                 for t in skip_span {
                     if metadata.name().contains(t) {
                         return false;
@@ -63,7 +63,7 @@ fn tracing_init() -> Result<(), Report> {
         ))
         .with_filter(tracing_subscriber::EnvFilter::new(
             // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
-            "shaping=warn,[DRAG]=debug",
+            "winit_event=info,shaping=warn,[DRAG]=debug",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {

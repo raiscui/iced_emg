@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-03-14 00:07:22
+ * @LastEditTime: 2023-03-17 16:05:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,7 +24,7 @@ use emg_common::{
     im::{ordmap::OrdMapPool, vector},
     IdStr, Vector,
 };
-use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem};
+use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem, CHILDREN_POOL_SIZE};
 use emg_shaping::ShapingUse;
 use emg_state::{Anchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar};
 use tracing::{debug, debug_span, error, info, info_span, trace, trace_span, warn};
@@ -183,7 +183,7 @@ where
                         child_node
                             .item
                             .paths_view_gel
-                            .filter(move |path, _gel| {
+                            .filter(1, move |path, _gel| {
                                 path.last()
                                     .and_then(|p| p.source_nix())
                                     .map(emg::NodeIndex::index)
@@ -219,7 +219,7 @@ where
         let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex, GElEither<Message>> =
             OrdMapPool::new(POOL_SIZE);
 
-        let paths_view_gel_sa = paths_sa.map_(move |current_path, _| {
+        let paths_view_gel_sa = paths_sa.map_(1,move |current_path, _| {
             let _span = info_span!("----[paths_view_gel_sa] recalculation,( in [Dict] paths_sa.map_ ===========>)",%current_path).entered();
 
             let current_path_clone2 = current_path.clone();
@@ -230,7 +230,7 @@ where
             //TODO 使用 cutoff 优化, children_view_gel_sa变化 时, 重新计算的this_path_children_sa不一定变化
             let this_path_children_sa: StateAnchor<Dict<EdgeIndex, GElEither<Message>>> =
                 children_view_gel_sa
-                    .filter_map(move |k_child_path, v_child_gel| {
+                    .filter_map(CHILDREN_POOL_SIZE,move |k_child_path, v_child_gel| {
                         let _span = info_span!("[this_path_children_sa] recalculation,( in [Dict] children_view_gel_sv_sa.filter_map => )",current_path = %current_path_clone2).entered();
 
                         let mut child_path_clone = k_child_path.clone();

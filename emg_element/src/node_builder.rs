@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-03-15 13:17:49
+ * @LastEditTime: 2023-03-17 15:56:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -166,7 +166,8 @@ where
                  children_layout_override: children_layout_override_sa,
                  ..
              }| {
-                let styles_sa = styles_end.map_(|_k, v| v.get_anchor()).then(|x| {
+                //TODO use cfg check when web not 0
+                let styles_sa = styles_end.map_(0, |_k, v| v.get_anchor()).then(|x| {
                     x.clone()
                         .into_iter()
                         .collect::<Anchor<Dict<TypeName, Rc<dyn EqShapingWithDebug<WidgetState>>>>>(

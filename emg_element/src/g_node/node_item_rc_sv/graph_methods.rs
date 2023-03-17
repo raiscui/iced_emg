@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-03-14 10:15:48
+ * @LastEditTime: 2023-03-17 16:06:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,7 +13,7 @@ use emg_common::{
     im::{self, vector},
     Pos, Vector,
 };
-use emg_layout::EPath;
+use emg_layout::{EPath, EDGES_POOL_SIZE};
 use emg_native::{EventWithFlagType, PaintCtx, Widget};
 use emg_state::{Dict, StateAnchor};
 use tracing::{debug, debug_span};
@@ -21,6 +21,8 @@ use tracing::{debug, debug_span};
 use crate::node_builder::{EvMatch, EventMatchs};
 
 use super::{EventMatchsSa, GraphType};
+// ─────────────────────────────────────────────────────────────────────────────
+
 pub trait GraphMethods<Message> {
     type SceneCtx;
     fn runtime_prepare(
@@ -121,11 +123,12 @@ where
         //         });
         let self_clone2 = self.clone();
         let event_matchs_pool = im::vector::RRBPool::<EvMatch<Message>>::new(8);
+
         let event_matchs: StateAnchor<Vector<Vector<EventMatchs<Message>>>> = self
             .borrow()
             .edges
             .watch()
-            .filter_map_with_anchor(&root_eix_sa, move |root_eix, eix, _| {
+            .filter_map_with_anchor(EDGES_POOL_SIZE, &root_eix_sa, move |root_eix, eix, _| {
                 let _span = debug_span!(
                     "event_matching",
                     at = "graph edges changed or root eix changed",
@@ -144,7 +147,7 @@ where
                     .map(|item| {
                         let f: StateAnchor<Vector<EventMatchs<Message>>> = item
                             .paths_view_gel
-                            .filter_map(move |ep, gel| {
+                            .filter_map(1, move |ep, gel| {
                                 let _span = debug_span!(
                                     "event_matching",
                                     func="runtime_prepare",

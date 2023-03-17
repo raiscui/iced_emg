@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-03-01 18:21:10
+ * @LastEditTime: 2023-03-17 11:49:45
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive cross-platform applications.
 
 use emg::EdgeIndex;
-use emg_common::{IdStr, Pos, Vector};
+use emg_common::{Pos, Vector};
 use emg_element::{
     graph_edit::{GraphEdit, GraphEditManyMethod},
     GTreeBuilderFn, GraphMethods,
@@ -18,7 +18,6 @@ use emg_state::{state_lit::StateVarLit, StateAnchor};
 use tracing::instrument;
 
 use crate::{element, window, Command, Executor, Settings};
-use std::{cell::RefCell, rc::Rc};
 
 // pub use emg_native::application::StyleSheet;
 
@@ -227,18 +226,16 @@ where
     A: Application,
 
     <A as Application>::GraphType: GraphMethods<
-        <A as Application>::Message,
-        SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
-    >,
+            <A as Application>::Message,
+            SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
+        > + GTreeBuilderFn<
+            <A as Application>::Message,
+            GraphType = <A as Application>::GraphType,
+            GraphEditor = <A as Application>::GraphEditor,
+        >,
 
     // ─────────────────────────────────────────────────────────────────────
     <A as Application>::Message: 'static,
-    // ─────────────────────────────────────────────────────────────────────
-    <A as Application>::GraphType: GTreeBuilderFn<
-        <A as Application>::Message,
-        GraphType = <A as Application>::GraphType,
-        GraphEditor = <A as Application>::GraphEditor,
-    >,
     // ─────────────────────────────────────────────────────────────────────
 {
     type Renderer = crate::Renderer;
@@ -288,15 +285,13 @@ where
     <A as Application>::Message: 'static,
 
     <A as Application>::GraphType: GraphMethods<
-        <A as Application>::Message,
-        SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
-    >,
-
-    <A as Application>::GraphType: GTreeBuilderFn<
-        <A as Application>::Message,
-        GraphType = <A as Application>::GraphType,
-        GraphEditor = <A as Application>::GraphEditor,
-    >,
+            <A as Application>::Message,
+            SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
+        > + GTreeBuilderFn<
+            <A as Application>::Message,
+            GraphType = <A as Application>::GraphType,
+            GraphEditor = <A as Application>::GraphEditor,
+        >,
 {
     type Flags = A::Flags;
 
