@@ -150,6 +150,7 @@ impl Sandbox for App {
                 let ay = use_state(|| align_y(pc(50)));
 
                 let x = Affine::<f32>::default();
+
                 let pos = Pos::<f32>::default();
                 let xx = x * pos;
 
@@ -181,13 +182,11 @@ impl Sandbox for App {
                                     let _span = debug_span!("DRAG", "{} -> ev:{:?}",Red.paint("on [b-check] drag"),ev)
                                             .entered();
                                         let drag_offset = ev.get_drag_offset();
-                                        let trans = drag_offset * Pos::default();
-                                        // let d_trans = ev.get_drag_trans();
-                                        // let trans = d_trans * Pos::default();
 
-                                        // ax.set_with(|x| align_x(px(trans.x)) + const_ax.clone() );
-                                        ax.set_with(|v| align_x(px(trans.x)) + v);
-                                        ay.set_with(|v| align_y(px(trans.y)) + v);
+                                        let trans = drag_offset * Pos::default();
+
+                                        ax.set_with(|v| v + trans);
+                                        ay.set_with(|v| v + trans);
 
                                         // width.set_with(|x| match x {
                                         //     CssWidth::Auto => todo!(),
@@ -199,8 +198,6 @@ impl Sandbox for App {
                                         // });
 
 
-
-                                    Message::Empty
                                 },
                             ]
 
@@ -260,11 +257,10 @@ impl Sandbox for App {
                                         let offset_trans = drag_offset * Pos::default();
 
 
-                                        ax.set_with(|v| align_x(px(offset_trans.x)) + v);
-                                        ay.set_with(|v| align_y(px(offset_trans.y)) + v);
+                                        ax.set_with(|v| v + offset_trans);
+                                        ay.set_with(|v| v + offset_trans);
 
 
-                                    // Message::Empty
                                 },
                             ]
 

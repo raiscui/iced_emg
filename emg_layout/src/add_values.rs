@@ -1,12 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-04-25 19:56:42
- * @LastEditTime: 2023-03-16 12:53:24
+ * @LastEditTime: 2023-03-16 23:24:37
  * @LastEditors: Rais
  * @Description:
  */
 #![allow(clippy::use_self)]
+use emg_common::impl_to_generic_size_g_a_l_i_i_s;
 use seed_style_macros::AddStyleMacro;
+use seed_styles::{CssHeight, CssWidth};
 
 use crate::{styles::LogicLength, GenericSize};
 use derive_more::Display;
@@ -30,18 +32,7 @@ pub enum OriginX {
     StringValue(String),
     Gs(GenericSize),
 }
-impl From<OriginX> for GenericSize {
-    fn from(v: OriginX) -> Self {
-        match v {
-            OriginX::Gs(gs) => gs,
-            OriginX::Auto => Self::Auto,
-            OriginX::Length(x) => x.into(),
-            OriginX::Initial => Self::Initial,
-            OriginX::Inherit => Self::Inherit,
-            OriginX::StringValue(x) => x.into(),
-        }
-    }
-}
+
 #[derive(Display, Clone, Debug, From, AddStyleMacro)]
 #[display(fmt = "{}")]
 pub enum OriginY {
@@ -55,18 +46,7 @@ pub enum OriginY {
     StringValue(String),
     Gs(GenericSize),
 }
-impl From<OriginY> for GenericSize {
-    fn from(v: OriginY) -> Self {
-        match v {
-            OriginY::Gs(gs) => gs,
-            OriginY::Auto => Self::Auto,
-            OriginY::Length(x) => x.into(),
-            OriginY::Initial => Self::Initial,
-            OriginY::Inherit => Self::Inherit,
-            OriginY::StringValue(x) => x.into(),
-        }
-    }
-}
+
 #[derive(Display, Clone, Debug, From, AddStyleMacro, PartialEq, Eq)]
 #[display(fmt = "{}")]
 pub enum AlignX {
@@ -81,27 +61,26 @@ pub enum AlignX {
     Gs(GenericSize),
 }
 
-// impl core::ops::Add for &AlignX {
-//     type Output = AlignX;
+#[derive(Display, Clone, Debug, From, AddStyleMacro)]
+#[display(fmt = "{}")]
+pub enum AlignY {
+    #[display(fmt = "auto")]
+    Auto,
+    Length(LogicLength),
+    #[display(fmt = "initial")]
+    Initial,
+    #[display(fmt = "inherit")]
+    Inherit,
+    StringValue(String),
+    Gs(GenericSize),
+}
 
-//     fn add(self, rhs: Self) -> Self::Output {
-//         AlignX::Gs(GenericSize::from(self.clone()) + GenericSize::from(rhs.clone()))
-//     }
-// }
-// impl core::ops::Add for AlignX {
-//     type Output = AlignX;
+// ─────────────────────────────────────────────────────────────────────────────
 
-//     fn add(self, rhs: Self) -> Self::Output {
-//         AlignX::Gs(GenericSize::from(self) + GenericSize::from(rhs))
-//     }
-// }
-// impl core::ops::Add<&Self> for AlignX {
-//     type Output = AlignX;
-
-//     fn add(self, rhs: &Self) -> Self::Output {
-//         AlignX::Gs(GenericSize::from(self) + GenericSize::from(rhs.clone()))
-//     }
-// }
+impl_to_generic_size_g_a_l_i_i_s!(AlignX);
+impl_to_generic_size_g_a_l_i_i_s!(AlignY);
+impl_to_generic_size_g_a_l_i_i_s!(OriginX);
+impl_to_generic_size_g_a_l_i_i_s!(OriginY);
 
 #[cfg(test)]
 mod add_test_mod {
@@ -156,42 +135,3 @@ mod add_test_mod {
         println!("{c:?}");
     }
 }
-impl From<AlignX> for GenericSize {
-    fn from(v: AlignX) -> Self {
-        match v {
-            AlignX::Gs(gs) => gs,
-            AlignX::Auto => Self::Auto,
-            AlignX::Length(x) => x.into(),
-            AlignX::Initial => Self::Initial,
-            AlignX::Inherit => Self::Inherit,
-            AlignX::StringValue(x) => x.into(),
-        }
-    }
-}
-#[derive(Display, Clone, Debug, From, AddStyleMacro)]
-#[display(fmt = "{}")]
-pub enum AlignY {
-    #[display(fmt = "auto")]
-    Auto,
-    Length(LogicLength),
-    #[display(fmt = "initial")]
-    Initial,
-    #[display(fmt = "inherit")]
-    Inherit,
-    StringValue(String),
-    Gs(GenericSize),
-}
-impl From<AlignY> for GenericSize {
-    fn from(v: AlignY) -> Self {
-        match v {
-            AlignY::Gs(gs) => gs,
-            AlignY::Auto => Self::Auto,
-            AlignY::Length(x) => x.into(),
-            AlignY::Initial => Self::Initial,
-            AlignY::Inherit => Self::Inherit,
-            AlignY::StringValue(x) => x.into(),
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────

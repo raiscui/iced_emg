@@ -1,42 +1,39 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-16 11:18:11
- * @LastEditTime: 2023-03-16 11:26:03
+ * @LastEditTime: 2023-03-16 23:48:12
  * @LastEditors: Rais
  * @Description:
  */
 
-use emg_common::GenericSize;
-use seed_styles::{CssHeight, CssWidth};
+use emg_common::{px, GenericSize, Pos};
 
 use crate::add_values::{AlignX, AlignY, OriginX, OriginY};
-macro_rules! impl_css_add {
-    ($x:ty) => {
-        impl core::ops::Add for &$x {
-            type Output = $x;
+impl core::ops::Add<Pos> for &AlignX {
+    type Output = AlignX;
 
-            fn add(self, rhs: Self) -> Self::Output {
-                <$x>::Gs(GenericSize::from(self.clone()) + GenericSize::from(rhs.clone()))
-            }
-        }
-        impl core::ops::Add for $x {
-            type Output = $x;
-
-            fn add(self, rhs: Self) -> Self::Output {
-                <$x>::Gs(GenericSize::from(self) + GenericSize::from(rhs))
-            }
-        }
-        impl core::ops::Add<&Self> for $x {
-            type Output = $x;
-
-            fn add(self, rhs: &Self) -> Self::Output {
-                <$x>::Gs(GenericSize::from(self) + GenericSize::from(rhs.clone()))
-            }
-        }
-    };
+    fn add(self, rhs: Pos) -> Self::Output {
+        AlignX::Gs(GenericSize::from(self.clone()) + px(rhs.x))
+    }
 }
+impl core::ops::Add<Pos> for &AlignY {
+    type Output = AlignY;
 
-impl_css_add!(AlignX);
-impl_css_add!(AlignY);
-impl_css_add!(OriginX);
-impl_css_add!(OriginY);
+    fn add(self, rhs: Pos) -> Self::Output {
+        AlignY::Gs(GenericSize::from(self.clone()) + px(rhs.y))
+    }
+}
+impl core::ops::Add<Pos> for &OriginX {
+    type Output = OriginX;
+
+    fn add(self, rhs: Pos) -> Self::Output {
+        OriginX::Gs(GenericSize::from(self.clone()) + px(rhs.x))
+    }
+}
+impl core::ops::Add<Pos> for &OriginY {
+    type Output = OriginY;
+
+    fn add(self, rhs: Pos) -> Self::Output {
+        OriginY::Gs(GenericSize::from(self.clone()) + px(rhs.y))
+    }
+}

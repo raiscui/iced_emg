@@ -3,11 +3,11 @@
 #![warn(clippy::nursery)]
 #![warn(clippy::non_ascii_literal)]
 #![allow(clippy::used_underscore_binding)]
-#![feature(cell_update)]
 //for display attr
 
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(specialization)]
+#![feature(more_qualified_paths)]
 // #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
@@ -25,15 +25,8 @@
 use cassowary::{Constraint, Solver, Variable, WeightedRelation};
 use ccsa::{CCSSEqExpression, CassowaryGeneralMap, CassowaryMap, ScopeViewVariable, CCSS};
 use emg_hasher::CustomHasher;
-use std::fmt::{Display, Write};
-use std::{
-    cell::RefCell,
-    clone::Clone,
-    cmp::{Eq, Ord},
-    hash::{BuildHasherDefault, Hash},
-    rc::Rc,
-    time::Duration,
-};
+use std::fmt::Write;
+use std::{cell::RefCell, clone::Clone, cmp::Eq, hash::BuildHasherDefault, rc::Rc, time::Duration};
 
 use calc::layout_calculating;
 use derive_more::Display;
@@ -50,7 +43,7 @@ use emg_common::{
         vector, HashMap, HashSet, OrdSet,
     },
     na::{Affine3, Matrix4, Rotation3, Translation3, Vector2, Vector3},
-    num_traits::{cast, AsPrimitive},
+    num_traits::cast,
     GenericSize, IdStr, LayoutOverride, NotNan, Precision, RectLTRB, TypeName, Vector, VectorDisp,
 };
 use emg_shaping::{EqShapingWithDebug, Shaping};
@@ -814,7 +807,9 @@ impl EmgEdgeItem {
     #[cfg(test)]
     #[topo::nested]
     #[instrument(skip(edges))]
-    pub fn default_with_wh_in_topo<T: AsPrimitive<Precision> + std::fmt::Debug>(
+    pub fn default_with_wh_in_topo<
+        T: emg_common::num_traits::AsPrimitive<Precision> + std::fmt::Debug,
+    >(
         source_node_nix_sa: StateAnchor<Option<NodeIndex>>,
         target_node_nix_sa: StateAnchor<Option<NodeIndex>>,
         edges: StateAnchor<GraphEdgesDict>,

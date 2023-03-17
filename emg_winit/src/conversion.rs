@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2023-03-16 14:48:44
+ * @LastEditTime: 2023-03-17 10:18:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -181,6 +181,8 @@ pub fn window_event(
                 }
                 (mouse::Button::Left, winit::event::ElementState::Released) => {
                     //TODO move to event_state function
+                    let (prior_mouse_down, mouse_down) = event_state.mouse_down();
+
                     event_state.set_mouse_down(false);
                     event_state.transform = Default::default();
 

@@ -184,6 +184,61 @@ impl GenericSize {
     }
 }
 
+#[macro_export]
+macro_rules! impl_to_generic_size_g_a_l_i_i_s {
+    ($name:ty) => {
+        impl From<$name> for GenericSize {
+            fn from(w: $name) -> Self {
+                match w {
+                    <$name>::Gs(gs) => gs,
+                    <$name>::Auto => Self::Auto,
+                    <$name>::Length(x) => x.into(),
+                    <$name>::Initial => Self::Initial,
+                    <$name>::Inherit => Self::Inherit,
+                    <$name>::StringValue(x) => x.into(),
+                }
+            }
+        }
+
+        impl core::ops::Add for &$name {
+            type Output = $name;
+
+            fn add(self, rhs: Self) -> Self::Output {
+                <$name>::Gs(GenericSize::from(self.clone()) + GenericSize::from(rhs.clone()))
+            }
+        }
+        impl core::ops::Add for $name {
+            type Output = $name;
+
+            fn add(self, rhs: Self) -> Self::Output {
+                <$name>::Gs(GenericSize::from(self) + GenericSize::from(rhs))
+            }
+        }
+        impl core::ops::Add<&Self> for $name {
+            type Output = $name;
+
+            fn add(self, rhs: &Self) -> Self::Output {
+                <$name>::Gs(GenericSize::from(self) + GenericSize::from(rhs.clone()))
+            }
+        }
+
+        impl core::ops::Add<$crate::Precision> for &$name {
+            type Output = $name;
+
+            fn add(self, rhs: $crate::Precision) -> Self::Output {
+                <$name>::Gs(GenericSize::from(self.clone()) + $crate::px(rhs))
+            }
+        }
+        impl core::ops::Add<$crate::Precision> for $name {
+            type Output = $name;
+
+            fn add(self, rhs: $crate::Precision) -> Self::Output {
+                <$name>::Gs(GenericSize::from(self) + $crate::px(rhs))
+            }
+        }
+    };
+}
+
 pub fn parent_ty<T>() -> GenericSize
 where
     T: TypeCheck,
@@ -230,7 +285,8 @@ where
 {
     type Output = GenericSize;
     default fn add(self, rhs: T) -> GenericSize {
-        Self::Calculation(Box::new(CalcOp::add(self, rhs.into())))
+        self + rhs.into()
+        // Self::Calculation(Box::new(CalcOp::add(self, rhs.into())))
     }
 }
 impl ::core::ops::Add for GenericSize {
