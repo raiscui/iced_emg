@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-17 10:51:35
+ * @LastEditTime: 2023-03-17 10:53:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -458,6 +458,7 @@ async fn run_instance<A, E, C>(
                     if !event_matchs.is_empty() {
                         for (_ei, ev, en_list) in event_matchs.iter().flatten().flatten() {
                             for en in en_list {
+                                //NOTE event callback called
                                 if let Some(msg) = en.call(ev) {
                                     messages.push(msg);
                                 }
