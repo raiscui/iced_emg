@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-17 10:46:29
+ * @LastEditTime: 2023-03-17 10:51:35
  * @LastEditors: Rais
  * @Description:
  */
 //! Create interactive, native cross-platform applications.
 mod state;
 
-use std::hash::BuildHasherDefault;
+use std::{hash::BuildHasherDefault, rc::Rc};
 
 use emg_common::{
     im::{hashmap::HashMapPool, vector::RRBPool, HashMap},
@@ -518,7 +518,9 @@ async fn run_instance<A, E, C>(
                 }
 
                 let new_ctx = ctx_sa.get();
-                if new_ctx == ctx {
+                //new_ctx == ctx
+                if Rc::ptr_eq(&new_ctx, &ctx) {
+                    //NOTE 不渲染,提前跳过
                     continue;
                 } else {
                     ctx = new_ctx;
