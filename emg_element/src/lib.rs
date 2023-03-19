@@ -28,7 +28,7 @@ pub use widget::Widget;
 pub mod graph_edit;
 // ────────────────────────────────────────────────────────────────────────────────
 #[cfg(all(feature = "gpu"))]
-use emg_native as platform;
+pub use emg_native as platform;
 
 #[cfg(all(feature = "gpu"))]
 use emg_vello::SceneFrag;

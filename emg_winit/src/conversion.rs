@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2023-03-17 11:45:43
+ * @LastEditTime: 2023-03-17 18:44:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -42,11 +42,15 @@ pub mod ev {
 
     impl EventState {
         pub fn set_mouse_down(&mut self, mouse_down: bool) {
+            if mouse_down {
+                println!("----按下");
+            }
+
             self.prior_mouse_down = self.mouse_down;
             self.mouse_down = mouse_down;
         }
 
-        pub fn mouse_down(&self) -> (bool, bool) {
+        pub fn mouse_down_info(&self) -> (bool, bool) {
             (self.prior_mouse_down, self.mouse_down)
         }
     }
@@ -91,9 +95,11 @@ pub fn window_event(
         WindowEvent::CursorMoved { position, .. } => {
             let position = position.to_logical::<f32>(scale_factor);
             let position = Pos::new(position.x, position.y);
-            let (prior_mouse_down, mouse_down) = event_state.mouse_down();
+            let (prior_mouse_down, mouse_down) = event_state.mouse_down_info();
 
             let mut evs = SmallVec::new();
+
+            let mut moved = false;
 
             //TODO move to event_state function
             if mouse_down {
@@ -103,16 +109,19 @@ pub fn window_event(
                 if let Some(prior) = event_state.prior_position {
                     if prior == position {
                         //按压 静止
-                        if !prior_mouse_down {
-                            let _span = debug_span!("DRAG", "-----start").entered();
+                        // if !prior_mouse_down {
+                        //     let _span = debug_span!("DRAG", "-----start").entered();
 
-                            evs.push((
-                                EventIdentify::new(EventFlag::DND, drag::DRAG_START),
-                                Event::DragDrop(drag::Event::DragStart { position }),
-                            ));
-                            event_state.set_mouse_down(true); // 持续更改 ,prior_mouse_down 变更
-                        }
+                        //     evs.push((
+                        //         EventIdentify::new(EventFlag::DND, drag::DRAG_START),
+                        //         Event::DragDrop(drag::Event::DragStart { position }),
+                        //     ));
+                        //     event_state.set_mouse_down(true); // 持续更改 ,prior_mouse_down 变更
+                        //     println!("----按下 1");
+                        // }
                     } else {
+                        moved = true;
+
                         let offset = na::Translation2::<f32>::from(position - prior);
                         event_state.transform = offset * event_state.transform;
 
@@ -121,35 +130,39 @@ pub fn window_event(
 
                             evs.push((
                                 EventIdentify::new(EventFlag::DND, drag::DRAG_START),
-                                Event::DragDrop(drag::Event::DragStart { position }),
+                                Event::DragDrop(drag::Event::DragStart { prior, position }),
                             ));
-                            //TODO drag start also emit draging
-                            //TODO drag end when  mouse release
+
                             event_state.set_mouse_down(true); // 持续更改 ,prior_mouse_down 变更
-                        } else {
-                            evs.push((
-                                EventIdentify::new(EventFlag::DND, drag::DRAG),
-                                Event::DragDrop(drag::Event::Drag(drag::Drag {
-                                    position,
-                                    trans: event_state.transform,
-                                    offset: na::convert(offset),
-                                })),
-                            ));
+                            println!("----按下 2");
                         }
+
+                        evs.push((
+                            EventIdentify::new(EventFlag::DND, drag::DRAG),
+                            Event::DragDrop(drag::Event::Drag(drag::Drag {
+                                prior,
+                                position,
+                                trans: event_state.transform,
+                                offset: na::convert(offset),
+                            })),
+                        ));
                     }
                 }
+            } else {
+                moved = event_state.prior_position.is_none()
+                    || event_state.prior_position.contains(&position);
             }
             event_state.prior_position = Some(position);
-            //TODO 判断 目标是否 can drag 确定是 CURSOR_MOVED 还是 DRAG
-            evs.push((
-                EventIdentify::new(EventFlag::MOUSE, mouse::CURSOR_MOVED),
-                Event::Mouse(mouse::Event::CursorMoved { position }),
-            ));
-            Some(evs)
-            // Some(smallvec![(
-            //     EventIdentify::new(EventFlag::MOUSE, mouse::CURSOR_MOVED),
-            //     Event::Mouse(mouse::Event::CursorMoved { position }),
-            // )])
+
+            if moved {
+                evs.push((
+                    EventIdentify::new(EventFlag::MOUSE, mouse::CURSOR_MOVED),
+                    Event::Mouse(mouse::Event::CursorMoved { position }),
+                ));
+                Some(evs)
+            } else {
+                None
+            }
         }
         WindowEvent::CursorEntered { .. } => Some(smallvec![(
             EventIdentify::new(EventFlag::MOUSE, mouse::CURSOR_ENTERED),
@@ -171,7 +184,10 @@ pub fn window_event(
             Some(match (button, state) {
                 (mouse::Button::Left, winit::event::ElementState::Pressed) => {
                     //TODO move to event_state function
+
                     event_state.set_mouse_down(true);
+                    println!("----按下 3");
+
                     event_state.transform = Default::default();
 
                     smallvec![(
@@ -181,13 +197,30 @@ pub fn window_event(
                 }
                 (mouse::Button::Left, winit::event::ElementState::Released) => {
                     //TODO move to event_state function
+                    let (pm, _m) = event_state.mouse_down_info();
                     event_state.set_mouse_down(false);
                     event_state.transform = Default::default();
+                    if !pm {
+                        //按下就释放
+                        println!("按下就释放");
+                        smallvec![(
+                            EventIdentify::new(EventFlag::MOUSE, mouse::LEFT_RELEASED),
+                            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)),
+                        )]
+                    } else {
+                        println!("按下+移动过..");
 
-                    smallvec![(
-                        EventIdentify::new(EventFlag::MOUSE, mouse::LEFT_RELEASED),
-                        Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)),
-                    )]
+                        smallvec![
+                            (
+                                EventIdentify::new(EventFlag::DND, drag::DRAG_END),
+                                Event::DragDrop(drag::Event::DragEnd),
+                            ),
+                            (
+                                EventIdentify::new(EventFlag::MOUSE, mouse::LEFT_RELEASED),
+                                Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)),
+                            )
+                        ]
+                    }
                 }
                 (mouse::Button::Right, winit::event::ElementState::Pressed) => smallvec![(
                     EventIdentify::new(EventFlag::MOUSE, mouse::RIGHT_PRESSED),

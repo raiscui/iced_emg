@@ -76,6 +76,21 @@ pub static EVENT_DEBOUNCE: MultiLevelIdentify = {
     mouse_e | drag_e
 };
 
+//collision down ,if collision,choice right
+//如果满足 if_cb_contains , 并且event 含有 left,right 两者,即冲突, 选择 left,remove right
+#[dynamic(lazy)]
+pub static COLLISION_DOWN: Vec<(MultiLevelIdentify, MultiLevelIdentify, MultiLevelIdentify)> = {
+    let if_cb_contains: EventIdentify = drag::EventFlag::DRAG.into();
+    let drag_e: EventIdentify = drag::EventFlag::DRAG_END.into();
+    let mouse_e: EventIdentify = mouse::RELEASED.into();
+    // let drag_e: EventIdentify = drag::EventFlag::empty().into();
+
+    vec![(
+        MultiLevelIdentify::new(if_cb_contains),
+        MultiLevelIdentify::new(drag_e),  //true choose
+        MultiLevelIdentify::new(mouse_e), //false choose
+    )]
+};
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]

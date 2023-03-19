@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-03-17 16:06:19
+ * @LastEditTime: 2023-03-17 19:02:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -124,10 +124,9 @@ where
         let self_clone2 = self.clone();
         let event_matchs_pool = im::vector::RRBPool::<EvMatch<Message>>::new(8);
 
-        let event_matchs: StateAnchor<Vector<Vector<EventMatchs<Message>>>> = self
-            .borrow()
-            .edges
-            .watch()
+        let edges_sa = self.borrow().edges.watch();
+
+        let event_matchs: StateAnchor<Vector<Vector<EventMatchs<Message>>>> = edges_sa
             .filter_map_with_anchor(EDGES_POOL_SIZE, &root_eix_sa, move |root_eix, eix, _| {
                 let _span = debug_span!(
                     "event_matching",

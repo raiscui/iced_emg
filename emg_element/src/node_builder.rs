@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-03-17 15:56:14
+ * @LastEditTime: 2023-03-19 23:05:05
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,7 +17,11 @@ mod event_builder;
 use emg_common::im::vector::RRBPool;
 use emg_common::{IdStr, Pos, TypeName, Vector};
 use emg_layout::EdgeCtx;
-use emg_native::{event::EventIdentify, renderer::Rect, Event, WidgetState, EVENT_HOVER_CHECK};
+
+use crate::platform::{
+    drag, event::EventIdentify, renderer::Rect, Event, WidgetState, COLLISION_DOWN,
+    EVENT_HOVER_CHECK,
+};
 use emg_shaping::EqShapingWithDebug;
 use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, debug_span, info, info_span, instrument, Span};
@@ -305,62 +309,49 @@ where
         let id2 = self.id.clone();
         let _span = debug_span!("event_matching", at = "event_matching pre run", ?id).entered();
 
-        let widget_is_hover = (cursor_position, &self.widget_state).map(move |c_pos, state| {
-            let size = state.size();
-            let world = &state.world;
-            let rect = Rect::from_origin_size((world.x as f64, world.y as f64), size);
-
-            c_pos.is_some_and(|pos| {
-                let _span = debug_span!("LayoutOverride",id=?id,func="event_matching").entered();
-
-                debug!(target:"widget_is_hover",?world,?size,?rect,?pos);
-
-                let pos_p = pos.cast::<f64>();
-
-                if rect.contains(emg_native::renderer::Point::new(pos_p.x, pos_p.y)) {
-                    debug!("⭕️ rect contains pos");
-
-                    if let Some(layout_override) = &*state.children_layout_override {
-                        debug!("⭕️ rect has layout_override");
-                        // debug!("layout_override --> {:#?}", layout_override);
-
-                        if !layout_override.contains(&pos_p) {
-                            debug!("❌ layout_override not contains pos ,not override, 🔔 ");
-                            true
-                        } else {
-                            debug!("⭕️ layout_override contains pos,override, 🔕 ");
-                            false
-                        }
-                    } else {
-                        debug!("❌ rect no layout_override, 🔔");
-                        true
-                    }
-                } else {
-                    debug!("❌ rect not contains pos, 🔕 ");
-
-                    false
-                }
-            })
-        });
+        // let widget_is_hover = (cursor_position, &self.widget_state)
+        //     .map(move |c_pos, state| hover_check(state, c_pos));
 
         let pool = pool.clone();
 
         let matchs_step1 = (events_sa).map(move |events| {
             let mut ev_matchs = Vector::<EvMatch<Message>>::with_pool(&pool);
 
+            let _span = debug_span!("event_matching_filter").entered();
+            debug!("events: {:#?}", events);
+
+            let need_removes = COLLISION_DOWN.iter().filter_map(|(if_cb, l, r)| {
+                debug!("COLLISION_DOWN: {:?} {:?}", l, r);
+
+                if events.iter().any(|(ei, _)| l.involve(ei))
+                    && events.iter().any(|(ei, _)| r.involve(ei))
+                    && event_callbacks
+                        .iter()
+                        .any(|(cb_ei, _)| if_cb.involve(cb_ei))
+                {
+                    Some(r) //remove right
+                } else {
+                    None
+                }
+            });
+
+            let nr = need_removes.clone().collect::<Vec<_>>();
+            if !nr.is_empty() {
+                debug!("need_removes: {:?}", nr);
+            }
+
             //TODO don't do this many times  ,events change to Dict
             //已经根据event 事件 筛选出来的 callbacks
             events
                 .iter()
+                .filter(|(ei, _)| !need_removes.clone().any(|n_remove| n_remove.involve(ei)))
                 .flat_map(|(ef, event)| {
-                    let ev_id = EventIdentify::from(*ef);
-
                     event_callbacks
                         .iter()
                         .filter_map(move |(cb_ev_id_wide, cb)| {
                             //ev_id 具体, cb_ev_id 宽泛
-                            if ev_id.contains(cb_ev_id_wide) {
-                                Some((ev_id, event.clone(), cb.clone()))
+                            if ef.contains(cb_ev_id_wide) {
+                                Some((*ef, event.clone(), cb.clone()))
                                 // debug!(target :"winit_event",id=?id3, ?intersects,?is_hover);
                             } else {
                                 None
@@ -379,7 +370,7 @@ where
             ev_matchs
         });
 
-        //left is need hover check
+        //NOTE 检查 EVENT_HOVER_CHECK 这些需要覆盖测试的 event 是否 在 cb event 里
         let matchs_step2_split = matchs_step1.map(|x| {
             x.iter()
                 .cloned()
@@ -388,21 +379,44 @@ where
                 })
         });
         // let (a, b) = matchs_step2_split.split();
-        let no_need_hover_check_matchs = matchs_step2_split.refmap(|x| &x.1);
+        let widget_state = self.widget_state.clone();
+        let cursor_position = cursor_position.clone();
 
-        matchs_step2_split.then(move |(need_hover_ck, _)| {
+        matchs_step2_split.then(move |(need_hover_ck, no_need_hover_check)| {
             if need_hover_ck.is_empty() {
-                matchs_step1.clone().into_anchor()
+                matchs_step1.get_anchor()
             } else {
-                let matchs_step1 = matchs_step1.clone();
-                let no_need_hover_check_matchs = no_need_hover_check_matchs.clone();
-                widget_is_hover
-                    .then(move |&is_hover| {
-                        if is_hover {
-                            matchs_step1.clone().into_anchor()
-                        } else {
-                            no_need_hover_check_matchs.clone().into_anchor()
-                        }
+                // let cursor_position = cursor_position.clone();
+                // let widget_state = widget_state.clone();
+                let need_hover_ck = need_hover_ck.clone();
+                let no_need_hover_check = no_need_hover_check.clone();
+                //TODO 细分 widget_state 中 的值,只监听 这里需要用到的.
+                (&cursor_position, &widget_state)
+                    .map(move |c_pos, widget_state| {
+                        let mut is_hover = None;
+                        let hover_cbs = need_hover_ck.iter().filter(|(_ei, ev, _cb)| match ev {
+                            Event::DragDrop(drag::Event::DragStart { prior, position: _ }) => {
+                                hover_check(widget_state, &Some(*prior))
+                            }
+                            Event::DragDrop(drag::Event::Drag(drag::Drag {
+                                prior,
+                                position: _,
+                                trans: _,
+                                offset: _,
+                            })) => hover_check(widget_state, &Some(*prior)),
+                            // ─────────────────────
+                            _ => {
+                                if is_hover.is_none() {
+                                    is_hover = Some(hover_check(widget_state, c_pos));
+                                }
+                                is_hover.unwrap()
+                            }
+                        });
+
+                        hover_cbs
+                            .chain(no_need_hover_check.iter())
+                            .cloned()
+                            .collect::<Vector<_>>()
                     })
                     .into_anchor()
             }
@@ -412,6 +426,49 @@ where
     pub fn event_callbacks(&self) -> &Dict<EventIdentify, Vector<EventNode<Message>>> {
         self.event_listener.event_callbacks()
     }
+}
+
+fn hover_check(
+    state: &WidgetState,
+    c_pos: &Option<Pos>,
+    // id: &IdStr,
+) -> bool {
+    let size = state.size();
+    let world = &state.world;
+    let rect = Rect::from_origin_size((world.x as f64, world.y as f64), size);
+
+    c_pos.is_some_and(|pos| {
+        // let _span = debug_span!("LayoutOverride",id=?id,func="event_matching").entered();
+        let _span = debug_span!("LayoutOverride", func = "event_matching").entered();
+
+        debug!(target:"widget_is_hover",?world,?size,?rect,?pos);
+
+        let pos_p = pos.cast::<f64>();
+
+        if rect.contains(emg_native::renderer::Point::new(pos_p.x, pos_p.y)) {
+            debug!("⭕️ rect contains pos");
+
+            if let Some(layout_override) = &*state.children_layout_override {
+                debug!("⭕️ rect has layout_override");
+                // debug!("layout_override --> {:#?}", layout_override);
+
+                if !layout_override.contains(&pos_p) {
+                    debug!("❌ layout_override not contains pos ,not override, 🔔 ");
+                    true
+                } else {
+                    debug!("⭕️ layout_override contains pos,override, 🔕 ");
+                    false
+                }
+            } else {
+                debug!("❌ rect no layout_override, 🔔");
+                true
+            }
+        } else {
+            debug!("❌ rect not contains pos, 🔕 ");
+
+            false
+        }
+    })
 }
 
 #[cfg(all(feature = "gpu"))]

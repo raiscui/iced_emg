@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-09 22:57:10
- * @LastEditTime: 2023-03-16 12:00:36
+ * @LastEditTime: 2023-03-17 19:29:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,6 +22,7 @@ bitflags! {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Drag {
+    pub prior: Pos,
     pub position: Pos,
     pub trans: Affine,
     pub offset: Affine,
@@ -39,11 +40,11 @@ impl Drag {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Event {
-    DragStart { position: Pos },
+    DragStart { prior: Pos, position: Pos },
 
     Drag(Drag),
 
-    DragEnd { position: Pos, trans: Affine },
+    DragEnd,
 }
 
 impl Event {
