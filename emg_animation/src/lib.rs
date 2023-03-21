@@ -20,14 +20,13 @@ use std::collections::VecDeque;
 // ────────────────────────────────────────────────────────────────────────────────
 // use emg_debuggable::dbg4;
 pub use emg_common;
-use emg_common::{animation::Tick, im::vector, SmallVec};
+use emg_common::{animation::Tick, im::vector, NotNan, SmallVec};
 use emg_common::{
     num_traits::{cast, AsPrimitive, NumCast},
     Precision,
 };
 use models::update_animation;
 use models::{map_to_motion, Animation, Interpolation, Property, Step};
-use ordered_float::NotNan;
 use props::warn_for_double_listed_properties;
 use seed_styles::Unit;
 use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};

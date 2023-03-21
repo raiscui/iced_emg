@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-03-02 23:09:58
+ * @LastEditTime: 2023-03-21 22:50:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -862,26 +862,13 @@ where
     pub fn or_insert_node_with_plugs(
         &mut self,
         key: IdStr,
-        item: N,
+        item: impl FnOnce(IdStr) -> N,
         incoming_eix_set: StateVar<EdgePlugsCollect>,
         outgoing_eix_set: StateVar<EdgePlugsCollect>,
-    ) -> NodeIndex {
-        let node = Node::new(item, incoming_eix_set, outgoing_eix_set);
-        let node_idx = node_index(key.clone());
-        // 直接 ─────────────────────────────────────────────────────────────
-        // self.nodes.insert(key, node);
-        // ─────────────────────────────────────────────────────────────
-        //TODO remove clone for if no need warn!
-        let ent = self.nodes.entry(key.clone());
-
-        if let Entry::Vacant(entry) = ent {
-            entry.insert(node);
-        } else {
-            warn!("id:{:?} already exists", &key);
-        }
-        // ─────────────────────────────────────────────────────────────
-
-        node_idx
+    ) {
+        self.nodes
+            .entry(key.clone())
+            .or_insert_with(|| Node::new(item(key), incoming_eix_set, outgoing_eix_set));
     }
 
     pub fn nodes_contains_key(&self, key: &IdStr) -> bool {
@@ -927,13 +914,13 @@ where
 
         self.nodes_connect(&edge_idx).unwrap();
 
-        let edge = Edge::new_in_topo(Some(s_nix.clone()), Some(t_nix.clone()), item);
+        let edge = || Edge::new_in_topo(Some(s_nix.clone()), Some(t_nix.clone()), item);
 
-        self.insert_edge_only(edge_idx.clone(), edge);
-
+        self.or_insert_edge_only(edge_idx.clone(), edge);
         Some(edge_idx)
     }
 
+    ///will update [`Node`]`outgoing_eix_set` ([`StateVar`])
     pub fn nodes_connect(&self, e_ix: &EdgeIndex) -> Result<(), Error> {
         if let Some(s_nix) = e_ix.source_nix() {
             self.nodes
@@ -960,19 +947,34 @@ where
         Ok(())
     }
 
-    pub fn insert_edge_only(&mut self, edge_idx: EdgeIndex, edge: Edge<E>) {
-        self.edges.store_update(&self.store(), |es| {
-            trace!(
-                "has edge?-- {:?} --{}",
-                &edge_idx,
-                es.contains_key(&edge_idx)
-            );
-            // if es.contains_key(&edge_idx) {
-            //     let e = es.get(&edge_idx).unwrap();
-            //     assert_eq!(e, &edge);
-            // }
-            es.insert(edge_idx, edge);
-        })
+    pub fn or_insert_edge_only(&self, edge_idx: EdgeIndex, edge: impl FnOnce() -> Edge<E>) -> E {
+        let es = self.edges.get_rc();
+
+        if es.contains_key(&edge_idx) {
+            es.get(&edge_idx).unwrap().item.clone()
+        } else {
+            let new_e = edge();
+            let ei = new_e.item.clone();
+
+            self.edges.set(es.update(edge_idx, new_e));
+            ei
+        }
+        // self.edges.store_update(&self.store(), |es| {
+        //     trace!(
+        //         "has edge?-- {:?} --{}",
+        //         &edge_idx,
+        //         es.contains_key(&edge_idx)
+        //     );
+        //     // if es.contains_key(&edge_idx) {
+        //     //     let e = es.get(&edge_idx).unwrap();
+        //     //     assert_eq!(e, &edge);
+        //     // }
+        //     es.entry(edge_idx)
+        //         .and_modify(|_| drop_fn())
+        //         .or_insert_with(edge)
+        //         .item
+        //         .clone()
+        // })
     }
 
     #[must_use]

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-03-19 23:05:05
+ * @LastEditTime: 2023-03-21 12:33:38
  * @LastEditors: Rais
  * @Description:
  */
@@ -378,9 +378,10 @@ where
                     EVENT_HOVER_CHECK.intersects(cb_ev_id_wide)
                 })
         });
-        // let (a, b) = matchs_step2_split.split();
         let widget_state = self.widget_state.clone();
         let cursor_position = cursor_position.clone();
+
+        let event_state = self.event_listener.event_state.clone();
 
         matchs_step2_split.then(move |(need_hover_ck, no_need_hover_check)| {
             if need_hover_ck.is_empty() {
@@ -390,11 +391,16 @@ where
                 // let widget_state = widget_state.clone();
                 let need_hover_ck = need_hover_ck.clone();
                 let no_need_hover_check = no_need_hover_check.clone();
+                let event_state = event_state.clone();
+                //NOTE event allway change
+                let drag = event_state.get().drag; //event_prepare
+
                 //TODO 细分 widget_state 中 的值,只监听 这里需要用到的.
                 (&cursor_position, &widget_state)
                     .map(move |c_pos, widget_state| {
                         let mut is_hover = None;
                         let hover_cbs = need_hover_ck.iter().filter(|(_ei, ev, _cb)| match ev {
+                            //NOTE  cb will run if return true.
                             Event::DragDrop(drag::Event::DragStart { prior, position: _ }) => {
                                 hover_check(widget_state, &Some(*prior))
                             }
@@ -403,7 +409,8 @@ where
                                 position: _,
                                 trans: _,
                                 offset: _,
-                            })) => hover_check(widget_state, &Some(*prior)),
+                            })) => drag,
+                            Event::DragDrop(drag::Event::DragEnd) => drag,
                             // ─────────────────────
                             _ => {
                                 if is_hover.is_none() {

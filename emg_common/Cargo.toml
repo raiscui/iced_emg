@@ -27,7 +27,7 @@ nalgebra = "0.32.2"
 tracing = "0.1"
 dyn_partial_eq = { path = "../../dyn_partial_eq" }
 
-ordered-float = "3.4.0"
+ordered-float = "3.6.0"
 derive_more = "0.99"
 im-rc = { version = "15.1.0", features = ["pool"] }
 # imbl = { version = "2.0.0" }

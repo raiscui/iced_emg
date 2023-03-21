@@ -6,6 +6,7 @@
 #![feature(negative_impls)] //for event callback;
 #![feature(is_some_and)]
 #![feature(iter_collect_into)]
+#![feature(cell_update)]
 //
 // ────────────────────────────────────────────────────────────────────────────────
 

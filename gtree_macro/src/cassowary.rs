@@ -5,7 +5,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-02-22 16:14:35
+ * @LastEditTime: 2023-03-20 11:32:17
  * @LastEditors: Rais
  * @Description:
  */
@@ -305,24 +305,24 @@ impl ToTokens for NameCharsOrNumber {
 /// `+ - *`
 #[derive(Debug, Clone, Display)]
 enum PredOp {
-    #[display("{0}")]
-    Add(#[display("+")] Token![+]),
-    #[display("{0}")]
-    Sub(#[display("-")] Token![-]),
-    #[display("{0}")]
-    Mul(#[display("*")] Token![*]),
+    #[display("+")]
+    Add(Span),
+    #[display("-")]
+    Sub(Span),
+    #[display("*")]
+    Mul(Span),
 }
 impl ToTokens for PredOp {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
             Self::Add(x) => {
-                quote_spanned!(x.span()=> ccsa_macro_prelude::ccsa::PredOp::Add).to_tokens(tokens);
+                quote_spanned!(*x=> ccsa_macro_prelude::ccsa::PredOp::Add).to_tokens(tokens);
             }
             Self::Sub(x) => {
-                quote_spanned!(x.span()=> ccsa_macro_prelude::ccsa::PredOp::Sub).to_tokens(tokens);
+                quote_spanned!(*x=> ccsa_macro_prelude::ccsa::PredOp::Sub).to_tokens(tokens);
             }
             Self::Mul(x) => {
-                quote_spanned!(x.span()=> ccsa_macro_prelude::ccsa::PredOp::Mul).to_tokens(tokens);
+                quote_spanned!(*x=> ccsa_macro_prelude::ccsa::PredOp::Mul).to_tokens(tokens);
             }
         }
     }
@@ -330,7 +330,7 @@ impl ToTokens for PredOp {
 
 impl PredOp {
     fn new_add() -> Self {
-        Self::Add(token::Add::default())
+        Self::Add(Span::call_site())
     }
     // fn new_sub() -> Self {
     //     Self::Sub(token::Sub::default())
@@ -345,9 +345,9 @@ impl Parse for PredOp {
 
         let pred_op: BinOp = input.parse()?;
         match pred_op {
-            BinOp::Add(x) => Ok(Self::Add(x)),
-            BinOp::Sub(x) => Ok(Self::Sub(x)),
-            BinOp::Mul(x) => Ok(Self::Mul(x)),
+            BinOp::Add(x) => Ok(Self::Add(x.span())),
+            BinOp::Sub(x) => Ok(Self::Sub(x.span())),
+            BinOp::Mul(x) => Ok(Self::Mul(x.span())),
             // _ => panic!("[PredOp] op not support :{:?}", pred_op),
             _ => Err(syn::Error::new(
                 pred_op.span(),
@@ -910,7 +910,7 @@ impl Parse for Predicate {
         let _paren_token = parenthesized!(content in input);
         debug!("got () : {:?}", &content);
         let content: Punctuated<PredicateItem, Token![,]> =
-            content.parse_terminated(PredicateItem::parse)?;
+            content.parse_terminated(PredicateItem::parse, Token![,])?;
         if !content.is_empty() {
             debug!("got PredicateItems vec:{:?}", &content);
         }
@@ -1046,7 +1046,7 @@ impl Parse for Connection {
             debug!("peek - ");
             input.parse::<Token![-]>()?;
 
-            if input.peek(token::Dot3) {
+            if input.peek(token::DotDotDot) {
                 return Ok(Self::Eq(Gap::Standard));
             }
 
@@ -1507,7 +1507,7 @@ impl Parse for ChainPredicate {
         let content;
         let _paren_token = parenthesized!(content in input);
         let content: Punctuated<ChainPredicateItem, Token![,]> =
-            content.parse_terminated(ChainPredicateItem::parse)?;
+            content.parse_terminated(ChainPredicateItem::parse, Token![,])?;
 
         Ok(Self(content.into_iter().collect()))
     }
@@ -1621,7 +1621,7 @@ impl Parse for OptionItem {
 
             //TODO 原版使用空格, 这里使用 “,” ,测试是否有问题
             let content: Punctuated<ScopeViewVariable, Token![,]> =
-                content.parse_terminated(ScopeViewVariable::parse)?;
+                content.parse_terminated(ScopeViewVariable::parse, Token![,])?;
             return Ok(Self::In(content.first().cloned().unwrap()));
         }
         if input.peek(kw_opt::gap) && input.peek2(token::Paren) {
@@ -1634,7 +1634,7 @@ impl Parse for OptionItem {
 
             //TODO 原版使用空格, 这里使用 “,” ,测试是否有问题
             let content: Punctuated<ScopeViewVariable, Token![,]> =
-                content.parse_terminated(ScopeViewVariable::parse)?;
+                content.parse_terminated(ScopeViewVariable::parse, Token![,])?;
 
             return Ok(Self::Gap(content.first().cloned().unwrap()));
         }
@@ -1649,7 +1649,7 @@ impl Parse for OptionItem {
 
             //TODO 原版使用空格, 这里使用 “,” ,测试是否有问题
             let content: Punctuated<ScopeViewVariable, Token![,]> =
-                content.parse_terminated(ScopeViewVariable::parse)?;
+                content.parse_terminated(ScopeViewVariable::parse, Token![,])?;
 
             return Ok(Self::OuterGap(content.first().cloned().unwrap()));
         }
@@ -2131,7 +2131,7 @@ impl Parse for Virtual {
         let _bracket_token = braced!(content in input);
 
         let content: Punctuated<GeneralVar, Token![,]> =
-            content.parse_terminated(GeneralVar::parse)?;
+            content.parse_terminated(GeneralVar::parse, Token![,])?;
 
         Ok(Self(lit_str, content))
     }
@@ -2228,7 +2228,7 @@ impl Parse for Cassowary {
             debug!(" not VFL");
 
             let content: Punctuated<DefineVar, Token![,]> =
-                content.parse_terminated(DefineVar::parse)?;
+                content.parse_terminated(DefineVar::parse, Token![,])?;
 
             Ok(Self::CassowaryVars(content))
         }

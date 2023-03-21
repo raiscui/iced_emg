@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-03-01 21:44:34
+ * @LastEditTime: 2023-03-21 22:44:48
  * @LastEditors: Rais
  * @Description:
  */
@@ -88,13 +88,15 @@ where
         let incoming_eix_set = use_state(|| self.opt_incoming_eix_set.unwrap());
         let outgoing_eix_set = use_state(|| self.opt_outgoing_eix_set.unwrap());
 
-        let node_item = EmgNodeItem::<NItem<Message>, GelType<Message>>::new(
-            self.ix.clone(),
-            self.opt_gel_sa.unwrap(),
-            &incoming_eix_set.watch(),
-            &outgoing_eix_set.watch(),
-            graph_rc.clone(),
-        );
+        let node_item = |key: IdStr| {
+            EmgNodeItem::<NItem<Message>, GelType<Message>>::new(
+                key,
+                self.opt_gel_sa.unwrap(),
+                &incoming_eix_set.watch(),
+                &outgoing_eix_set.watch(),
+                graph_rc.clone(),
+            )
+        };
         //TODO all use or_insert_node? 目前没有使用 or_insert_node , same key 会覆盖
         graph_rc.borrow_mut().or_insert_node_with_plugs(
             self.ix,
@@ -157,7 +159,7 @@ impl GraphEdgeBuilder {
         self,
         graph_rc: &Rc<RefCell<GraphType<Message>>>,
     ) -> Result<EmgEdgeItem, Error> {
-        let mut g = graph_rc.borrow_mut();
+        let g = graph_rc.borrow();
         let size = self.opt_size.unwrap_or_default();
         let origin = self.opt_origin.unwrap_or_default();
         let align = self.opt_align.unwrap_or_default();
@@ -168,19 +170,44 @@ impl GraphEdgeBuilder {
         let source = use_state(|| self.edge_ix.source_nix().cloned());
         let target = use_state(|| self.edge_ix.target_nix().cloned());
         // ─────────────────────────────────────────────────────────────
-        let edge_item = EmgEdgeItem::new_in_topo(
-            source.watch(),
-            target.watch(),
-            g.get_raw_edges_watch(),
-            size,
-            origin,
-            align,
-        );
+        let edges_watch = g.get_raw_edges_watch();
+
+        let edge_item = || {
+            EmgEdgeItem::new_in_topo(
+                source.watch(),
+                target.watch(),
+                edges_watch,
+                size,
+                origin,
+                align,
+            )
+        };
         // ─────────────────────────────────────────────────────────────
 
-        g.insert_edge_only(self.edge_ix, Edge::new(source, target, edge_item.clone()));
+        Ok(g.or_insert_edge_only(self.edge_ix, || Edge::new(source, target, edge_item())))
+    }
+}
 
-        Ok(edge_item)
+#[cfg(test)]
+mod testaa {
+    use emg_state::{topo, use_state, StateVar};
+
+    fn x(func: impl FnOnce() -> StateVar<i32>) -> StateVar<i32> {
+        func()
+    }
+
+    #[topo::nested]
+    fn aa() -> (StateVar<i32>, StateVar<i32>) {
+        let a = || use_state(|| 1);
+        (x(a), a())
+    }
+
+    #[test]
+    fn nn() {
+        let (f1, f2) = aa();
+        let (f3, f4) = aa();
+        assert_ne!(f1.id(), f3.id());
+        assert_eq!(f1.id(), f2.id());
     }
 }
 

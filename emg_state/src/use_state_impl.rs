@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-03-17 15:50:24
+ * @LastEditTime: 2023-03-21 21:42:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -2171,7 +2171,7 @@ fn or_insert_var_with_topo_id<F: FnOnce() -> T, T: 'static + std::fmt::Debug>(
     state_store_with(
         #[track_caller]
         |g_state_store_refcell| {
-            trace!("G_STATE_STORE::borrow_mut:\n{}", Location::caller());
+            trace!(target:"G_STATE_STORE","G_STATE_STORE::borrow_mut:\n{}", Location::caller());
 
             g_state_store_refcell
                 .borrow_mut()
@@ -2358,7 +2358,7 @@ pub fn state_store() -> Rc<RefCell<GStateStore>> {
 }
 
 #[inline]
-#[instrument(name = "G_STATE_STORE with", skip_all)]
+#[instrument(target = "G_STATE_STORE", name = "state_store_with", skip_all)]
 pub fn state_store_with<F, R>(f: F) -> R
 where
     F: FnOnce(&Rc<RefCell<GStateStore>>) -> R,
@@ -2366,7 +2366,7 @@ where
     G_STATE_STORE.with(f)
 }
 #[inline]
-#[instrument(name = "G_STATE_STORE try with", skip_all)]
+#[instrument(target = "G_STATE_STORE", name = "state_store_try_with", skip_all)]
 pub fn state_store_try_with<F, R>(f: F) -> Result<R, AccessError>
 where
     F: FnOnce(&Rc<RefCell<GStateStore>>) -> R,
@@ -2401,8 +2401,7 @@ pub fn get_caller_location2() {
     get_caller_location();
 }
 
-/// # Panics
-/// new old not eq
+/// 没有 #[[`topo::nested`]] 的函数,call结果就是 同一个[`StateVar`].
 #[must_use]
 // #[topo::nested]
 #[track_caller]
@@ -2424,7 +2423,7 @@ where
                 let old_v = old.get_rc();
                 let v = func();
 
-                warn!("this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {},\n old_v:{:?},\n new V:{:?}",std::any::type_name::<T>(),loc,old_v,v);
+                warn!(target:"use_state","this is checker: use_state call again, StateVar already settled state ->{} ,\n Location: {},\n old_v:{:?},\n new V:{:?}",std::any::type_name::<T>(),loc,old_v,v);
                 if format!("{old_v:?}") != format!("{v:?}") {
                     warn!("val changed !!!!!!!!!!!!!!!!!!!!!!!!");
                 }

@@ -11,9 +11,7 @@
 use cassowary::Cassowary;
 
 use proc_macro2::TokenStream;
-use proc_macro_error::{
-    abort, abort_call_site, emit_call_site_error, emit_error, proc_macro_error,
-};
+
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
 use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token, ExprClosure};
@@ -214,7 +212,7 @@ impl Parse for Edge {
         debug!("======Edge-> will parse ()");
 
         let content: Punctuated<EdgeObject, Token![,]> =
-            content.parse_terminated(EdgeObject::parse)?;
+            content.parse_terminated(EdgeObject::parse, Token![,])?;
         // content.parse_terminated(syn::Expr::parse)?;
         debug!("content: {:?}", &content);
         debug!("");
@@ -565,7 +563,7 @@ impl Parse for GTreeSurface {
                 let content;
                 let _bracket = bracketed!(content in input);
                 let children: ChildrenType =
-                    Some(content.parse_terminated(GTreeMacroElement::parse)?);
+                    Some(content.parse_terminated(GTreeMacroElement::parse, Token![,])?);
                 Ok(Self {
                     edge,
                     id,
@@ -1002,7 +1000,8 @@ impl Parse for GTreeLayerStruct {
         let content;
         let _bracket = bracketed!(content in input);
         //println!("brace_token=>{:?}", &bracket);
-        let children: ChildrenType = Some(content.parse_terminated(GTreeMacroElement::parse)?);
+        let children: ChildrenType =
+            Some(content.parse_terminated(GTreeMacroElement::parse, Token![,])?);
         //println!("children:=>{:?}", &children);
         // println!("children op :=>{}", quote!(  #children));
 

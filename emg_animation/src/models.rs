@@ -6,13 +6,12 @@ use emg_common::{
     im::HashSet,
     measures::Unit,
     num_traits::{AsPrimitive, ToPrimitive, Zero},
-    smallvec, IdStr, SmallVec, TypeName, Vector,
+    smallvec, IdStr, NotNan, SmallVec, TypeName, Vector,
 };
 use emg_hasher::CustomHasher;
 // use iter_fixed::IntoIteratorFixed;
 use crate::{Debuggable, Precision, MOTION_SIZE, PROP_SIZE};
 use derive_more::Display;
-use ordered_float::NotNan;
 use std::{
     collections::VecDeque,
     hash::BuildHasherDefault,

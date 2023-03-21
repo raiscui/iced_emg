@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-13 14:41:13
- * @LastEditTime: 2023-03-19 22:30:44
+ * @LastEditTime: 2023-03-20 18:19:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -127,6 +127,9 @@ impl EventIdentify {
     #[inline]
     pub const fn contains(&self, other: &Self) -> bool {
         self.0 == other.0 && (self.1 & other.1) == other.1
+    }
+    pub const fn lv1(&self) -> u32 {
+        self.0
     }
 }
 

@@ -63,7 +63,8 @@ fn tracing_init() -> Result<(), Report> {
         ))
         .with_filter(tracing_subscriber::EnvFilter::new(
             // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
-            "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
+            // "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
+            "use_state=warn",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
@@ -173,6 +174,7 @@ impl Sandbox for App {
                                 h(px(50)),
                                 ax,
                                 ay,
+                                fill(rgb(1,0,0))
                             ]
                             @="b-check" Checkbox::new(false,"b-abcd",|_|{
                                 println!("b checkbox");
@@ -182,20 +184,11 @@ impl Sandbox for App {
                                     let _span = debug_span!("DRAG", "{} -> ev:{:?}",Red.paint("on [b-check] drag"),ev)
                                             .entered();
                                         let drag_offset = ev.get_drag_offset();
+                                        let offset_trans = drag_offset * Pos::default();
 
-                                        let trans = drag_offset * Pos::default();
 
-                                        ax.set_with(|v| v + trans);
-                                        ay.set_with(|v| v + trans);
-
-                                        // width.set_with(|x| match x {
-                                        //     CssWidth::Auto => todo!(),
-                                        //     CssWidth::Length(ll) => (px(10) + ll).into(),
-                                        //     CssWidth::Initial => todo!(),
-                                        //     CssWidth::Inherit => todo!(),
-                                        //     CssWidth::StringValue(_) => todo!(),
-                                        //     CssWidth::Gs(_) => todo!(),
-                                        // });
+                                        ax.set_with(|v| v + offset_trans);
+                                        ay.set_with(|v| v + offset_trans);
 
 
                                 },
@@ -236,33 +229,33 @@ impl Sandbox for App {
                 @="y" Layer [
                     // node_ref("b")
 
-                    @E=[
-                                w(px(50)),
-                                // width,
-                                h(px(50)),
-                                ax,
-                                ay,
-                                fill(rgb(1,0,0))
+                    // @E=[
+                    //             w(px(50)),
+                    //             // width,
+                    //             h(px(50)),
+                    //             ax,
+                    //             ay,
+                    //             fill(rgb(1,0,0))
 
 
-                            ]
-                            @="b-check" Checkbox::new(false,"b-abcd",move|_|{
-                                println!("b checkbox");
-                            })=>[
-                                @="b_click2" On:DRAG  move|ev|{
-                                    use nu_ansi_term::Color::Red;
-                                    let _span = debug_span!("DRAG", "{} -> ev:{:?}",Red.paint("on [b-check] drag"),ev)
-                                            .entered();
-                                        let drag_offset = ev.get_drag_offset();
-                                        let offset_trans = drag_offset * Pos::default();
+                    //         ]
+                    //         @="b-check" Checkbox::new(false,"b-abcd",move|_|{
+                    //             println!("b checkbox");
+                    //         })=>[
+                    //             @="b_click2" On:DRAG  move|ev|{
+                    //                 use nu_ansi_term::Color::Red;
+                    //                 let _span = debug_span!("DRAG", "{} -> ev:{:?}",Red.paint("on [b-check] drag"),ev)
+                    //                         .entered();
+                    //                     let drag_offset = ev.get_drag_offset();
+                    //                     let offset_trans = drag_offset * Pos::default();
 
 
-                                        ax.set_with(|v| v + offset_trans);
-                                        ay.set_with(|v| v + offset_trans);
+                    //                     ax.set_with(|v| v + offset_trans);
+                    //                     ay.set_with(|v| v + offset_trans);
 
 
-                                },
-                            ]
+                    //             },
+                    //         ]
 
                 ],
                 // ─────────────────────────────────────────────
@@ -280,12 +273,12 @@ impl Sandbox for App {
 
 
 
-                    // @="x_click" On:CLICK  ||{
-                    //     let _span = debug_span!("CLICK", "on [x] click, moving a->b to m->b")
-                    //             .entered();
+                    @="x_click" On:CLICK  ||{
+                        let _span = debug_span!("CLICK", "on [x] click, moving a->b to m->b")
+                                .entered();
 
-                    //     Message::Empty
-                    // },
+                        Message::Empty
+                    },
 
                     @E=[
                         origin_x(px(0)),

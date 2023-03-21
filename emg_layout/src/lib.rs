@@ -48,8 +48,8 @@ use emg_common::{
 };
 use emg_shaping::{EqShapingWithDebug, Shaping};
 use emg_state::{
-    state_store, topo, use_state, use_state_impl::Engine, Anchor, CloneStateAnchor, CloneStateVar,
-    Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar,
+    state_lit::StateVarLit, state_store, topo, use_state, use_state_impl::Engine, Anchor,
+    CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar,
 };
 use float_cmp::approx_eq;
 use styles::{px, s, w, CssTransform, CssValueTrait, Style, UpdateStyle};
@@ -208,26 +208,25 @@ impl<T> !NotStateVar for StateVar<T> {}
 
 impl<T> From<T> for GenericSizeAnchor
 where
-    T: NotStateAnchor + NotStateVar + Into<GenericSize> + Clone + 'static,
+    T: NotStateAnchor + NotStateVar + Into<GenericSize>,
 {
     fn from(v: T) -> Self {
         Self(StateAnchor::constant(v.into()))
+        // Self(StateVarLit::new(v.into()).watch())
     }
 }
 
 impl<T> From<StateAnchor<T>> for GenericSizeAnchor
-//TODO sure not use "NotStateAnchor+NotStateVar+ " ?
 where
-    T: Into<GenericSize> + Clone + 'static,
+    T: NotStateAnchor + NotStateVar + Into<GenericSize> + Clone + 'static,
 {
     fn from(v: StateAnchor<T>) -> Self {
         Self(v.map(|x| x.clone().into()))
     }
 }
 impl<T> From<StateVar<T>> for GenericSizeAnchor
-//TODO sure not use "NotStateAnchor+NotStateVar+ " ?
 where
-    T: Into<GenericSize> + Clone + 'static,
+    T: NotStateAnchor + NotStateVar + Into<GenericSize> + Clone + 'static,
 {
     fn from(v: StateVar<T>) -> Self {
         // Self(v.watch().map(|x|x.clone().into()))
@@ -727,14 +726,14 @@ impl EmgEdgeItem {
     fn set_size(&self, w: impl Into<GenericSizeAnchor>, h: impl Into<GenericSizeAnchor>) {
         self.layout.set_size(w, h);
     }
-    pub fn store_set_size(
-        &self,
-        store: &GStateStore,
-        w: impl Into<GenericSizeAnchor>,
-        h: impl Into<GenericSizeAnchor>,
-    ) {
-        self.layout.store_set_size(store, w, h);
-    }
+    // pub fn store_set_size(
+    //     &self,
+    //     store: &GStateStore,
+    //     w: impl Into<GenericSizeAnchor>,
+    //     h: impl Into<GenericSizeAnchor>,
+    // ) {
+    //     self.layout.store_set_size(store, w, h);
+    // }
 
     #[cfg(test)]
     #[must_use]
@@ -781,30 +780,30 @@ impl EmgEdgeItem {
             .set_with_once(move |pls_map| pls_map.update(path, layout));
     }
 
-    #[topo::nested]
-    #[instrument(skip(edges))]
-    pub fn default_in_topo(
-        source_node_nix_sa: StateAnchor<Option<NodeIndex>>,
-        target_node_nix_sa: StateAnchor<Option<NodeIndex>>,
-        edges: StateAnchor<GraphEdgesDict>,
-    ) -> Self {
-        Self::new_in_topo(
-            source_node_nix_sa,
-            target_node_nix_sa,
-            edges,
-            (GenericSize::default(), GenericSize::default()),
-            (
-                GenericSize::default(),
-                GenericSize::default(),
-                GenericSize::default(),
-            ),
-            (
-                GenericSize::default(),
-                GenericSize::default(),
-                GenericSize::default(),
-            ),
-        )
-    }
+    // #[topo::nested]
+    // #[instrument(skip(edges))]
+    // pub fn default_in_topo(
+    //     source_node_nix_sa: StateAnchor<Option<NodeIndex>>,
+    //     target_node_nix_sa: StateAnchor<Option<NodeIndex>>,
+    //     edges: StateAnchor<GraphEdgesDict>,
+    // ) -> Self {
+    //     Self::new_in_topo(
+    //         source_node_nix_sa,
+    //         target_node_nix_sa,
+    //         edges,
+    //         (GenericSize::default(), GenericSize::default()),
+    //         (
+    //             GenericSize::default(),
+    //             GenericSize::default(),
+    //             GenericSize::default(),
+    //         ),
+    //         (
+    //             GenericSize::default(),
+    //             GenericSize::default(),
+    //             GenericSize::default(),
+    //         ),
+    //     )
+    // }
 
     #[cfg(test)]
     #[topo::nested]

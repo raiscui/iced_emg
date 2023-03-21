@@ -35,7 +35,7 @@ thiserror = "1.0"
 #for orders
 indexmap = "1.9.2"
 #--------------
-winit = "0.28.2"
+winit = "0.28.3"
 
 nu-ansi-term = "0.47"
 
