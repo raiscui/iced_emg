@@ -1,7 +1,8 @@
+use emg_common::{smallvec, SmallVec};
 /*
  * @Author: Rais
  * @Date: 2023-03-13 14:41:13
- * @LastEditTime: 2023-03-20 18:19:49
+ * @LastEditTime: 2023-03-23 15:59:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,15 +15,21 @@ use super::{EventFlag, DND, MOUSE, TOUCH};
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct MultiLevelIdentify {
     union: u32,
-    map: integer_hasher::IntMap<u32, u32>,
+    map: integer_hasher::IntMap<u32, SmallVec<[u32; 8]>>,
 }
 
 impl std::fmt::Debug for MultiLevelIdentify {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let union = format!("{:b}", self.union);
         let mut map = String::new();
-        for (k, v) in self.map.iter() {
-            map.push_str(&format!(", {:b}:{:b})", k, v));
+        for (k, vs) in self.map.iter() {
+            let v_str: String = vs
+                .iter()
+                .map(|v| format!("{:b}", v))
+                .intersperse(",".to_string())
+                .collect();
+
+            map.push_str(&format!("{:b}:[{}], ", k, &v_str));
         }
 
         f.debug_struct("MultiLevelIdentify")
@@ -46,7 +53,7 @@ impl MultiLevelIdentify {
         let union = ei.0;
         let mut map =
             integer_hasher::IntMap::with_capacity_and_hasher(2, BuildIntHasher::default());
-        map.insert(ei.0, ei.1);
+        map.insert(ei.0, smallvec![ei.1]);
 
         Self { union, map }
     }
@@ -54,10 +61,12 @@ impl MultiLevelIdentify {
         if self.union & ei.0 == ei.0 {
             //包含
             let v = self.map.get_mut(&ei.0).unwrap();
-            *v |= ei.1;
+            if !v.contains(&ei.1) {
+                v.push(ei.1);
+            }
         } else {
             self.union |= ei.0;
-            self.map.insert(ei.0, ei.1);
+            self.map.insert(ei.0, smallvec![ei.1]);
         }
     }
     ///self 宽泛 , ei 具体 ,check self 是否涉及到 ei的flag 且完全在 ev 的 flag 之内 ?
@@ -65,19 +74,8 @@ impl MultiLevelIdentify {
     pub fn involve(&self, ei: &EventIdentify) -> bool {
         if self.union & ei.0 == ei.0 {
             //包含
-            let v = *self.map.get(&ei.0).unwrap();
-            ei.1 & v == v
-        } else {
-            false
-        }
-    }
-
-    ///self 宽泛 , ei 具体 ,check self 是否涉及到 ei的flag 其中之一(交集)?
-    pub fn intersects(&self, ei: &EventIdentify) -> bool {
-        if self.union & ei.0 == ei.0 {
-            //包含
-            let v = *self.map.get(&ei.0).unwrap();
-            ei.1 & v != 0
+            let vs = self.map.get(&ei.0).unwrap();
+            vs.iter().any(|&v| ei.1 & v == v)
         } else {
             false
         }
@@ -163,15 +161,15 @@ mod event_test {
     };
 
     #[test]
-    fn intersects_test() {
+    fn involve_test() {
         let mouse_click_left: EventIdentify = mouse::LEFT_RELEASED.into();
         let finger_lost: EventIdentify = (EventFlag::TOUCH, touch::FINGER_LOST.bits()).into();
 
-        assert!(EVENT_HOVER_CHECK.intersects(&mouse_click_left));
-        assert!(EVENT_HOVER_CHECK.intersects(&finger_lost));
+        assert!(EVENT_HOVER_CHECK.involve(&mouse_click_left));
+        assert!(EVENT_HOVER_CHECK.involve(&finger_lost));
 
         let left: EventIdentify = mouse::LEFT.into();
-        assert!(!EVENT_HOVER_CHECK.intersects(&left));
+        assert!(!EVENT_HOVER_CHECK.involve(&left));
     }
 
     #[test]

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-03-21 22:44:48
+ * @LastEditTime: 2023-03-23 14:58:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -196,7 +196,7 @@ mod testaa {
         func()
     }
 
-    #[topo::nested]
+    // #[topo::nested]
     fn aa() -> (StateVar<i32>, StateVar<i32>) {
         let a = || use_state(|| 1);
         (x(a), a())
@@ -206,7 +206,7 @@ mod testaa {
     fn nn() {
         let (f1, f2) = aa();
         let (f3, f4) = aa();
-        assert_ne!(f1.id(), f3.id());
+        assert_eq!(f1.id(), f3.id());
         assert_eq!(f1.id(), f2.id());
     }
 }

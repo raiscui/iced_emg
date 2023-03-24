@@ -58,7 +58,7 @@ use std::rc::Rc;
 //         true
 //     }
 // }
-
+///[`EmgEdgeItem`]
 macro_rules! impl_css_native_shaping {
     ($css:ident) => {
         impl Shaping<EmgEdgeItem> for $css

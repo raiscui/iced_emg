@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-15 17:10:47
- * @LastEditTime: 2023-03-21 21:42:57
+ * @LastEditTime: 2023-03-24 17:21:09
  * @LastEditors: Rais
  * @Description:
  */
@@ -13,8 +13,8 @@ pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::Engine;
 pub use anchors::singlethread::Var;
 use anchors::{
-    expert::{cutoff, map, map_mut, refmap, then, AnchorInner},
-    singlethread::MultiAnchor,
+    expert::{cutoff, either, map, map_mut, refmap, then, AnchorInner},
+    singlethread::{EitherAnchor, MultiAnchor},
 };
 use emg_common::{smallvec, SVec::ToSmallVec, SmallVec, TypeCheck, TypeName, Vector};
 use tracing::{debug, debug_span, instrument, warn};
@@ -1539,15 +1539,15 @@ where
         sa.0
     }
 }
-impl<T> From<T> for StateAnchor<T>
-where
-    T: 'static,
-{
-    #[track_caller]
-    fn from(v: T) -> Self {
-        Self::constant(v)
-    }
-}
+// impl<T> From<T> for StateAnchor<T>
+// where
+//     T: 'static,
+// {
+//     #[track_caller]
+//     fn from(v: T) -> Self {
+//         Self::constant(v)
+//     }
+// }
 
 impl<I, V> From<StateAnchor<Dict<I, Anchor<V>>>> for StateAnchor<Dict<I, V>>
 where
@@ -1794,6 +1794,11 @@ where
     pub fn into_anchor(self) -> Anchor<T> {
         self.0
     }
+    #[inline]
+    #[must_use]
+    pub fn into_either(self) -> EitherAnchor<T> {
+        self.0.into()
+    }
 
     #[must_use]
     #[inline]
@@ -1838,6 +1843,16 @@ where
     {
         self.0.then(f).into()
     }
+    #[track_caller]
+    #[inline]
+    pub fn either<Out, F>(&self, f: F) -> StateAnchor<Out>
+    where
+        F: 'static,
+        Out: 'static,
+        either::Either<(Anchor<T>,), Out, F, Engine>: AnchorInner<Engine, Output = Out>,
+    {
+        self.0.either(f).into()
+    }
 
     #[track_caller]
     #[inline]
@@ -1881,6 +1896,12 @@ pub trait StateMultiAnchor: Sized {
         F: 'static,
         Out: 'static,
         then::Then<Self::Target, Out, F, Engine>: AnchorInner<Engine, Output = Out>;
+
+    fn either<F, Out>(self, f: F) -> StateAnchor<Out>
+    where
+        F: 'static,
+        Out: 'static,
+        either::Either<Self::Target, Out, F, Engine>: AnchorInner<Engine, Output = Out>;
 
     fn cutoff<F, Out>(self, _f: F) -> StateAnchor<Out>
     where
@@ -1951,6 +1972,16 @@ macro_rules! impl_tuple_ext {
                 then::Then<Self::Target, Out, F,Engine>: AnchorInner<Engine, Output=Out>,
             {
                 ($(&self.$num.0,)+).then(f).into()
+            }
+
+            #[track_caller]
+            fn either<F, Out>(self, f: F) -> StateAnchor<Out>
+            where
+                F: 'static,
+                Out: 'static,
+                either::Either<Self::Target, Out, F,Engine>: AnchorInner<Engine, Output=Out>,
+            {
+                ($(&self.$num.0,)+).either(f).into()
             }
 
             #[track_caller]

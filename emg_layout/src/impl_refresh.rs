@@ -1,14 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2023-03-16 17:56:11
+ * @LastEditTime: 2023-03-22 12:24:16
  * @LastEditors: Rais
  * @Description:
  */
 mod native;
 use emg_shaping::{Shaping, ShapingUseDyn, ShapingUseNoWarper, ShapingWhoNoWarper};
-use nu_ansi_term::Color::Red;
-use std::{any::Any, panic::Location, rc::Rc};
+
+use std::{any::Any, panic::Location};
 
 use emg_state::{CloneStateVar, StateAnchor, StateVar};
 pub use seed_styles as styles;
@@ -82,7 +82,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssWidth>");
 
-        who.layout.w.set(self.watch().into());
+        who.layout.w.set((*self).into());
 
         true
     }
@@ -106,7 +106,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssHeight>");
 
-        who.layout.h.set(self.watch().into());
+        who.layout.h.set((*self).into());
 
         true
     }
@@ -130,7 +130,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!(target:"shaping","Edge  Refresh use StateVar<CssWidth>");
 
-        who.layout.align_x.set(self.watch().into());
+        who.layout.align_x.set((*self).into());
 
         true
     }
@@ -178,7 +178,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssWidth>");
 
-        who.layout.origin_x.set(self.watch().into());
+        who.layout.origin_x.set((*self).into());
 
         true
     }

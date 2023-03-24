@@ -64,7 +64,7 @@ fn tracing_init() -> Result<(), Report> {
         .with_filter(tracing_subscriber::EnvFilter::new(
             // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
             // "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
-            "use_state=warn",
+            "anchors=error,use_state=warn",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
@@ -88,7 +88,7 @@ fn tracing_init() -> Result<(), Report> {
         // .with(layout_override_layer)
         // .with(event_matching_layer)
         // .with(touch_layer)
-        .with(tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR))
+        // .with(tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR))
         .with(filter_layer)
         // .with(out_layer)
         .init();

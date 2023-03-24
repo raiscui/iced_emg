@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2023-02-21 12:19:26
+ * @LastEditTime: 2023-03-23 16:16:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -169,14 +169,17 @@ where
 {
     #[must_use]
     default fn shaping(&self, _el: &mut Who) -> bool {
-        // println!(
-        //     "this is un implemented yet use ->\n{} \n shaping ->\n{}",
-        //     std::any::type_name::<Use>(),
-        //     std::any::type_name::<Who>()
-        // );
-
         #[cfg(not(feature = "default_shaping_make_panic"))]
         {
+            use nu_ansi_term::Color::Red;
+            use nu_ansi_term::Style;
+            println!(
+                "{} ->\n{} \n shaping ->\n{}",
+                Style::new().on(Red).paint("this is un implemented yet use"),
+                std::any::type_name::<Use>(),
+                std::any::type_name::<Who>()
+            );
+
             error!(
                 "this is un implemented yet use ->\n{} \n shaping ->\n{}",
                 std::any::type_name::<Use>(),
@@ -315,6 +318,7 @@ mod updater_test {
 
     impl Shaping<String> for i32 {
         fn shaping(&self, el: &mut String) -> bool {
+            println!("shaping string use i32");
             *el = format!("{el},{self}");
             true
         }
@@ -325,8 +329,11 @@ mod updater_test {
     use emg_state::use_state;
 
     #[test]
+    #[should_panic]
     fn test_anchor() {
         setup_tracing();
+
+        //NOTE 因为取消了 StateAnchor shaping StateVar , StateVar shaping StateVar 等的默认行为 , 所以 这里会不匹配
 
         #[allow(unused)]
         let mut s = String::from("sss");
@@ -341,12 +348,12 @@ mod updater_test {
         ff.shaping_use_dyn(&ff_w);
         ff.shaping_use_dyn(&ffw_vec);
         ff2.shaping(&mut ff);
-        info!("==== test_anchor: {}", ff.get());
+        println!("==== test_anchor: {}", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
         s.shaping_use_dyn(&ff2);
         ff2.shaping(&mut s);
-        info!("==== test_anchor: {}", &s);
+        println!("==== test_anchor: {}", &s);
         assert_eq!("sss,2,2", &s);
         // ─────────────────────────────────────────────────────────────────
 

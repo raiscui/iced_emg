@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-21 22:42:07
+ * @LastEditTime: 2023-03-23 16:01:16
  * @LastEditors: Rais
  * @Description:
  */
@@ -367,7 +367,7 @@ async fn run_instance<A, E, C>(
                 }
                 let iter = ev_list.iter();
                 for (evf, ev) in iter {
-                    if  EVENT_DEBOUNCE.intersects(evf) {
+                    if  EVENT_DEBOUNCE.involve(evf) {
 
                         latest_event_state
                         .entry(*evf)

@@ -1,4 +1,5 @@
 #![feature(fn_traits)]
+#![feature(iter_intersperse)]
 //for trait Program
 #![feature(specialization)]
 // #![feature(trivial_bounds)] // for emg_state::StateAnchor<emg_common::nalgebra::Translation<f64, 3>>: emg_shaping::ShapingWhoNoWarper;
@@ -60,20 +61,22 @@ pub static G_POS: emg_state::StateVar<Option<Pos<f64>>> = use_state(|| None);
 
 #[dynamic(lazy)]
 pub static EVENT_HOVER_CHECK: MultiLevelIdentify = {
-    let mouse_need_hover_check: EventIdentify =
-        (mouse::GENERAL_CLICK | mouse::CURSOR | mouse::WHEEL_SCROLLED).into();
-    let touch_need_hover_check: EventIdentify = touch::EventFlag::all().into();
-    let dnd_need_hover_check: EventIdentify = drag::EventFlag::all().into();
-    mouse_need_hover_check | touch_need_hover_check | dnd_need_hover_check
+    let m_click: EventIdentify = mouse::GENERAL_CLICK.into();
+    let m_cursor: EventIdentify = mouse::CURSOR.into();
+    let m_ws: EventIdentify = mouse::WHEEL_SCROLLED.into();
+    let touch: EventIdentify = touch::EventFlag::empty().into();
+    let dnd: EventIdentify = drag::EventFlag::empty().into();
+    m_click | m_cursor | m_ws | touch | dnd
 };
 
 #[dynamic(lazy)]
 pub static EVENT_DEBOUNCE: MultiLevelIdentify = {
-    let mouse_e: EventIdentify = (mouse::CURSOR_MOVED).into();
-    let drag_e: EventIdentify = (drag::EventFlag::DRAG_START | drag::EventFlag::DRAG).into();
+    let mouse_e: EventIdentify = mouse::CURSOR_MOVED.into();
+    let drag_s: EventIdentify = drag::EventFlag::DRAG_START.into();
+    let drag: EventIdentify = drag::EventFlag::DRAG.into();
     // let drag_e: EventIdentify = drag::EventFlag::empty().into();
 
-    mouse_e | drag_e
+    mouse_e | drag_s | drag
 };
 
 //collision down ,if collision,choice right
@@ -102,12 +105,11 @@ mod tests {
         let cm = mouse::CURSOR_MOVED.into();
         let drag_start: EventIdentify = drag::EventFlag::DRAG_START.into();
 
-        assert!(EVENT_DEBOUNCE.intersects(&cm));
         assert!(EVENT_DEBOUNCE.involve(&cm));
-        assert!(EVENT_DEBOUNCE.intersects(&drag_start));
+        println!("{:?}   {:?}", EVENT_DEBOUNCE, drag_start);
         assert!(EVENT_DEBOUNCE.involve(&drag_start));
 
-        assert!(EVENT_HOVER_CHECK.intersects(&mouse::CLICK.into()));
+        assert!(EVENT_HOVER_CHECK.involve(&mouse::CLICK.into()));
         // assert!(EVENT_HOVER_CHECK.involve(&mouse::CLICK.into()));
     }
 }

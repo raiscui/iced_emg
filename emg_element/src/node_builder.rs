@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-03-21 12:33:38
+ * @LastEditTime: 2023-03-23 16:00:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -375,7 +375,7 @@ where
             x.iter()
                 .cloned()
                 .partition::<Vector<_>, _>(|(cb_ev_id_wide, _, _)| {
-                    EVENT_HOVER_CHECK.intersects(cb_ev_id_wide)
+                    EVENT_HOVER_CHECK.involve(cb_ev_id_wide)
                 })
         });
         let widget_state = self.widget_state.clone();

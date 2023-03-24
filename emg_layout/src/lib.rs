@@ -50,6 +50,7 @@ use emg_shaping::{EqShapingWithDebug, Shaping};
 use emg_state::{
     state_lit::StateVarLit, state_store, topo, use_state, use_state_impl::Engine, Anchor,
     CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar,
+    Var,
 };
 use float_cmp::approx_eq;
 use styles::{px, s, w, CssTransform, CssValueTrait, Style, UpdateStyle};
@@ -203,16 +204,22 @@ impl ::core::ops::Add for GenericSizeAnchor {
 
 pub auto trait NotStateAnchor {}
 impl<T> !NotStateAnchor for StateAnchor<T> {}
+impl<T, E> !NotStateAnchor for emg_state::anchors::expert::Anchor<T, E> {}
 pub auto trait NotStateVar {}
 impl<T> !NotStateVar for StateVar<T> {}
+impl<T, E> !NotStateVar for emg_state::anchors::expert::Var<T, E> {}
 
 impl<T> From<T> for GenericSizeAnchor
 where
     T: NotStateAnchor + NotStateVar + Into<GenericSize>,
 {
-    fn from(v: T) -> Self {
+    default fn from(v: T) -> Self {
         Self(StateAnchor::constant(v.into()))
-        // Self(StateVarLit::new(v.into()).watch())
+    }
+}
+impl From<GenericSize> for GenericSizeAnchor {
+    fn from(v: GenericSize) -> Self {
+        Self(StateAnchor::constant(v))
     }
 }
 
@@ -220,17 +227,27 @@ impl<T> From<StateAnchor<T>> for GenericSizeAnchor
 where
     T: NotStateAnchor + NotStateVar + Into<GenericSize> + Clone + 'static,
 {
-    fn from(v: StateAnchor<T>) -> Self {
+    default fn from(v: StateAnchor<T>) -> Self {
         Self(v.map(|x| x.clone().into()))
     }
 }
+impl From<StateAnchor<GenericSize>> for GenericSizeAnchor {
+    fn from(v: StateAnchor<GenericSize>) -> Self {
+        Self(v)
+    }
+}
+
 impl<T> From<StateVar<T>> for GenericSizeAnchor
 where
     T: NotStateAnchor + NotStateVar + Into<GenericSize> + Clone + 'static,
 {
-    fn from(v: StateVar<T>) -> Self {
-        // Self(v.watch().map(|x|x.clone().into()))
-        Self(v.get_var_with(|v| v.watch().map(|x| x.clone().into()).into()))
+    default fn from(v: StateVar<T>) -> Self {
+        Self(v.watch().map(|x| x.clone().into()))
+    }
+}
+impl From<StateVar<GenericSize>> for GenericSizeAnchor {
+    fn from(v: StateVar<GenericSize>) -> Self {
+        Self(v.watch())
     }
 }
 
