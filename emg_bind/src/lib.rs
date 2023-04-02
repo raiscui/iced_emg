@@ -170,7 +170,7 @@ mod tests {
         layout::{add_values::*, css, styles::*, EmgEdgeItem},
         runtime::{node_ref, EventCallback, EventMessage, GElement, GTreeBuilderElement},
         shaping::{EqShaping, Shaper, Shaping, ShapingUse},
-        state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
+        state::{use_state, CloneState, CloneStateAnchor, StateMultiAnchor},
     };
 
     #[allow(unused)]

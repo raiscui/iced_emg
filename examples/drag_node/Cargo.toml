@@ -36,8 +36,7 @@ color-eyre = "0.6.2"
 insta = "1"
 # https://docs.rs/dhat/latest/dhat/
 dhat = "0.3.2"
-
-nu-ansi-term = "0.47"
+owo-colors = "3.5.0"
 
 
 [profile.release]

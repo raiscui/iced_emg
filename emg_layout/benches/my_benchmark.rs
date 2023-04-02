@@ -20,7 +20,7 @@ use emg_common::{
     animation::Tick, im::vector, into_smvec, into_vector, smallvec, IdStr, SmallVec, Vector,
 };
 use emg_layout::{global_clock, AnimationE};
-use emg_state::{topo, CloneStateVar};
+use emg_state::{topo, CloneState};
 use seed_styles::{height, px, width, Unit};
 use std::{collections::VecDeque, time::Duration};
 

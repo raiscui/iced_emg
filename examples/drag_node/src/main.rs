@@ -13,6 +13,7 @@ use emg_bind::{
     runtime::{drag::DRAG, Affine, OrdersContainer, Pos},
     Sandbox, Settings,
 };
+use owo_colors::OwoColorize;
 use tracing::{debug_span, info, instrument, warn};
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
@@ -180,8 +181,7 @@ impl Sandbox for App {
                                 println!("b checkbox");
                             })=>[
                                 @="b_click2" On:DRAG  move|ev|{
-                                    use nu_ansi_term::Color::Red;
-                                    let _span = debug_span!("DRAG", "{} -> ev:{:?}",Red.paint("on [b-check] drag"),ev)
+                                    let _span = debug_span!("DRAG", "{} -> ev:{:?}","on [b-check] drag".on_black().red(),ev)
                                             .entered();
                                         let drag_offset = ev.get_drag_offset();
                                         let offset_trans = drag_offset * Pos::default();

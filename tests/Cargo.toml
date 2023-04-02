@@ -13,7 +13,6 @@ lto = true
 [dependencies]
 emg_bind = { path = "../emg_bind" }
 # emg_hasher = { path = "../emg_hasher" }
-rustc-hash = "1.1.0"
 
 
 # iced_web = "0.3"

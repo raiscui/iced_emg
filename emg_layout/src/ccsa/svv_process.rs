@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-21 10:50:01
- * @LastEditTime: 2023-02-23 13:46:47
+ * @LastEditTime: 2023-03-31 17:43:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,6 +21,8 @@ use emg_hasher::CustomHasher;
 use emg_state::{Dict, StateAnchor};
 use tracing::{debug_span, instrument, warn};
 use Either::{Left, Right};
+
+use crate::ChildrenCassMap;
 
 use super::{
     CCSSOpSvv, CCSSSvvOpSvvExpr, CassowaryGeneralMap, CassowaryMap, ConstraintList,
@@ -54,11 +56,9 @@ type SvvOpSvvsToExpr = (
 #[instrument(skip(children_cass_maps))]
 pub(crate) fn svv_op_svvs_to_expr(
     svv_op_svvs: &CCSSSvvOpSvvExpr,
-    children_cass_maps: &Dict<IdStr, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
+    children_cass_maps: &ChildrenCassMap,
     current_cassowary_inherited_generals: &Rc<CassowaryGeneralMap>,
-) -> SvvOpSvvsToExpr
-
-{
+) -> SvvOpSvvsToExpr {
     let CCSSSvvOpSvvExpr {
         svv: main_svv,
         op_exprs,
@@ -126,11 +126,9 @@ pub(crate) fn svv_op_svvs_to_expr(
 #[instrument(skip(children_cass_maps))]
 fn svv_to_var(
     scope_view_variable: &ScopeViewVariable,
-    children_cass_maps: &Dict<IdStr, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
+    children_cass_maps: &ChildrenCassMap,
     current_cassowary_inherited_generals: &Rc<CassowaryGeneralMap>,
-) -> (Option<Either<Variable, Expression>>, Option<ConstraintList>)
-
-{
+) -> (Option<Either<Variable, Expression>>, Option<ConstraintList>) {
     let ScopeViewVariable {
         scope,
         view,

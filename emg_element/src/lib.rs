@@ -51,7 +51,7 @@ pub mod gtree_macro_prelude {
     };
     pub use emg_layout::{add_values::*, ccsa_macro_prelude, css, styles::*, EmgEdgeItem};
     pub use emg_shaping::{EqShaping, Shaper, Shaping, ShapingUse};
-    pub use emg_state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor};
+    pub use emg_state::{use_state, CloneState, CloneStateAnchor, StateMultiAnchor};
 }
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -3,7 +3,7 @@ use emg_common::animation::Tick;
 // use fxhash::FxBuildHasher;
 use emg_hasher::CustomHasher;
 use emg_layout::{global_anima_running_sa, global_clock, global_height, global_width};
-use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
+use emg_state::{CloneState, CloneStateAnchor, StateAnchor, StateVar};
 
 use crate::Bus;
 use indexmap::IndexMap;

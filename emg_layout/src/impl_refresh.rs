@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2023-03-22 12:24:16
+ * @LastEditTime: 2023-03-31 17:52:17
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,10 @@ use emg_shaping::{Shaping, ShapingUseDyn, ShapingUseNoWarper, ShapingWhoNoWarper
 
 use std::{any::Any, panic::Location};
 
-use emg_state::{CloneStateVar, StateAnchor, StateVar};
+use emg_state::{
+    anchors::expert::{voa, CastIntoValOrAnchor},
+    CloneState, StateAnchor, StateVar,
+};
 pub use seed_styles as styles;
 use styles::{CssHeight, CssValueTrait, CssWidth, UpdateStyle};
 use tracing::{debug, error, trace, trace_span, warn};
@@ -82,7 +85,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssWidth>");
 
-        who.layout.w.set((*self).into());
+        who.layout.w.set(self.watch().cast_into());
 
         true
     }
@@ -94,7 +97,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateAnchor<CssWidth>");
 
-        who.layout.w.set(self.clone().into());
+        who.layout.w.set(self.clone().cast_into());
 
         true
     }
@@ -106,7 +109,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssHeight>");
 
-        who.layout.h.set((*self).into());
+        who.layout.h.set(self.watch().cast_into());
 
         true
     }
@@ -118,7 +121,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateAnchor<CssHeight>");
 
-        who.layout.h.set(self.clone().into());
+        who.layout.h.set(self.clone().cast_into());
 
         true
     }
@@ -130,7 +133,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!(target:"shaping","Edge  Refresh use StateVar<CssWidth>");
 
-        who.layout.align_x.set((*self).into());
+        who.layout.align_x.set(self.watch().cast_into());
 
         true
     }
@@ -142,7 +145,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!(target:"shaping","Edge  Refresh use StateAnchor<CssWidth>");
 
-        who.layout.align_x.set(self.clone().into());
+        who.layout.align_x.set(self.clone().cast_into());
 
         true
     }
@@ -154,7 +157,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!(target:"shaping","Edge  Refresh use StateVar<CssWidth>");
 
-        who.layout.align_y.set(self.watch().into());
+        who.layout.align_y.set(self.watch().cast_into());
 
         true
     }
@@ -166,7 +169,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!(target:"shaping","Edge  Refresh use StateAnchor<CssWidth>");
 
-        who.layout.align_y.set(self.clone().into());
+        who.layout.align_y.set(self.clone().cast_into());
 
         true
     }
@@ -178,7 +181,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssWidth>");
 
-        who.layout.origin_x.set((*self).into());
+        who.layout.origin_x.set(self.watch().cast_into());
 
         true
     }
@@ -190,7 +193,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateAnchor<CssWidth>");
 
-        who.layout.origin_x.set(self.clone().into());
+        who.layout.origin_x.set(self.clone().cast_into());
 
         true
     }
@@ -202,7 +205,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateVar<CssWidth>");
 
-        who.layout.origin_y.set(self.watch().into());
+        who.layout.origin_y.set(self.watch().cast_into());
 
         true
     }
@@ -214,7 +217,7 @@ where
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         warn!("Edge  Refresh use StateAnchor<CssWidth>");
 
-        who.layout.origin_y.set(self.clone().into());
+        who.layout.origin_y.set(self.clone().cast_into());
 
         true
     }
@@ -279,7 +282,7 @@ impl Shaping<EmgEdgeItem> for CssWidth {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for CssWidth").entered();
 
-        who.layout.w.set(self.clone().into());
+        who.layout.w.set(voa(self.clone()));
         true
     }
 }
@@ -289,7 +292,7 @@ impl Shaping<EmgEdgeItem> for CssHeight {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for CssHeight").entered();
 
-        who.layout.h.set(self.clone().into());
+        who.layout.h.set(voa(self.clone()));
         true
     }
 }
@@ -298,7 +301,7 @@ impl Shaping<EmgEdgeItem> for OriginX {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for OriginX").entered();
 
-        who.layout.origin_x.set(self.clone().into());
+        who.layout.origin_x.set(voa(self.clone()));
         true
     }
 }
@@ -307,7 +310,7 @@ impl Shaping<EmgEdgeItem> for OriginY {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for OriginY").entered();
 
-        who.layout.origin_y.set(self.clone().into());
+        who.layout.origin_y.set(voa(self.clone()));
         true
     }
 }
@@ -316,7 +319,7 @@ impl Shaping<EmgEdgeItem> for AlignX {
     #[track_caller]
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for AlignX").entered();
-        who.layout.align_x.set(self.clone().into());
+        who.layout.align_x.set(voa(self.clone()));
         true
     }
 }
@@ -325,7 +328,7 @@ impl Shaping<EmgEdgeItem> for AlignY {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for AlignY").entered();
 
-        who.layout.align_y.set(self.clone().into());
+        who.layout.align_y.set(voa(self.clone()));
         true
     }
 }
@@ -368,7 +371,7 @@ mod refresh_test {
     use emg_animation::to;
     use emg_common::{im::vector, into_smvec, IdStr};
     use emg_shaping::ShapingUseDyn;
-    use emg_state::{use_state, CloneStateVar, Dict, StateVar};
+    use emg_state::{use_state, CloneState, Dict, StateVar};
     use seed_styles as styles;
     use seed_styles::CssWidth;
 
@@ -394,8 +397,8 @@ mod refresh_test {
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
-            root_e_source.watch(),
-            root_e_target.watch(),
+            &root_e_source.watch(),
+            &root_e_target.watch(),
             e_dict_sv.watch(),
             1920,
             1080,

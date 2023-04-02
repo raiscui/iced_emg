@@ -80,6 +80,7 @@ impl<T: 'static> StateVarLit<T> {
     }
 }
 
+#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod state_var_lit_test {
     use std::rc::Rc;
@@ -124,13 +125,13 @@ mod state_var_lit_test {
     }
 }
 
-// impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
+// impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVarEA<T> {
 //     default fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 //         let v = self.get();
 //         write!(f, "\u{2726} ({})", &v)
 //     }
 // }
-// impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVar<T> {
+// impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVarEA<T> {
 //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 //         let v = self.get();
 //         f.debug_tuple("StateVar").field(&v).finish()

@@ -11,7 +11,7 @@ use crate::{EqShaping, Shaping};
 
 use crate::{Shaper, ShaperFor, ShapingUseDyn};
 use dyn_partial_eq::DynPartialEq;
-use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
+use emg_state::{CloneState, CloneStateAnchor, StateAnchor, StateVar};
 use tracing::{debug, warn};
 // ────────────────────────────────────────────────────────────────────────────────
 

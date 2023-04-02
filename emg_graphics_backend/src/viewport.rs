@@ -9,7 +9,7 @@
 use std::{cell::Cell, rc::Rc};
 
 use emg_common::na;
-use emg_state::{state_lit::StateVarLit, CloneStateVar, StateAnchor};
+use emg_state::{state_lit::StateVarLit, CloneState, StateAnchor};
 /// A viewing region for displaying computer graphics.
 #[derive(Debug, Clone)]
 pub struct Viewport {

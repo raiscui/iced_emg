@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-03-23 14:58:49
+ * @LastEditTime: 2023-03-31 23:41:59
  * @LastEditors: Rais
  * @Description:
  */
@@ -15,13 +15,14 @@ use crate::{
 };
 use emg::{edge_index_no_source, node_index, Edge, EdgeIndex, EdgePlugsCollect, NodeIndex};
 
-use emg_common::{im::vector, IdStr};
+use emg_common::{im::vector, GenericSize, IdStr};
 use emg_hasher::CustomHasher;
-use emg_layout::{global_height, global_width, EPath, EmgEdgeItem, GenericSizeAnchor};
+use emg_layout::{global_height, global_width, EPath, EmgEdgeItem};
 use emg_shaping::ShapingUseDyn;
 use emg_state::{
+    anchors::{expert::CastIntoValOrAnchor, singlethread::ValOrAnchor},
     topo::{self, call_in_slot},
-    use_state, CloneStateVar, StateAnchor,
+    use_state, CloneState, StateAnchor,
 };
 use indexmap::IndexSet;
 use std::{cell::RefCell, hash::BuildHasherDefault, rc::Rc};
@@ -109,9 +110,17 @@ where
 
 pub struct GraphEdgeBuilder {
     edge_ix: EdgeIndex,
-    opt_size: Option<(GenericSizeAnchor, GenericSizeAnchor)>,
-    opt_origin: Option<(GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor)>,
-    opt_align: Option<(GenericSizeAnchor, GenericSizeAnchor, GenericSizeAnchor)>,
+    opt_size: Option<(ValOrAnchor<GenericSize>, ValOrAnchor<GenericSize>)>,
+    opt_origin: Option<(
+        ValOrAnchor<GenericSize>,
+        ValOrAnchor<GenericSize>,
+        ValOrAnchor<GenericSize>,
+    )>,
+    opt_align: Option<(
+        ValOrAnchor<GenericSize>,
+        ValOrAnchor<GenericSize>,
+        ValOrAnchor<GenericSize>,
+    )>,
 }
 
 impl GraphEdgeBuilder {
@@ -126,7 +135,10 @@ impl GraphEdgeBuilder {
 
     pub fn with_size(
         mut self,
-        (w, h): (impl Into<GenericSizeAnchor>, impl Into<GenericSizeAnchor>),
+        (w, h): (
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
+        ),
     ) -> Self {
         self.opt_size = Some((w.into(), h.into()));
         self
@@ -134,9 +146,9 @@ impl GraphEdgeBuilder {
     pub fn with_origin(
         mut self,
         (origin_x, origin_y, origin_z): (
-            impl Into<GenericSizeAnchor>,
-            impl Into<GenericSizeAnchor>,
-            impl Into<GenericSizeAnchor>,
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
         ),
     ) -> Self {
         self.opt_origin = Some((origin_x.into(), origin_y.into(), origin_z.into()));
@@ -145,9 +157,9 @@ impl GraphEdgeBuilder {
     pub fn with_align(
         mut self,
         (align_x, align_y, align_z): (
-            impl Into<GenericSizeAnchor>,
-            impl Into<GenericSizeAnchor>,
-            impl Into<GenericSizeAnchor>,
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
         ),
     ) -> Self {
         self.opt_align = Some((align_x.into(), align_y.into(), align_z.into()));
@@ -174,8 +186,8 @@ impl GraphEdgeBuilder {
 
         let edge_item = || {
             EmgEdgeItem::new_in_topo(
-                source.watch(),
-                target.watch(),
+                &source.watch(),
+                &target.watch(),
                 edges_watch,
                 size,
                 origin,
@@ -252,7 +264,7 @@ where
                 let height = global_height();
 
                 let mut root_ei = GraphEdgeBuilder::new(edge_ix.clone())
-                    .with_size((width, height))
+                    .with_size((width.cast_into(), height.cast_into()))
                     .build_in_topo(self)
                     .unwrap();
 
@@ -268,7 +280,7 @@ where
                 illicit::Layer::new().offer(path.clone()).enter(|| {
                     debug_assert_eq!(*illicit::expect::<EPath>(), path);
 
-                    root_ei.shaping_use_dyn(edge_shapers);
+                    let _ = root_ei.shaping_use_dyn(edge_shapers);
 
                     illicit::Layer::new().offer(nix.clone()).enter(|| {
                         assert_eq!(*illicit::expect::<NodeIndex>(), nix);

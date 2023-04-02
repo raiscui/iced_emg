@@ -3,13 +3,12 @@ use std::rc::Rc;
 /*
 * @Author: Rais
 * @Date: 2021-03-29 17:30:58
- * @LastEditTime: 2023-01-28 19:46:33
+ * @LastEditTime: 2023-03-31 15:46:21
  * @LastEditors: Rais
 * @Description:
 */
 use crate::{
-    ccsa::CassowaryMap, EdgeData, GenericSize, GenericSizeAnchor, Layout, LayoutCalculated, Mat4,
-    CHILD_PROP_WEIGHT,
+    ccsa::CassowaryMap, EdgeData, GenericSize, Layout, LayoutCalculated, Mat4, CHILD_PROP_WEIGHT,
 };
 
 use cassowary::{
@@ -20,7 +19,7 @@ use derive_more::From;
 use emg::EdgeIndex;
 use emg_common::na::{Translation3, Vector2};
 use emg_common::{Precision, TypeName};
-use emg_state::{topo, StateAnchor, StateMultiAnchor, StateVar};
+use emg_state::{topo, StateAnchor, StateMultiAnchor, StateVOA, StateVar};
 use float_cmp::assert_approx_eq;
 use seed_styles as styles;
 use styles::{s, CssTransform, CssTransformTrait, LogicLength};
@@ -32,16 +31,13 @@ mod cassowary_calc;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-// #[track_caller]
 #[topo::nested]
 pub fn layout_calculating(
-    _id: StateVar<StateAnchor<EdgeIndex>>,
+    _id: StateVOA<EdgeIndex>,
     path_edgedata: &EdgeData, //parent
     current_cassowary_map: &Rc<CassowaryMap>,
     layout: &StateAnchor<Layout>,
-) -> LayoutCalculated
-
-{
+) -> LayoutCalculated {
     let _span_ = trace_span!("->[ layout_calculating ] ").entered();
     let _debug_span_ = debug_span!("->[ layout_calculating ] ").entered();
 
@@ -75,8 +71,8 @@ pub fn layout_calculating(
     });
 
     // ─────────────────────────────────────────────────────────────────
-    let w = layout.then(|l: &Layout| l.w.watch().into());
-    let h = layout.then(|l: &Layout| l.h.watch().into());
+    let sa_gs_w = layout.then(|l: &Layout| l.w.watch().into());
+    let sa_gs_h = layout.then(|l: &Layout| l.h.watch().into());
     let origin_x = layout.then(|l: &Layout| l.origin_x.watch().into());
     let origin_y = layout.then(|l: &Layout| l.origin_y.watch().into());
     let align_x = layout.then(|l: &Layout| l.align_x.watch().into());
@@ -92,8 +88,6 @@ pub fn layout_calculating(
     // ────────────────────────────────────────────────────────────────────────────────
 
     let p_cassowary_map2 = p_cassowary_map.clone();
-    let sa_gs_w = w.then(|w| w.get_anchor());
-    let sa_gs_h = h.then(|h| h.get_anchor());
 
     let size_constraints = (&sa_gs_w, &sa_gs_h).map(move |w: &GenericSize, h: &GenericSize| {
         let mut size_constraints = vec![];
@@ -381,44 +375,38 @@ pub fn layout_calculating(
         &origin_x,
         &origin_y,
     )
-        .then(
+        .map(
             move |&p_calc_size: &Vector2<Precision>,
                   &p_calc_origin: &Translation3<Precision>,
                   &p_calc_align: &Translation3<Precision>,
                   &calc_size: &Vector2<Precision>,
-                  origin_x: &GenericSizeAnchor,
-                  origin_y: &GenericSizeAnchor| {
+                  origin_x: &GenericSize,
+                  origin_y: &GenericSize| {
                 let _enter = trace_span!("-> [ calculated_origin ] recalculation..",).entered();
 
-                (&**origin_x, &**origin_y)
-                    .map(move |ox: &GenericSize, oy: &GenericSize| {
-                        calculation_origin(
-                            p_calc_size,
-                            p_calc_origin,
-                            p_calc_align,
-                            calc_size,
-                            ox,
-                            oy,
-                        )
-                    })
-                    .into()
+                calculation_origin(
+                    p_calc_size,
+                    p_calc_origin,
+                    p_calc_align,
+                    calc_size,
+                    origin_x,
+                    origin_y,
+                )
             },
         );
 
-    let calculated_align:StateAnchor<Translation3<Precision>> = (&p_cass_p_size_sa,&p_calculated.origin, &p_calculated.align, &align_x, &align_y).then(
-                move |&p_calc_size: &Vector2<Precision>,&p_calc_origin:&Translation3<Precision>,&p_calc_align:&Translation3<Precision>, align_x: &GenericSizeAnchor, align_y: &GenericSizeAnchor| {
+    let calculated_align:StateAnchor<Translation3<Precision>> = (&p_cass_p_size_sa,&p_calculated.origin, &p_calculated.align, &align_x, &align_y).map(
+                move |&p_calc_size: &Vector2<Precision>,&p_calc_origin:&Translation3<Precision>,&p_calc_align:&Translation3<Precision>, align_x: &GenericSize, align_y: &GenericSize| {
                     // let p_calc_size= *p_calc_size;
-
-
 
 
                     let _enter = trace_span!(
                         "-> [ calculated_align ] recalculation..(&p_calculated.size, &layout.align.watch()).map ",
                         ).entered();
-                    (&**align_x ,&**align_y).map(move|ax:&GenericSize,ay:&GenericSize|{
-                        calculation_align(p_calc_size,p_calc_origin,p_calc_align, ax,ay)
 
-                    }).into()
+                    calculation_align(p_calc_size,p_calc_origin,p_calc_align, align_x,align_y)
+
+
                 },
             );
 

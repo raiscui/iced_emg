@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-03-23 16:01:16
+ * @LastEditTime: 2023-03-31 23:51:35
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,6 +16,7 @@ use emg_common::{
 };
 use emg_hasher::CustomHasher;
 use emg_orders::Orders;
+use owo_colors::OwoColorize;
 pub use state::State;
 use winit::event_loop::EventLoopBuilder;
 
@@ -467,9 +468,7 @@ async fn run_instance<A, E, C>(
                     }
                 }
                 {
-                    use nu_ansi_term::Color::Red;
-                    use nu_ansi_term::Style;
-                    debug!(target:"winit_event","{}",Style::new().on(Red).paint(  "============= event processed end ============================="));
+                    debug!(target:"winit_event","{}","============= event processed end =============================".on_red());
                 }
                 //NOTE  has events or messages now -------------------
 

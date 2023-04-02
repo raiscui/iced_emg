@@ -1,6 +1,6 @@
 use slotmap::DefaultKey;
 
-use crate::{use_state_impl::LocationEngineGet, StorageKey};
+use crate::general_struct::{LocationEngineGet, StorageKey};
 
 /// An error that occurred while running an application.
 #[derive(Debug, thiserror::Error)]

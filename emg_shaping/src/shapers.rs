@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2023-03-23 16:16:00
+ * @LastEditTime: 2023-03-31 12:18:33
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,6 +10,7 @@ use emg_common::{
     dyn_partial_eq::DynPartialEq,
     TypeCheckObjectSafeTid,
 };
+use owo_colors::OwoColorize;
 use std::{panic::Location, rc::Rc};
 use tracing::{debug, error, warn};
 
@@ -171,11 +172,9 @@ where
     default fn shaping(&self, _el: &mut Who) -> bool {
         #[cfg(not(feature = "default_shaping_make_panic"))]
         {
-            use nu_ansi_term::Color::Red;
-            use nu_ansi_term::Style;
             println!(
                 "{} ->\n{} \n shaping ->\n{}",
-                Style::new().on(Red).paint("this is un implemented yet use"),
+                "this is un implemented yet use".on_red(),
                 std::any::type_name::<Use>(),
                 std::any::type_name::<Who>()
             );
@@ -324,7 +323,7 @@ mod updater_test {
         }
     }
 
-    use emg_state::CloneStateVar;
+    use emg_state::CloneState;
 
     use emg_state::use_state;
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-03-17 16:05:42
+ * @LastEditTime: 2023-03-31 18:12:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -26,7 +26,7 @@ use emg_common::{
 };
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem, CHILDREN_POOL_SIZE};
 use emg_shaping::ShapingUse;
-use emg_state::{Anchor, CloneStateVar, Dict, StateAnchor, StateMultiAnchor, StateVar};
+use emg_state::{Anchor, CloneState, Dict, StateAnchor, StateMultiAnchor, StateVar};
 use tracing::{debug, debug_span, error, info, info_span, trace, trace_span, warn};
 // use vec_string::VecString;
 
@@ -474,7 +474,7 @@ where
     fn gen_paths_view_gel(
         paths_view_gel_sa: &StateAnchor<Dict<EPath, StateAnchor<GelType<Message>>>>,
     ) -> StateAnchor<Dict<EPath, GelType<Message>>> {
-        //NOTE newest version convert sa
+        //NOTE newest version convert sa (StateAnchor collection)
         paths_view_gel_sa.then(|dict| {
             dict.into_iter()
                 .collect::<StateAnchor<Dict<EPath, GelType<Message>>>>()

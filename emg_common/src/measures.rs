@@ -20,7 +20,7 @@ impl LogicLength {
     pub fn get_unit(&self) -> Option<crate::measures::Unit> {
         match self {
             Self::Simplex(v) => Some(v.unit),
-            Self::Calculation(v) => None,
+            Self::Calculation(_) => None,
         }
     }
     pub fn has_add_unit(&self, unit: crate::measures::Unit) -> bool {
@@ -288,13 +288,10 @@ mod logic_length_test {
 impl LogicLength {
     pub fn try_get_number(&self) -> Result<Precision, &Self> {
         match self {
-            LogicLength::Simplex(l) => {
-                if matches!(l.unit, Unit::Px | Unit::Empty) {
-                    Ok(l.value.into_inner())
-                } else {
-                    Err(self)
-                }
-            }
+            LogicLength::Simplex(l) => match l.unit {
+                Unit::Px | Unit::Empty => Ok(l.value.into_inner()),
+                _ => Err(self),
+            },
             LogicLength::Calculation(_) => Err(self),
         }
     }

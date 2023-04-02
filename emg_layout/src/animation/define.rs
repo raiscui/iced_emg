@@ -5,11 +5,13 @@ use std::{
 
 use either::Either::{self, Left, Right};
 use emg_animation::{models::Property, Debuggable};
-use emg_state::{topo, use_state, CloneStateVar, StateVar};
+use emg_common::GenericSize;
+use emg_state::{
+    anchors::expert::CastIntoValOrAnchor, general_traits::BiState, topo, use_state, use_state_voa,
+    CloneState, StateVOA, StateVar,
+};
 // use emg_state::{state_store, topo, use_state, CloneStateVar, StateVar, StorageKey};
 use tracing::{debug, debug_span, trace};
-
-use crate::GenericSizeAnchor;
 
 #[derive(Debug, PartialEq, Eq)]
 struct StateVarPropertyDropMark;
@@ -131,7 +133,7 @@ impl<T> NotStateVar for Debuggable<T> {}
 
 impl<T> From<StateVar<T>> for StateVarProperty
 where
-    T: Clone + 'static + From<Property> + std::fmt::Debug,
+    T: Clone + 'static + From<Property> + std::fmt::Debug + std::cmp::PartialEq,
     Property: From<T>,
 {
     #[topo::nested]
@@ -156,33 +158,30 @@ where
     }
 }
 
-impl From<StateVarProperty> for StateVar<GenericSizeAnchor> {
-    #[topo::nested]
-    fn from(sv: StateVarProperty) -> Self {
-        trace!("StateVarProperty to StateVar<GenericSizeAnchor>");
+//TODO re enable this
+// impl From<StateVarProperty> for StateVOA<GenericSize> {
+//     #[topo::nested]
+//     fn from(sv: StateVarProperty) -> Self {
+//         trace!("StateVarProperty to StateVar<GenericSizeAnchor>");
 
-        use_state(||
-            //
-            //TODO impl new_from
-            GenericSizeAnchor(sv.watch().map(|p| p.clone().into())))
-    }
-}
-impl std::ops::ShlAssign<&StateVarProperty> for StateVar<GenericSizeAnchor> {
+//         use_state_voa(||
+//             sv.watch().map(|v| v.clone().into()))
+//     }
+// }
+
+impl std::ops::ShlAssign<&StateVarProperty> for StateVOA<GenericSize> {
     fn shl_assign(&mut self, rhs: &StateVarProperty) {
-        self.set(GenericSizeAnchor(
-            // rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
-            //TODO impl new_from
-            rhs.watch().map(|p| p.clone().into()),
-        ));
+        self.set(rhs.watch().cast_into());
     }
 }
-impl std::ops::ShlAssign<StateVarProperty> for StateVar<GenericSizeAnchor> {
-    fn shl_assign(&mut self, rhs: StateVarProperty) {
-        self.set(GenericSizeAnchor(
-            //TODO impl new_from
-            //TODO check performance
-            // rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
-            rhs.watch().map(|p| p.clone().into()),
-        ));
-    }
-}
+
+// impl std::ops::ShlAssign<StateVarProperty> for StateVar<GenericSizeAnchor> {
+//     fn shl_assign(&mut self, rhs: StateVarProperty) {
+//         self.set(GenericSizeAnchor(
+//             //TODO impl new_from
+//             //TODO check performance
+//             // rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
+//             rhs.watch().map(|p| p.clone().into()),
+//         ));
+//     }
+// }

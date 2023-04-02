@@ -11,7 +11,7 @@ use emg_common::TypeCheck;
 use emg_native::WidgetState;
 use emg_shaping::{EqShapingWithDebug, Shaping, ShapingWhoNoWarper};
 use emg_state::StateTypeCheck;
-use emg_state::{CloneStateVar, StateAnchor, StateVar};
+use emg_state::{CloneState, StateAnchor, StateVar};
 #[allow(clippy::wildcard_imports)]
 use seed_styles::*;
 use std::rc::Rc;

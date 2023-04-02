@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-03-21 22:50:00
+ * @LastEditTime: 2023-03-29 16:40:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -20,7 +20,7 @@ use emg_common::im::{
 };
 use emg_common::{display::DictDisplay, IdStr};
 use emg_state::{
-    state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateAnchor,
+    state_store, topo, use_state, CloneState, CloneStateAnchor, Dict, GStateStore, StateAnchor,
     StateVar,
 };
 use indented::{indented, indented_with};

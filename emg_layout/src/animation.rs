@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-03-15 11:31:10
+ * @LastEditTime: 2023-03-31 17:52:29
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,8 +11,8 @@ mod func;
 
 use emg_common::{im::vector, Precision, SmallVec, Vector};
 use emg_state::{
-    state_lit::StateVarLit, state_store, topo, use_state_impl::TopoKey, Anchor, CloneStateAnchor,
-    CloneStateVar, StateAnchor, StateMultiAnchor, StateVar,
+    general_struct::TopoKey, state_lit::StateVarLit, state_store, topo, Anchor, CloneState,
+    CloneStateAnchor, StateAnchor, StateMultiAnchor, StateVar,
 };
 use std::{
     cell::{Cell, RefCell},
@@ -281,7 +281,6 @@ where
     //     Ok(self)
     // }
     #[allow(clippy::too_many_lines)]
-    // #[track_caller]
     //TODO check 是否需要 nested (有一个 CallId::current())
     #[topo::nested]
     #[must_use]
@@ -700,7 +699,7 @@ mod tests {
     use emg_animation::{interrupt, models::Property, opacity, style, to};
     use emg_common::{animation::Tick, im::vector, into_smvec, smallvec, IdStr};
     use emg_state::{
-        state_store, topo, use_state, CloneStateAnchor, CloneStateVar, Dict, GStateStore, StateVar,
+        state_store, topo, use_state, CloneState, CloneStateAnchor, Dict, GStateStore, StateVar,
     };
     use seed_styles as styles;
     use styles::{pc, width};
@@ -1181,7 +1180,7 @@ mod tests {
 
                     let root_e_source =use_state(|| None);
                     let root_e_target = use_state(||Some(node_index("root")));
-                    let  root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+                    let  root_e = EmgEdgeItem::default_with_wh_in_topo(&root_e_source.watch(),& root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
                     // e_dict_sv.set_with(|d|{
                     //     let mut nd = d .clone();
                     //     nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
@@ -1434,8 +1433,8 @@ mod tests {
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
-            root_e_source.watch(),
-            root_e_target.watch(),
+            &root_e_source.watch(),
+            &root_e_target.watch(),
             e_dict_sv.watch(),
             1920,
             1080,
@@ -1472,8 +1471,8 @@ mod tests {
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
-            root_e_source.watch(),
-            root_e_target.watch(),
+            &root_e_source.watch(),
+            &root_e_target.watch(),
             e_dict_sv.watch(),
             1920,
             1080,
@@ -1522,8 +1521,8 @@ mod tests {
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let root_e = EmgEdgeItem::default_with_wh_in_topo(
-            root_e_source.watch(),
-            root_e_target.watch(),
+            &root_e_source.watch(),
+            &root_e_target.watch(),
             e_dict_sv.watch(),
             1920,
             1080,
@@ -1567,7 +1566,7 @@ mod tests {
 
                     let root_e_source =use_state(|| None);
                     let root_e_target = use_state(||Some(node_index("root")));
-                    let root_e = EmgEdgeItem::default_with_wh_in_topo(root_e_source.watch(), root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
+                    let root_e = EmgEdgeItem::default_with_wh_in_topo(&root_e_source.watch(), &root_e_target.watch(),e_dict_sv.watch(),1920, 1080);
                     e_dict_sv.set_with_once(|d|{
                         let mut nd = d .clone();
                         nd.insert(EdgeIndex::new(None,node_index("root")), Edge::new(root_e_source, root_e_target, root_e.clone()));
@@ -1577,8 +1576,8 @@ mod tests {
                     let e1_source =use_state(|| Some(node_index("root")));
                     let e1_target = use_state(||Some(node_index("1")));
                     let e1 = EmgEdgeItem::new_in_topo(
-                            e1_source.watch(),
-                            e1_target.watch(),
+                            &e1_source.watch(),
+                            &e1_target.watch(),
                         e_dict_sv.watch(),
                         (px(50), px(50)),
                          (pc(0), pc(0), pc(0)),

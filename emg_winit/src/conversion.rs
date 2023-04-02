@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2023-03-17 18:44:02
+ * @LastEditTime: 2023-03-31 23:48:23
  * @LastEditors: Rais
  * @Description:
  */
@@ -150,7 +150,7 @@ pub fn window_event(
                 }
             } else {
                 moved = event_state.prior_position.is_none()
-                    || event_state.prior_position.contains(&position);
+                    || event_state.prior_position.is_some_and(|x| x == position);
             }
             event_state.prior_position = Some(position);
 

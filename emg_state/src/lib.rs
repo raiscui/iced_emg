@@ -1,41 +1,59 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![warn(clippy::nursery)]
-#![feature(min_specialization)]
+#![feature(specialization)]
 #![feature(box_into_inner)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
 #![feature(is_some_and)]
 #![feature(closure_track_caller)]
+#![feature(iter_collect_into)]
 // ────────────────────────────────────────────────────────────────────────────────
+use emg_common::GenericSize;
+use general_struct::TopoKey;
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 // #![feature(specialization)]
+pub(crate) mod g_store;
+
 pub mod error;
+pub mod general_fns;
+pub mod general_struct;
+pub mod general_traits;
+pub mod state_anchor;
 pub mod state_lit;
-pub mod use_state_impl;
+pub mod state_var;
+pub mod state_voa;
+pub mod test_sv;
 pub use anchors;
+pub use anchors::collections::ord_map_methods::Dict;
 pub use anchors::dict;
 pub use anchors::singlethread::Anchor;
+pub use anchors::singlethread::Engine;
 pub use anchors::singlethread::MultiAnchor as AnchorMultiAnchor;
 pub use anchors::singlethread::Var;
-use emg_common::GenericSize;
+pub use g_store::DepsVarTopoKey;
+pub use g_store::GStateStore;
+pub use g_store::SkipKeyCollection;
+pub use general_fns::state_store;
+pub use general_struct::StorageKey;
+pub use general_traits::CloneState;
+pub use general_traits::CloneStateAnchor;
+pub use general_traits::StateTypeCheck;
+pub use state_anchor::StateAnchor;
+pub use state_anchor::StateMultiAnchor;
+pub use state_var::use_state;
+pub use state_var::StateVar;
+pub use state_voa::use_state_voa;
+pub use state_voa::StateVOA;
 pub use topo;
-pub use use_state_impl::reset_state;
-pub use use_state_impl::state_store;
-// pub use use_state_impl::state_store_with;
-pub use use_state_impl::use_state;
-pub use use_state_impl::CloneStateAnchor;
-pub use use_state_impl::CloneStateVar;
-pub use use_state_impl::DepsVarTopoKey;
-pub use use_state_impl::Dict;
-pub use use_state_impl::GStateStore;
-pub use use_state_impl::SkipKeyCollection;
-pub use use_state_impl::StateAnchor;
-pub use use_state_impl::StateMultiAnchor;
-pub use use_state_impl::StateTypeCheck;
-pub use use_state_impl::StateVar;
-pub use use_state_impl::StorageKey;
+
 // ────────────────────────────────────────────────────────────────────────────────
+//TODO use this replace StorageKey for b a callback fn
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
+pub struct CallbackFnStorageKey(TopoKey);
+// ─────────────────────────────────────────────────────────────────────────────
 
 impl ::core::ops::Mul<f64> for StateAnchor<GenericSize> {
     type Output = Self;
@@ -51,10 +69,10 @@ impl ::core::ops::Add for StateAnchor<GenericSize> {
 }
 #[cfg(test)]
 mod tests {
-    use crate::dict;
+    use crate::{dict, general_traits::StateFn, state_var::use_state};
     use std::{panic::Location, rc::Rc};
 
-    use crate::{state_store, use_state, CloneStateVar, StateAnchor, StateMultiAnchor, StateVar};
+    use crate::{state_store, CloneState, StateAnchor, StateMultiAnchor, StateVar};
 
     struct X {
         a: StateVar<i32>,
@@ -62,12 +80,11 @@ mod tests {
         c: StateVar<i32>,
     }
 
-    // #[track_caller]
     #[topo::nested]
     fn t1_in_topo() -> StateVar<i32> {
         use_state(|| 1)
     }
-    // #[track_caller]
+
     fn call_t1() -> StateVar<i32> {
         t1_in_topo()
     }

@@ -1,5 +1,4 @@
 #![feature(is_some_and)]
-#![feature(option_result_contains)]
 // ─────────────────────────────────────────────────────────────────────────────
 
 mod error;

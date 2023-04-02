@@ -36,9 +36,7 @@ thiserror = "1.0"
 indexmap = "1.9.2"
 #--------------
 winit = "0.28.3"
-
-nu-ansi-term = "0.47"
-
+owo-colors = "3.5.0"
 
 [dependencies.sysinfo]
 version = "0.23"
