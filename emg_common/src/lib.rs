@@ -185,6 +185,7 @@ impl GenericSize {
 }
 
 #[macro_export]
+///need emg_state to impl Into ValOrAnchor
 macro_rules! impl_to_generic_size_g_a_l_i_i_s {
     ($name:ty) => {
         impl From<$name> for GenericSize {
@@ -197,6 +198,12 @@ macro_rules! impl_to_generic_size_g_a_l_i_i_s {
                     <$name>::Inherit => Self::Inherit,
                     <$name>::StringValue(x) => x.into(),
                 }
+            }
+        }
+
+        impl From<$name> for emg_state::anchors::singlethread::ValOrAnchor<GenericSize> {
+            fn from(value: $name) -> Self {
+                Self::Val(value.into())
             }
         }
 

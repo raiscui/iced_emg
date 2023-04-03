@@ -159,28 +159,6 @@ pub enum PathCommand {
     AntiClockwiseArc(ArcMotion),
     Close,
 }
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PathCommandOG {
-    Move(Vector<Motion>),
-    MoveTo(Vector<Motion>),
-    Line(Vector<Motion>),
-    LineTo(Vector<Motion>),
-    Horizontal(Motion),
-    HorizontalTo(Motion),
-    Vertical(Motion),
-    VerticalTo(Motion),
-    Curve(CubicCurveMotionOG),
-    CurveTo(CubicCurveMotionOG),
-    Quadratic(QuadraticCurveMotionOG),
-    QuadraticTo(QuadraticCurveMotionOG),
-    SmoothQuadratic(Vector<[Motion; DIM2]>),
-    SmoothQuadraticTo(Vector<[Motion; DIM2]>),
-    Smooth(Vector<[Motion; DIM2]>),
-    SmoothTo(Vector<[Motion; DIM2]>),
-    ClockwiseArc(ArcMotion),
-    AntiClockwiseArc(ArcMotion),
-    Close,
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ShadowMotion {

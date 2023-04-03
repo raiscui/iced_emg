@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2023-03-31 17:52:17
+ * @LastEditTime: 2023-04-03 12:39:12
  * @LastEditors: Rais
  * @Description:
  */
@@ -282,7 +282,7 @@ impl Shaping<EmgEdgeItem> for CssWidth {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for CssWidth").entered();
 
-        who.layout.w.set(voa(self.clone()));
+        who.layout.w.set(self.clone());
         true
     }
 }
@@ -292,7 +292,7 @@ impl Shaping<EmgEdgeItem> for CssHeight {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for CssHeight").entered();
 
-        who.layout.h.set(voa(self.clone()));
+        who.layout.h.set(self.clone());
         true
     }
 }
@@ -301,7 +301,7 @@ impl Shaping<EmgEdgeItem> for OriginX {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for OriginX").entered();
 
-        who.layout.origin_x.set(voa(self.clone()));
+        who.layout.origin_x.set(self.clone());
         true
     }
 }
@@ -310,7 +310,7 @@ impl Shaping<EmgEdgeItem> for OriginY {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for OriginY").entered();
 
-        who.layout.origin_y.set(voa(self.clone()));
+        who.layout.origin_y.set(self.clone());
         true
     }
 }
@@ -319,7 +319,7 @@ impl Shaping<EmgEdgeItem> for AlignX {
     #[track_caller]
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for AlignX").entered();
-        who.layout.align_x.set(voa(self.clone()));
+        who.layout.align_x.set(self.clone());
         true
     }
 }
@@ -328,7 +328,7 @@ impl Shaping<EmgEdgeItem> for AlignY {
     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let _g = trace_span!("-> Shaping<EmgEdgeItem> for AlignY").entered();
 
-        who.layout.align_y.set(voa(self.clone()));
+        who.layout.align_y.set(self.clone());
         true
     }
 }

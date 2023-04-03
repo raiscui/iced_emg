@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:19:27
- * @LastEditTime: 2023-03-31 23:48:23
+ * @LastEditTime: 2023-04-03 11:09:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -28,6 +28,7 @@ pub mod ev {
     use emg_common::Affine;
 
     use emg_common;
+    use tracing::debug;
 
     use crate::Pos;
 
@@ -43,7 +44,7 @@ pub mod ev {
     impl EventState {
         pub fn set_mouse_down(&mut self, mouse_down: bool) {
             if mouse_down {
-                println!("----按下");
+                debug!(target = "drag_check", "----按下");
             }
 
             self.prior_mouse_down = self.mouse_down;
@@ -134,7 +135,7 @@ pub fn window_event(
                             ));
 
                             event_state.set_mouse_down(true); // 持续更改 ,prior_mouse_down 变更
-                            println!("----按下 2");
+                            debug!(target = "drag_check", "----按下 2");
                         }
 
                         evs.push((
@@ -186,7 +187,7 @@ pub fn window_event(
                     //TODO move to event_state function
 
                     event_state.set_mouse_down(true);
-                    println!("----按下 3");
+                    debug!(target = "drag_check", "----按下 3");
 
                     event_state.transform = Default::default();
 
@@ -202,13 +203,13 @@ pub fn window_event(
                     event_state.transform = Default::default();
                     if !pm {
                         //按下就释放
-                        println!("按下就释放");
+                        debug!(target = "drag_check", "按下就释放");
                         smallvec![(
                             EventIdentify::new(EventFlag::MOUSE, mouse::LEFT_RELEASED),
                             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)),
                         )]
                     } else {
-                        println!("按下+移动过..");
+                        debug!(target = "drag_check", "按下+移动过..");
 
                         smallvec![
                             (

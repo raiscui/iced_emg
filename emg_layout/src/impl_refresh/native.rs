@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-29 23:19:00
- * @LastEditTime: 2023-03-17 10:10:29
+ * @LastEditTime: 2023-04-03 13:17:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,54 +10,13 @@ use crate::EmgEdgeItem;
 use emg_common::TypeCheck;
 use emg_native::WidgetState;
 use emg_shaping::{EqShapingWithDebug, Shaping, ShapingWhoNoWarper};
-use emg_state::StateTypeCheck;
+use emg_state::{anchors::singlethread::ValOrAnchor, StateTypeCheck};
 use emg_state::{CloneState, StateAnchor, StateVar};
 #[allow(clippy::wildcard_imports)]
 use seed_styles::*;
 use std::rc::Rc;
+// ─────────────────────────────────────────────────────────────────────────────
 
-// impl Shaping<EmgEdgeItem> for CssBackgroundAttachment
-// where
-//     EmgEdgeItem: ShapingWhoNoWarper,
-// {
-//     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
-//         let type_name = Self::TYPE_NAME;
-//         who.styles.update(|s| {
-//             s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
-//         });
-//         true
-//     }
-// }
-
-// impl Shaping<EmgEdgeItem> for StateVar<CssBackgroundAttachment>
-// where
-//     EmgEdgeItem: ShapingWhoNoWarper,
-// {
-//     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
-//         let type_name = Self::INSIDE_TYPE_NAME;
-//         who.styles.update(|s| {
-//             let value = self
-//                 .watch()
-//                 .map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
-//             s.insert(type_name, value);
-//         });
-//         true
-//     }
-// }
-
-// impl Shaping<EmgEdgeItem> for StateAnchor<CssBackgroundAttachment>
-// where
-//     EmgEdgeItem: ShapingWhoNoWarper,
-// {
-//     fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
-//         let type_name = Self::INSIDE_TYPE_NAME;
-//         who.styles.update(|s| {
-//             let value = self.map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
-//             s.insert(type_name, value);
-//         });
-//         true
-//     }
-// }
 ///[`EmgEdgeItem`]
 macro_rules! impl_css_native_shaping {
     ($css:ident) => {
@@ -68,7 +27,7 @@ macro_rules! impl_css_native_shaping {
             fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
                 let type_name = Self::TYPE_NAME;
                 who.styles.update(|s| {
-                    s.insert(type_name, StateAnchor::constant(Rc::new(self.clone())));
+                    s.insert(type_name, ValOrAnchor::new_val(Rc::new(self.clone())));
                 });
                 true
             }
@@ -84,7 +43,7 @@ macro_rules! impl_css_native_shaping {
                     let value = self
                         .watch()
                         .map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
-                    s.insert(type_name, value);
+                    s.insert(type_name, value.into());
                 });
                 true
             }
@@ -99,7 +58,7 @@ macro_rules! impl_css_native_shaping {
                 who.styles.update(|s| {
                     let value =
                         self.map(|x| Rc::new(x.clone()) as Rc<dyn EqShapingWithDebug<WidgetState>>);
-                    s.insert(type_name, value);
+                    s.insert(type_name, value.into());
                 });
                 true
             }

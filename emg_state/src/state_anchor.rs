@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-29 11:12:34
- * @LastEditTime: 2023-03-31 18:12:25
+ * @LastEditTime: 2023-04-03 15:41:16
  * @LastEditors: Rais
  * @Description:
  */
@@ -38,8 +38,6 @@ impl<T> From<StateAnchor<T>> for ValOrAnchor<T> {
         Self::Anchor(value.0)
     }
 }
-
-
 
 impl<T> Clone for StateAnchor<T> {
     fn clone(&self) -> Self {
@@ -222,7 +220,7 @@ impl<K: Ord + Clone + PartialEq + 'static, V: Clone + PartialEq + 'static> State
     #[must_use]
     #[inline]
     pub fn increment_reduction<
-        F: FnMut(&mut T, &K, &V) + 'static,
+        F: FnMut(&mut T, &K, &V) -> bool + 'static,
         T: Clone + PartialEq + 'static,
     >(
         &self,

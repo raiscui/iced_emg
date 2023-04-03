@@ -48,9 +48,9 @@ use emg_common::{
 };
 use emg_shaping::{EqShapingWithDebug, Shaping};
 use emg_state::{
-    anchors::singlethread::ValOrAnchor, state_lit::StateVarLit, state_store, topo, use_state,
-    use_state_voa, Anchor, CloneState, CloneStateAnchor, Dict, Engine, GStateStore, StateAnchor,
-    StateMultiAnchor, StateVOA, StateVar, Var,
+    anchors::singlethread::ValOrAnchor, state_store, topo, use_state, use_state_voa, Anchor,
+    CloneState, CloneStateAnchor, Dict, Engine, GStateStore, StateAnchor, StateMultiAnchor,
+    StateVOA, StateVar,
 };
 use float_cmp::approx_eq;
 use styles::{px, s, w, CssTransform, CssValueTrait, Style, UpdateStyle};
@@ -663,8 +663,10 @@ pub type GraphEdgesDict = Dict<EdgeIndex, Edge<EmgEdgeItem>>;
 
 type PathVarMap<T> = HashMap<EPath, T, BuildHasherDefault<CustomHasher>>;
 //TODO use GenericSizeAnchor for kv's -> v
+// pub type StylesDict =
+//     Dict<TypeName, StateAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
 pub type StylesDict =
-    Dict<TypeName, StateAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
+    Dict<TypeName, ValOrAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
 
 pub struct EmgEdgeItem {
     //TODO save g_store
@@ -820,36 +822,18 @@ impl EmgEdgeItem {
 }
 
 impl EmgEdgeItem {
-    pub fn build_path_layout(&self, func: impl FnOnce(Layout) -> (EPath, Layout)) {
+    /// # Errors
+    ///
+    /// Will return `Err`: [`emg_state::error::Error`]
+    /// permission to read it.
+    pub fn build_path_layout(
+        &self,
+        func: impl FnOnce(Layout) -> (EPath, Layout),
+    ) -> Result<(), emg_state::error::Error> {
         let (path, layout) = func(self.layout);
         self.path_layouts
-            .set_with_once(move |pls_map| pls_map.update(path, layout));
+            .set_with_once(move |pls_map| pls_map.update(path, layout))
     }
-
-    // #[topo::nested]
-    // #[instrument(skip(edges))]
-    // pub fn default_in_topo(
-    //     source_node_nix_sa: StateAnchor<Option<NodeIndex>>,
-    //     target_node_nix_sa: StateAnchor<Option<NodeIndex>>,
-    //     edges: StateAnchor<GraphEdgesDict>,
-    // ) -> Self {
-    //     Self::new_in_topo(
-    //         source_node_nix_sa,
-    //         target_node_nix_sa,
-    //         edges,
-    //         (GenericSize::default(), GenericSize::default()),
-    //         (
-    //             GenericSize::default(),
-    //             GenericSize::default(),
-    //             GenericSize::default(),
-    //         ),
-    //         (
-    //             GenericSize::default(),
-    //             GenericSize::default(),
-    //             GenericSize::default(),
-    //         ),
-    //     )
-    // }
 
     #[cfg(test)]
     #[topo::nested]
@@ -1312,71 +1296,72 @@ impl EmgEdgeItem {
                             let _debug_span_ = warn_span!( "->[ calculated_changed_vars_sa calc map_mut ] ").entered();
                             warn!("[calculated_changed_vars_sa] path:{:?} newest_current_prop_vals :{:?}",&self_path5,&newest_current_prop_vals);
 
-                            let mut children_for_current_constants_did_update = false;
-
-
-                            if children_for_current_addition_constants.is_empty() && !last_observation_children_for_current_constants.is_empty(){
+                            let children_for_current_constants_did_update =   if children_for_current_addition_constants.is_empty() && !last_observation_children_for_current_constants.is_empty(){
                                 for constant in last_observation_children_for_current_constants.iter(){
                                     cass_solver.remove_constraint(constant).unwrap();
 
                                 }
                                 last_observation_children_for_current_constants.clear();
-                                children_for_current_constants_did_update=true;
+                                true
                             }else{
+                                let mut update = false;
                                 for diff_item in last_observation_children_for_current_constants.diff(children_for_current_addition_constants){
                                     match diff_item{
                                         NodeDiffItem::Add(new) => {
                                             cass_solver.add_constraint(new.clone()).unwrap();
-                                            children_for_current_constants_did_update = true;
+                                            update = true;
                                         },
                                         NodeDiffItem::Update { old, new } => {
                                             cass_solver.remove_constraint(old).unwrap();
                                             cass_solver.add_constraint(new.clone()).unwrap();
-                                            children_for_current_constants_did_update = true;
+                                            update = true;
 
                                         },
                                         NodeDiffItem::Remove(old) => {
                                             cass_solver.remove_constraint(old).unwrap();
-                                            children_for_current_constants_did_update = true;
+                                            update = true;
                                         },
                                     }
                                 }
-                                last_observation_children_for_current_constants = children_for_current_addition_constants.clone();
+                                if update {
+                                    last_observation_children_for_current_constants = children_for_current_addition_constants.clone();
+                                }
+                                update
 
-                            }
+                            };
 
-                            let mut constants_did_update = false;
-
-                            if newest_constants.is_empty() && !last_observation_constants.is_empty() {
+                            let  constants_did_update = if newest_constants.is_empty() && !last_observation_constants.is_empty() {
                                 for constant in last_observation_constants.iter() {
                                     cass_solver.remove_constraint(constant).unwrap();
                                 }
                                 last_observation_constants.clear();
-                                constants_did_update = true;
+                                true
                             }else{
+                                let mut update = false;
                                 for diff_item in last_observation_constants.diff(newest_constants){
                                     match diff_item {
                                         NodeDiffItem::Add(x) => {
                                             cass_solver.add_constraint(x.clone()).ok();//may duplicate constants
-                                            constants_did_update = true;
+                                            update = true;
                                         },
                                         NodeDiffItem::Update { old, new } => {
                                             cass_solver.remove_constraint(old).unwrap();
                                             cass_solver.add_constraint(new.clone()).unwrap();
-                                            constants_did_update = true;
+                                            update = true;
                                         },
                                         NodeDiffItem::Remove(old) => {
                                             cass_solver.remove_constraint(old).unwrap();
-                                            constants_did_update = true;
+                                            update = true;
                                         } ,
                                     };
 
                                 };
-                                if constants_did_update {
+                                if update {
                                     last_observation_constants = newest_constants.clone();
                                 }
+                                update
 
-                            }
+                            };
 
                             // @ current cassowary Top general vals ────────────────────────────────────────────────────────────────────────────────
                             let mut general_top_vals_did_update = false;
@@ -1496,13 +1481,16 @@ impl EmgEdgeItem {
                                 let changes = cass_solver.fetch_changes();
                                 // warn!("cass solver change:{:#?}",&changes);
 
-
-
-                                if !changes.is_empty() {
+                                //TODO check performance
+                                // if !changes.is_empty() {
                                     *out =  changes.into();
                                     return true
-                                }
+                                // }
+
+
                             }
+
+                            out.clear();
 
                             false
 
@@ -2026,7 +2014,7 @@ impl EdgeItemNode {
     ///
     /// [`Empty`]: EdgeItemNode::Empty
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         matches!(self, Self::Empty)
     }
 }
@@ -2076,10 +2064,10 @@ pub mod tests {
     extern crate test;
 
     use emg::{edge_index, edge_index_no_source, node_index};
+    use emg_common::parent;
     use emg_common::{im::vector, num_traits::ToPrimitive};
-    use emg_common::{parent, IdStr};
     use emg_shaping::ShapingUseDyn;
-    use emg_state::{anchors::expert::voa, StateVar};
+    use emg_state::StateVar;
 
     use styles::{bg_color, h, hsl, pc, width, CssBackgroundColorTrait, CssHeight, CssWidth};
     use tracing::{info, span, warn};
@@ -2179,7 +2167,7 @@ pub mod tests {
                 1920,
                 1080,
             );
-            e_dict_sv.set_with_once(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     EdgeIndex::new(None, node_index("root")),
@@ -2199,7 +2187,7 @@ pub mod tests {
                 (pc(50), pc(50), pc(50)),
             );
 
-            e_dict_sv.set_with_once(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("root", "1"),
@@ -2218,7 +2206,7 @@ pub mod tests {
                 (pc(100), pc(100), pc(100)),
                 (pc(100), pc(100), pc(100)),
             );
-            e_dict_sv.set_with_once(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("1", "2"),
@@ -2234,9 +2222,9 @@ pub mod tests {
             });
             info!("l2 =========================================================");
 
-            root_e.shaping_use_dyn(&vec![css(css_width)]);
+            let _ = root_e.shaping_use_dyn(&vec![css(css_width)]);
             // root_e.shaping_use(&css(css_width.clone()));
-            root_e.shaping_use_dyn(&Css(css_height));
+            let _ = root_e.shaping_use_dyn(&Css(css_height));
             assert_eq!(
                 e1.edge_data(&EPath(vector![
                     edge_index_no_source("root"),
@@ -2250,9 +2238,9 @@ pub mod tests {
             );
             info!("=========================================================");
 
-            e2.shaping_use_dyn(&Css(CssWidth::from(px(20))));
-            e2.shaping_use_dyn(&Css(CssHeight::from(px(20))));
-            e2.shaping_use_dyn(&Css(bg_color(hsl(40, 70, 30))));
+            let _ = e2.shaping_use_dyn(&Css(CssWidth::from(px(20))));
+            let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(20))));
+            let _ = e2.shaping_use_dyn(&Css(bg_color(hsl(40, 70, 30))));
 
             trace!("shaping_use after {:#?}", &e2);
             info!("l3 =========================================================");
@@ -2319,7 +2307,7 @@ pub mod tests {
             1920,
             1080,
         );
-        e_dict_sv.set_with_once(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 EdgeIndex::new(None, Some(node_index("root"))),
@@ -2338,7 +2326,7 @@ pub mod tests {
             (pc(100), pc(100), pc(100)),
             (pc(50), pc(20), pc(20)),
         );
-        e_dict_sv.set_with_once(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("root", "1"),
@@ -2357,7 +2345,7 @@ pub mod tests {
             (pc(100), pc(100), pc(100)),
             (pc(50), pc(20), pc(20)),
         );
-        e_dict_sv.set_with_once(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("1", "2"),
@@ -2391,41 +2379,41 @@ pub mod tests {
         let xx = vec![css_width];
         // let xx = vec![css(css_width)];
 
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
 
         // trace!("shaping_use after css_width {}", &root_e);
         trace!("shaping_use after css_width {}", &e1);
@@ -2433,7 +2421,7 @@ pub mod tests {
 
         // root_e.shaping_use(&Css(css_height.clone()));
         let tempcss = use_state(|| css_height);
-        root_e.shaping_use_dyn(&tempcss);
+        let _ = root_e.shaping_use_dyn(&tempcss);
         assert_eq!(
             e1.edge_nodes
                 .get()
@@ -2482,36 +2470,36 @@ pub mod tests {
 
         info!("=========================================================");
 
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
         assert_eq!(
             e1.edge_nodes
                 .get()
@@ -2540,7 +2528,7 @@ pub mod tests {
 
         trace!("shaping_use after {}", &e2);
         info!("l1351 =========================================================");
-        e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
+        let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
         assert_eq!(
             e2.edge_nodes
                 .get()
@@ -2582,7 +2570,7 @@ pub mod tests {
             trace!("shaping_use after2 {}", &e2);
         });
         info!("=========================================================");
-        e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
+        let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
 
         trace!("shaping_use after {:#?}", &e2);
         info!("..=========================================================");
@@ -2635,7 +2623,7 @@ pub mod tests {
             1920,
             1080,
         );
-        e_dict_sv.set_with_once(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 EdgeIndex::new(None, Some(node_index("root"))),
@@ -2661,7 +2649,7 @@ pub mod tests {
                 pc(20),
             ),
         );
-        e_dict_sv.set_with_once(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("root", "1"),
@@ -2680,7 +2668,7 @@ pub mod tests {
             (pc(100), pc(100), pc(100)),
             (pc(50), pc(20), pc(20)),
         );
-        e_dict_sv.set_with_once(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("1", "2"),
@@ -2739,7 +2727,7 @@ pub mod tests {
         let xx = vec![css_width];
         // let xx = vec![css(css_width)];
 
-        root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
 
         warn!("calculated 3 =========================================================");
         warn!(
@@ -2755,40 +2743,40 @@ pub mod tests {
                 .calculated
         );
 
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
 
         // trace!("shaping_use after css_width {}", &root_e);
         trace!("shaping_use after css_width {}", &e1);
@@ -2796,7 +2784,7 @@ pub mod tests {
 
         // root_e.shaping_use(&Css(css_height.clone()));
         let tempcss = use_state(|| css_height);
-        root_e.shaping_use_dyn(&tempcss);
+        let _ = root_e.shaping_use_dyn(&tempcss);
 
         warn!(
             "calculated 4 root h w 100 ========================================================="
@@ -2873,36 +2861,36 @@ pub mod tests {
 
         info!("=========================================================");
 
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
 
         assert_eq!(
             e1.edge_nodes
@@ -2932,7 +2920,7 @@ pub mod tests {
 
         trace!("shaping_use after {}", &e2);
         info!("l1351 =========================================================");
-        e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
+        let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
         assert_eq!(
             e2.edge_nodes
                 .get()
@@ -2974,7 +2962,7 @@ pub mod tests {
             trace!("shaping_use after2 {}", &e2);
         });
         info!("=========================================================");
-        e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
+        let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
 
         trace!("shaping_use after {:#?}", &e2);
         info!("..=========================================================");
@@ -3018,7 +3006,7 @@ pub mod tests {
                 100,
                 100,
             );
-            e_dict_sv.set_with_once(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     EdgeIndex::new(None, Some(node_index("root"))),
@@ -3036,7 +3024,7 @@ pub mod tests {
                 200,
                 200,
             );
-            e_dict_sv.set_with_once(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     EdgeIndex::new(None, Some(node_index("root2"))),
@@ -3056,7 +3044,7 @@ pub mod tests {
                 (pc(0), pc(0), pc(0)),
                 (pc(50), pc(50), pc(50)),
             );
-            e_dict_sv.set_with_once(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("root", "1"),
@@ -3077,7 +3065,7 @@ pub mod tests {
                 (pc(0), pc(0), pc(0)),
                 (pc(100), pc(000), pc(000)),
             );
-            e_dict_sv.set_with_once(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("1", "2"),

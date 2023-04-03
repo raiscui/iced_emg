@@ -39,7 +39,7 @@ split-debuginfo = "unpacked"
 
 [patch.crates-io]
 window_clipboard = { path = "../window_clipboard" }
-objc2 = { path = "/Users/cuiluming/Nextcloud/dev_chaoway/rust/objc2/objc2" }
+# objc2 = { path = "/Users/cuiluming/Nextcloud/dev_chaoway/rust/objc2/objc2" }
 
 [patch."https://github.com/linebender/peniko"]
 peniko = { path = "../peniko" }

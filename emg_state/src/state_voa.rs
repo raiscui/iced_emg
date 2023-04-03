@@ -75,13 +75,6 @@ impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVOA<T> {
         write!(f, "\u{2726} ({})", &v)
     }
 }
-// NOTE: need #![feature(specialization)]
-// impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<StateAnchor<T>> {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         let v = self.get();
-//         write!(f, "\u{2726} ({})", &v)
-//     }
-// }
 
 impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVOA<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-03-31 17:52:29
+ * @LastEditTime: 2023-04-03 23:10:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,8 +11,9 @@ mod func;
 
 use emg_common::{im::vector, Precision, SmallVec, Vector};
 use emg_state::{
-    general_struct::TopoKey, state_lit::StateVarLit, state_store, topo, Anchor, CloneState,
-    CloneStateAnchor, StateAnchor, StateMultiAnchor, StateVar,
+    anchors::expert::CastIntoValOrAnchor, general_struct::TopoKey, state_lit::StateVarLit,
+    state_store, topo, Anchor, CloneState, CloneStateAnchor, StateAnchor, StateMultiAnchor,
+    StateVar,
 };
 use std::{
     cell::{Cell, RefCell},
@@ -231,7 +232,7 @@ where
     /// permission to read it.
     //TODO return bool changed or not
     pub fn effecting_edge_path(&self, edge: &EmgEdgeItem, for_path: EPath) {
-        edge.build_path_layout(|mut l| {
+        edge.build_path_layout(|l| {
             // • • • • •
 
             self.inside.props.iter().for_each(|svp| {
@@ -241,10 +242,7 @@ where
                 match name.as_str() {
                     //TODO full this
                     "CssWidth" => {
-                        //TODO why directly l.w = ..., maybe change impl From<StateVarProperty> for StateVar<GenericSizeAnchor>
-                        // l.w = (*svp).into();
-                        l.w <<= svp;
-                        // panic!("why directly l.w = ..., maybe change impl From<StateVarProperty> for StateVar<GenericSizeAnchor>");
+                        l.w.set(svp.watch().cast_into());
                     }
                     _ => {
                         unimplemented!("not implemented....")
@@ -254,7 +252,8 @@ where
             // • • • • •
 
             (for_path, l) //TODO return bool changed or not
-        });
+        })
+        .unwrap();
     }
 
     // pub fn effecting_path(self, for_path: EPath) -> Result<Self, String> {

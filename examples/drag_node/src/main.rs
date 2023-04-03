@@ -271,8 +271,6 @@ impl Sandbox for App {
                     ]
                 @="x" Layer [
 
-
-
                     @="x_click" On:CLICK  ||{
                         let _span = debug_span!("CLICK", "on [x] click, moving a->b to m->b")
                                 .entered();

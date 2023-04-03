@@ -140,6 +140,7 @@ where
     fn from(sv: StateVar<T>) -> Self {
         trace!("StateVar to StateVarProperty");
         let _span = debug_span!("sv to svp").entered();
+        //TODO  可以使用 stateVOA的 bi
         let bi_self = sv.build_bi_similar_use_into_in_topo::<Property>();
         debug!("bi_self.id: {:?}", bi_self.id());
         Self::new(bi_self)
@@ -169,11 +170,11 @@ where
 //     }
 // }
 
-impl std::ops::ShlAssign<&StateVarProperty> for StateVOA<GenericSize> {
-    fn shl_assign(&mut self, rhs: &StateVarProperty) {
-        self.set(rhs.watch().cast_into());
-    }
-}
+// impl std::ops::ShlAssign<&StateVarProperty> for StateVOA<GenericSize> {
+//     fn shl_assign(&mut self, rhs: &StateVarProperty) {
+//         self.set(rhs.watch().cast_into());
+//     }
+// }
 
 // impl std::ops::ShlAssign<StateVarProperty> for StateVar<GenericSizeAnchor> {
 //     fn shl_assign(&mut self, rhs: StateVarProperty) {

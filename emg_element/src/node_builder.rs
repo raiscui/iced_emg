@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-03-23 16:00:56
+ * @LastEditTime: 2023-04-03 15:32:00
  * @LastEditors: Rais
  * @Description:
  */
@@ -171,12 +171,14 @@ where
                  ..
              }| {
                 //TODO use cfg check when web not 0
-                let styles_sa = styles_end.map_(0, |_k, v| v.get_anchor()).then(|x| {
-                    x.clone()
-                        .into_iter()
-                        .collect::<Anchor<Dict<TypeName, Rc<dyn EqShapingWithDebug<WidgetState>>>>>(
-                        )
-                });
+                // let styles_sa = styles_end.map_(0, |_k, voa| voa.get_anchor()).then(|x| {
+                //     x.clone()
+                //         .into_iter()
+                //         .collect::<Anchor<Dict<TypeName, Rc<dyn EqShapingWithDebug<WidgetState>>>>>(
+                //         )
+                // });
+                let styles_sa: Anchor<Dict<TypeName, Rc<dyn EqShapingWithDebug<WidgetState>>>> =
+                    styles_end.get_anchor().into();
 
                 //TODO 不要用 顺序pipe , 这样情况下 size trans改变 会 重新 进行全部 style 计算,使用 mut 保存 ws.
                 (layout_end, children_layout_override_sa, world_sa)
@@ -189,37 +191,14 @@ where
                         )
                     })
                     .then(move |ws| {
-                        styles_sa
-                            .increment_reduction(ws.clone(), |out_ws, _k, v| {
-                                debug!("increment_reduction ------  {:?}", v);
-                                v.as_ref().shaping(out_ws);
-                                // out_ws.shaping_use(v.as_ref());
-                                // out_ws.shape_of_use(v.as_ref() as &dyn Shaping<WidgetState>);
-                            })
-                            .into_anchor()
+                        styles_sa.increment_reduction(ws.clone(), |out_ws, _k, v| {
+                            debug!("increment_reduction ------  {:?}", v);
+                            v.as_ref().shaping(out_ws)
+                        })
                     })
                     .into_anchor()
-
-                // (styles_end, layout_end)
-                //     .map(move |styles, &(trans, w, h)| {
-                //         let new_widget_state = WidgetState::new(
-                //             (w, h),
-                //             trans,
-                //             world_clone.clone(),
-                //             children_layout_override_clone.clone(),
-                //         );
-
-                //         styles.values().fold(new_widget_state, |mut ws, x| {
-                //             // x.shaping(&mut ws);
-                //             ws.shape_of_use(x);
-                //             // ws.shaping_use(x);
-                //             ws
-                //         })
-                //     })
-                //     .into_anchor()
             },
         );
-        // let widget_state = layout_end.map(|&(trans, w, h)| WidgetState::new((w, h), trans));
 
         Self {
             id: ix.clone(),
@@ -230,30 +209,6 @@ where
             widget_state,
         }
     }
-    /// # Errors
-    ///
-    /// Will return `Err` if `gel` does not Layer_(_) | Button_(_) | Text_(_)
-    /// # Panics
-    ///
-    /// Will panic if xxxx
-    // #[allow(clippy::match_same_arms)]
-    // pub fn try_new_use(gel: &GElement<Message>) -> Result<Self, ()> {
-    //     use GElement::{Button_, Layer_, Text_};
-    //     match gel {
-    //         Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
-    //         GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
-    //         GElement::Refresher_(_) | GElement::Event_(_) => Err(()),
-    //         GElement::NodeRef_(_) => {
-    //             unreachable!("crate builder use NodeRef_ is should never happened")
-    //         }
-
-    //         GElement::EmptyNeverUse => {
-    //             unreachable!("crate builder use EmptyNeverUse is should never happened")
-    //         }
-    //         GElement::SaNode_(_) => todo!(),
-    //         GElement::EvolutionaryFactor(_) => todo!(),
-    //     }
-    // }
 
     //TODO use try into
     #[allow(clippy::match_same_arms)]
