@@ -1,34 +1,38 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-02 20:24:27
- * @LastEditTime: 2023-04-03 23:08:17
+ * @LastEditTime: 2023-04-04 18:45:10
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg_common::na;
-use emg_state::{state_lit::StateVarLit, CloneState, StateAnchor};
+use emg_state::{state_lit::StateVarLit, CloneState, StateAnchor, StateVar};
 /// A viewing region for displaying computer graphics.
 #[derive(Debug, Clone)]
 pub struct Viewport {
     physical_size: na::Vector2<u32>,
     logical_size: na::Vector2<f32>,
     vp_scale_factor: StateVarLit<f64>,
+    global_width: StateVar<f64>,
+    global_height: StateVar<f64>,
     // projection: Transformation,
 }
 
 impl Viewport {
     /// Creates a new [`Viewport`] with the given physical dimensions and scale
     /// factor.
-    pub fn new(size: na::Vector2<u32>, scale_factor: f64) -> Viewport {
+    pub fn new(size: na::Vector2<u32>, vp_scale_factor: f64) -> Viewport {
         let res = Viewport {
             physical_size: size,
-            logical_size: (size.cast::<f64>() / scale_factor).cast(),
+            logical_size: (size.cast::<f64>() / vp_scale_factor).cast(),
             // logical_size: na::Vector2::<f32>::new(
             //     (size.x as f64 / scale_factor) as f32,
             //     (size.y as f64 / scale_factor) as f32,
             // ),
-            vp_scale_factor: StateVarLit::new(scale_factor),
+            vp_scale_factor: StateVarLit::new(vp_scale_factor),
+            global_width: emg_layout::global_width(),
+            global_height: emg_layout::global_height(),
             // projection: Transformation::orthographic(size.width, size.height),
         };
         //TODO when multiple window, will have multiple global_size
@@ -46,6 +50,8 @@ impl Viewport {
             //     (size.y as f64 / scale_factor) as f32,
             // ),
             vp_scale_factor: self.vp_scale_factor.clone(),
+            global_width: self.global_width,
+            global_height: self.global_height,
             // projection: Transformation::orthographic(size.width, size.height),
         };
         //TODO when multiple window, will have multiple global_size
@@ -54,10 +60,9 @@ impl Viewport {
     }
 
     fn setup_global_size(&self) {
-        //TODO 考虑是否可以 clone global_width  global_height sa 到 vp?
         //emg layout work on logical_size
-        emg_layout::global_width().set(self.logical_size.x as f64);
-        emg_layout::global_height().set(self.logical_size.y as f64);
+        self.global_width.set(self.logical_size.x as f64);
+        self.global_height.set(self.logical_size.y as f64);
     }
 
     /// Returns the physical size of the [`Viewport`].

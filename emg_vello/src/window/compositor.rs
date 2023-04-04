@@ -25,7 +25,7 @@ impl Compositor {
     /// Requests a new [`Compositor`] with the given [`Settings`].
     ///
     /// Returns `None` if no compatible graphics adapter could be found.
-    #[instrument(skip(window))]
+    // #[instrument(skip(window))]
     pub async fn request<W>(settings: Settings, window: &W) -> Result<Self, Error>
     where
         W: HasRawWindowHandle + HasRawDisplayHandle,
@@ -115,13 +115,12 @@ impl compositor_arch::Compositor for Compositor {
     }
 
     fn configure_surface(&mut self, _surface: &mut Self::Surface, width: u32, height: u32) {
-        debug_span!(
-            "window_size",
-            "======== resize_surface size: {} {}",
-            width,
-            height
-        )
-        .in_scope(|| {});
+        let _span =
+            debug_span!(target: "resize","Compositor::configure_surface", ?width,?height).entered();
+
+        //NOTE if base_color change , need reset base_color
+        self.render_params.width = width;
+        self.render_params.height = height;
 
         self.render_cx
             .resize_surface(&mut self.surface, width, height);

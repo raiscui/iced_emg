@@ -123,6 +123,8 @@ impl<A: Application> State<A> {
         match event {
             WindowEvent::Resized(new_size) => {
                 let _span = debug_span!("onWindowEvent",at="State", event = ?event).entered();
+                let _span =
+                    debug_span!(target: "resize","onWindowEvent", size= ?new_size).entered();
 
                 let size = na::Vector2::<u32>::new(new_size.width, new_size.height);
 
