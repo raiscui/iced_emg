@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-03-31 18:12:58
+ * @LastEditTime: 2023-04-04 17:30:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -26,8 +26,8 @@ use emg_common::{
 };
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem, CHILDREN_POOL_SIZE};
 use emg_shaping::ShapingUse;
-use emg_state::{Anchor, CloneState, Dict, StateAnchor, StateMultiAnchor, StateVar};
-use tracing::{debug, debug_span, error, info, info_span, trace, trace_span, warn};
+use emg_state::{Anchor, CloneState, Dict, StateAnchor, StateMultiAnchor, StateVOA};
+use tracing::{debug, debug_span, error, info, info_span, trace, trace_span};
 // use vec_string::VecString;
 
 use crate::{node_builder::EventMatchs, GElement, NodeBuilderWidget};
@@ -39,7 +39,7 @@ const POOL_SIZE: usize = 1;
 
 pub type GelType<Message> = Rc<GElement<Message>>;
 
-pub type NItem<Message> = StateVar<StateAnchor<GelType<Message>>>;
+pub type NItem<Message> = StateVOA<GelType<Message>>;
 pub type N<Message> = EmgNodeItem<NItem<Message>, GelType<Message>>;
 pub type E = EmgEdgeItem;
 pub type GraphType<Message> = Graph<N<Message>, E>;
@@ -353,26 +353,21 @@ where
             let graph_rc6 = graph_rc.clone();
 
             //TODO move out  path map scope
-            let gel_sa_no_sv = gel_sa.watch().then(move |g_sa| {
+            let gel_sa_no_sv = gel_sa.watch().either(move |gel| {
                 let graph_rc7 = graph_rc6.clone();
-                let g_sa2 = g_sa.clone();
 
-                g_sa.then(move |gel| {
                     if gel.is_node_ref_() {
                         let refs = gel.as_node_ref_().unwrap();
                         error!("self is node_ref:{} ", refs);
                         graph_rc7
                             .borrow()
                             .get_node_item_use_ix(refs)
-                            .map(|x| x.gel_item.watch().anchor().then(|aa| aa.clone().into_anchor()))
-                            .unwrap()
+                            .map(|x| x.gel_item.watch())
+                            .unwrap().into()
                     } else {
-                        g_sa2.clone().into_anchor()
+                        gel.clone().into()
                     }
-                })
-                .into_anchor()
 
-                // g_sa.clone().into()
             });
             //TODO children Dict 细化 reduce, use diffitem 更新 gel_clone (参考 cass 储存 dict 对比 dict ,diff 更新的方式)
             //TODO 不太行 children变更 会使 current item  不可预计的改变 ,无法
@@ -507,8 +502,12 @@ where
         self.gel_item.set(gel_sa);
     }
 
+    // #[must_use]
+    // pub fn get_gel_rc_sa(&self) -> Rc<StateAnchor<Rc<GElement<Message>>>> {
+    //     self.gel_item.get_rc()
+    // }
     #[must_use]
-    pub fn get_gel_rc_sa(&self) -> Rc<StateAnchor<Rc<GElement<Message>>>> {
-        self.gel_item.get_rc()
+    pub fn get_gel_sa(&self) -> StateAnchor<Rc<GElement<Message>>> {
+        self.gel_item.watch()
     }
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-20 00:02:37
- * @LastEditTime: 2023-02-23 17:32:51
+ * @LastEditTime: 2023-04-04 17:34:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -59,7 +59,7 @@ mod test {
     use emg::{edge_index, edge_index_no_source, Direction::Incoming};
     use emg_common::{px, IdStr};
 
-    use emg_state::{use_state, StateAnchor};
+    use emg_state::{use_state, use_state_voa, StateAnchor};
 
     use crate::{
         g_tree_builder::{GraphEdgeBuilder, GraphNodeBuilder},
@@ -85,9 +85,9 @@ mod test {
                  // node ────────────────────────────────────────────────────────────────────────────────
 
                  GraphNodeBuilder::new(root_id.clone())
-                     .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
+                     .with_gel_sa(use_state_voa(||Rc::new(
                          Layer::<Message>::new(root_id.clone()).into(),
-                     ))))
+                     )))
                      .with_incoming_eix_set([root_edge_ix.clone()].into_iter().collect())
                      .with_outgoing_eix_set_with_default_capacity(5)
                      .build_in_topo(&emg_graph_rc_refcell);
@@ -105,9 +105,9 @@ mod test {
                  // node ────────────────────────────────────────────────────────────────────────────────
 
                  GraphNodeBuilder::new(id.clone())
-                     .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
+                     .with_gel_sa(use_state_voa(||Rc::new(
                          Layer::<Message>::new(id.clone()).into(),
-                     ))))
+                     )))
                      .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                      .with_outgoing_eix_set_with_default_capacity(5)
                      .build_in_topo(&emg_graph_rc_refcell);
@@ -126,9 +126,9 @@ mod test {
                  // node ────────────────────────────────────────────────────────────────────────────────
 
                  GraphNodeBuilder::new(id.clone())
-                     .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
+                     .with_gel_sa(use_state_voa(||Rc::new(
                          Layer::<Message>::new(id.clone()).into(),
-                     ))))
+                    )))
                      .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                      .with_outgoing_eix_set_with_default_capacity(5)
                      .build_in_topo(&emg_graph_rc_refcell);
@@ -147,9 +147,9 @@ mod test {
                  // node ────────────────────────────────────────────────────────────────────────────────
 
                  GraphNodeBuilder::new(id.clone())
-                     .with_gel_sa(use_state(||StateAnchor::constant(Rc::new(
+                     .with_gel_sa(use_state_voa(||Rc::new(
                          Layer::<Message>::new(id.clone()).into(),
-                     ))))
+                     )))
                      .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                      .with_outgoing_eix_set_with_default_capacity(5)
                      .build_in_topo(&emg_graph_rc_refcell);
