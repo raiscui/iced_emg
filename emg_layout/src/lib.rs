@@ -170,7 +170,6 @@ struct Mat4(Matrix4<Precision>);
 // ────────────────────────────────────────────────────────────────────────────────
 
 // #[derive(Debug, Clone, PartialEq, Eq, Display)]
-// //TODO use StateVar<StateAnchor> for can change? note: 了解 最终 和 cassowary 如何共同影响 尺寸
 // pub struct GenericSizeAnchor(ValOrAnchor<GenericSize>);
 
 // impl Default for GenericSizeAnchor {
@@ -3102,7 +3101,7 @@ pub mod tests {
             trace!("new root_e2:e2 {}", &e2);
             info!("..=========================================================");
             //local
-            assert_eq!(e2.id.get(), edge_index("1", "2"));
+            assert_eq!(e2.id.get_out_val(), edge_index("1", "2"));
             assert_eq!(
                 e2.edge_data(&epath!("root2"=>"1"=>"2"))
                     .unwrap()
@@ -3118,7 +3117,7 @@ pub mod tests {
             // parent_for_e2_sa.set(root_e.clone());
             // local use root
             e2_source.set(Some(node_index("root")));
-            assert_eq!(e2.id.get(), edge_index("root", "2"));
+            assert_eq!(e2.id.get_out_val(), edge_index("root", "2"));
             assert_eq!(
                 e2.edge_data(&epath!("root"=>"2"))
                     .unwrap()

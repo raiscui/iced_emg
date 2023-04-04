@@ -5,7 +5,7 @@ use Either::{Left, Right};
 /*
  * @Author: Rais
  * @Date: 2022-06-24 18:11:24
- * @LastEditTime: 2023-03-20 11:32:17
+ * @LastEditTime: 2023-04-04 19:30:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -2595,7 +2595,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn point_containment() {
+    fn point_containment_err() {
         //TODO support special node element, then, remove #[should_panic]
         let input = r#"
         @h < "col1"[center_x] + 20 > -(#box1)- < ::window[center_x] >
