@@ -1,12 +1,15 @@
 /*
  * @Author: Rais
  * @Date: 2022-06-23 22:52:57
- * @LastEditTime: 2023-03-31 16:23:10
+ * @LastEditTime: 2023-04-04 23:14:46
  * @LastEditors: Rais
  * @Description:
  */
 
-use std::{hash::BuildHasherDefault, rc::Rc};
+use std::{
+    hash::BuildHasherDefault,
+    rc::{Rc, Weak},
+};
 
 use cassowary::{
     strength::{REQUIRED, WEAK},
@@ -453,7 +456,7 @@ pub enum CassowaryVar {
     Virtual(Virtual),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct CassowaryGeneralMap {
     pub(crate) map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
     pub(crate) v_v_suggest: Dict<Variable, f64>,
@@ -463,8 +466,24 @@ pub struct CassowaryGeneralMap {
         HashMap<IdStr, ConstraintList, BuildHasherDefault<CustomHasher>>,
     pub(crate) top_map: HashMap<IdStr, Variable, BuildHasherDefault<CustomHasher>>,
     pub(crate) top_v_v_suggest: Dict<Variable, f64>,
-    pub(crate) parent: Option<Rc<CassowaryGeneralMap>>,
+    pub(crate) parent: Option<Weak<CassowaryGeneralMap>>,
     // pub(crate) cassowary_map: Option<Rc<CassowaryMap>>,
+}
+
+impl PartialEq for CassowaryGeneralMap {
+    fn eq(&self, other: &Self) -> bool {
+        self.map == other.map
+            && self.v_v_suggest == other.v_v_suggest
+            && self.virtual_constraints == other.virtual_constraints
+            && self.top_virtual_constraints == other.top_virtual_constraints
+            && self.top_map == other.top_map
+            && self.top_v_v_suggest == other.top_v_v_suggest
+            && match (&self.parent, &other.parent) {
+                (None, None) => true,
+                (None, Some(_)) | (Some(_), None) => false,
+                (Some(s), Some(o)) => s.ptr_eq(o),
+            }
+    }
 }
 
 pub type ConstraintList = [Constraint; 8];
@@ -617,7 +636,7 @@ impl Default for CassowaryGeneralMap {
 impl std::ops::Add<CassowaryGeneralMap> for Rc<CassowaryGeneralMap> {
     type Output = CassowaryGeneralMap;
     fn add(self, current_new: CassowaryGeneralMap) -> Self::Output {
-        Self::Output {
+        CassowaryGeneralMap {
             map: current_new.map.union_with(self.map.clone(), |l, _| l),
             v_v_suggest: current_new
                 .v_v_suggest
@@ -636,7 +655,7 @@ impl std::ops::Add<CassowaryGeneralMap> for Rc<CassowaryGeneralMap> {
             top_virtual_constraints: current_new
                 .top_virtual_constraints
                 .union(self.top_virtual_constraints.clone()),
-            parent: Some(self),
+            parent: Some(Rc::downgrade(&self)),
             // cassowary_map: current_new.cassowary_map,
         }
     }

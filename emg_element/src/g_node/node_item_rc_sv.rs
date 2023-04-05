@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-04-04 17:30:57
+ * @LastEditTime: 2023-04-05 20:41:22
  * @LastEditors: Rais
  * @Description:
  */
@@ -26,7 +26,10 @@ use emg_common::{
 };
 use emg_layout::{EPath, EdgeItemNode, EmgEdgeItem, CHILDREN_POOL_SIZE};
 use emg_shaping::ShapingUse;
-use emg_state::{Anchor, CloneState, Dict, StateAnchor, StateMultiAnchor, StateVOA};
+use emg_state::{
+    anchors::singlethread::ValOrAnchor, Anchor, CloneState, Dict, StateAnchor, StateMultiAnchor,
+    StateVOA,
+};
 use tracing::{debug, debug_span, error, info, info_span, trace, trace_span};
 // use vec_string::VecString;
 
@@ -66,109 +69,42 @@ where
     ) -> Self {
         let graph_rc2 = graph_rc.clone();
         let nix2 = nix.clone();
-        let paths_ord_map_pool_0: OrdMapPool<EPath, ()> = OrdMapPool::new(POOL_SIZE);
 
         let paths_sa = incoming_eix_sa.then(move |ins| {
             let _span = info_span!("paths_sa recalculation").entered();
-            let ord_map_pool = paths_ord_map_pool_0.clone();
+
             ins.iter()
-                .map(|in_eix| {
-                    // let left_sa = Var::new(Dict::<EPath, _>::unit(
-                    //     EPath::new(vector![in_eix.clone()]),
-                    //     (),
-                    // ))
-                    // .watch();
-                    let res = in_eix.source_nix().as_ref().map_or(
-                        Left(in_eix.clone()),
+                .map(|in_eix| -> ValOrAnchor<emg_common::im::OrdMap<EPath, ()>> {
+                    in_eix.source_nix().as_ref().map_or(
+                        PathDictAsSets::unit(EPath::new(vector![in_eix.clone()]), ()).into(),
                         |self_source_nix| {
                             let nix2 = nix2.clone();
-                            let ord_map_pool2 = ord_map_pool.clone();
-                            Right(
-                                graph_rc2
-                                    .borrow()
-                                    .get_node_item(self_source_nix)
-                                    .unwrap()
-                                    .paths_sa
-                                    .map(move |vec_e_path| {
-                                        // cfg_if! {
-                                        //     if #[cfg(feature = "pool")]{
 
-                                        //         let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool2);
-                                        //         let vec_e_path_clone = vec_e_path.clone();
-                                        //         vec_e_path_clone
-                                        //             .into_iter()
-                                        //             .map(|(ep, v)| (ep.link_ref(nix2.clone().into()), v))
-                                        //             .collect_into(&mut pd);
-                                        //         pd
-                                        //     }else{
-                                        //         let vec_e_path_clone = vec_e_path.clone();
-                                        //         vec_e_path_clone
-                                        //             .into_iter()
-                                        //             .map(|(ep, v)| (ep.link_ref(nix2.clone().into()), v))
-                                        //             .collect::<PathDict<IdStr>>()
-                                        //     }
-                                        // }
-                                        let vec_e_path_clone = vec_e_path.clone();
-                                        vec_e_path_clone
-                                            .into_iter()
-                                            .map(|(ep, _)| (ep.link(nix2.clone().into()), ()))
-                                            .collect::<PathDictAsSets>()
-                                    })
-                                    .get_anchor(),
-                            )
+                            graph_rc2
+                                .borrow()
+                                .get_node_item(self_source_nix)
+                                .unwrap()
+                                .paths_sa
+                                .map(move |vec_e_path| {
+                                    let vec_e_path_clone = vec_e_path.clone();
+                                    vec_e_path_clone
+                                        .into_iter()
+                                        .map(|(ep, _)| (ep.link(nix2.clone().into()), ()))
+                                        .collect::<PathDictAsSets>()
+                                })
+                                .into()
                         },
-                    );
-                    res.right_or_else(|no_source_self_eix| {
-                        // cfg_if!{
-                        //     if #[cfg(feature = "pool")]{
-                        //         let mut pd = PathDict::<IdStr>::with_pool(&ord_map_pool);
-                        //         pd.insert(EPath::new(vector![no_source_self_eix]), false);
-                        //         Anchor::constant(pd)
-                        //     }else{
-                        //         Anchor::constant(Dict::<EPath, bool>::unit(EPath::new(vector![no_source_self_eix]), false))
-                        //     }
-                        // }
-                        // ─────────────────────────────
-
-                        Anchor::constant(PathDictAsSets::unit(
-                            EPath::new(vector![no_source_self_eix]),
-                            (),
-                        ))
-                        // ─────────────────────────────
-
-                        // Var::new(Dict::<EPath, _>::unit(
-                        //     EPath::new(vector![no_source_self_eix]),
-                        //     (),
-                        // ))
-                        // .watch()
-                        // ─────────────────────────────
-                        // left_sa.clone()
-                    })
+                    )
                 })
                 .collect::<Anchor<Vector<_>>>()
-                .map(move |vd: &Vector<_>| {
-                    // cfg_if! {
-                    //     if #[cfg(feature = "pool")]{
-                    //         vd.clone()
-                    //         .into_iter()
-                    //         .fold(PathDict::<IdStr>::with_pool(&ord_map_pool), Dict::union)
-                    //     }else{
-                    //         PathDict::<IdStr>::unions(vd.clone())
-                    //     }
-                    // }
-                    PathDictAsSets::unions(vd.clone())
-                })
+                .map(move |vd: &Vector<_>| PathDictAsSets::unions(vd.clone()))
         });
 
         let graph_rc3 = graph_rc.clone();
         let nix3 = nix.clone();
 
-        let children_ord_map_pool_0: OrdMapPool<EPath, StateAnchor<GelType<Message>>> =
-            OrdMapPool::new(POOL_SIZE);
-
         let children_view_gel_sa: StateAnchor<Dict<EPath, GelType<Message>>> = outgoing_eix_sa
             .then(move |outs| {
-                let children_ord_map_pool = children_ord_map_pool_0.clone();
                 outs.iter()
                     .filter_map(|out_eix| out_eix.target_nix())
                     .filter_map(|out_target_nix| {
@@ -192,9 +128,7 @@ where
                             })
                             .get_anchor()
                     })
-                    // .map(|x| x.get_anchor())
                     .collect::<Anchor<Vector<_>>>() //each edge-child vec --<  diff paths dict
-                    // .map(|v: &Vector<_>| Dict::unions(v.clone()))
                     .map(move |vd: &Vector<_>| {
                         // cfg_if!{
                         //     if #[cfg(feature = "pool")]{
@@ -216,16 +150,12 @@ where
         // @────────────────────────────────────────────────────────────────────────────────
         let outgoing_eix_sa_clone = outgoing_eix_sa.clone();
 
-        let children_either_ord_map_pool_0: OrdMapPool<EdgeIndex, GElEither<Message>> =
-            OrdMapPool::new(POOL_SIZE);
-
         let paths_view_gel_sa = paths_sa.map_(1,move |current_path, _| {
             let _span = info_span!("----[paths_view_gel_sa] recalculation,( in [Dict] paths_sa.map_ ===========>)",%current_path).entered();
 
             let current_path_clone2 = current_path.clone();
             // let graph_rc4 = graph_rc3.clone();
 
-            let children_either_ord_map_pool_1 = children_either_ord_map_pool_0.clone();
 
             //TODO 使用 cutoff 优化, children_view_gel_sa变化 时, 重新计算的this_path_children_sa不一定变化
             let this_path_children_sa: StateAnchor<Dict<EdgeIndex, GElEither<Message>>> =
