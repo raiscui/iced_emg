@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use vello::{
     util::{DeviceHandle, RenderContext as VelloRenderContext, RenderSurface},
@@ -8,8 +10,16 @@ use emg_graphics_backend::{window::compositor as compositor_arch, Error};
 use emg_native::futures;
 use tracing::{debug_span, info, instrument};
 
-use crate::{Backend, Renderer, SceneFrag, Settings};
+use crate::{scenes::SimpleText, Backend, Renderer, SceneFrag, Settings};
+
+use super::stats;
 // ────────────────────────────────────────────────────────────────────────────────
+use static_init::dynamic;
+
+#[dynamic]
+static mut FRAME_START_TIME: std::time::Instant = Instant::now();
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 /// A window graphics backend for  `vello`.
 #[allow(missing_debug_implementations)]
@@ -19,6 +29,8 @@ pub struct Compositor {
     scene: Scene,
     surface: RenderSurface,
     render_params: RenderParams,
+    stats: stats::Stats,
+    simple_text: SimpleText,
 }
 
 impl Compositor {
@@ -48,7 +60,7 @@ impl Compositor {
         )
         .in_scope(|| {});
 
-        let surface = render_cx
+        let mut surface = render_cx
             .create_surface(
                 &window, //NOTE 物理尺寸
                 (settings.width as f64 * vp_scale_factor).round() as u32,
@@ -64,12 +76,23 @@ impl Compositor {
             height: surface.config.height,
         };
 
+        // ─────────────────────────────────────────────────────────────────────────────
+        let stats = stats::Stats::new();
+        let simple_text = crate::scenes::SimpleText::new();
+
+        // render_cx.set_present_mode(&mut surface, wgpu::PresentMode::AutoNoVsync);
+        render_cx.set_present_mode(&mut surface, wgpu::PresentMode::AutoVsync);
+
+        // ─────────────────────────────────────────────────────────────────────────────
+
         Ok(Compositor {
             settings,
             render_cx,
             scene,
             surface,
             render_params,
+            stats,
+            simple_text,
         })
     }
 
@@ -143,9 +166,26 @@ impl compositor_arch::Compositor for Compositor {
         scene_ctx: &SceneFrag,
         _surface: &mut Self::Surface,
     ) -> Result<(), compositor_arch::SurfaceError> {
+        let snapshot = self.stats.snapshot();
+        let stats_shown = true;
+        let vsync_on = true;
+
+        // ─────────────────────────────────────────────────────────────────────────────
+
         let backend = renderer.backend_mut();
         let mut sb = SceneBuilder::for_scene(&mut self.scene);
         sb.append(&scene_ctx.0, scene_ctx.1);
+
+        if stats_shown {
+            snapshot.draw_layer(
+                &mut sb,
+                &mut self.simple_text,
+                self.render_params.width as f64,
+                self.render_params.height as f64,
+                self.stats.samples(),
+                vsync_on,
+            );
+        }
 
         // render_cx: &VelloRenderContext,
         // scene: &Scene,
@@ -156,6 +196,15 @@ impl compositor_arch::Compositor for Compositor {
             &self.surface,
             &self.render_params,
         );
+
+        let new_time = Instant::now();
+
+        self.stats.add_sample(stats::Sample {
+            frame_time_us: (new_time - *FRAME_START_TIME.read()).as_micros() as u64,
+        });
+        let mut w = FRAME_START_TIME.write();
+        *w = new_time;
+
         Ok(())
     }
 }

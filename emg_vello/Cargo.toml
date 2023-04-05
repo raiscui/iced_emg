@@ -16,3 +16,4 @@ vello = { path = "../../piet-gpu-new" }
 tracing = "0.1"
 raw-window-handle = "0.5"
 wgpu = "0.15"
+static_init = "1.0.3"
