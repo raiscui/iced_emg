@@ -7,6 +7,10 @@ edition = "2021"
 # [lib]
 # crate-type = ["rlib"]
 
+[features]
+default = ["show-fps"]
+show-fps = []
+
 [dependencies]
 emg_native = { path = "../emg_native" }
 emg_graphics_backend = { path = "../emg_graphics_backend" }

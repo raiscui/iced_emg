@@ -14,8 +14,10 @@ use crate::{scenes::SimpleText, Backend, Renderer, SceneFrag, Settings};
 
 use super::stats;
 // ────────────────────────────────────────────────────────────────────────────────
+#[cfg(feature = "show-fps")]
 use static_init::dynamic;
 
+#[cfg(feature = "show-fps")]
 #[dynamic]
 static mut FRAME_START_TIME: std::time::Instant = Instant::now();
 
@@ -29,8 +31,9 @@ pub struct Compositor {
     scene: Scene,
     surface: RenderSurface,
     render_params: RenderParams,
-    stats: stats::Stats,
     simple_text: SimpleText,
+    #[cfg(feature = "show-fps")]
+    stats: stats::Stats,
 }
 
 impl Compositor {
@@ -77,13 +80,15 @@ impl Compositor {
         };
 
         // ─────────────────────────────────────────────────────────────────────────────
-        let stats = stats::Stats::new();
         let simple_text = crate::scenes::SimpleText::new();
 
         // render_cx.set_present_mode(&mut surface, wgpu::PresentMode::AutoNoVsync);
         render_cx.set_present_mode(&mut surface, wgpu::PresentMode::AutoVsync);
 
         // ─────────────────────────────────────────────────────────────────────────────
+        #[cfg(feature = "show-fps")]
+        let stats = stats::Stats::new();
+        // ─────────────────────────────────────────────────────────────
 
         Ok(Compositor {
             settings,
@@ -91,8 +96,9 @@ impl Compositor {
             scene,
             surface,
             render_params,
-            stats,
             simple_text,
+            #[cfg(feature = "show-fps")]
+            stats,
         })
     }
 
@@ -166,25 +172,28 @@ impl compositor_arch::Compositor for Compositor {
         scene_ctx: &SceneFrag,
         _surface: &mut Self::Surface,
     ) -> Result<(), compositor_arch::SurfaceError> {
-        let snapshot = self.stats.snapshot();
-        let stats_shown = true;
-        let vsync_on = true;
-
-        // ─────────────────────────────────────────────────────────────────────────────
-
         let backend = renderer.backend_mut();
         let mut sb = SceneBuilder::for_scene(&mut self.scene);
         sb.append(&scene_ctx.0, scene_ctx.1);
 
-        if stats_shown {
-            snapshot.draw_layer(
-                &mut sb,
-                &mut self.simple_text,
-                self.render_params.width as f64,
-                self.render_params.height as f64,
-                self.stats.samples(),
-                vsync_on,
-            );
+        #[cfg(feature = "show-fps")]
+        {
+            let snapshot = self.stats.snapshot();
+            let stats_shown = true;
+            let vsync_on = true;
+
+            // ─────────────────────────────────────────────────────────────────────────────
+
+            if stats_shown {
+                snapshot.draw_layer(
+                    &mut sb,
+                    &mut self.simple_text,
+                    self.render_params.width as f64,
+                    self.render_params.height as f64,
+                    self.stats.samples(),
+                    vsync_on,
+                );
+            }
         }
 
         // render_cx: &VelloRenderContext,
@@ -197,13 +206,16 @@ impl compositor_arch::Compositor for Compositor {
             &self.render_params,
         );
 
-        let new_time = Instant::now();
+        #[cfg(feature = "show-fps")]
+        {
+            let new_time = Instant::now();
 
-        self.stats.add_sample(stats::Sample {
-            frame_time_us: (new_time - *FRAME_START_TIME.read()).as_micros() as u64,
-        });
-        let mut w = FRAME_START_TIME.write();
-        *w = new_time;
+            self.stats.add_sample(stats::Sample {
+                frame_time_us: (new_time - *FRAME_START_TIME.read()).as_micros() as u64,
+            });
+            let mut w = FRAME_START_TIME.write();
+            *w = new_time;
+        }
 
         Ok(())
     }
