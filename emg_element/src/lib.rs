@@ -7,6 +7,7 @@
 #![feature(is_some_and)]
 #![feature(iter_collect_into)]
 #![feature(cell_update)]
+#![feature(let_chains)]
 //
 // ────────────────────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-04-05 20:41:22
+ * @LastEditTime: 2023-04-08 15:27:10
  * @LastEditors: Rais
  * @Description:
  */
@@ -49,7 +49,7 @@ pub type GraphType<Message> = Graph<N<Message>, E>;
 // ─────────────────────────────────────────────────────────────────────────────
 
 // pub type EventMatchsSa<Message> = StateAnchor<EventMatchs<Message>>;
-pub type EventMatchsSa<Message> = StateAnchor<Vector<Vector<EventMatchs<Message>>>>;
+pub type EventMatchsSa<Message> = StateAnchor<EventMatchs<Message>>;
 
 // ────────────────────────────────────────────────────────────────────────────────
 type GElEither<Message> = Either<GelType<Message>, GelType<Message>>;
@@ -399,7 +399,7 @@ where
     fn gen_paths_view_gel(
         paths_view_gel_sa: &StateAnchor<Dict<EPath, StateAnchor<GelType<Message>>>>,
     ) -> StateAnchor<Dict<EPath, GelType<Message>>> {
-        //NOTE newest version convert sa (StateAnchor collection)
+        //TODO use  newest version convert sa (StateAnchor collection)
         paths_view_gel_sa.then(|dict| {
             dict.into_iter()
                 .collect::<StateAnchor<Dict<EPath, GelType<Message>>>>()

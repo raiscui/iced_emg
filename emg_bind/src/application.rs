@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-03-17 11:49:45
+ * @LastEditTime: 2023-04-08 18:31:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -269,13 +269,18 @@ where
     fn build_ctx(
         &self,
         g: &Self::GraphType,
-        painter: &StateAnchor<crate::runtime::PaintCtx>,
-        events: &StateAnchor<Vector<crate::runtime::EventWithFlagType>>,
+        painter: StateAnchor<crate::runtime::PaintCtx>,
+        events: StateAnchor<Vector<crate::runtime::EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
     ) -> crate::runtime::EventAndCtx<Self::Message, Self::Renderer> {
         self.1.set(Some(self.root_eix()));
 
-        g.runtime_prepare(self.1.watch(), painter, events, cursor_position)
+        g.runtime_prepare(
+            self.1.watch(),
+            painter,
+            events.into_anchor(),
+            cursor_position,
+        )
     }
 }
 

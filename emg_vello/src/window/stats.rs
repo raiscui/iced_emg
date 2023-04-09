@@ -78,7 +78,7 @@ impl Snapshot {
                 text_size,
                 Some(&Brush::Solid(Color::WHITE)),
                 offset * Affine::translate((left_margin, (i + 1) as f64 * text_height)),
-                &label,
+                label,
             );
         }
         text.add(

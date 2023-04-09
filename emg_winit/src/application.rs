@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-04-05 23:14:48
+ * @LastEditTime: 2023-04-09 22:11:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -422,9 +422,9 @@ async fn run_instance<A, E, C>(
 
     let (event_matchs_sa, ctx_sa) = application.build_ctx(
         g.graph(),
-        &painter,
+        painter,
         // &native_events.watch(),
-        &event_debouncer,
+        event_debouncer,
         state.cursor_position(),
     );
     let mut ctx = ctx_sa.get();
@@ -457,7 +457,9 @@ async fn run_instance<A, E, C>(
                     native_events.set(Default::default());
 
                     if !event_matchs.is_empty() {
-                        for (_ei, ev, en_list) in event_matchs.iter().flatten().flatten() {
+                        for (_ei, ev, en_list) in event_matchs.iter()
+                        // .flatten().flatten()
+                        {
                             for en in en_list {
                                 //NOTE event callback called
                                 if let Some(msg) = en.call(ev) {
@@ -520,7 +522,7 @@ async fn run_instance<A, E, C>(
                 let new_ctx = ctx_sa.get();
                 //new_ctx == ctx
                 if Rc::ptr_eq(&new_ctx, &ctx) {
-                    //NOTE 不渲染,提前跳过
+                    //NOTE 不渲染,提前跳过,持续渲染就注释掉
                     continue;
                 } else {
                     ctx = new_ctx;

@@ -2,7 +2,7 @@ use emg_common::{smallvec, SmallVec};
 /*
  * @Author: Rais
  * @Date: 2023-03-13 14:41:13
- * @LastEditTime: 2023-03-23 15:59:20
+ * @LastEditTime: 2023-04-09 17:54:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -90,6 +90,111 @@ impl MultiLevelIdentify {
     //         false
     //     }
     // }
+}
+
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct MultiLevelIdentifyWithSwitch {
+    union: u32,
+    map: integer_hasher::IntMap<u32, integer_hasher::IntMap<u32, bool>>,
+}
+
+impl std::fmt::Debug for MultiLevelIdentifyWithSwitch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let union = format!("{:b}", self.union);
+        let mut map = String::new();
+        for (k, vs) in self.map.iter() {
+            let v_str: String = vs
+                .iter()
+                .map(|(v, sw)| format!("({:b}:{})", v, sw))
+                .intersperse(",".to_string())
+                .collect();
+
+            map.push_str(&format!("{:b}:[{}], ", k, &v_str));
+        }
+
+        f.debug_struct("MultiLevelIdentifyWithSwitch")
+            .field("union", &union)
+            .field("map", &map)
+            .finish()
+    }
+}
+
+impl core::ops::BitOr<(EventIdentify, bool)> for MultiLevelIdentifyWithSwitch {
+    type Output = Self;
+
+    fn bitor(mut self, rhs: (EventIdentify, bool)) -> Self::Output {
+        self.insert(rhs.0, rhs.1);
+        self
+    }
+}
+impl core::ops::BitOr<EventIdentify> for MultiLevelIdentifyWithSwitch {
+    type Output = Self;
+
+    fn bitor(mut self, rhs: EventIdentify) -> Self::Output {
+        self.insert(rhs, false);
+        self
+    }
+}
+
+impl MultiLevelIdentifyWithSwitch {
+    pub fn new(ei: EventIdentify, sw: bool) -> Self {
+        let union = ei.0;
+        let mut map =
+            integer_hasher::IntMap::with_capacity_and_hasher(2, BuildIntHasher::default());
+
+        let mut map2 =
+            integer_hasher::IntMap::with_capacity_and_hasher(1, BuildIntHasher::default());
+        map2.insert(ei.1, sw);
+        map.insert(ei.0, map2);
+
+        Self { union, map }
+    }
+    pub fn insert(&mut self, ei: EventIdentify, sw: bool) {
+        if self.union & ei.0 == ei.0 {
+            //包含
+            let v = self.map.get_mut(&ei.0).unwrap();
+
+            v.insert(ei.1, sw);
+        } else {
+            self.union |= ei.0;
+
+            let mut map2 =
+                integer_hasher::IntMap::with_capacity_and_hasher(1, BuildIntHasher::default());
+            map2.insert(ei.1, sw);
+
+            self.map.insert(ei.0, map2);
+        }
+    }
+    ///self 宽泛 , ei 具体 ,check self 是否涉及到 ei的flag 且完全在 ev 的 flag 之内 ?
+    // #[tracing::instrument]
+    pub fn involve(&self, ei: &EventIdentify) -> bool {
+        if self.union & ei.0 == ei.0 {
+            //包含
+            let vs = self.map.get(&ei.0).unwrap();
+            vs.iter().any(|(&v, &sw)| (ei.1 & v == v) && sw)
+        } else {
+            false
+        }
+    }
+
+    pub fn opt_involve_any_on(&self, ei: &EventIdentify) -> Option<bool> {
+        if self.union & ei.0 == ei.0 {
+            //包含
+            let vs = self.map.get(&ei.0).unwrap();
+            let has = vs
+                .iter()
+                .filter_map(|(&v, &sw)| if ei.1 & v == v { Some(sw) } else { None })
+                .collect::<Vec<_>>();
+
+            if has.is_empty() {
+                Some(false)
+            } else {
+                Some(has.into_iter().any(|sw| sw))
+            }
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

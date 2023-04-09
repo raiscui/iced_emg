@@ -1,17 +1,31 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-05 20:56:05
- * @LastEditTime: 2023-03-20 18:49:21
+ * @LastEditTime: 2023-04-09 21:12:37
  * @LastEditors: Rais
  * @Description:
  */
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    hash::BuildHasherDefault,
+    rc::Rc,
+};
 
 use derive_more::From;
+use emg_hasher::CustomHasher;
+use emg_native::{
+    drag,
+    event::{MultiLevelIdentify, MultiLevelIdentifyWithSwitch},
+    EVENT_LONG_STATE_INIT, GLOBAL_PENETRATE_EVENTS,
+};
+use indexmap::IndexSet;
 use tracing::{debug, debug_span, info};
 
 use crate::platform::{event::EventIdentify, Event};
-use emg_common::Vector;
+use emg_common::{
+    im::{HashMap, HashSet, OrdSet},
+    SmallVec, Vector,
+};
 use emg_state::{state_lit::StateVarLit, Dict};
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -231,13 +245,15 @@ impl<Message> Clone for EventNode<Message> {
         }
     }
 }
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct EventLongTimeState {
-    pub drag: bool,
+    // pub drag: bool,
+    pub penetrate: MultiLevelIdentifyWithSwitch,
+    pub long_state: MultiLevelIdentifyWithSwitch,
 }
 pub struct EventListener<Message> {
     pub(crate) event_callbacks: Dict<EventIdentify, Vector<EventNode<Message>>>,
-    pub(crate) event_state: Rc<Cell<EventLongTimeState>>,
+    pub(crate) event_long_state: Rc<RefCell<EventLongTimeState>>,
 }
 
 impl<Message> std::fmt::Debug for EventListener<Message> {
@@ -252,7 +268,7 @@ impl<Message> Clone for EventListener<Message> {
     fn clone(&self) -> Self {
         Self {
             event_callbacks: self.event_callbacks.clone(),
-            event_state: self.event_state.clone(),
+            event_long_state: self.event_long_state.clone(),
         }
     }
 }
@@ -265,9 +281,15 @@ impl<Message> PartialEq for EventListener<Message> {
 
 impl<Message> EventListener<Message> {
     pub fn new() -> Self {
+        //@-- init
+        let ls = EventLongTimeState {
+            penetrate: (*GLOBAL_PENETRATE_EVENTS.read()).clone(),
+            long_state: (*EVENT_LONG_STATE_INIT.read()).clone(),
+        };
+
         Self {
             event_callbacks: Dict::default(),
-            event_state: Default::default(),
+            event_long_state: Rc::new(RefCell::new(ls)),
         }
     }
 
@@ -284,20 +306,28 @@ impl<Message: 'static> EventListener<Message> {
     ) {
         let _span = debug_span!("event", action = "register_listener").entered();
         self.event_prepare(event_name);
-        let entry = self.event_callbacks.entry(event_name);
-        let v = entry.or_default();
-        v.push_back(event_node);
-        debug!("event list: {:#?}", v);
+        self.register_listener_no_prepare(event_name, event_node);
     }
     fn event_prepare(&mut self, event_name: EventIdentify) {
         if event_name.lv1() == crate::platform::event::EventFlag::DND.bits() {
             // ─────────────────────────────────────────────────────
 
-            let event_state = self.event_state.clone();
+            let event_state = self.event_long_state.clone();
             let ei = crate::platform::drag::DRAG_START.into();
             let drag_on: EventNode<Message> = EventMessage::new(ei, move || {
-                // event_state.update(|s| EventLongTimeState { drag: true, ..s });
-                event_state.set(EventLongTimeState { drag: true });
+                {
+                    let mut es = event_state.borrow_mut();
+
+                    es.long_state.insert(drag::DRAG.into(), true);
+
+                    es.penetrate.insert(drag::DRAG.into(), true);
+                    es.penetrate.insert(drag::DRAG_END.into(), true);
+                }
+                {
+                    let mut w = GLOBAL_PENETRATE_EVENTS.write();
+                    w.insert(drag::DRAG.into(), true);
+                    w.insert(drag::DRAG_END.into(), true);
+                }
             })
             .into();
 
@@ -305,15 +335,29 @@ impl<Message: 'static> EventListener<Message> {
 
             // ─────────────────────────────────────────────────────────────────────────────
 
-            let event_state = self.event_state.clone();
+            let event_state = self.event_long_state.clone();
             let ei2 = crate::platform::drag::DRAG_END.into();
             let drag_off: EventNode<Message> = EventMessage::new(ei, move || {
-                // event_state.update(|s| EventLongTimeState { drag: true, ..s });
-                event_state.set(EventLongTimeState { drag: false });
+                {
+                    let mut es = event_state.borrow_mut();
+
+                    es.long_state.insert(drag::DRAG.into(), false);
+
+                    es.penetrate.insert(drag::DRAG.into(), false);
+                    es.penetrate.insert(drag::DRAG_END.into(), false);
+                }
+
+                {
+                    let mut w = GLOBAL_PENETRATE_EVENTS.write();
+                    w.insert(drag::DRAG.into(), false);
+                    w.insert(drag::DRAG_END.into(), false);
+                }
             })
             .into();
 
             self.register_listener_no_prepare(ei2, drag_off);
+
+            // ─────────────────────────────────────────────────────
         }
     }
 

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-22 14:02:47
- * @LastEditTime: 2023-03-01 21:52:45
+ * @LastEditTime: 2023-04-08 00:13:56
  * @LastEditors: Rais
  * @Description:
  */
@@ -18,7 +18,7 @@ use crate::parser::parse_edge_ix_s;
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Debug, Default)]
 //TODO  loop check
-pub struct EPath(pub Vector<EdgeIndex>);
+pub struct EPath(pub(crate) Vector<EdgeIndex>);
 // : Clone + Hash + Eq + PartialEq + Default
 
 #[macro_export]
@@ -150,14 +150,26 @@ impl EPath {
         // assert!(vec.front().unwrap().source_nix().is_none());
         #[cfg(debug_assertions)]
         {
-            if vec.front().unwrap().source_nix().is_some() {
+            if vec
+                .front()
+                .expect("EPath must has one EdgeIndex")
+                .source_nix()
+                .is_some()
+            {
                 let loc = Location::caller();
                 error!(
-                    "vec.front().unwrap().source_nix().is_none() is not none :{:?}\n{}",
+                    "vec.front().expect().source_nix().is_none() is not none :{:?}\n{}",
                     vec, loc
                 );
             }
         }
+        assert!(!vec.is_empty());
+        Self(vec)
+    }
+
+    #[track_caller]
+    #[must_use]
+    pub const fn new_uncheck(vec: Vector<EdgeIndex>) -> Self {
         Self(vec)
     }
 

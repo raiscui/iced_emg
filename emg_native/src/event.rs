@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:22:19
- * @LastEditTime: 2023-03-17 19:06:26
+ * @LastEditTime: 2023-04-09 15:24:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -81,6 +81,14 @@ impl Event {
             .and_then(|x| x.as_drag())
             .map(|x| x.trans())
             .unwrap()
+    }
+
+    /// Returns `true` if the event is [`DragDrop`].
+    ///
+    /// [`DragDrop`]: Event::DragDrop
+    #[must_use]
+    pub fn is_drag_drop(&self) -> bool {
+        matches!(self, Self::DragDrop(..))
     }
 }
 

@@ -129,7 +129,6 @@ impl compositor_arch::Compositor for Compositor {
         W: HasRawWindowHandle + HasRawDisplayHandle,
     {
         info!("Compositor new \n\t gpu settings:{:#?}", &settings);
-        // let compositor = futures::executor::block_on(Self::request(settings))?;
         let compositor = futures::executor::block_on(Self::request(settings, window))?;
 
         let backend = compositor.create_backend()?;

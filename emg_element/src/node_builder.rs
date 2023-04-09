@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-04-03 15:32:00
+ * @LastEditTime: 2023-04-09 22:00:30
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,6 +9,7 @@
 #![allow(clippy::borrow_as_ptr)]
 #![allow(clippy::ptr_as_ptr)]
 #![allow(clippy::ptr_eq)]
+use emg_native::{EventWithFlagType, EVENT_LONG_STATE_INIT, GLOBAL_PENETRATE_EVENTS};
 // ────────────────────────────────────────────────────────────────────────────────
 use indented::indented;
 use std::fmt::Write;
@@ -23,7 +24,7 @@ use crate::platform::{
     EVENT_HOVER_CHECK,
 };
 use emg_shaping::EqShapingWithDebug;
-use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
+use emg_state::{Anchor, AnchorMultiAnchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, debug_span, info, info_span, instrument, Span};
 
 use crate::GElement;
@@ -254,29 +255,46 @@ where
     }
     pub fn event_matching(
         &self,
-        events_sa: &StateAnchor<Vector<emg_native::EventWithFlagType>>,
-        cursor_position: &StateAnchor<Option<Pos>>,
-        pool: &RRBPool<EvMatch<Message>>,
-    ) -> StateAnchor<EventMatchs<Message>> {
+        events_sa: Anchor<Vector<emg_native::EventWithFlagType>>,
+        cursor_position: StateAnchor<Option<Pos>>,
+        pool: RRBPool<EvMatch<Message>>,
+    ) -> Anchor<(Vector<emg_native::EventWithFlagType>, EventMatchs<Message>)> {
         let event_callbacks = self.event_listener.event_callbacks().clone();
         //TODO move event_callbacks into sa map 不会变更, 是否考虑变更?
         let id = self.id.clone();
         let id2 = self.id.clone();
-        let _span = debug_span!("event_matching", at = "event_matching pre run", ?id).entered();
-
+        let id3 = self.id.clone();
+        let _span = debug_span!(
+            "event_matching",
+            at = "pre run",
+            func = "event_matching",
+            info = "求 event match 的 callbacks",
+            ?id
+        )
+        .entered();
         // let widget_is_hover = (cursor_position, &self.widget_state)
         //     .map(move |c_pos, state| hover_check(state, c_pos));
 
-        let pool = pool.clone();
+        // let pool = pool.clone();
 
         let matchs_step1 = (events_sa).map(move |events| {
+            let _span = debug_span!("event_matching_filter").entered();
+
+            let _span = debug_span!(
+                "event_matching",
+                at = "filter new event",
+                func = "event_matching",
+                info = "确定是否在该节点触发(该节点是否有对应callback)",
+                ?id
+            )
+            .entered();
+
+            debug!("events: {:#?}", events);
             let mut ev_matchs = Vector::<EvMatch<Message>>::with_pool(&pool);
 
-            let _span = debug_span!("event_matching_filter").entered();
-            debug!("events: {:#?}", events);
-
+            //NOTE event_callbacks 含有 if_cb, 并且 events 含有 l 和  r  则选择 l 移除 r
             let need_removes = COLLISION_DOWN.iter().filter_map(|(if_cb, l, r)| {
-                debug!("COLLISION_DOWN: {:?} {:?}", l, r);
+                // debug!("COLLISION_DOWN: {:?} {:?}", l, r);
 
                 if events.iter().any(|(ei, _)| l.involve(ei))
                     && events.iter().any(|(ei, _)| r.involve(ei))
@@ -290,10 +308,10 @@ where
                 }
             });
 
-            let nr = need_removes.clone().collect::<Vec<_>>();
-            if !nr.is_empty() {
-                debug!("need_removes: {:?}", nr);
-            }
+            // let nr = need_removes.clone().collect::<Vec<_>>();
+            // if !nr.is_empty() {
+            //     debug!("need_removes: {:?}", nr);
+            // }
 
             //TODO don't do this many times  ,events change to Dict
             //已经根据event 事件 筛选出来的 callbacks
@@ -334,51 +352,133 @@ where
                 })
         });
         let widget_state = self.widget_state.clone();
-        let cursor_position = cursor_position.clone();
+        // let cursor_position = cursor_position.clone();
 
-        let event_state = self.event_listener.event_state.clone();
+        let event_long_state = self.event_listener.event_long_state.clone();
 
         matchs_step2_split.then(move |(need_hover_ck, no_need_hover_check)| {
+            let id3 = id3.clone();
+
+            let events_sa = events_sa.clone();
             if need_hover_ck.is_empty() {
-                matchs_step1.get_anchor()
+                // matchs_step1.get_anchor()
+                (&events_sa, &matchs_step1).map(|ev, m| (ev.clone(), m.clone()))
             } else {
                 // let cursor_position = cursor_position.clone();
-                // let widget_state = widget_state.clone();
                 let need_hover_ck = need_hover_ck.clone();
                 let no_need_hover_check = no_need_hover_check.clone();
-                let event_state = event_state.clone();
+                let event_long_state = event_long_state.clone();
                 //NOTE event allway change
-                let drag = event_state.get().drag; //event_prepare
 
                 //TODO 细分 widget_state 中 的值,只监听 这里需要用到的.
                 (&cursor_position, &widget_state)
-                    .map(move |c_pos, widget_state| {
-                        let mut is_hover = None;
-                        let hover_cbs = need_hover_ck.iter().filter(|(_ei, ev, _cb)| match ev {
-                            //NOTE  cb will run if return true.
-                            Event::DragDrop(drag::Event::DragStart { prior, position: _ }) => {
-                                hover_check(widget_state, &Some(*prior))
-                            }
-                            Event::DragDrop(drag::Event::Drag(drag::Drag {
-                                prior,
-                                position: _,
-                                trans: _,
-                                offset: _,
-                            })) => drag,
-                            Event::DragDrop(drag::Event::DragEnd) => drag,
-                            // ─────────────────────
-                            _ => {
-                                if is_hover.is_none() {
-                                    is_hover = Some(hover_check(widget_state, c_pos));
-                                }
-                                is_hover.unwrap()
-                            }
-                        });
+                    .then(move |c_pos, widget_state| {
+                        // let id3 = id3.clone();
+                        let event_long_state2 = event_long_state.clone();
 
-                        hover_cbs
-                            .chain(no_need_hover_check.iter())
+                        let long_state = &event_long_state.borrow().long_state;
+
+                        let no_need_hover_check = no_need_hover_check.clone();
+
+                        let mut is_hover = None;
+                        let _span = debug_span!(
+                            "event_matching",
+                            at = "hover filter all vec---------",
+                            func = "event_matching",
+                            info = ?need_hover_ck,
+                            id=?id3
+                        )
+                        .entered();
+
+                        let mut draging = false;
+
+                        let hover_cbs = need_hover_ck
+                            .iter()
+                            .filter(|(_ei, ev, _cb)| {
+                                let _span = debug_span!(
+                                    "event_matching",
+                                    at = "hover filter - in filter",
+                                    func = "event_matching",
+                                    info = ?ev,
+                                    id=?id3
+                                )
+                                .entered();
+
+                                match ev {
+                                    //NOTE  cb will run if return true.
+                                    Event::DragDrop(drag::Event::DragStart {
+                                        prior,
+                                        position: _,
+                                    }) => {
+                                        draging = hover_check(widget_state, &Some(*prior));
+                                        draging
+                                    }
+
+                                    //NOTE use long_state check
+                                    Event::DragDrop(drag::Event::Drag(drag::Drag {
+                                        prior: _,
+                                        position: _,
+                                        trans: _,
+                                        offset: _,
+                                    })) => {
+                                        if draging {
+                                            draging = false;
+                                            return true;
+                                        }
+                                        let long_on = long_state.involve(&drag::DRAG.into());
+                                        debug!("Drag long_on:{:?}", long_on);
+                                        long_on
+                                    }
+                                    //NOTE use long_state check
+                                    Event::DragDrop(drag::Event::DragEnd) => {
+                                        draging = false;
+                                        let long_on = long_state.involve(&drag::DRAG.into());
+                                        debug!("DragEnd long_on:{:?}", long_on);
+                                        long_on
+                                    }
+
+                                    // ─────────────────────
+                                    _ => {
+                                        // debug_assert!(
+                                        //     !other.is_drag_drop(),
+                                        //     "other is drag_drop, is {other:?}"
+                                        // );
+                                        if is_hover.is_none() {
+                                            is_hover = Some(hover_check(widget_state, c_pos));
+                                        }
+                                        is_hover.unwrap()
+                                    }
+                                }
+                            })
                             .cloned()
-                            .collect::<Vector<_>>()
+                            .collect::<Vector<_>>();
+
+                        events_sa.map(move |evs| {
+                            let no_need_hover_check = no_need_hover_check.clone();
+                            let hover_cbs = hover_cbs.clone();
+                            // let event_long_state2 = event_long_state2.clone();
+
+                            (
+                                evs.iter()
+                                    .filter(|(ei, _)| {
+                                        let used =
+                                            hover_cbs.iter().any(|(hover_ei, _, _)| ei == hover_ei);
+                                        if used {
+                                            let penetrate = &event_long_state2.borrow().penetrate;
+                                            penetrate.involve(ei)
+                                        } else {
+                                            true
+                                        }
+                                    })
+                                    .cloned()
+                                    .collect::<Vector<_>>(),
+                                hover_cbs
+                                    .into_iter()
+                                    .chain(no_need_hover_check.into_iter())
+                                    // .cloned()
+                                    .collect::<Vector<_>>(), //TODO pool
+                            )
+                        })
                     })
                     .into_anchor()
             }
@@ -388,9 +488,61 @@ where
     pub fn event_callbacks(&self) -> &Dict<EventIdentify, Vector<EventNode<Message>>> {
         self.event_listener.event_callbacks()
     }
+
+    pub fn hover_state_check(
+        &self,
+        events: &Anchor<Vector<EventWithFlagType>>,
+        pos_sa: &StateAnchor<Option<Pos>>,
+    ) -> StateAnchor<HoverState> {
+        (pos_sa, &self.widget_state).map(|opt_pos, state| hover_state_check(state, opt_pos))
+    }
 }
 
-fn hover_check(
+#[derive(Debug, PartialEq, Eq)]
+pub enum HoverState {
+    Hover,
+    NotHover,
+    HoverOverride,
+}
+
+fn hover_check(state: &WidgetState, opt_pos: &Option<Pos>) -> bool {
+    HoverState::Hover == hover_state_check(state, opt_pos)
+}
+
+fn hover_state_check(state: &WidgetState, opt_pos: &Option<Pos>) -> HoverState {
+    let size = state.size();
+    let world = &state.world;
+    let rect = Rect::from_origin_size((world.x as f64, world.y as f64), size);
+
+    // let _span = debug_span!("LayoutOverride",id=?id,func="event_matching").entered();
+    let _span = debug_span!("LayoutOverride", func = "event_matching").entered();
+
+    opt_pos.map_or(HoverState::NotHover,|pos|{
+        debug!(target:"widget_is_hover",?world,?size,?rect,?pos);
+
+        let pos_p = pos.cast::<f64>();
+
+        let rect_hover = if rect.contains(emg_native::renderer::Point::new(pos_p.x, pos_p.y)) {
+            debug!("⭕️ 点在矩形内 🔔");
+            HoverState::Hover
+        } else {
+            debug!("❌ 点不在矩形, 🔕 ");
+            HoverState::NotHover
+        };
+
+        if let Some(layout_override) = &*state.children_layout_override && layout_override.contains(&pos_p) {
+
+                debug!("⭕️ 点在子层上 🔔 ");
+                HoverState::HoverOverride
+
+        } else {
+            debug!("矩形没有子层遮挡");
+            rect_hover
+        }
+    })
+}
+
+fn hover_check_old(
     state: &WidgetState,
     c_pos: &Option<Pos>,
     // id: &IdStr,

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2020-12-28 16:48:19
- * @LastEditTime: 2023-03-29 16:40:44
+ * @LastEditTime: 2023-04-08 15:14:25
  * @LastEditors: Rais
  * @Description:
  */
@@ -830,13 +830,16 @@ where
     /// Also available with indexing syntax: `&graph[a]`.
 
     pub fn get_node_item(&self, a: &NodeIndex) -> Option<&N> {
-        self.nodes.get(a.index()).map(|n| &n.item)
+        self.get_node(a).map(|n| &n.item)
+    }
+    pub fn get_node(&self, ix: &NodeIndex) -> Option<&Node<N>> {
+        self.get_node_use_ix(ix.index())
     }
     pub fn get_node_use_ix(&self, ix: &IdStr) -> Option<&Node<N>> {
         self.nodes.get(ix)
     }
     pub fn get_node_item_use_ix(&self, ix: &IdStr) -> Option<&N> {
-        self.nodes.get(ix).map(|n| &n.item)
+        self.get_node_use_ix(ix).map(|n| &n.item)
     }
     pub fn get_mut_node_item_use_ix(&mut self, ix: &IdStr) -> Option<&mut N> {
         self.nodes.get_mut(ix).map(|n| &mut n.item)

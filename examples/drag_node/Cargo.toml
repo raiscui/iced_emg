@@ -37,7 +37,7 @@ insta = "1"
 # https://docs.rs/dhat/latest/dhat/
 dhat = "0.3.2"
 owo-colors = "3.5.0"
-
+tracing-error = "0.2.0"
 
 [profile.release]
 #NOTE for dhat-heap need true

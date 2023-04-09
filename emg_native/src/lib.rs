@@ -26,6 +26,8 @@ mod debug;
 #[cfg(not(feature = "debug"))]
 #[path = "debug/null.rs"]
 mod debug;
+use std::hash::BuildHasherDefault;
+
 // ────────────────────────────────────────────────────────────────────────────────
 pub use clipboard::Clipboard;
 pub use command::Command;
@@ -35,10 +37,12 @@ pub use emg_common::time;
 pub use emg_common::Affine;
 pub use emg_common::Pos;
 pub use emg_futures::{executor, futures};
+use emg_hasher::CustomHasher;
 pub use event::Event;
 pub use event::EventWithFlagType;
 pub use executor::Executor;
 pub use future_runtime::FutureRuntime;
+use indexmap::IndexSet;
 // pub use hasher::Hasher;
 // pub use layout::Layout;
 // pub use overlay::Overlay;
@@ -53,23 +57,23 @@ pub use widget::Widget;
 
 // ────────────────────────────────────────────────────────────────────────────────
 use emg_state::use_state;
-use event::{EventIdentify, MultiLevelIdentify};
+use event::{EventIdentify, MultiLevelIdentify, MultiLevelIdentifyWithSwitch};
 use static_init::dynamic;
 
 #[dynamic]
 pub static G_POS: emg_state::StateVar<Option<Pos<f64>>> = use_state(|| None);
 
-#[dynamic(lazy)]
+#[dynamic]
 pub static EVENT_HOVER_CHECK: MultiLevelIdentify = {
     let m_click: EventIdentify = mouse::GENERAL_CLICK.into();
     let m_cursor: EventIdentify = mouse::CURSOR.into();
     let m_ws: EventIdentify = mouse::WHEEL_SCROLLED.into();
-    let touch: EventIdentify = touch::EventFlag::empty().into();
-    let dnd: EventIdentify = drag::EventFlag::empty().into();
+    let touch: EventIdentify = touch::EventFlag::empty().into(); //all
+    let dnd: EventIdentify = drag::EventFlag::empty().into(); //all
     m_click | m_cursor | m_ws | touch | dnd
 };
 
-#[dynamic(lazy)]
+#[dynamic]
 pub static EVENT_DEBOUNCE: MultiLevelIdentify = {
     let mouse_e: EventIdentify = mouse::CURSOR_MOVED.into();
     let drag_s: EventIdentify = drag::EventFlag::DRAG_START.into();
@@ -81,18 +85,43 @@ pub static EVENT_DEBOUNCE: MultiLevelIdentify = {
 
 //collision down ,if collision,choice right
 //如果满足 if_cb_contains , 并且event 含有 left,right 两者,即冲突, 选择 left,remove right
-#[dynamic(lazy)]
+#[dynamic]
 pub static COLLISION_DOWN: Vec<(MultiLevelIdentify, MultiLevelIdentify, MultiLevelIdentify)> = {
     let if_cb_contains: EventIdentify = drag::EventFlag::DRAG.into();
-    let drag_e: EventIdentify = drag::EventFlag::DRAG_END.into();
-    let mouse_e: EventIdentify = mouse::RELEASED.into();
-    // let drag_e: EventIdentify = drag::EventFlag::empty().into();
+    let drag_e: EventIdentify = drag::EventFlag::DRAG_END.into(); //use
+    let mouse_e: EventIdentify = mouse::RELEASED.into(); //remove
+                                                         // let drag_e: EventIdentify = drag::EventFlag::empty().into();
 
     vec![(
         MultiLevelIdentify::new(if_cb_contains),
         MultiLevelIdentify::new(drag_e),  //true choose
         MultiLevelIdentify::new(mouse_e), //false choose
     )]
+};
+
+#[dynamic]
+pub static mut EVENT_LONG_STATE_INIT: MultiLevelIdentifyWithSwitch = {
+    let draging: EventIdentify = drag::EventFlag::DRAG.into();
+
+    MultiLevelIdentifyWithSwitch::new(draging, false)
+};
+
+// thread_local! {
+//     static GLOBAL_PENETRATE_EVENTS:  HashMap<
+//     EventIdentify,
+//     bool,
+//     BuildHasherDefault<CustomHasher>,
+// > = HashMap::default();
+// }
+
+#[dynamic]
+pub static mut GLOBAL_PENETRATE_EVENTS: MultiLevelIdentifyWithSwitch = {
+    let d: EventIdentify = drag::DRAG.into();
+    let de: EventIdentify = drag::DRAG_END.into();
+    let cu: EventIdentify = mouse::CURSOR.into();
+    let gc: EventIdentify = mouse::GENERAL_CLICK.into();
+    // MultiLevelIdentifyWithSwitch::new(d, false) | de | cu | gc
+    MultiLevelIdentifyWithSwitch::new(d, false) | de | cu | (gc, false)
 };
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -106,7 +135,8 @@ mod tests {
         let drag_start: EventIdentify = drag::EventFlag::DRAG_START.into();
 
         assert!(EVENT_DEBOUNCE.involve(&cm));
-        println!("{:?}   {:?}", EVENT_DEBOUNCE, drag_start);
+
+        // println!("{:?}   {:?}", EVENT_DEBOUNCE, drag_start);
         assert!(EVENT_DEBOUNCE.involve(&drag_start));
 
         assert!(EVENT_HOVER_CHECK.involve(&mouse::CLICK.into()));

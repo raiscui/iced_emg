@@ -1,6 +1,11 @@
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+use tracing_error::ErrorLayer;
+use tracing_subscriber::prelude::*;
 // ─────────────────────────────────────────────────────────────────────────────
 
 use color_eyre::{eyre::Report, eyre::Result, eyre::WrapErr};
@@ -65,7 +70,7 @@ fn tracing_init() -> Result<(), Report> {
         .with_filter(tracing_subscriber::EnvFilter::new(
             // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
             // "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
-            "resize=debug",
+            "[event_matching]=debug,[event_matching_filter]=debug",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
@@ -92,6 +97,7 @@ fn tracing_init() -> Result<(), Report> {
         // .with(tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR))
         .with(filter_layer)
         // .with(out_layer)
+        .with(ErrorLayer::default())
         .init();
 
     // ─────────────────────────────────────────────────────────────────────────────

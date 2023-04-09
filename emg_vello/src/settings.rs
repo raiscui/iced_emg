@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 00:09:14
- * @LastEditTime: 2023-02-01 15:29:01
+ * @LastEditTime: 2023-04-09 22:16:11
  * @LastEditors: Rais
  * @Description:
  */
@@ -66,7 +66,8 @@ impl Settings {
     ///     - `webgpu`
     ///     - `primary`
     pub fn from_env() -> Self {
-        Settings { ..Self::default() }
+        // Settings { ..Self::default() }
+        Self::default()
     }
 }
 impl CompositorSetting for Settings {
