@@ -33,6 +33,8 @@ pub mod settings;
 pub use emg_element::graph_edit;
 
 // ────────────────────────────────────────────────────────────────────────────────
+#[cfg(all(feature = "gpu", feature = "wasm32"))]
+compile_error!("current no support");
 
 #[cfg(all(feature = "gpu"))]
 // pub use emg_piet_gpu as renderer;

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-09-07 14:20:32
- * @LastEditTime: 2023-04-09 20:42:24
+ * @LastEditTime: 2023-04-14 11:03:17
  * @LastEditors: Rais
  * @Description:
  */
@@ -17,7 +17,7 @@ use emg_common::{
     Pos, Vector,
 };
 use emg_layout::{EPath, EDGES_POOL_SIZE};
-use emg_native::{EventWithFlagType, PaintCtx, Widget, EVENT_HOVER_CHECK, GLOBAL_PENETRATE_EVENTS};
+use emg_native::{EventWithFlagType, PaintCtx, Widget, GLOBAL_PENETRATE_EVENTS};
 use emg_state::{Anchor, AnchorMultiAnchor, StateAnchor};
 use tracing::{debug, debug_span};
 
@@ -62,7 +62,7 @@ where
     // SceneCtx: crate::renderer::SceneCtx + Clone + PartialEq + 'static,
     Message: 'static,
 {
-    type SceneCtx = crate::SceneFrag;
+    type SceneCtx = crate::renderer::SceneFrag;
 
     // fn xx(&self,events_sa: &StateAnchor<Vector<Event>>) {
     //     let events = events_sa.clone();
@@ -92,7 +92,7 @@ where
     //         .filter_map(move |_k, gel| gel.as_builder().map(|nb| nb.event_matchs(&events)));
     // }
 
-    //TODO re enable #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all)]
     fn runtime_prepare(
         &self,
         opt_root_eix_sa: StateAnchor<Option<EdgeIndex>>,
@@ -307,6 +307,8 @@ fn get_event_match_cbs<Message: 'static>(
                 let new_event = new_event.clone();
                 let cursor_position = cursor_position.clone();
                 let event_matchs_pool2 = event_matchs_pool2.clone();
+
+                //TODO 支持 event.stopPropagation 直接执行本级别 event_matching  而不进行子node event_matching
 
                 let (children_latest_evs, mut children_cbs_vav) = v.iter().flatten().fold(
                     //TODO pool

@@ -1,7 +1,5 @@
-pub use peniko::{
-    kurbo::{Affine, PathEl, Point, Rect, Shape, Size, Vec2},
-    BlendMode, Brush, BrushRef, Color, Fill, Stroke,
-};
+pub use peniko::kurbo::*;
+pub use peniko::*;
 
 pub trait SceneCtx {
     type Ctx<'a>: SceneBuilder
@@ -44,6 +42,9 @@ pub trait SceneBuilder {
         brush_transform: Option<Affine>,
         shape: &impl Shape,
     );
+
+    fn draw_image(&mut self, image: &Image, transform: Affine);
+    fn draw_glyphs(&mut self, font: &Font) -> vello::DrawGlyphs;
 
     /// Appends a fragment to the scene.
     fn append(&mut self, fragment: &Self::SceneCtx, transform: Option<Affine>);

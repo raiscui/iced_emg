@@ -281,7 +281,7 @@ impl<Message> NodeBuilderWidget<Message> {
     /// permission to read it.
     #[must_use]
     pub fn and_widget(mut self, gel: GElement<Message>) -> Self {
-        // use match_any::match_any;
+        // use match_any_cfg::match_any;
         #[allow(unused)]
         use GElement::{
             Builder_, Button_, EmptyNeverUse, Event_, Generic_, Layer_, NodeRef_, Refresher_, Text_,

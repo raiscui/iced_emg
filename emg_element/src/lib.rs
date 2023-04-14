@@ -11,6 +11,7 @@
 //
 // ────────────────────────────────────────────────────────────────────────────────
 
+pub mod component;
 mod error;
 mod g_element;
 mod g_node;
@@ -30,10 +31,12 @@ pub use widget::Widget;
 pub mod graph_edit;
 // ────────────────────────────────────────────────────────────────────────────────
 #[cfg(all(feature = "gpu"))]
-pub use emg_native as platform;
+use emg_native as platform;
 
 #[cfg(all(feature = "gpu"))]
-use emg_vello::SceneFrag;
+use emg_vello as renderer;
+// #[cfg(all(feature = "gpu"))]
+// use emg_vello::SceneFrag;
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod prelude {
     pub use crate::{

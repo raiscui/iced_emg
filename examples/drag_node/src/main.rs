@@ -18,7 +18,6 @@ use emg_bind::{
     runtime::{drag::DRAG, Affine, OrdersContainer, Pos},
     Sandbox, Settings,
 };
-use owo_colors::OwoColorize;
 use tracing::{debug_span, info, instrument, warn};
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
@@ -187,6 +186,8 @@ impl Sandbox for App {
                                 println!("b checkbox");
                             })=>[
                                 @="b_click2" On:DRAG  move|ev|{
+                                    use owo_colors::OwoColorize;
+
                                     let _span = debug_span!("DRAG", "{} -> ev:{:?}","on [b-check] drag".on_black().red(),ev)
                                             .entered();
                                         let drag_offset = ev.get_drag_offset();
@@ -336,6 +337,17 @@ impl Sandbox for App {
                         fill(rgba(0, 0, 0.5, 1))
                     ]
                     @="w" Layer [
+
+                        @E=[
+                            // origin_x(pc(100)),
+                            // origin_y(pc(100)),
+                            // align_x(pc(100)),
+                            // align_y(pc(50)),
+                            w(pc(100)),
+                            h(pc(100)),
+                            // fill(rgba(0, 1, 0, 1))
+                        ]
+                        Video::new("video-player", "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4", false)
                         // @E=[
                         //     origin_x(pc(100)),
                         //     origin_y(pc(50)),

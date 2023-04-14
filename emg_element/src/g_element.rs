@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-04-08 00:35:12
+ * @LastEditTime: 2023-04-14 11:01:27
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ use crate::{
 };
 use dyn_clone::DynClone;
 use emg_state::{StateAnchor, StateMultiAnchor};
-use match_any::match_any;
+use match_any_cfg::match_any;
 
 use emg_common::{
     any::MessageTid,
@@ -39,7 +39,7 @@ pub trait DynGElement<Message:for <'a> MessageTid<'a>>:
      +Shaping<GElement< Message>>
      +ShapingUse<GElement<Message>>
     // + GenerateElement<Message>
-    + Widget<SceneCtxType = crate::SceneFrag>
+    + Widget<SceneCtxType = crate::renderer::SceneFrag>
     + TypeCheckObjectSafeTid
     + TypeCheckObjectSafe
     + DynPartialEq
@@ -125,6 +125,9 @@ pub enum GElement<Message> {
     SaNode_(StateAnchor<Rc<Self>>),
     EvolutionaryFactor(Rc<dyn Evolution<StateAnchor<Rc<Self>>>>),
     EmptyNeverUse,
+    //@ accesskit Role ─────────────────────────────────────────────────────────────────────#[cfg(feature = "video-player")]
+    #[cfg(feature = "video-player")]
+    Video_(crate::component::Video),
 }
 
 impl<Message> GTreeInit<Message> for GElement<Message> {
@@ -151,6 +154,9 @@ impl<Message> Clone for GElement<Message> {
             Self::EvolutionaryFactor(arg0) => Self::EvolutionaryFactor(arg0.clone()),
             Self::Event_(x) => Self::Event_(x.clone()),
             Self::EmptyNeverUse => Self::EmptyNeverUse,
+            //@accesskit
+            #[cfg(feature = "video-player")]
+            Self::Video_(x) => Self::Video_(x.clone()),
         }
     }
 }
@@ -332,19 +338,22 @@ impl<Message> PartialEq for GElement<Message>
 {
     fn eq(&self, other: &Self) -> bool {
         //[] allways check when add GElement number;
-        //CHECK allways check when add(modifier) GElement number;
+        //CHECK: allways check when add(modifier) GElement number;
         match (self, other) {
             (Self::Builder_(l0), Self::Builder_(r0)) => l0 == r0,
             (Self::Layer_(l0), Self::Layer_(r0)) => l0 == r0,
-            // (Self::Text_(l0), Self::Text_(r0)) => l0 == r0,
-            // (Self::Button_(l0), Self::Button_(r0)) => l0 == r0,
             (Self::Shaper_(l0), Self::Shaper_(r0)) => (**l0) == (**r0),
-            // (Self::Event_(l0), Self::Event_(r0)) => l0 == r0,
+            (Self::Event_(l0), Self::Event_(r0)) => l0 == r0,
             (Self::Generic_(l0), Self::Generic_(r0)) => l0 == r0,
             (Self::NodeRef_(l0), Self::NodeRef_(r0)) => l0 == r0,
-
             (Self::SaNode_(l0), Self::SaNode_(r0)) => l0 == r0,
             (Self::EvolutionaryFactor(l0), Self::EvolutionaryFactor(r0)) => l0 == r0,
+            //@ accesskit ─────────────────────────────────────────────────────
+            #[cfg(feature = "video-player")]
+            (Self::Video_(l), Self::Video_(r)) => l == r,
+            // ─────────────────────────────────────────────────────
+
+            // with EmptyNeverUse
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
             // std::ptr::eq(
             //     (std::ptr::addr_of!(**l0)).cast::<u8>(),
@@ -385,7 +394,7 @@ impl<Message> GElement<Message>
         }
     }
 
-    pub fn as_dyn_node_widget(&self) -> &dyn Widget<SceneCtxType = crate::SceneFrag>
+    pub fn as_dyn_node_widget(&self) -> &dyn Widget<SceneCtxType = crate::renderer::SceneFrag>
     where
         Message: 'static,
     {
@@ -393,22 +402,23 @@ impl<Message> GElement<Message>
             Builder_, EmptyNeverUse, Event_, EvolutionaryFactor, Generic_, Layer_, NodeRef_,
             SaNode_, Shaper_,
         };
+
         match_any!(self,
 
-            // Builder_( x)| Layer_(x) | Text_(x) | Button_(x) => x as &dyn Widget<Message>,
-            Builder_( x)| Layer_(x) => x as &(dyn Widget<SceneCtxType = crate::SceneFrag>),
-            // Refresher_(_) | Event_(_) => panic!("Refresher_|Event_ can't convert to dyn widget."),
+            Builder_( x)| Layer_(x)
+            => x as &(dyn Widget<SceneCtxType = crate::renderer::SceneFrag>),
             Shaper_(_)  => panic!("Refresher_|Event_ can't convert to dyn widget."),
             Generic_(x) => {
-                // debug!("Generic_:: from Generic_ to dyn Widget");
-                 &**x as &(dyn Widget<SceneCtxType = crate::SceneFrag>)
-                // panic!("Generic_ should be Builder here");
+                 &**x as &(dyn Widget<SceneCtxType = crate::renderer::SceneFrag>)
                 },
             NodeRef_(_)=> panic!("TryFrom<GElement to dyn Widget: \n     GElement::NodeIndex_() should handle before."),
             SaNode_(_)=>todo!(),
             EmptyNeverUse=> panic!("EmptyNeverUse never here"),
             EvolutionaryFactor(_)=> todo!(),
-            Event_(_)=>todo!()
+            Event_(_)=>todo!(),
+             // @ accesskit ─────────────────────────────────────────────────────
+             #[cfg(feature = "video-player")]
+             Self::Video_(x) => x as &(dyn Widget<SceneCtxType = crate::renderer::SceneFrag>)
 
 
 
@@ -482,6 +492,9 @@ where
             EmptyNeverUse => write!(f, "GElement::EmptyNeverUse"),
             Self::SaNode_(_) => write!(f, "GElement::SaNode"),
             Self::EvolutionaryFactor(_) => write!(f, "GElement::EvolutionaryFactor"),
+            //@ accesskit ─────────────────────────────────────────────────────
+            #[cfg(feature = "video-player")]
+            Self::Video_(_) => write!(f, "GElement::Video"),
         }
     }
 }
@@ -494,7 +507,7 @@ where
     // fn paint(&self, ctx: &mut emg_native::PaintCtx<RenderContext>) {
     //     self.as_dyn_node_widget().paint(ctx)
     // }
-    type SceneCtxType = crate::SceneFrag;
+    type SceneCtxType = crate::renderer::SceneFrag;
 
     #[instrument(skip(self, painter), name = "GElement paint",fields(self = %self))]
     #[inline]
@@ -527,7 +540,10 @@ where
             SaNode_(_)=>todo!(),
             EmptyNeverUse=> panic!("EmptyNeverUse never here"),
             EvolutionaryFactor(_)=> todo!(),
-            Event_(_)=> panic!("Event_() should never here")
+            Event_(_)=> panic!("Event_() should never here"),
+             //@ accesskit ─────────────────────────────────────────────────────
+            #[cfg(feature = "video-player")]
+            Self::Video_(x) => x.paint_sa(painter)
 
 
 

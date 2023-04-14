@@ -9,6 +9,7 @@ pub mod clipboard;
 pub mod command;
 pub mod drag;
 pub mod event;
+pub mod features;
 pub mod future_runtime;
 pub mod keyboard;
 pub mod mouse;
@@ -26,23 +27,19 @@ mod debug;
 #[cfg(not(feature = "debug"))]
 #[path = "debug/null.rs"]
 mod debug;
-use std::hash::BuildHasherDefault;
 
 // ────────────────────────────────────────────────────────────────────────────────
 pub use clipboard::Clipboard;
 pub use command::Command;
 pub use debug::Debug;
-// pub use element::Element;
 pub use emg_common::time;
 pub use emg_common::Affine;
 pub use emg_common::Pos;
 pub use emg_futures::{executor, futures};
-use emg_hasher::CustomHasher;
 pub use event::Event;
 pub use event::EventWithFlagType;
 pub use executor::Executor;
 pub use future_runtime::FutureRuntime;
-use indexmap::IndexSet;
 // pub use hasher::Hasher;
 // pub use layout::Layout;
 // pub use overlay::Overlay;

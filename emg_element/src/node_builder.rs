@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-04-09 22:00:30
+ * @LastEditTime: 2023-04-13 15:44:57
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,7 +9,7 @@
 #![allow(clippy::borrow_as_ptr)]
 #![allow(clippy::ptr_as_ptr)]
 #![allow(clippy::ptr_eq)]
-use emg_native::{EventWithFlagType, EVENT_LONG_STATE_INIT, GLOBAL_PENETRATE_EVENTS};
+use emg_native::EventWithFlagType;
 // ────────────────────────────────────────────────────────────────────────────────
 use indented::indented;
 use std::fmt::Write;
@@ -231,6 +231,9 @@ where
             }
             GElement::SaNode_(_) => todo!(),
             GElement::EvolutionaryFactor(_) => todo!(),
+            //@ accesskit ─────────────────────────────────────────────────────
+            #[cfg(feature = "video-player")]
+            GElement::Video_(_) => Ok(Self::new(ix, gel, edge_ctx)),
         }
     }
 
@@ -591,7 +594,7 @@ where
     Message: 'static,
     // Message: PartialEq + 'static + std::clone::Clone,
 {
-    type SceneCtxType = crate::SceneFrag;
+    type SceneCtxType = crate::renderer::SceneFrag;
     #[instrument(skip(self, painter), name = "NodeBuilderWidget paint")]
     fn paint_sa(
         &self,

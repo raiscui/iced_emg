@@ -12,7 +12,7 @@ use crate::{
 };
 use dyn_clone::DynClone;
 use emg_state::{StateAnchor, StateMultiAnchor};
-use match_any::match_any;
+use match_any_cfg::match_any;
 
 use emg_common::{better_any::Tid, dyn_partial_eq::DynPartialEq, IdStr, TypeCheckObjectSafe};
 use emg_shaping::{EqShaping, Shaping, ShapingUse, ShapingUseAny};

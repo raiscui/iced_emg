@@ -83,7 +83,6 @@ impl Compositor {
         let simple_text = crate::scenes::SimpleText::new();
 
         // render_cx.set_present_mode(&mut surface, wgpu::PresentMode::AutoNoVsync);
-        render_cx.set_present_mode(&mut surface, wgpu::PresentMode::AutoVsync);
 
         // ─────────────────────────────────────────────────────────────────────────────
         #[cfg(feature = "show-fps")]

@@ -12,6 +12,8 @@ split-debuginfo = "unpacked"
 
 [features]
 debug = []
+video-player = ["gstreamer", "gstreamer-app", "derive_more", "num-traits"]
+
 
 [dependencies]
 seed_styles = { path = "../../styles_hooks/seed_styles" }
@@ -33,3 +35,11 @@ static_init = { version = "1.0.3" }
 bitflags = { path = "../../bitflags_export_const" }
 integer-hasher = "0.1.1"
 indexmap = "1.9"
+
+# video player
+thiserror = "1"
+gstreamer = { version = "0.20.3", optional = true }
+gstreamer-app = { version = "0.20.0", optional = true } # appsink
+derive_more = { version = "0.99.5", optional = true }
+# glib = { git = "https://github.com/gtk-rs/gtk-rs-core", branch = "0.17", version = "0.17" }
+num-traits = { version = "0.2", optional = true } # convert rationals to floats (ToPrimitive)

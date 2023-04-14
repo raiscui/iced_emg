@@ -11,3 +11,5 @@ edition = "2021"
 emg_common = { path = "../emg_common" }
 peniko = { git = "https://github.com/linebender/peniko", rev = "8cb710f" }
 tracing = "0.1"
+# for DrawGlyphs
+vello = { path = "../../piet-gpu-new" }

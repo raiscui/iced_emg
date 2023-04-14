@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-04-05 20:56:12
+ * @LastEditTime: 2023-04-13 23:44:18
  * @LastEditors: Rais
  * @Description:
  */
@@ -471,7 +471,9 @@ where
                     GElement::Shaper_(_) |
                     GElement::Event_(_) |
                     GElement::Generic_(_) |
-                    GElement::NodeRef_(_)   =>{
+                    GElement::NodeRef_(_)
+                     //
+                      =>{
                         GraphNodeBuilder::new(id.clone())
                         //TODO GTreeBuilderElement use Rc
                         .with_gel_sa(use_state_voa(||Rc::new(gel.clone())))
@@ -480,6 +482,18 @@ where
                         .build_in_topo(self);
                     },
                     GElement::EmptyNeverUse => unreachable!(),
+                     //@ accesskit ─────────────────────────────────────
+                     #[cfg(feature = "video-player")]
+                     GElement::Video_(_)
+                      //
+                       =>{
+                         GraphNodeBuilder::new(id.clone())
+                         //TODO GTreeBuilderElement use Rc
+                         .with_gel_sa(use_state_voa(||Rc::new(gel.clone())))
+                         .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
+                         .with_outgoing_eix_set_with_default_capacity(1)
+                         .build_in_topo(self);
+                     },
 
                 };
 

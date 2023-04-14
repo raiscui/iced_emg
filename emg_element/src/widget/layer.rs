@@ -2,7 +2,7 @@ use std::{clone::Clone, cmp::PartialEq, rc::Rc};
 
 use emg_common::{
     better_any::{Tid, TidAble},
-    IdStr, Vector,
+    im, IdStr, Vector,
 };
 use emg_layout::EmgEdgeItem;
 use emg_shaping::Shaping;
@@ -124,7 +124,7 @@ impl<Message> crate::Widget for Layer<Message>
 where
     Message: 'static,
 {
-    type SceneCtxType = crate::SceneFrag;
+    type SceneCtxType = crate::renderer::SceneFrag;
     fn paint_sa(
         &self,
         ctx: &StateAnchor<crate::platform::PaintCtx>,
@@ -132,11 +132,13 @@ where
         let id = self.id.clone();
         let span = illicit::expect::<Span>();
 
-        let children_sc_list_sa: StateAnchor<Vec<Rc<crate::SceneFrag>>> = self
+        //@ paint children first ─────────────────────────────────────────────────────────────
+
+        let children_sc_list_sa: StateAnchor<Vector<Rc<crate::renderer::SceneFrag>>> = self
             .children
             .iter()
             .map(|child| child.paint_sa(ctx).into_anchor())
-            .collect::<Anchor<Vec<_>>>()
+            .collect::<Anchor<Vector<_>>>()
             .into();
 
         //TODO 分离 ctx, &children_sc_list_sa
@@ -166,6 +168,8 @@ where
                     );
                 }
             }
+
+            //@ append children last ─────────────────────────────────────────────────────────────
 
             children_sc_list
                 .iter()

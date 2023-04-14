@@ -926,7 +926,7 @@ impl Parse for GTreeMacroElement {
 
 impl ToTokens for GTreeMacroElement {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        use match_any::match_any;
+        use match_any_cfg::match_any;
 
         match_any!( self ,
             Self::GL(x)|Self::GS(x)|Self::RT(x)|Self::GC(x)|Self::OnEvent(x)

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-12-22 16:18:38
- * @LastEditTime: 2023-03-09 14:46:22
+ * @LastEditTime: 2023-04-13 17:26:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -68,6 +68,7 @@ impl<'a> SceneBuilder<'a> {
 impl<'a> emg_native::renderer::SceneBuilder for SceneBuilder<'a> {
     type SceneCtx = SceneFrag;
 
+    #[inline]
     fn push_layer(
         &mut self,
         blend: impl Into<BlendMode>,
@@ -78,10 +79,12 @@ impl<'a> emg_native::renderer::SceneBuilder for SceneBuilder<'a> {
         self.0.push_layer(blend, alpha, transform, shape)
     }
 
+    #[inline]
     fn pop_layer(&mut self) {
         self.0.pop_layer()
     }
 
+    #[inline]
     fn fill<'b>(
         &mut self,
         style: Fill,
@@ -93,6 +96,7 @@ impl<'a> emg_native::renderer::SceneBuilder for SceneBuilder<'a> {
         self.0.fill(style, transform, brush, brush_transform, shape)
     }
 
+    #[inline]
     fn stroke<'b>(
         &mut self,
         style: &Stroke,
@@ -105,7 +109,18 @@ impl<'a> emg_native::renderer::SceneBuilder for SceneBuilder<'a> {
             .stroke(style, transform, brush, brush_transform, shape)
     }
 
+    #[inline]
     fn append(&mut self, fragment: &Self::SceneCtx, transform: Option<Affine>) {
         self.0.append(fragment, transform)
+    }
+
+    #[inline]
+    fn draw_image(&mut self, image: &emg_native::renderer::Image, transform: Affine) {
+        self.0.draw_image(image, transform)
+    }
+
+    #[inline]
+    fn draw_glyphs(&mut self, font: &emg_native::renderer::Font) -> vello::DrawGlyphs {
+        self.0.draw_glyphs(font)
     }
 }

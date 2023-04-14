@@ -10,13 +10,20 @@ split-debuginfo = "unpacked"
 # crate-type = ["rlib"]
 
 [features]
-default = ["gpu"]
+default = ["gpu", "video-player"]
 # gpu = ["emg_native", "emg_piet_gpu", "emg_layout/gpu"]
-gpu = ["emg_native", "emg_vello", "emg_layout/gpu"]
+gpu = ["dep:emg_native", "dep:emg_vello", "emg_layout/gpu"]
 insta = []
+video-player = ["emg_native?/video-player"]
+
+# [target.'cfg(all(feature = "video-player", feature = "gpu"))'.dependencies]
+# emg_native = { path = "../emg_native", optional = true, features = [
+#     "video-player",
+# ] }
 
 
 [dependencies]
+emg_native = { path = "../emg_native", optional = true }
 emg_common = { path = "../emg_common" }
 emg_state = { path = "../emg_state" }
 emg_shaping = { path = "../emg_shaping" }
@@ -31,7 +38,7 @@ derive_more = "0.99"
 strum = { version = "0.24", features = ["derive"] }
 dyn-clone = "1.0.11"
 tracing = "0.1"
-match_any = "1.0.1"
+match_any_cfg = { path = "../../match_any_cfg" }
 either = "1.8.1"
 indexmap = "1.9"
 illicit = "1.1.2"
@@ -46,7 +53,7 @@ bevy_reflect = "0.9.1"
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-emg_native = { path = "../emg_native", optional = true }
+# emg_native = { path = "../emg_native", optional = true }
 emg_vello = { path = "../emg_vello", optional = true }
 
 
