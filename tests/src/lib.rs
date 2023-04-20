@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-05-23 16:41:57
- * @LastEditTime: 2022-08-11 16:39:13
+ * @LastEditTime: 2023-02-23 13:24:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -244,9 +244,7 @@ mod wasm_test {
                         .borrow()
                         .get_node_item_use_ix(&IdStr::new_inline("a"))
                         .unwrap()
-                        .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source(
-                            "a"
-                        )]))
+                        .get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")]))
                         .get();
                     _root_gel
                 })
@@ -275,7 +273,7 @@ mod wasm_test {
             .borrow()
             .get_node_item_use_ix(&IdStr::new_inline("a"))
             .unwrap()
-            .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")]))
+            .get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")]))
             .get();
     }
 
@@ -381,7 +379,7 @@ mod wasm_test {
             ]
         };
         emg_graph.handle_root_in_topo(&root);
-        // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+        // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
         // warn!("{:#?}",&root_gel);
         emg_graph
     }
@@ -404,10 +402,10 @@ mod wasm_test {
     //     use web_sys::console;
 
     //     let  g=  new_graph_build();
-    //     let root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //     let root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get();
 
     //     let  g2=  new_graph_build();
-    //     let root_gel2:GElement<Message> = g2.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //     let root_gel2:GElement<Message> = g2.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get();
 
     // }
     // #[wasm_bindgen_test]
@@ -457,7 +455,7 @@ mod wasm_test {
     //     let css = GlobalStyleSV::default_topo();
 
     //     let  g=  new_graph_build();
-    //     let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //     let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get();
     //     let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget().node(&cx.bump,&bus,&css)));
     //     // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
     //     render2string(&root_elm_render_fn)
@@ -481,7 +479,7 @@ mod wasm_test {
     //     let css = GlobalStyleSV::default_topo();
 
     //     let  g=  new_graph_build();
-    //     let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //     let root_elm:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get();
     //     let root_elm_render_fn = Rc::new(RenderFn(move |cx|root_elm.as_dyn_node_widget().node(&cx.bump,&bus,&css)));
     //     // let _vdom = Vdom::new(&container, root_elm_render_fn.clone());
     //     render2text(&root_elm_render_fn);
@@ -607,7 +605,7 @@ mod wasm_test {
     //         &format!(
     //             "new graph build view2: {}",
     //             bench_limit(10.,|| {
-    //                 let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //                 let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get();
     //                 _root_gel
     //                 })
 
@@ -638,7 +636,7 @@ mod wasm_test {
     //             "new rc graph build view: {}",
     //             bench_limit(10.,|| {
     //                 let  g=  new_rc_graph_build();
-    //                 let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //                 let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get();
     //                 _root_gel
     //                 })
 
@@ -663,7 +661,7 @@ mod wasm_test {
     //     tracing_wasm::set_as_global_default_with_config(config.build());
 
     //                 let  g=  new_rc_graph_build();
-    //                 let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //                 let _root_gel = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get();
 
     // }
 
@@ -767,7 +765,7 @@ mod wasm_test {
     //         ]
     //     };
     //     emg_graph.handle_root_in_topo(&root);
-    //     // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+    //     // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
     //     // warn!("{:#?}",&root_gel);
     //     emg_graph
 
@@ -794,7 +792,7 @@ mod wasm_test {
     //             "new graph build view: {}",
     //             bench_limit(10.,|| {
     //                 let  g=  new_graph_build();
-    //                 let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get();
+    //                 let _root_gel:GElement<Message> = g.borrow().get_node_item_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get();
     //                 _root_gel
     //                 })
 
@@ -903,7 +901,7 @@ mod wasm_test {
     //         ]
     //     };
     //     emg_graph.handle_root_in_topo(&root);
-    //     // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
+    //     // let root_gel:Element<Message> = emg_graph.borrow().get_node_weight_use_ix(&IdStr::new_inline("a")).unwrap().get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("a")])).get().try_into().unwrap();
     //     // warn!("{:#?}",&root_gel);
     //     emg_graph
 
@@ -1100,8 +1098,8 @@ mod wasm_test {
             .raw_edges()
             .store_get_rc(&emg_graph.borrow().store());
         let edges_2 = Rc::new(RefCell::new((*edges).clone()));
-        let ep: EdgeIndex<IdStr> = edge_index_no_source("a");
-        let ep2: EdgeIndex<IdStr> = edge_index_no_source("a");
+        let ep: EdgeIndex = edge_index_no_source("a");
+        let ep2: EdgeIndex = edge_index_no_source("a");
 
         let edges_sa = emg_graph
             .borrow()

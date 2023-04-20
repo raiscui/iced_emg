@@ -7,6 +7,7 @@
 
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(specialization)]
+#![feature(more_qualified_paths)]
 // #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
@@ -24,15 +25,8 @@
 use cassowary::{Constraint, Solver, Variable, WeightedRelation};
 use ccsa::{CCSSEqExpression, CassowaryGeneralMap, CassowaryMap, ScopeViewVariable, CCSS};
 use emg_hasher::CustomHasher;
-use std::fmt::{Display, Write};
-use std::{
-    cell::RefCell,
-    clone::Clone,
-    cmp::{Eq, Ord},
-    hash::{BuildHasherDefault, Hash},
-    rc::Rc,
-    time::Duration,
-};
+use std::{cell::RefCell, clone::Clone, cmp::Eq, hash::BuildHasherDefault, rc::Rc, time::Duration};
+use std::{fmt::Write, time::Instant};
 
 use calc::layout_calculating;
 use derive_more::Display;
@@ -49,13 +43,14 @@ use emg_common::{
         vector, HashMap, HashSet, OrdSet,
     },
     na::{Affine3, Matrix4, Rotation3, Translation3, Vector2, Vector3},
-    num_traits::{cast, AsPrimitive},
+    num_traits::cast,
     GenericSize, IdStr, LayoutOverride, NotNan, Precision, RectLTRB, TypeName, Vector, VectorDisp,
 };
 use emg_shaping::{EqShapingWithDebug, Shaping};
 use emg_state::{
-    state_store, topo, use_state, use_state_impl::Engine, Anchor, CloneStateAnchor, CloneStateVar,
-    Dict, GStateStore, StateAnchor, StateMultiAnchor, StateVar,
+    anchors::singlethread::ValOrAnchor, state_lit::StateVarLit, state_store, topo, use_state,
+    use_state_voa, Anchor, CloneState, CloneStateAnchor, Dict, Engine, GStateStore, StateAnchor,
+    StateMultiAnchor, StateVOA, StateVar,
 };
 use float_cmp::approx_eq;
 use styles::{px, s, w, CssTransform, CssValueTrait, Style, UpdateStyle};
@@ -75,6 +70,7 @@ use tracing::{
 
 // ─────────────────────────────────────────────────────────────────────────────
 mod calc;
+mod css_calc_op;
 mod epath;
 mod impl_refresh;
 mod parser;
@@ -90,70 +86,20 @@ pub use emg_common;
 
 pub mod ccsa;
 pub type LayoutEndType = (Translation3<Precision>, Precision, Precision);
+// ─────────────────────────────────────────────────────────────────────────────
+pub mod ccsa_macro_prelude {
+
+    pub use crate::ccsa;
+
+    pub use emg_common as common;
+}
 
 // ────────────────────────────────────────────────────────────────────────────────
 
 static CURRENT_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 1.5;
 static CHILD_PROP_WEIGHT: f64 = cassowary::strength::MEDIUM * 0.9;
-
-// ────────────────────────────────────────────────────────────────────────────────
-
-thread_local! {
-    static G_CLOCK: StateVar<Duration> = use_state(||Duration::ZERO);
-}
-
-thread_local! {
-    static G_ANIMA_RUNNING_STORE: StateVar<Vector<Anchor<bool>>> = use_state(||Vector::new());
-}
-thread_local! {
-    static G_AM_RUNING: StateAnchor<bool> = global_anima_running_build();
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-pub fn global_anima_running_add(running: &StateAnchor<bool>) {
-    G_ANIMA_RUNNING_STORE.with(|sv| sv.update(|v| v.push_back(running.get_anchor())));
-}
-
-#[must_use]
-pub fn global_anima_running_sa() -> StateAnchor<bool> {
-    G_AM_RUNING.with(std::clone::Clone::clone)
-}
-#[must_use]
-pub fn global_anima_running() -> bool {
-    G_AM_RUNING.with(emg_state::CloneStateAnchor::get)
-}
-#[must_use]
-pub fn global_anima_running_build() -> StateAnchor<bool> {
-    let watch: Anchor<Vector<bool>> = G_ANIMA_RUNNING_STORE.with(|am| {
-        am.watch().anchor().then(|v: &Vector<Anchor<bool>>| {
-            v.clone().into_iter().collect::<Anchor<Vector<bool>>>()
-        })
-    });
-    watch.map(|list: &Vector<bool>| list.contains(&true)).into()
-}
-#[must_use]
-pub fn global_clock() -> StateVar<Duration> {
-    G_CLOCK.with(|c| *c)
-}
-pub fn global_clock_set(now: Duration) {
-    G_CLOCK.with(|c| c.set(now));
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-thread_local! {
-    static G_WIDTH: StateVar<f64> = use_state(||0.);
-}
-#[must_use]
-pub fn global_width() -> StateVar<f64> {
-    G_WIDTH.with(|sv| *sv)
-}
-thread_local! {
-    static G_HEIGHT: StateVar<f64> = use_state(||0.);
-}
-#[must_use]
-pub fn global_height() -> StateVar<f64> {
-    G_HEIGHT.with(|sv| *sv)
-}
+pub const EDGES_POOL_SIZE: usize = 16;
+pub const CHILDREN_POOL_SIZE: usize = 2;
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -164,72 +110,107 @@ struct Mat4(Matrix4<Precision>);
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq, Eq, Display)]
-//TODO use StateVar<StateAnchor> for can change? note: 了解 最终 和 cassowary 如何共同影响 尺寸
-pub struct GenericSizeAnchor(StateAnchor<GenericSize>);
+// #[derive(Debug, Clone, PartialEq, Eq, Display)]
+// pub struct GenericSizeAnchor(ValOrAnchor<GenericSize>);
 
-impl Default for GenericSizeAnchor {
-    fn default() -> Self {
-        Self(StateAnchor::constant(GenericSize::default()))
-    }
-}
+// impl Default for GenericSizeAnchor {
+//     fn default() -> Self {
+//         Self(StateAnchor::constant(GenericSize::default()))
+//     }
+// }
 
-impl std::ops::Deref for GenericSizeAnchor {
-    type Target = StateAnchor<GenericSize>;
+// impl std::ops::Deref for GenericSizeAnchor {
+//     type Target = StateAnchor<GenericSize>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
+// // ────────────────────────────────────────────────────────────────────────────────
 
-impl ::core::ops::Mul<f64> for GenericSizeAnchor {
-    type Output = Self;
-    fn mul(self, rhs: f64) -> Self {
-        Self(self.0 * rhs)
-    }
-}
-impl ::core::ops::Add for GenericSizeAnchor {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self {
-        Self(self.0 + rhs.0)
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
+// impl ::core::ops::Mul<f64> for GenericSizeAnchor {
+//     type Output = Self;
+//     fn mul(self, rhs: f64) -> Self {
+//         Self(self.0 * rhs)
+//     }
+// }
+// impl ::core::ops::Add for GenericSizeAnchor {
+//     type Output = Self;
+//     fn add(self, rhs: Self) -> Self {
+//         Self(self.0 + rhs.0)
+//     }
+// }
+// // ────────────────────────────────────────────────────────────────────────────────
 
-pub auto trait NotStateAnchor {}
-impl<T> !NotStateAnchor for StateAnchor<T> {}
-pub auto trait NotStateVar {}
-impl<T> !NotStateVar for StateVar<T> {}
+// pub auto trait NotStateAnchor {}
+// impl<T> !NotStateAnchor for StateAnchor<T> {}
+// impl<T, E> !NotStateAnchor for emg_state::anchors::expert::Anchor<T, E> {}
+// pub auto trait NotStateVar {}
+// impl<T> !NotStateVar for StateVar<T> {}
+// impl<T, E> !NotStateVar for emg_state::anchors::expert::Var<T, E> {}
 
-impl<T> From<T> for GenericSizeAnchor
-where
-    T: NotStateAnchor + NotStateVar + Into<GenericSize> + Clone + 'static,
-{
-    fn from(v: T) -> Self {
-        Self(StateAnchor::constant(v.into()))
-    }
-}
+// impl<T> From<T> for GenericSizeAnchor
+// where
+//     T: NotStateAnchor + NotStateVar + Into<GenericSize>,
+// {
+//     default fn from(v: T) -> Self {
+//         Self(ValOrAnchor::Val(v.into()))
+//     }
+// }
+// impl From<GenericSize> for GenericSizeAnchor {
+//     fn from(v: GenericSize) -> Self {
+//         Self(ValOrAnchor::Val(v))
+//     }
+// }
 
-impl<T> From<StateAnchor<T>> for GenericSizeAnchor
-//TODO sure not use "NotStateAnchor+NotStateVar+ " ?
-where
-    T: Into<GenericSize> + Clone + 'static,
-{
-    fn from(v: StateAnchor<T>) -> Self {
-        Self(v.map(|x| x.clone().into()))
-    }
-}
-impl<T> From<StateVar<T>> for GenericSizeAnchor
-//TODO sure not use "NotStateAnchor+NotStateVar+ " ?
-where
-    T: Into<GenericSize> + Clone + 'static,
-{
-    fn from(v: StateVar<T>) -> Self {
-        // Self(v.watch().map(|x|x.clone().into()))
-        Self(v.get_var_with(|v| v.watch().map(|x| x.clone().into()).into()))
-    }
-}
+// impl<T> From<Anchor<T>> for GenericSizeAnchor
+// where
+//     T: NotStateAnchor + NotStateVar + Into<GenericSize> + Clone + 'static,
+// {
+//     default fn from(v: Anchor<T>) -> Self {
+//         Self(ValOrAnchor::Anchor(v.map(|x| x.clone().into())))
+//     }
+// }
+
+// impl<T> From<StateAnchor<T>> for GenericSizeAnchor
+// where
+//     T: NotStateAnchor + NotStateVar + Into<GenericSize> + Clone + 'static,
+// {
+//     default fn from(v: StateAnchor<T>) -> Self {
+//         Self(ValOrAnchor::Anchor(v.anchor().map(|x| x.clone().into())))
+//     }
+// }
+// impl From<Anchor<GenericSize>> for GenericSizeAnchor {
+//     fn from(v: Anchor<GenericSize>) -> Self {
+//         Self(ValOrAnchor::Anchor(v))
+//     }
+// }
+// impl From<StateAnchor<GenericSize>> for GenericSizeAnchor {
+//     fn from(v: StateAnchor<GenericSize>) -> Self {
+//         Self(ValOrAnchor::Anchor(v.into_anchor()))
+//     }
+// }
+
+// impl<T> From<StateVar<T>> for GenericSizeAnchor
+// where
+//     T: NotStateAnchor + NotStateVar + Into<GenericSize> + Clone + 'static,
+// {
+//     default fn from(v: StateVar<T>) -> Self {
+//         Self(ValOrAnchor::Anchor(
+//             v.watch().anchor().map(|x| x.clone().into()),
+//         ))
+//     }
+// }
+// impl From<Var<GenericSize>> for GenericSizeAnchor {
+//     fn from(v: Var<GenericSize>) -> Self {
+//         Self(ValOrAnchor::Anchor(v.watch()))
+//     }
+// }
+// impl From<StateVar<GenericSize>> for GenericSizeAnchor {
+//     fn from(v: StateVar<GenericSize>) -> Self {
+//         Self(ValOrAnchor::Anchor(v.watch().into_anchor()))
+//     }
+// }
 
 struct Transforms {
     loc: Translation3<f64>,
@@ -271,16 +252,16 @@ impl Default for M4Data {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Layout {
-    w: StateVar<GenericSizeAnchor>,
-    h: StateVar<GenericSizeAnchor>,
-    z: StateVar<StateAnchor<u64>>,
-    origin_x: StateVar<GenericSizeAnchor>,
-    origin_y: StateVar<GenericSizeAnchor>,
-    origin_z: StateVar<GenericSizeAnchor>,
-    align_x: StateVar<GenericSizeAnchor>,
-    align_y: StateVar<GenericSizeAnchor>,
-    align_z: StateVar<GenericSizeAnchor>,
-    cassowary_constants: StateVar<StateAnchor<Vector<CCSS>>>,
+    w: StateVOA<GenericSize>,
+    h: StateVOA<GenericSize>,
+    z: StateVOA<u64>,
+    origin_x: StateVOA<GenericSize>,
+    origin_y: StateVOA<GenericSize>,
+    origin_z: StateVOA<GenericSize>,
+    align_x: StateVOA<GenericSize>,
+    align_y: StateVOA<GenericSize>,
+    align_z: StateVOA<GenericSize>,
+    cassowary_constants: StateVOA<Vector<CCSS>>,
     cassowary_selectors: StateVar<Vector<ScopeViewVariable>>,
     cassowary_generals: StateVar<CassowaryGeneralMap>,
 }
@@ -302,24 +283,28 @@ impl Layout {
     // }
     /// Set the layout's size.
     #[cfg(test)]
-    fn set_size(&self, w: impl Into<GenericSizeAnchor>, h: impl Into<GenericSizeAnchor>) {
+    fn set_size(
+        &self,
+        w: impl Into<ValOrAnchor<GenericSize>>,
+        h: impl Into<ValOrAnchor<GenericSize>>,
+    ) {
         self.w.set(w.into());
         self.h.set(h.into());
     }
     pub fn store_set_size(
         &self,
         store: &GStateStore,
-        w: impl Into<GenericSizeAnchor>,
-        h: impl Into<GenericSizeAnchor>,
+        w: impl Into<ValOrAnchor<GenericSize>>,
+        h: impl Into<ValOrAnchor<GenericSize>>,
     ) {
         self.store_set_w(store, w);
         self.store_set_h(store, h);
     }
 
-    pub fn store_set_w(&self, store: &GStateStore, w: impl Into<GenericSizeAnchor>) {
+    pub fn store_set_w(&self, store: &GStateStore, w: impl Into<ValOrAnchor<GenericSize>>) {
         self.w.store_set(store, w.into());
     }
-    pub fn store_set_h(&self, store: &GStateStore, h: impl Into<GenericSizeAnchor>) {
+    pub fn store_set_h(&self, store: &GStateStore, h: impl Into<ValOrAnchor<GenericSize>>) {
         self.h.store_set(store, h.into());
     }
 }
@@ -391,10 +376,7 @@ pub struct EdgeCtx {
 impl EdgeCtx {
     #[cfg(feature = "debug")]
     #[must_use]
-    pub fn to_layout_override<Ix: std::fmt::Debug + 'static + std::clone::Clone>(
-        &self,
-        nix: NodeIndex<Ix>,
-    ) -> StateAnchor<LayoutOverride> {
+    pub fn to_layout_override(&self, nix: NodeIndex) -> StateAnchor<LayoutOverride> {
         (
             &self.world,
             &self.layout_end,
@@ -436,14 +418,14 @@ impl EdgeCtx {
                     || {
                         let _span = debug_span!("LayoutOverride", func = "to_layout_override-def")
                             .entered();
-                        debug!("rect:{:#?}", &rect);
+                        debug!(target:"to_layout_override",?rect);
                         LayoutOverride::new(rect)
                     },
                     |mut lo| {
                         let _span =
                             debug_span!("LayoutOverride", func = "to_layout_override").entered();
-                        debug!("lo:{:#?}", &lo);
-                        debug!("rect:{:#?}", &rect);
+                        debug!(target:"to_layout_override", "lo:{:#?}", &lo);
+                        debug!(target:"to_layout_override", "rect:{:#?}", &rect);
 
                         lo.underlay(rect);
                         lo
@@ -615,47 +597,33 @@ where
     }
 }
 
-pub type GraphEdgesDict<Ix> = Dict<EdgeIndex<Ix>, Edge<EmgEdgeItem<Ix>, Ix>>;
+pub type GraphEdgesDict = Dict<EdgeIndex, Edge<EmgEdgeItem>>;
 // use ahash::AHasher as CustomHasher;
 // use rustc_hash::FxHasher as CustomHasher;
 
-// type PathVarMap<Ix,T> = Dict<EPath<Ix>,T>;
-// type PathVarMap<Ix,T> = indexmap::IndexMap <EPath<Ix>,T,BuildHasherDefault<CustomHasher>>;
-type PathVarMap<Ix, T> = HashMap<EPath<Ix>, T, BuildHasherDefault<CustomHasher>>;
+type PathVarMap<T> = HashMap<EPath, T, BuildHasherDefault<CustomHasher>>;
+//TODO use GenericSizeAnchor for kv's -> v
+// pub type StylesDict =
+//     Dict<TypeName, StateAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
 pub type StylesDict =
-    Dict<TypeName, StateAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
+    Dict<TypeName, ValOrAnchor<Rc<dyn EqShapingWithDebug<emg_native::WidgetState>>>>;
 
-pub struct EmgEdgeItem<Ix>
-where
-    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
-{
+pub struct EmgEdgeItem {
     //TODO save g_store
-    pub id: StateVar<StateAnchor<EdgeIndex<Ix>>>, // dyn by Edge(source_nix , target_nix)
-    pub paths: DictPathEiNodeSA<Ix>, // with parent self  // current not has current node
+    pub id: StateVOA<EdgeIndex>, // dyn by Edge(source_nix , target_nix)
+    pub paths: DictPathEiNodeSA, // with parent self  // current not has current node
     pub layout: Layout,
     pub styles: StateVar<StylesDict>,
-    path_styles: StateVar<PathVarMap<Ix, Style>>, //TODO check use
-    path_layouts: StateVar<PathVarMap<Ix, Layout>>, // layout only for one path
+    path_styles: StateVar<PathVarMap<Style>>, //TODO check use
+    path_layouts: StateVar<PathVarMap<Layout>>, // layout only for one path
 
     pub other_css_styles: StateVar<Style>,
     // no self  first try
-    pub edge_nodes: DictPathEiNodeSA<Ix>, //TODO with self?  not with self?  (current with self)
+    pub edge_nodes: DictPathEiNodeSA, //TODO with self?  not with self?  (current with self)
     store: Rc<RefCell<GStateStore>>,
 }
 
-impl<Ix> std::fmt::Display for EmgEdgeItem<Ix>
-where
-    Ix: 'static
-        + Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + std::default::Default
-        + std::fmt::Display,
-{
+impl std::fmt::Display for EmgEdgeItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut members = String::new();
 
@@ -692,11 +660,7 @@ where
     }
 }
 
-impl<Ix> Clone for EmgEdgeItem<Ix>
-where
-    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
-{
+impl Clone for EmgEdgeItem {
     fn clone(&self) -> Self {
         Self {
             id: self.id,
@@ -712,11 +676,7 @@ where
     }
 }
 
-impl<Ix> std::fmt::Debug for EmgEdgeItem<Ix>
-where
-    // Ix: Clone + Hash + Eq + Ord + 'static + Default,
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static + std::fmt::Debug,
-{
+impl std::fmt::Debug for EmgEdgeItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EmgEdgeItem")
             .field("id", &self.id)
@@ -730,15 +690,9 @@ where
             .finish()
     }
 }
-impl<Ix> Eq for EmgEdgeItem<Ix> where
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static
-{
-}
+impl Eq for EmgEdgeItem {}
 
-impl<Ix> PartialEq for EmgEdgeItem<Ix>
-where
-    Ix: Clone + Hash + Eq + Default + PartialOrd + std::cmp::Ord + 'static,
-{
+impl PartialEq for EmgEdgeItem {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             && self.paths == other.paths
@@ -749,28 +703,29 @@ where
     }
 }
 
-pub type DictPathEiNodeSA<Ix> = StateAnchor<Dict<EPath<Ix>, EdgeItemNode>>; //NOTE: EdgeData or something
+pub type DictPathEiNodeSA = StateAnchor<Dict<EPath, EdgeItemNode>>; //NOTE: EdgeData or something
 
-impl<Ix> EmgEdgeItem<Ix>
-where
-    Ix: Clone + Hash + Ord + Default + std::fmt::Debug,
-{
+impl EmgEdgeItem {
     #[cfg(test)]
-    fn set_size(&self, w: impl Into<GenericSizeAnchor>, h: impl Into<GenericSizeAnchor>) {
-        self.layout.set_size(w, h)
-    }
-    pub fn store_set_size(
+    fn set_size(
         &self,
-        store: &GStateStore,
-        w: impl Into<GenericSizeAnchor>,
-        h: impl Into<GenericSizeAnchor>,
+        w: impl Into<ValOrAnchor<GenericSize>>,
+        h: impl Into<ValOrAnchor<GenericSize>>,
     ) {
-        self.layout.store_set_size(store, w, h);
+        self.layout.set_size(w, h);
     }
+    // pub fn store_set_size(
+    //     &self,
+    //     store: &GStateStore,
+    //     w: impl Into<GenericSizeAnchor>,
+    //     h: impl Into<GenericSizeAnchor>,
+    // ) {
+    //     self.layout.store_set_size(store, w, h);
+    // }
 
     #[cfg(test)]
     #[must_use]
-    fn edge_data(&self, key: &EPath<Ix>) -> Option<EdgeData> {
+    fn edge_data(&self, key: &EPath) -> Option<EdgeData> {
         //TODO not get(), use ref
         self.edge_nodes
             .get()
@@ -780,7 +735,7 @@ where
     }
 
     // #[must_use]
-    // pub fn store_edge_data(&self,store:&GStateStore, key: &EPath<Ix>) -> Option<EdgeData> {
+    // pub fn store_edge_data(&self,store:&GStateStore, key: &EPath) -> Option<EdgeData> {
     //     self.node.store_get(store)
     //         .get(key)
     //         .and_then(EdgeItemNode::as_edge_data).cloned()
@@ -789,7 +744,7 @@ where
     pub fn store_edge_data_with<F: FnOnce(Option<&EdgeData>) -> R, R>(
         &self,
         store: &GStateStore,
-        key: &EPath<Ix>,
+        key: &EPath,
         func: F,
     ) -> R {
         #[cfg(debug_assertions)]
@@ -806,65 +761,32 @@ where
     }
 }
 
-impl<Ix> EmgEdgeItem<Ix>
-where
-    Ix: Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + Default
-        + std::borrow::Borrow<str>
-        + Display,
-{
-    pub fn build_path_layout(&self, func: impl FnOnce(Layout) -> (EPath<Ix>, Layout)) {
+impl EmgEdgeItem {
+    /// # Errors
+    ///
+    /// Will return `Err`: [`emg_state::error::Error`]
+    /// permission to read it.
+    pub fn build_path_layout(
+        &self,
+        func: impl FnOnce(Layout) -> (EPath, Layout),
+    ) -> Result<(), emg_state::error::Error> {
         let (path, layout) = func(self.layout);
         self.path_layouts
-            .set_with_once(move |pls_map| pls_map.update(path, layout));
-    }
-
-    #[topo::nested]
-    #[instrument(skip(edges))]
-    pub fn default_in_topo(
-        source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
-    ) -> Self
-    where
-        Ix: std::fmt::Debug + std::fmt::Display,
-    {
-        Self::new_in_topo(
-            source_node_nix_sa,
-            target_node_nix_sa,
-            edges,
-            (GenericSize::default(), GenericSize::default()),
-            (
-                GenericSize::default(),
-                GenericSize::default(),
-                GenericSize::default(),
-            ),
-            (
-                GenericSize::default(),
-                GenericSize::default(),
-                GenericSize::default(),
-            ),
-        )
+            .set_with_once(move |pls_map| pls_map.update(path, layout))
     }
 
     #[cfg(test)]
     #[topo::nested]
     #[instrument(skip(edges))]
-    pub fn default_with_wh_in_topo<T: AsPrimitive<Precision> + std::fmt::Debug>(
-        source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
+    pub fn default_with_wh_in_topo<
+        T: emg_common::num_traits::AsPrimitive<Precision> + std::fmt::Debug,
+    >(
+        source_node_nix_sa: &StateAnchor<Option<NodeIndex>>,
+        target_node_nix_sa: &StateAnchor<Option<NodeIndex>>,
+        edges: StateAnchor<GraphEdgesDict>,
         w: T,
         h: T,
-    ) -> Self
-    where
-        Ix: std::fmt::Debug,
-    {
+    ) -> Self {
         Self::new_in_topo(
             source_node_nix_sa,
             target_node_nix_sa,
@@ -882,177 +804,88 @@ where
             ),
         )
     }
+
     #[topo::nested]
     #[instrument(skip_all)]
+    //TODO write missing_panics_doc
+    //TODO rebuild too_many_lines
+    #[allow(clippy::missing_panics_doc)]
+    #[allow(clippy::too_many_lines)]
     pub fn new_in_topo(
-        source_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        target_node_nix_sa: StateAnchor<Option<NodeIndex<Ix>>>,
-        edges: StateAnchor<GraphEdgesDict<Ix>>,
-        size: (impl Into<GenericSizeAnchor>, impl Into<GenericSizeAnchor>),
+        source_node_nix_sa: &StateAnchor<Option<NodeIndex>>,
+        target_node_nix_sa: &StateAnchor<Option<NodeIndex>>,
+        edges: StateAnchor<GraphEdgesDict>,
+        size: (
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
+        ),
         origin: (
-            impl Into<GenericSizeAnchor>,
-            impl Into<GenericSizeAnchor>,
-            impl Into<GenericSizeAnchor>,
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
         ),
         align: (
-            impl Into<GenericSizeAnchor>,
-            impl Into<GenericSizeAnchor>,
-            impl Into<GenericSizeAnchor>,
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
+            impl Into<ValOrAnchor<GenericSize>>,
         ),
     ) -> Self
     where
-        Ix: std::fmt::Debug,
         (IdStr, NotNan<Precision>): PartialEq,
     {
-        let id_sa: StateAnchor<EdgeIndex<Ix>> =
-            (&source_node_nix_sa, &target_node_nix_sa).map(|s, t| {
-                let _g = span!(
-                    Level::TRACE,
-                    "[ id_sa recalculation ]:source_node_nix_sa/target_node_nix_sa change "
-                )
-                .entered();
+        let id_sa: StateAnchor<EdgeIndex> = (source_node_nix_sa, target_node_nix_sa).map(|s, t| {
+            let _g = span!(
+                Level::TRACE,
+                "[ id_sa recalculation ]:source_node_nix_sa/target_node_nix_sa change "
+            )
+            .entered();
 
-                EdgeIndex::new(s.clone(), t.clone())
-            });
-        let id_sv = use_state(|| id_sa);
-        let _child_span = trace_span!(" building new child ",id=?id_sv).entered();
+            EdgeIndex::new(s.clone(), t.clone())
+        });
+        let id_svoa = use_state_voa(|| id_sa);
+        let _child_span = trace_span!(" building new child ",id=?id_svoa).entered();
         // ─────────────────────────────────────────────────────────────────
 
         let layout = Layout {
-            w: use_state(|| size.0.into()),
-            h: use_state(|| size.1.into()),
-            z: use_state(|| StateAnchor::constant(0)),
-            origin_x: use_state(|| origin.0.into()),
-            origin_y: use_state(|| origin.1.into()),
-            origin_z: use_state(|| origin.2.into()),
-            align_x: use_state(|| align.0.into()),
-            align_y: use_state(|| align.1.into()),
-            align_z: use_state(|| align.2.into()),
-            cassowary_constants: use_state(|| StateAnchor::constant(vector![])),
+            w: use_state_voa(|| size.0),
+            h: use_state_voa(|| size.1),
+            z: use_state_voa(|| 0),
+            origin_x: use_state_voa(|| origin.0),
+            origin_y: use_state_voa(|| origin.1),
+            origin_z: use_state_voa(|| origin.2),
+            align_x: use_state_voa(|| align.0),
+            align_y: use_state_voa(|| align.1),
+            align_z: use_state_voa(|| align.2),
+            cassowary_constants: use_state_voa(|| vector![]),
             cassowary_selectors: use_state(|| vector![]),
-            cassowary_generals: use_state(|| CassowaryGeneralMap::new()),
+            cassowary_generals: use_state(CassowaryGeneralMap::new),
         };
 
-        // let path_styles= use_state(||Dict::unit(EPath::<Ix>::default(), s()));
-        let path_styles: StateVar<PathVarMap<Ix, Style>> = use_state(|| PathVarMap::default());
-        let path_layouts: StateVar<PathVarMap<Ix, Layout>> = use_state(|| PathVarMap::default());
+        // let path_styles= use_state(||Dict::unit(EPath::::default(), s()));
+        let path_styles: StateVar<PathVarMap<Style>> = use_state(PathVarMap::default);
+        let path_layouts: StateVar<PathVarMap<Layout>> = use_state(PathVarMap::default);
 
-        let other_css_styles_sv = use_state(|| s());
-        let styles_sv = use_state(|| Dict::new());
-
-        let opt_self_source_node_nix_sa_re_get:StateAnchor<Option<NodeIndex<Ix>>> = id_sv.watch().then(|eid_sa_inner|{
-            let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
-
-            eid_sa_inner.map(|i:&EdgeIndex<Ix>|{
-
-                let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:eid_sa_inner change ",edge_index=?i).entered();
-
-                i.source_nix().clone()
-            }).into()
-        });
-
-        let opt_self_target_node_nix_sa_re_get: StateAnchor<Option<NodeIndex<Ix>>> =
-            id_sv.watch().then(|eid_sa_inner| {
-                eid_sa_inner
-                    .map(|i: &EdgeIndex<Ix>| i.target_nix().clone())
-                    .into()
-            });
+        let other_css_styles_sv = use_state(s);
+        let styles_sv = use_state(Dict::new);
 
         let edges2 = edges.clone();
 
-        let parent_paths: DictPathEiNodeSA<Ix> =
-            opt_self_source_node_nix_sa_re_get.then(move|opt_self_source_nix:&Option<NodeIndex<Ix>>| {
+        let parent_paths = build_parent_paths_sa(&id_svoa, edges);
 
-                let _g = span!(Level::TRACE, "[ source_node_incoming_edge_dict_sa recalculation ]:source_node_nix_sa_re_get change ").entered();
-
-                // if opt_self_source_nix.is_none(){
-                //     //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
-                //     Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty))
-                //     //TODO check why use unit? answer:need for `EdgeItemNode::Empty => path_ein_empty_node_builder`
-                //     // Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::new())
-                // }else{
-                    opt_self_source_nix.clone().map_or_else(
-                        ||Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::unit(EPath::<Ix>::default(), EdgeItemNode::Empty)),
-                        |some_source_nix|{
-
-
-                        edges.filter_map(move|someone_eix, e| {
-
-
-                            debug!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&some_source_nix);
-                            if   someone_eix.target_nix().as_ref()? == &some_source_nix {
-
-                                Some(e.item.edge_nodes.clone())
-
-                            }else{
-                                None
-                            }
-
-                        })
-                        .anchor()
-                        .then(|x:&Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>|{
-
-                            x.values().map(emg_state::StateAnchor::anchor)
-                            .collect::<Anchor<Vector<_>>>()
-                            .map(|v:&Vector<_>|{
-                                let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
-                                Dict::unions(v.clone())})
-                        })
-                    })
-
-                // }
-
-
-
-            });
-
-        // NOTE children cassowary_map
-        let children_nodes = opt_self_target_node_nix_sa_re_get.then(move |opt_self_target_nix| {
-            // if opt_self_target_nix.is_none() {
-            //     //NOTE 尾
-            //     Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default())
-            // } else {
-            // TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
-            // TODO ? let e = edges2.map(|e|e.get(Edge::default()));
-            opt_self_target_nix.clone().map_or_else(
-                || Anchor::constant(Dict::<EPath<Ix>, EdgeItemNode>::default()),
-                |self_target_nix| {
-                    edges2
-                        .filter_map(move |child_eix, v| {
-                            //NOTE  edge source is self_target, this is children
-
-                            if child_eix.source_nix().as_ref()? == &self_target_nix {
-                                Some(v.edge_nodes.clone())
-                            } else {
-                                None
-                            }
-                        })
-                        .anchor()
-                        .then(|x: &Dict<EdgeIndex<Ix>, DictPathEiNodeSA<Ix>>| {
-                            x.values()
-                                .map(emg_state::StateAnchor::anchor)
-                                .collect::<Anchor<Vector<_>>>()
-                                .map(|v: &Vector<_>| Dict::unions(v.clone()))
-                        })
-                },
-            )
-        });
+        let children_nodes = build_children_nodes_sa(&id_svoa, edges2);
         // ─────────────────────────────────────────────────────────────────
 
-        //TODO not paths: StateVar<Dict<EPath<Ix>,EdgeItemNode>>  use edgeIndex instead to Reduce memory
+        //TODO not paths: StateVar<Dict<EPath,EdgeItemNode>>  use edgeIndex instead to Reduce memory
         let paths_clone = parent_paths.clone();
-        let edge_nodes_sa:DictPathEiNodeSA<Ix,> = id_sv.watch().then(move|id_sa|{
+        let edge_nodes_sa:DictPathEiNodeSA = id_svoa.watch().then(move|eid|{
 
-            let paths_clone2 = paths_clone.clone();
-            let children_nodes2 = children_nodes.clone();
 
-            id_sa.then(move |eid:&EdgeIndex<Ix>|{
 
-            let children_nodes3 = children_nodes2.clone();
+                let children_nodes3 = children_nodes.clone();
 
                 let eid_clone = eid.clone();
 
-                paths_clone2.map(move |p_node_as_paths:&Dict<EPath<Ix>, EdgeItemNode>|{
+                paths_clone.map(move |p_node_as_paths:&Dict<EPath, EdgeItemNode>|{
 
                     p_node_as_paths.iter()
                         .map(|(parent_e_path, p_ei_node_v)| {
@@ -1063,12 +896,12 @@ where
                             p_ep_add_self.push_back(eid_clone.clone());
                             (p_ep_add_self, p_ei_node_v.clone())
                         })
-                        .collect::<Dict<EPath<Ix>, EdgeItemNode>>()
+                        .collect::<Dict<EPath, EdgeItemNode>>()
 
-                }) .map_( move |self_path:&EPath<Ix>, p_path_edge_item_node:&EdgeItemNode| {
+                }).map_( 1,move |self_path:&EPath, p_path_edge_item_node:&EdgeItemNode| {
 
-//@=====    each    path    edge    prosess     ============================================================================================================================================
-//
+                    //@=====    each    path    edge    prosess     ============================================================================================================================================
+                    //
                     //@ current var=>ix ix=>var cassowary_map
                     let current_cassowary_map = Rc::new(CassowaryMap::new());
 
@@ -1083,7 +916,6 @@ where
 
                     let self_path2 =self_path.clone();
                     // let self_path3 =self_path.clone();
-                    let self_path4 =self_path.clone();
                     let self_path5 =self_path.clone();
                     let self_path6 =self_path.clone();
                     let self_path7 =self_path.clone();
@@ -1092,7 +924,7 @@ where
                         span!(Level::TRACE, "[ node recalculation ]:paths change ").entered();
 
                         //TODO use Dict anchor Collection
-                    let path_layout:StateAnchor<Layout> = path_layouts.watch().map(move|path_layouts_map:&PathVarMap<Ix, Layout>|{
+                    let path_layout:StateAnchor<Layout> = path_layouts.watch().map(move|path_layouts_map:&PathVarMap< Layout>|{
                         // println!("--> id: {:?}", &id_sv);
                         trace!("--> finding path_layout in path_with_ed_node_builder------------------- len:{}",path_layouts_map.len());
                         // println!("--> layout:{:?}",pls_map.get(&path_clone));
@@ -1102,7 +934,7 @@ where
 
                     //NOTE 约束
                     let ccss_list_sa = path_layout.then(|layout|{
-                        layout.cassowary_constants.watch().then(|x|x.clone().into_anchor()).into_anchor()
+                        layout.cassowary_constants.watch().into_anchor()
                     });
 
 
@@ -1112,7 +944,7 @@ where
                     let (opt_p_calculated,layout_calculated,layout_styles_string) =  match p_path_edge_item_node {
                         //NOTE 上一级节点: empty => 此节点是root
                         EdgeItemNode::Empty => path_ein_empty_node_builder(&path_layout, self_path,&current_cassowary_map,path_styles, other_css_styles_sv),
-                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_sv, ped, &path_layout, self_path, &current_cassowary_map,path_styles, other_css_styles_sv),
+                        EdgeItemNode::EdgeData(ped)=> path_with_ed_node_builder(id_svoa, ped, &path_layout, self_path, &current_cassowary_map,path_styles, other_css_styles_sv),
                         EdgeItemNode::String(_)  => {
                             todo!("parent is EdgeItemNode::String(_) not implemented yet");
                         }
@@ -1120,7 +952,7 @@ where
                     };
 
                     //NOTE children cassowary_map
-                    let (children_layout_override_sa_a,children_cass_maps_sa) = children_nodes3.filter_map(move |child_path,child_node|{
+                    let (children_layout_override_sa_a,children_cass_maps_sa) = children_nodes3.filter_map(CHILDREN_POOL_SIZE,move |child_path,child_node|{
                         let _span = debug_span!("LayoutOverride",step=0, func = "will except_tail_match")
                                     .entered();
                                     // debug!("self_path3:{}",&self_path3);
@@ -1154,7 +986,7 @@ where
                     .map(|x|{
                         #[cfg(feature = "debug")]
                         {
-                             debug_span!("LayoutOverride",step=2,func = "EdgeItem new_in_top",info="to_layout_override之后 ... debug..").in_scope(||{
+                                debug_span!("LayoutOverride",step=2,func = "EdgeItem new_in_top",info="to_layout_override之后 ... debug..").in_scope(||{
                                 for (k,_) in x.iter(){
                                     debug!("child path---------:{:?}",k,);
                                 }
@@ -1196,15 +1028,15 @@ where
                                 los.clone().into_iter().fold(Option::<LayoutOverride>::None,|acc,(ix,lo)|{
                                     debug!("ix:{:?}   acc:{:#?}",ix,&acc);
                                     debug!("lo:{:#?}",&lo);
-                                     if let Some(old_lo) = acc {
+                                        if let Some(old_lo) = acc {
                                             debug!("acc is some, will + ");
                                             let x = Some(old_lo + lo);
                                             debug!("comb---:{:#?}",&x);
                                             x
 
-                                     }else{
+                                        }else{
                                         Some(lo)
-                                     }
+                                        }
                                 })
 
                             }
@@ -1215,14 +1047,13 @@ where
                                 los.clone().into_iter().reduce(|acc,lo|{
                                     // debug!("acc:{:#?}",&acc);
                                     // debug!("lo:{:#?}",&lo);
-                                     acc + lo
+                                        acc + lo
                                 })
                             }
 
                         });
                         (children_layout_override,children_cass_maps)
 
-                        // .collect::<Dict<Ix, (Rc<CassowaryMap>,StateAnchor<Vec<Constraint>>)>>();
 
                     }).split();
 
@@ -1330,45 +1161,45 @@ where
 
                     });
 
-// ────────────────────────────────────────────────────────────────────────────────
-// let children_cass_maps_no_val_sa = children_cass_maps_sa.map_(|_ix,(map,..)|{
-//     map.clone()
-// });
-let children_cass_size_constraints_sa = children_cass_maps_sa.then(|d|{
-    d.values().map(|(_,sa)|sa.get_anchor()).collect::<Vec<_>>().into_iter().collect::<Anchor<Vector<Vec<Constraint>>>>()
-});
-// let current_cassowary_map3 = current_cassowary_map.clone();
+                    // ────────────────────────────────────────────────────────────────────────────────
+                    // let children_cass_maps_no_val_sa = children_cass_maps_sa.map_(|_ix,(map,..)|{
+                    //     map.clone()
+                    // });
+                    let children_cass_size_constraints_sa = children_cass_maps_sa.then(|d|{
+                        d.values().map(|(_,sa)|sa.get_anchor()).collect::<Vec<_>>().into_iter().collect::<Anchor<Vector<Vec<Constraint>>>>()
+                    });
+                    // let current_cassowary_map3 = current_cassowary_map.clone();
 
-// let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa,&children_cass_size_constraints_sa).map(move |cass_maps,children_size_constraints|{
-let children_for_current_addition_constants_sa =  children_cass_size_constraints_sa.map(move |children_size_constraints|{
-
-
-    let mut  res_exprs = OrdSet::new();
-
-    //NOTE add some each child custom  cassowary map to current constants map
-
-    // for (_,map) in cass_maps {
-
-    //     res_exprs.extend([
-    //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("left").unwrap()+map.var("width").unwrap(),
-    //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("top").unwrap() + map.var("height").unwrap(),
-
-    //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("right").unwrap(),
-    //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("bottom").unwrap(),
-
-    //     ]);
+                    // let children_for_current_addition_constants_sa =  (&children_cass_maps_no_val_sa,&children_cass_size_constraints_sa).map(move |cass_maps,children_size_constraints|{
+                    let children_for_current_addition_constants_sa =  children_cass_size_constraints_sa.map(move |children_size_constraints|{
 
 
-    // }
+                        let mut  res_exprs = OrdSet::new();
 
-    res_exprs.extend(children_size_constraints.clone().into_iter().flatten());
+                        //NOTE add some each child custom  cassowary map to current constants map
+
+                        // for (_,map) in cass_maps {
+
+                        //     res_exprs.extend([
+                        //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("left").unwrap()+map.var("width").unwrap(),
+                        //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::REQUIRED) | map.var("top").unwrap() + map.var("height").unwrap(),
+
+                        //         // current_cassowary_map3.var("width").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("right").unwrap(),
+                        //         // current_cassowary_map3.var("height").unwrap() | WeightedRelation::GE(cassowary::strength::WEAK) | map.var("bottom").unwrap(),
+
+                        //     ]);
 
 
-    res_exprs
+                        // }
+
+                        res_exprs.extend(children_size_constraints.clone().into_iter().flatten());
 
 
-});
-// ────────────────────────────────────────────────────────────────────────────────
+                        res_exprs
+
+
+                    });
+                    // ────────────────────────────────────────────────────────────────────────────────
 
                     let mut last_observation_constants:OrdSet<Constraint>  =  OrdSet::new();
                     let mut last_observation_current_props:Dict<IdStr, NotNan<Precision>> =  Dict::new();
@@ -1405,71 +1236,72 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                             let _debug_span_ = warn_span!( "->[ calculated_changed_vars_sa calc map_mut ] ").entered();
                             warn!("[calculated_changed_vars_sa] path:{:?} newest_current_prop_vals :{:?}",&self_path5,&newest_current_prop_vals);
 
-                            let mut children_for_current_constants_did_update = false;
-
-
-                            if children_for_current_addition_constants.is_empty() && !last_observation_children_for_current_constants.is_empty(){
+                            let children_for_current_constants_did_update =   if children_for_current_addition_constants.is_empty() && !last_observation_children_for_current_constants.is_empty(){
                                 for constant in last_observation_children_for_current_constants.iter(){
                                     cass_solver.remove_constraint(constant).unwrap();
 
                                 }
                                 last_observation_children_for_current_constants.clear();
-                                children_for_current_constants_did_update=true;
+                                true
                             }else{
+                                let mut update = false;
                                 for diff_item in last_observation_children_for_current_constants.diff(children_for_current_addition_constants){
                                     match diff_item{
                                         NodeDiffItem::Add(new) => {
                                             cass_solver.add_constraint(new.clone()).unwrap();
-                                            children_for_current_constants_did_update = true;
+                                            update = true;
                                         },
                                         NodeDiffItem::Update { old, new } => {
                                             cass_solver.remove_constraint(old).unwrap();
                                             cass_solver.add_constraint(new.clone()).unwrap();
-                                            children_for_current_constants_did_update = true;
+                                            update = true;
 
                                         },
                                         NodeDiffItem::Remove(old) => {
                                             cass_solver.remove_constraint(old).unwrap();
-                                            children_for_current_constants_did_update = true;
+                                            update = true;
                                         },
                                     }
                                 }
-                                last_observation_children_for_current_constants = children_for_current_addition_constants.clone();
+                                if update {
+                                    last_observation_children_for_current_constants = children_for_current_addition_constants.clone();
+                                }
+                                update
 
-                            }
+                            };
 
-                            let mut constants_did_update = false;
-
-                            if newest_constants.is_empty() && !last_observation_constants.is_empty() {
+                            let  constants_did_update = if newest_constants.is_empty() && !last_observation_constants.is_empty() {
                                 for constant in last_observation_constants.iter() {
                                     cass_solver.remove_constraint(constant).unwrap();
                                 }
                                 last_observation_constants.clear();
-                                constants_did_update = true;
+                                true
                             }else{
+                                let mut update = false;
                                 for diff_item in last_observation_constants.diff(newest_constants){
                                     match diff_item {
                                         NodeDiffItem::Add(x) => {
                                             cass_solver.add_constraint(x.clone()).ok();//may duplicate constants
-                                            constants_did_update = true;
+                                            update = true;
                                         },
                                         NodeDiffItem::Update { old, new } => {
                                             cass_solver.remove_constraint(old).unwrap();
                                             cass_solver.add_constraint(new.clone()).unwrap();
-                                            constants_did_update = true;
+                                            update = true;
                                         },
                                         NodeDiffItem::Remove(old) => {
                                             cass_solver.remove_constraint(old).unwrap();
-                                            constants_did_update = true;
+                                            update = true;
                                         } ,
                                     };
 
                                 };
-                                if constants_did_update {
+                                if update {
                                     last_observation_constants = newest_constants.clone();
                                 }
+                                update
 
-                            }
+                            };
 
                             // @ current cassowary Top general vals ────────────────────────────────────────────────────────────────────────────────
                             let mut general_top_vals_did_update = false;
@@ -1589,53 +1421,23 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                                 let changes = cass_solver.fetch_changes();
                                 // warn!("cass solver change:{:#?}",&changes);
 
-
-
-                                if !changes.is_empty() {
+                                //TODO check performance
+                                // if !changes.is_empty() {
                                     *out =  changes.into();
                                     return true
-                                }
+                                // }
+
+
                             }
+
+                            out.clear();
 
                             false
 
                         });
                     // ────────────────────────────────────────────────────────────────────────────────
                     let current_cassowary_map3 = current_cassowary_map.clone();
-                    let cassowary_calculated_vars =  (&children_cass_maps_sa,&calculated_changed_vars_sa).map_mut(Dict::<Variable, (NotNan<Precision>,IdStr)>::new(),move|out,children_cass_maps,changed_vars|{
-                        let _debug_span_ = warn_span!( "->[ calculated_vars calc map_mut ] ").entered();
-
-                        if !changed_vars.is_empty() {
-                            // warn!("[calculated_vars] changed_vars======== \n{:?}",&changed_vars);
-
-                            //TODO remove get id if release
-                            for (var,v) in changed_vars.iter() {
-                                let id_prop_str =   children_cass_maps.iter().find_map(|(id,(cassowary_map ,..))|{
-                                     cassowary_map.prop(var).map(|prop|{
-                                        let vv:IdStr = format!("{} |=> #{:?}[{}]",&self_path4, &id,&prop).into();
-                                        vv
-                                     })
-                                }).or_else(||{
-                                    current_cassowary_map3.prop(var).map(|prop|{
-                                        let vv:IdStr = format!("{}[{}] ",&self_path4,&prop).into();
-                                        vv
-                                    })
-                                }).unwrap_or_default();//TODO add genal vals
-
-                                warn!("[calculated_vars] changed  prop:{:?}  v:{}",&id_prop_str,&v);
-
-
-                                out.insert(*var,(NotNan::new(cast(v.into_inner()).unwrap()).unwrap(),id_prop_str));
-
-
-                            }
-                            // warn!("[calculated_vars] total  prop:\n{:#?} ",&out);
-
-                            return true
-                        }
-                        false
-
-                    });
+                    let cassowary_calculated_vars = build_cassowary_calculated_vars_sa(&children_cass_maps_sa, &calculated_changed_vars_sa, current_cassowary_map3,self_path);
 
 
 
@@ -1698,7 +1500,7 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
 
 
 
-// ────────────────────────────────────────────────────────────────────────────────
+                    // ────────────────────────────────────────────────────────────────────────────────
 
                     let world = layout_calculated.world.clone();
 
@@ -1722,11 +1524,10 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
                     }))
                 }).into()
 
-            }).into()
         });
 
         Self {
-            id: id_sv,
+            id: id_svoa,
             paths: parent_paths,
             layout,
             path_styles,
@@ -1739,36 +1540,186 @@ let children_for_current_addition_constants_sa =  children_cass_size_constraints
     }
 }
 
-fn path_with_ed_node_builder<Ix>(
-    id_sv: StateVar<StateAnchor<EdgeIndex<Ix>>>,
+type ChildrenCassMap = Dict<IdStr, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>;
+
+fn build_cassowary_calculated_vars_sa(
+    children_cass_maps_sa: &StateAnchor<ChildrenCassMap>,
+    calculated_changed_vars_sa: &StateAnchor<Dict<Variable, NotNan<f64>>>,
+    current_cassowary_map3: Rc<CassowaryMap>,
+    self_path: &EPath,
+) -> StateAnchor<Dict<Variable, (NotNan<f32>, IdStr)>> {
+    let self_path = self_path.clone();
+    (children_cass_maps_sa, calculated_changed_vars_sa).map_mut(
+        Dict::<Variable, (NotNan<Precision>, IdStr)>::new(),
+        move |out, children_cass_maps, changed_vars| {
+            let _debug_span_ = warn_span!("->[ calculated_vars calc map_mut ] ").entered();
+
+            if !changed_vars.is_empty() {
+                // warn!("[calculated_vars] changed_vars======== \n{:?}",&changed_vars);
+
+                //TODO remove get id if release
+                for (var, v) in changed_vars.iter() {
+                    let id_prop_str = children_cass_maps
+                        .iter()
+                        .find_map(|(id, (cassowary_map, ..))| {
+                            cassowary_map.prop(var).map(|prop| {
+                                let vv: IdStr =
+                                    format!("{} |=> #{:?}[{}]", &self_path, &id, &prop).into();
+                                vv
+                            })
+                        })
+                        .or_else(|| {
+                            current_cassowary_map3.prop(var).map(|prop| {
+                                let vv: IdStr = format!("{}[{}] ", &self_path, &prop).into();
+                                vv
+                            })
+                        })
+                        .unwrap_or_default(); //TODO add genal vals
+
+                    warn!(
+                        "[calculated_vars] changed  prop:{:?}  v:{}",
+                        &id_prop_str, &v
+                    );
+
+                    out.insert(
+                        *var,
+                        (
+                            NotNan::new(cast(v.into_inner()).unwrap()).unwrap(),
+                            id_prop_str,
+                        ),
+                    );
+                }
+                // warn!("[calculated_vars] total  prop:\n{:#?} ",&out);
+
+                return true;
+            }
+            false
+        },
+    )
+}
+
+fn build_children_nodes_sa(
+    id_svoa: &StateVOA<EdgeIndex>,
+    edges2: StateAnchor<GraphEdgesDict>,
+) -> DictPathEiNodeSA {
+    // NOTE children cassowary_map
+
+    id_svoa
+        .watch()
+        .map(|i: &EdgeIndex| i.target_nix().cloned())
+        .then(move |opt_self_target_nix| {
+            // if opt_self_target_nix.is_none() {
+            //     //NOTE 尾
+            //     Anchor::constant(Dict::<EPath, EdgeItemNode>::default())
+            // } else {
+            // TODO  try  use node outgoing  find which is good speed? maybe make loop, because node in map/then will calculating
+            // TODO ? let e = edges2.map(|e|e.get(Edge::default()));
+            opt_self_target_nix.clone().map_or_else(
+                || Anchor::constant(Dict::<EPath, EdgeItemNode>::default()),
+                |self_target_nix| {
+                    edges2
+                        .filter_map(EDGES_POOL_SIZE, move |child_eix, v| {
+                            //NOTE  edge source is self_target, this is children
+
+                            if child_eix.source_nix()? == &self_target_nix {
+                                Some(v.edge_nodes.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .anchor()
+                        .then(|x: &Dict<EdgeIndex, DictPathEiNodeSA>| {
+                            x.values()
+                                .map(emg_state::StateAnchor::anchor)
+                                .collect::<Anchor<Vector<_>>>()
+                                .map(|v: &Vector<_>| Dict::unions(v.clone()))
+                        })
+                },
+            )
+        })
+}
+
+fn build_parent_paths_sa(
+    id_svoa: &StateVOA<EdgeIndex>,
+    // opt_self_source_node_nix_sa_re_get: &StateAnchor<Option<NodeIndex>>,
+    edges: StateAnchor<GraphEdgesDict>,
+) -> DictPathEiNodeSA {
+    id_svoa.watch().map(|i:&EdgeIndex|{
+        let _g = trace_span!( "[ source_node_nix_sa_re_get recalculation ]:id_sv change ").entered();
+
+
+            let _g = span!(Level::TRACE, "[ source_node_nix_sa_re_get recalculation ]:eid_sa_inner change ",edge_index=?i).entered();
+            i.source_nix().cloned()
+    })
+
+    .then(move|opt_self_source_nix:&Option<NodeIndex>| {
+
+            let _g = span!(Level::TRACE, "[ source_node_incoming_edge_dict_sa recalculation ]:source_node_nix_sa_re_get change ").entered();
+
+            // if opt_self_source_nix.is_none(){
+            //     //NOTE 如果 source nix  是没有 node index 那么他就是无上一级的
+            //     Anchor::constant(Dict::<EPath, EdgeItemNode>::unit(EPath::::default(), EdgeItemNode::Empty))
+            //     //TODO check why use unit? answer:need for `EdgeItemNode::Empty => path_ein_empty_node_builder`
+            //     // Anchor::constant(Dict::<EPath, EdgeItemNode>::new())
+            // }else{
+                opt_self_source_nix.clone().map_or_else(
+                    ||Anchor::constant(Dict::<EPath, EdgeItemNode>::unit(EPath::default(), EdgeItemNode::Empty)),
+                    |some_source_nix|{
+
+
+                    edges.filter_map(EDGES_POOL_SIZE,move|someone_eix, e| {
+
+
+                        debug!("********************** \n one_eix.target_node_ix: {:?} ?? opt_source_nix_clone:{:?}",someone_eix.target_nix(),&some_source_nix);
+                        if   someone_eix.target_nix()? == &some_source_nix {
+
+                            Some(e.item.edge_nodes.clone())
+
+                        }else{
+                            None
+                        }
+
+                    })
+                    .anchor()
+                    .then(|x:&Dict<EdgeIndex, DictPathEiNodeSA>|{
+
+                        x.values().map(emg_state::StateAnchor::anchor)
+                        .collect::<Anchor<Vector<_>>>()
+                        .map(|v:&Vector<_>|{
+                            let _g = trace_span!( "[  paths dict recalculation ]:vector paths change ").entered();
+                            Dict::unions(v.clone())})
+                    })
+                })
+
+            // }
+
+
+
+        })
+}
+
+fn path_with_ed_node_builder(
+    id_svoa: StateVOA<EdgeIndex>,
     ped: &EdgeData,
     path_layout: &StateAnchor<Layout>,
-    path: &EPath<Ix>,
+    path: &EPath,
     current_cassowary_map: &Rc<CassowaryMap>,
-    path_styles: StateVar<PathVarMap<Ix, Style>>,
+    path_styles: StateVar<PathVarMap<Style>>,
     other_styles_sv: StateVar<Style>,
 ) -> (
     Option<LayoutCalculated>,
     LayoutCalculated,
     StateAnchor<String>,
-)
-where
-    Ix: std::clone::Clone
-        + std::hash::Hash
-        + std::default::Default
-        + std::cmp::Ord
-        + 'static
-        + std::fmt::Debug,
-{
+) {
     // println!("run path_with_ed_node_builder ******************************************************************");
 
     let p_calculated = ped.calculated.clone();
     let path_clone2 = path.clone();
 
-    let layout_calculated = layout_calculating(id_sv, ped, current_cassowary_map, path_layout);
+    let layout_calculated = layout_calculating(id_svoa, ped, current_cassowary_map, path_layout);
     // let p = path.clone();
     let this_path_style_string_sa: StateAnchor<Option<String>> =
-        path_styles.watch().map(move |d: &PathVarMap<Ix, Style>| {
+        path_styles.watch().map(move |d: &PathVarMap<Style>| {
             let _g = trace_span!(
                 "[  this_path_style_string_sa recalculation ]:layout.path_styles change "
             )
@@ -1801,37 +1752,33 @@ where
     (Some(p_calculated), layout_calculated, styles_string)
 }
 
-fn path_ein_empty_node_builder<Ix: 'static>(
+fn path_ein_empty_node_builder(
     path_layout: &StateAnchor<Layout>,
-    _path: &EPath<Ix>,
+    _path: &EPath,
     current_cassowary_map: &Rc<CassowaryMap>,
 
-    path_styles: StateVar<PathVarMap<Ix, Style>>,
+    path_styles: StateVar<PathVarMap<Style>>,
     other_styles_sv: StateVar<Style>,
 ) -> (
     Option<LayoutCalculated>,
     LayoutCalculated,
     StateAnchor<String>,
-)
-where
-    Ix: std::clone::Clone + std::hash::Hash + std::default::Default + std::cmp::Ord,
-{
+) {
     // println!("run path_ein_empty_node_builder ******************************************************************");
 
     // ─────────────────────────────────────────────────────────────────
     // let path_clone = path.clone();
 
-    let w = path_layout.then(|l: &Layout| l.w.watch().into());
-    let h = path_layout.then(|l: &Layout| l.h.watch().into());
-    let current_cassowary_generals_sa = path_layout.then(|l| l.cassowary_generals.watch().into());
+    let sa_w = path_layout.then(|l: &Layout| l.w.watch().into_anchor());
+    let sa_h = path_layout.then(|l: &Layout| l.h.watch().into_anchor());
+    let current_cassowary_generals_sa =
+        path_layout.then(|l| l.cassowary_generals.watch().into_anchor());
 
     // let origin_x = path_layout.then(|l:&Layout|l.origin_x.watch().into());
     // let origin_y = path_layout.then(|l:&Layout|l.origin_y.watch().into());
     // let align_x = path_layout.then(|l:&Layout|l.align_x.watch().into());
     // let align_y = path_layout.then(|l:&Layout|l.align_y.watch().into());
     // ─────────────────────────────────────────────────────────────────
-    let sa_w = w.then(|w| w.get_anchor());
-    let sa_h = h.then(|h| h.get_anchor());
     let width_var = current_cassowary_map.var("width").unwrap();
     let height_var = current_cassowary_map.var("height").unwrap();
     let top_var = current_cassowary_map.var("top").unwrap();
@@ -1927,7 +1874,7 @@ where
         &other_styles_sv.watch(),
     )
         .map(
-            move |path_styles: &PathVarMap<Ix, Style>, loc_styles: &Style, other_styles: &Style| {
+            move |path_styles: &PathVarMap<Style>, loc_styles: &Style, other_styles: &Style| {
                 let _enter = span!(
                     Level::TRACE,
                     "-> [ROOT styles ] recalculation..(&other_styles_watch, &loc_styles).map ",
@@ -2007,7 +1954,7 @@ impl EdgeItemNode {
     ///
     /// [`Empty`]: EdgeItemNode::Empty
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         matches!(self, Self::Empty)
     }
 }
@@ -2040,12 +1987,7 @@ impl<T: Clone + seed_styles::CssValueTrait> From<T> for Css<T> {
 //     GenericLoc::new(x, y, px(0))
 // }
 //TODO lifetime
-pub fn css<
-    Ix: Clone + Hash + Eq + Ord + 'static + Default,
-    Use: CssValueTrait + Clone + 'static,
->(
-    v: Use,
-) -> Box<dyn Shaping<EmgEdgeItem<Ix>>> {
+pub fn css<Use: CssValueTrait + Clone + 'static>(v: Use) -> Box<dyn Shaping<EmgEdgeItem>> {
     // pub fn css<Use: CssValueTrait + std::clone::Clone + 'static>(v: Use) -> Box<Css<Use>> {
     Box::new(Css(v))
 }
@@ -2053,12 +1995,17 @@ pub fn css<
 #[cfg(test)]
 pub mod tests {
     #![allow(clippy::too_many_lines)]
-    use crate::*;
+    use crate::{
+        css, debug, debug_span, emg_common, epath, instrument, px, s, styles, topo, trace,
+        use_state, Clone, CloneState, CloneStateAnchor, Css, CssWidthTrait, Dict, EPath, Edge,
+        EdgeIndex, EdgeItemNode, EmgEdgeItem, GraphEdgesDict, Level, Precision, Translation3,
+        Vector2,
+    };
     extern crate test;
 
     use emg::{edge_index, edge_index_no_source, node_index};
+    use emg_common::parent;
     use emg_common::{im::vector, num_traits::ToPrimitive};
-    use emg_common::{parent, IdStr};
     use emg_shaping::ShapingUseDyn;
     use emg_state::StateVar;
 
@@ -2066,14 +2013,23 @@ pub mod tests {
     use tracing::{info, span, warn};
 
     use test::{black_box, Bencher};
-    use tracing_flame::FlameLayer;
-    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
     use emg_common::num_traits::cast;
 
-    use color_eyre::{eyre::Report, eyre::WrapErr};
+    use color_eyre::eyre::Report;
+    ///# Errors
+    /// run twice
     pub fn tracing_init() -> Result<(), Report> {
         use tracing_subscriber::prelude::*;
+        fn theme() -> color_eyre::config::Theme {
+            use color_eyre::{config::Theme, owo_colors::style};
+
+            Theme::dark().active_line(style().bright_yellow().bold())
+            // ^ use `new` to derive from a blank theme, or `light` to derive from a light theme.
+            // Now configure your theme (see the docs for all options):
+            // .line_number(style().blue())
+            // .help_info_suggestion(style().red())
+        }
         // let error_layer =
         // tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
 
@@ -2101,16 +2057,6 @@ pub mod tests {
             // .with(out_layer)
             .try_init()?;
 
-        fn theme() -> color_eyre::config::Theme {
-            use color_eyre::{config::Theme, owo_colors::style};
-
-            Theme::dark().active_line(style().bright_yellow().bold())
-            // ^ use `new` to derive from a blank theme, or `light` to derive from a light theme.
-            // Now configure your theme (see the docs for all options):
-            // .line_number(style().blue())
-            // .help_info_suggestion(style().red())
-        }
-
         // color_eyre::install()
         color_eyre::config::HookBuilder::new()
             .theme(theme())
@@ -2120,6 +2066,7 @@ pub mod tests {
     #[test]
     fn f64_to_f32() {
         // let val = 1452089033.7674935_f64;
+        #[allow(clippy::unreadable_literal)]
         let val = 12089033.7674935_f64;
         let x: f32 = cast(val).unwrap();
         println!("64- {val:?}");
@@ -2129,6 +2076,7 @@ pub mod tests {
         println!("64- {val:?}");
         println!("32- {x:?}");
 
+        #[allow(clippy::cast_possible_truncation)]
         let x: f32 = (f64::trunc(val * 100.0f64) / 100.0f64) as f32;
         println!("64- {val:?}");
         println!("32- {x:?}");
@@ -2148,18 +2096,18 @@ pub mod tests {
 
             let css_width = width(px(100));
             let css_height = h(px(100));
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+            let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
 
             let root_e_source = use_state(|| None);
             let root_e_target = use_state(|| Some(node_index("root")));
-            let mut root_e = EmgEdgeItem::<IdStr>::default_with_wh_in_topo(
-                root_e_source.watch(),
-                root_e_target.watch(),
+            let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
+                &root_e_source.watch(),
+                &root_e_target.watch(),
                 e_dict_sv.watch(),
                 1920,
                 1080,
             );
-            e_dict_sv.set_with(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     EdgeIndex::new(None, node_index("root")),
@@ -2170,16 +2118,16 @@ pub mod tests {
 
             let e1_source = use_state(|| Some(node_index("root")));
             let e1_target = use_state(|| Some(node_index("1")));
-            let e1 = EmgEdgeItem::<IdStr>::new_in_topo(
-                e1_source.watch(),
-                e1_target.watch(),
+            let e1 = EmgEdgeItem::new_in_topo(
+                &e1_source.watch(),
+                &e1_target.watch(),
                 e_dict_sv.watch(),
                 (px(50), px(50)),
                 (pc(0), pc(0), pc(0)),
                 (pc(50), pc(50), pc(50)),
             );
 
-            e_dict_sv.set_with(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("root", "1"),
@@ -2190,15 +2138,15 @@ pub mod tests {
 
             let e2_source = use_state(|| Some(node_index("1")));
             let e2_target = use_state(|| Some(node_index("2")));
-            let mut e2 = EmgEdgeItem::<IdStr>::new_in_topo(
-                e2_source.watch(),
-                e2_target.watch(),
+            let mut e2 = EmgEdgeItem::new_in_topo(
+                &e2_source.watch(),
+                &e2_target.watch(),
                 e_dict_sv.watch(),
                 (px(10), px(10)),
                 (pc(100), pc(100), pc(100)),
                 (pc(100), pc(100), pc(100)),
             );
-            e_dict_sv.set_with(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("1", "2"),
@@ -2214,9 +2162,9 @@ pub mod tests {
             });
             info!("l2 =========================================================");
 
-            root_e.shaping_use_dyn(&vec![css(css_width)]);
+            let _ = root_e.shaping_use_dyn(&vec![css(css_width)]);
             // root_e.shaping_use(&css(css_width.clone()));
-            root_e.shaping_use_dyn(&Css(css_height));
+            let _ = root_e.shaping_use_dyn(&Css(css_height));
             assert_eq!(
                 e1.edge_data(&EPath(vector![
                     edge_index_no_source("root"),
@@ -2230,9 +2178,9 @@ pub mod tests {
             );
             info!("=========================================================");
 
-            e2.shaping_use_dyn(&Css(CssWidth::from(px(20))));
-            e2.shaping_use_dyn(&Css(CssHeight::from(px(20))));
-            e2.shaping_use_dyn(&Css(bg_color(hsl(40, 70, 30))));
+            let _ = e2.shaping_use_dyn(&Css(CssWidth::from(px(20))));
+            let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(20))));
+            let _ = e2.shaping_use_dyn(&Css(bg_color(hsl(40, 70, 30))));
 
             trace!("shaping_use after {:#?}", &e2);
             info!("l3 =========================================================");
@@ -2259,8 +2207,11 @@ pub mod tests {
                 .styles_string
                 .get(),
             );
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("loc-root_e", &root_e);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("loc-e1", &e1);
+            #[cfg(feature = "insta")]
             insta::assert_debug_snapshot!("loc-e2", &e2);
 
             info!("..=========================================================");
@@ -2270,7 +2221,8 @@ pub mod tests {
     #[topo::nested]
     fn it_works_bench(b: &mut Bencher) {
         b.iter(|| {
-            black_box(it_works_for_bench());
+            it_works_for_bench();
+            black_box(());
         });
     }
 
@@ -2284,18 +2236,18 @@ pub mod tests {
         let css_width = width(px(100));
         let css_height = h(px(100));
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
 
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
-            root_e_source.watch(),
-            root_e_target.watch(),
+            &root_e_source.watch(),
+            &root_e_target.watch(),
             e_dict_sv.watch(),
             1920,
             1080,
         );
-        e_dict_sv.set_with(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 EdgeIndex::new(None, Some(node_index("root"))),
@@ -2307,14 +2259,14 @@ pub mod tests {
         let e1_source = use_state(|| Some(node_index("root")));
         let e1_target = use_state(|| Some(node_index("1")));
         let mut e1 = EmgEdgeItem::new_in_topo(
-            e1_source.watch(),
-            e1_target.watch(),
+            &e1_source.watch(),
+            &e1_target.watch(),
             e_dict_sv.watch(),
             (px(10), px(10)),
             (pc(100), pc(100), pc(100)),
             (pc(50), pc(20), pc(20)),
         );
-        e_dict_sv.set_with(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("root", "1"),
@@ -2326,14 +2278,14 @@ pub mod tests {
         let e2_source = use_state(|| Some(node_index("1")));
         let e2_target = use_state(|| Some(node_index("2")));
         let mut e2 = EmgEdgeItem::new_in_topo(
-            e2_source.watch(),
-            e2_target.watch(),
+            &e2_source.watch(),
+            &e2_target.watch(),
             e_dict_sv.watch(),
             (px(10), px(10)),
             (pc(100), pc(100), pc(100)),
             (pc(50), pc(20), pc(20)),
         );
-        e_dict_sv.set_with(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("1", "2"),
@@ -2367,41 +2319,41 @@ pub mod tests {
         let xx = vec![css_width];
         // let xx = vec![css(css_width)];
 
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
 
         // trace!("shaping_use after css_width {}", &root_e);
         trace!("shaping_use after css_width {}", &e1);
@@ -2409,7 +2361,7 @@ pub mod tests {
 
         // root_e.shaping_use(&Css(css_height.clone()));
         let tempcss = use_state(|| css_height);
-        root_e.shaping_use_dyn(&tempcss);
+        let _ = root_e.shaping_use_dyn(&tempcss);
         assert_eq!(
             e1.edge_nodes
                 .get()
@@ -2458,36 +2410,36 @@ pub mod tests {
 
         info!("=========================================================");
 
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
         assert_eq!(
             e1.edge_nodes
                 .get()
@@ -2516,7 +2468,7 @@ pub mod tests {
 
         trace!("shaping_use after {}", &e2);
         info!("l1351 =========================================================");
-        e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
+        let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
         assert_eq!(
             e2.edge_nodes
                 .get()
@@ -2558,7 +2510,7 @@ pub mod tests {
             trace!("shaping_use after2 {}", &e2);
         });
         info!("=========================================================");
-        e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
+        let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
 
         trace!("shaping_use after {:#?}", &e2);
         info!("..=========================================================");
@@ -2581,7 +2533,7 @@ pub mod tests {
     #[test]
     fn test_edge() {
         let f = width(parent!(CssHeight) + pc(100));
-        println!("{}", f);
+        println!("{f}");
     }
 
     #[test]
@@ -2600,18 +2552,18 @@ pub mod tests {
         let css_width = width(px(100));
         let css_height = h(px(100));
 
-        let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+        let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
 
         let root_e_source = use_state(|| None);
         let root_e_target = use_state(|| Some(node_index("root")));
         let mut root_e = EmgEdgeItem::default_with_wh_in_topo(
-            root_e_source.watch(),
-            root_e_target.watch(),
+            &root_e_source.watch(),
+            &root_e_target.watch(),
             e_dict_sv.watch(),
             1920,
             1080,
         );
-        e_dict_sv.set_with(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 EdgeIndex::new(None, Some(node_index("root"))),
@@ -2623,8 +2575,8 @@ pub mod tests {
         let e1_source = use_state(|| Some(node_index("root")));
         let e1_target = use_state(|| Some(node_index("1")));
         let mut e1 = EmgEdgeItem::new_in_topo(
-            e1_source.watch(),
-            e1_target.watch(),
+            &e1_source.watch(),
+            &e1_target.watch(),
             e_dict_sv.watch(),
             (
                 (parent!(CssHeight) + pc(100)),
@@ -2637,7 +2589,7 @@ pub mod tests {
                 pc(20),
             ),
         );
-        e_dict_sv.set_with(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("root", "1"),
@@ -2649,14 +2601,14 @@ pub mod tests {
         let e2_source = use_state(|| Some(node_index("1")));
         let e2_target = use_state(|| Some(node_index("2")));
         let mut e2 = EmgEdgeItem::new_in_topo(
-            e2_source.watch(),
-            e2_target.watch(),
+            &e2_source.watch(),
+            &e2_target.watch(),
             e_dict_sv.watch(),
             (px(10), px(10)),
             (pc(100), pc(100), pc(100)),
             (pc(50), pc(20), pc(20)),
         );
-        e_dict_sv.set_with(|d| {
+        let _ = e_dict_sv.set_with_once(|d| {
             let mut nd = d.clone();
             nd.insert(
                 edge_index("1", "2"),
@@ -2715,7 +2667,7 @@ pub mod tests {
         let xx = vec![css_width];
         // let xx = vec![css(css_width)];
 
-        root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
 
         warn!("calculated 3 =========================================================");
         warn!(
@@ -2731,40 +2683,40 @@ pub mod tests {
                 .calculated
         );
 
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
-        root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
+        let _ = root_e.shaping_use_dyn(&xx);
 
         // trace!("shaping_use after css_width {}", &root_e);
         trace!("shaping_use after css_width {}", &e1);
@@ -2772,7 +2724,7 @@ pub mod tests {
 
         // root_e.shaping_use(&Css(css_height.clone()));
         let tempcss = use_state(|| css_height);
-        root_e.shaping_use_dyn(&tempcss);
+        let _ = root_e.shaping_use_dyn(&tempcss);
 
         warn!(
             "calculated 4 root h w 100 ========================================================="
@@ -2849,36 +2801,36 @@ pub mod tests {
 
         info!("=========================================================");
 
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
-        e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
+        let _ = e1.shaping_use_dyn(&Css(CssWidth::from(px(12))));
 
         assert_eq!(
             e1.edge_nodes
@@ -2908,7 +2860,7 @@ pub mod tests {
 
         trace!("shaping_use after {}", &e2);
         info!("l1351 =========================================================");
-        e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
+        let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(50))));
         assert_eq!(
             e2.edge_nodes
                 .get()
@@ -2950,7 +2902,7 @@ pub mod tests {
             trace!("shaping_use after2 {}", &e2);
         });
         info!("=========================================================");
-        e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
+        let _ = e2.shaping_use_dyn(&Css(CssHeight::from(px(150))));
 
         trace!("shaping_use after {:#?}", &e2);
         info!("..=========================================================");
@@ -2968,8 +2920,11 @@ pub mod tests {
                 .styles_string
                 .get(),
         );
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("it_works-root_e", &root_e);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("it_works-e1", &e1);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("it_works-e2", &e2);
         info!("..=========================================================");
     }
@@ -2980,18 +2935,18 @@ pub mod tests {
         {
             let _g = span!(Level::TRACE, "change_parent").entered();
 
-            let e_dict_sv: StateVar<GraphEdgesDict<IdStr>> = use_state(|| Dict::new());
+            let e_dict_sv: StateVar<GraphEdgesDict> = use_state(Dict::new);
 
             let root_e_source = use_state(|| None);
             let root_e_target = use_state(|| Some(node_index("root")));
             let root_e = EmgEdgeItem::default_with_wh_in_topo(
-                root_e_source.watch(),
-                root_e_target.watch(),
+                &root_e_source.watch(),
+                &root_e_target.watch(),
                 e_dict_sv.watch(),
                 100,
                 100,
             );
-            e_dict_sv.set_with(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     EdgeIndex::new(None, Some(node_index("root"))),
@@ -3003,13 +2958,13 @@ pub mod tests {
             let s_root_e2_source = use_state(|| None);
             let root_e2_target = use_state(|| Some(node_index("root2")));
             let root_e2 = EmgEdgeItem::default_with_wh_in_topo(
-                s_root_e2_source.watch(),
-                root_e2_target.watch(),
+                &s_root_e2_source.watch(),
+                &root_e2_target.watch(),
                 e_dict_sv.watch(),
                 200,
                 200,
             );
-            e_dict_sv.set_with(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     EdgeIndex::new(None, Some(node_index("root2"))),
@@ -3022,14 +2977,14 @@ pub mod tests {
             let e1_source = use_state(|| Some(node_index("root")));
             let e1_target = use_state(|| Some(node_index("1")));
             let e1 = EmgEdgeItem::new_in_topo(
-                e1_source.watch(),
-                e1_target.watch(),
+                &e1_source.watch(),
+                &e1_target.watch(),
                 e_dict_sv.watch(),
                 (px(10), pc(10)),
                 (pc(0), pc(0), pc(0)),
                 (pc(50), pc(50), pc(50)),
             );
-            e_dict_sv.set_with(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("root", "1"),
@@ -3043,14 +2998,14 @@ pub mod tests {
             let e2_source = use_state(|| Some(node_index("1")));
             let e2_target = use_state(|| Some(node_index("2")));
             let e2 = EmgEdgeItem::new_in_topo(
-                e2_source.watch(),
-                e2_target.watch(),
+                &e2_source.watch(),
+                &e2_target.watch(),
                 e_dict_sv.watch(),
                 (px(10), px(10)),
                 (pc(0), pc(0), pc(0)),
                 (pc(100), pc(000), pc(000)),
             );
-            e_dict_sv.set_with(|d| {
+            let _ = e_dict_sv.set_with_once(|d| {
                 let mut nd = d.clone();
                 nd.insert(
                     edge_index("1", "2"),
@@ -3087,7 +3042,7 @@ pub mod tests {
             trace!("new root_e2:e2 {}", &e2);
             info!("..=========================================================");
             //local
-            assert_eq!(e2.id.get(), edge_index("1", "2"));
+            assert_eq!(e2.id.get_out_val(), edge_index("1", "2"));
             assert_eq!(
                 e2.edge_data(&epath!("root2"=>"1"=>"2"))
                     .unwrap()
@@ -3103,7 +3058,7 @@ pub mod tests {
             // parent_for_e2_sa.set(root_e.clone());
             // local use root
             e2_source.set(Some(node_index("root")));
-            assert_eq!(e2.id.get(), edge_index("root", "2"));
+            assert_eq!(e2.id.get_out_val(), edge_index("root", "2"));
             assert_eq!(
                 e2.edge_data(&epath!("root"=>"2"))
                     .unwrap()

@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 default = ["bench"]
 bench = []
+insta = []
 
 [profile.dev]
 split-debuginfo = "unpacked"
@@ -27,7 +28,6 @@ emg_hasher = { path = "../emg_hasher" }
 emg_state = { path = "../emg_state" }
 emg_common = { path = "../emg_common" }
 seed_styles = { path = "../../styles_hooks/seed_styles" }
-ordered-float = "3.4.0"
 derive_more = "0.99"
 
 

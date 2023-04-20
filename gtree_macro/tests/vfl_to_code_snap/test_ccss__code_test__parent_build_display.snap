@@ -1,0 +1,10 @@
+---
+source: gtree_macro/tests/test_ccss.rs
+assertion_line: 46
+expression: "&macro_disp"
+---
+[
+&[top]  ==  #sub[top],
+#sub[bottom]  ==  &[bottom],
+]
+

@@ -7,6 +7,10 @@ edition = "2021"
 # [lib]
 # crate-type = ["rlib"]
 
+[features]
+default = ["show-fps"]
+show-fps = []
+
 [dependencies]
 emg_native = { path = "../emg_native" }
 emg_graphics_backend = { path = "../emg_graphics_backend" }
@@ -16,3 +20,4 @@ vello = { path = "../../piet-gpu-new" }
 tracing = "0.1"
 raw-window-handle = "0.5"
 wgpu = "0.15"
+static_init = "1.0.3"

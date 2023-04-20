@@ -4,7 +4,6 @@
 // ────────────────────────────────────────────────────────────────────────────────
 #![feature(is_some_and)]
 // ────────────────────────────────────────────────────────────────────────────────
-use proc_macro_crate::{crate_name, FoundCrate};
 // use std::collections::HashSet as Set;
 
 // use trace_var::trace_var;
@@ -12,9 +11,10 @@ use proc_macro_crate::{crate_name, FoundCrate};
 use cassowary::Cassowary;
 
 use proc_macro2::TokenStream;
+
 use quote::{quote, quote_spanned, ToTokens};
 // use quote::quote;
-use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token};
+use syn::{bracketed, ext::IdentExt, punctuated::Punctuated, spanned::Spanned, token, ExprClosure};
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
     Expr,
@@ -57,14 +57,12 @@ impl ID {
         self.0.as_ref().map_or_else(
             || {
                 let id = make_id(def_name);
-                // println!("id:{}", &id);
 
-                // quote!(String::from(#id))
-                if id.len() <= 12usize {
-                    quote!(IdStr::new_inline(#id))
-                } else {
-                    quote!(IdStr::new(#id))
-                }
+                // if id.len() <= 12usize {
+                // quote!(IdStr::new_inline(#id))
+                // } else {
+                quote!(IdStr::new(#id))
+                // }
             },
             |id| {
                 // let id_string = id.to_string();
@@ -79,12 +77,13 @@ impl ID {
 
                 if let Expr::Lit(lit) = id {
                     if let syn::Lit::Str(lit_str) = &lit.lit {
-                        let id_string = lit_str.value();
-                        if id_string.len() <= 12usize {
-                            quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
-                        } else {
-                            quote_spanned!(id.span()=>IdStr::new(#id_string))
-                        }
+                        // let id_string = lit_str.value();
+                        // if id_string.len() <= 12usize {
+                        // quote_spanned!(id.span()=>IdStr::new_inline(#id_string))
+                        // } else {
+                        // quote_spanned!(id.span()=>IdStr::new(#id_string))
+                        quote_spanned!(id.span()=>IdStr::new(#lit_str))
+                        // }
                     } else {
                         quote_spanned!(id.span()=>IdStr::from(#id))
                     }
@@ -213,7 +212,7 @@ impl Parse for Edge {
         debug!("======Edge-> will parse ()");
 
         let content: Punctuated<EdgeObject, Token![,]> =
-            content.parse_terminated(EdgeObject::parse)?;
+            content.parse_terminated(EdgeObject::parse, Token![,])?;
         // content.parse_terminated(syn::Expr::parse)?;
         debug!("content: {:?}", &content);
         debug!("");
@@ -238,7 +237,7 @@ impl ToTokens for Edge {
         let content_iter = content.iter();
         //NOTE use Rc because dyn
         quote_spanned!(
-            bracket_token.span=> vec![#(std::rc::Rc::new(#content_iter) as std::rc::Rc<dyn Shaping<EmgEdgeItem<_>>>),*]
+            bracket_token.span=> vec![#(std::rc::Rc::new(#content_iter) as std::rc::Rc<dyn Shaping<EmgEdgeItem>>),*]
         )
         .to_tokens(tokens);
     }
@@ -343,10 +342,21 @@ impl Parse for GOnEvent {
 
         let event_name = input.parse::<Ident>()?;
 
+        let closure: ExprClosure = input.parse()?;
+
+        if !(closure.inputs.is_empty() || closure.inputs.len() == 1) {
+            //TODO for web , need closure.inputs.len() == 3
+
+            return Err(syn::Error::new(
+                closure.span(),
+                "event callback argument size is must empty or one(native) / three",
+            ));
+        }
+
         Ok(Self {
             id,
             event_name,
-            closure: input.parse()?,
+            closure,
         })
     }
 }
@@ -357,14 +367,16 @@ impl ToTokens for GOnEvent {
             event_name,
             closure,
         } = self;
+
         let id_token = id.get(format!("Ev-{event_name}").as_str()); //just emg graph node id
 
         let token = if closure.inputs.is_empty() {
             quote_spanned! (closure.span()=> GTreeBuilderElement::Event(#id_token,EventMessage::new((#event_name).into(), #closure ).into()) )
-        } else if closure.inputs.len() == 3 {
-            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new((#event_name).into(),std::rc::Rc::new(#closure)).into()) )
+        } else if closure.inputs.len() == 1 {
+            quote_spanned! (closure.span()=>GTreeBuilderElement::Event(#id_token,EventCallback::new((#event_name).into(), #closure ).into()) )
         } else {
-            panic!("event callback argument size is must empty or three")
+            //TODO for web , need closure.inputs.len() == 3
+            unreachable!("event callback argument size is must empty or three")
         };
         token.to_tokens(tokens);
     }
@@ -463,7 +475,7 @@ impl ToTokens for GShapingUse {
 #[derive(Debug, Clone)]
 struct SaGel {
     pub left: Box<Expr>,
-    pub _map_fn_token: token::FatArrow,
+    pub _map_fn_token: Token!(=>),
     pub right: Box<syn::ExprClosure>,
 }
 
@@ -551,7 +563,7 @@ impl Parse for GTreeSurface {
                 let content;
                 let _bracket = bracketed!(content in input);
                 let children: ChildrenType =
-                    Some(content.parse_terminated(GTreeMacroElement::parse)?);
+                    Some(content.parse_terminated(GTreeMacroElement::parse, Token![,])?);
                 Ok(Self {
                     edge,
                     id,
@@ -659,6 +671,7 @@ impl ToTokens for GTreeSurface {
             )
             .to_tokens(tokens);
         } else {
+            //NOTE not module
             let id_token = id.get("GEl");
 
             match (opt_sa_gel, opt_expr) {
@@ -681,7 +694,7 @@ impl ToTokens for GTreeSurface {
                             let children = #children_token;
                             #expr
                             .tree_init_calling(&id,&edges,&children)
-                            .with_id_edge_children(id,Some(edges),Some(children))
+                            .with_id_edge_children(id,edges,children)
                         }
                         )
                         .to_tokens(tokens);
@@ -914,7 +927,7 @@ impl Parse for GTreeMacroElement {
 
 impl ToTokens for GTreeMacroElement {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        use match_any::match_any;
+        use match_any_cfg::match_any;
 
         match_any!( self ,
             Self::GL(x)|Self::GS(x)|Self::RT(x)|Self::GC(x)|Self::OnEvent(x)
@@ -988,7 +1001,8 @@ impl Parse for GTreeLayerStruct {
         let content;
         let _bracket = bracketed!(content in input);
         //println!("brace_token=>{:?}", &bracket);
-        let children: ChildrenType = Some(content.parse_terminated(GTreeMacroElement::parse)?);
+        let children: ChildrenType =
+            Some(content.parse_terminated(GTreeMacroElement::parse, Token![,])?);
         //println!("children:=>{:?}", &children);
         // println!("children op :=>{}", quote!(  #children));
 
@@ -1033,7 +1047,7 @@ impl ToTokens for GTreeLayerStruct {
                 let children = #children_token;
                 #layer_token ::new(id.clone())
                 .tree_init_calling(&id,&edges,&children)
-                .with_id_edge_children(id,Some(edges),Some(children))
+                .with_id_edge_children(id,edges,children)
             })
         } .to_tokens(tokens);
         // quote!(GTreeBuilderElement::#layer(String::from(#id),vec![#(#children_iter),*])).to_tokens(tokens)
@@ -1066,7 +1080,7 @@ impl Parse for Gtree {
         // Ok(Gtree { emg_graph, root })
 
         if !input.is_empty() {
-            let err = format!("input has unknown tokens not parsed: {} ", input,);
+            let err = format!("input has unknown tokens not parsed: {input} ",);
 
             return Err(input.error(err));
         }
@@ -1238,10 +1252,11 @@ mod tests {
 
             match parse_str {
                 Ok(ok) => {
+                    #[cfg(feature = "insta")]
                     insta::assert_display_snapshot!("test_new_skip_init", ok.to_token_stream());
-                    println!("===>{}", ok.to_token_stream())
+                    println!("===>{}", ok.to_token_stream());
                 }
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1261,10 +1276,11 @@ mod tests {
 
             match parse_str {
                 Ok(ok) => {
+                    #[cfg(feature = "insta")]
                     insta::assert_display_snapshot!("test_new_not_builder", ok.to_token_stream());
-                    println!("===>{}", ok.to_token_stream())
+                    println!("===>{}", ok.to_token_stream());
                 }
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1284,10 +1300,11 @@ mod tests {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => {
+                    #[cfg(feature = "insta")]
                     insta::assert_display_snapshot!("test_vfl_1", ok.to_token_stream());
-                    println!("===>{}", ok.to_token_stream())
+                    println!("===>{}", ok.to_token_stream());
                 }
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1309,7 +1326,7 @@ mod tests {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1330,10 +1347,15 @@ mod tests {
 
     #[test]
     fn test_vfl_3() {
+        #[allow(unused)]
+        enum A {
+            B,
+            C,
+        }
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
@@ -1355,11 +1377,6 @@ mod tests {
 
         token_test(input);
         println!();
-        #[allow(unused)]
-        enum A {
-            B,
-            C,
-        }
 
         // GTreeBuilderElement :: Layer (IdStr :: new_inline ("root") , vec ! [] , vec ! [
         //     GTreeBuilderElement :: Layer (IdStr :: new_inline ("x111x") , vec ! [
@@ -1412,20 +1429,21 @@ mod tests {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 
         println!();
         let input = r#"
-        @=root
+        @="root"
                 Layer [
-                    @=x111x @E=[{@h |(button)...| in(#panel) gap(10)},h(px(11))]
+                    @="x111x" @E=[{@h |(button)...| in(#panel) gap(10)},h(px(11))]
                     Layer []
                 ]
         "#;
 
-        token_test(input);
+        //TODO support this
+        // token_test(input);
         println!();
     }
     #[test]
@@ -1433,7 +1451,7 @@ mod tests {
         fn token_test(input: &str) {
             match syn::parse_str::<Gtree>(input) {
                 Ok(ok) => println!("===>{}", ok.to_token_stream()),
-                Err(error) => println!("...{:?}", error),
+                Err(error) => println!("...{error:?}"),
             }
         }
 

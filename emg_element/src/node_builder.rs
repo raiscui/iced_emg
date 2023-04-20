@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-02-13 14:18:14
+ * @LastEditTime: 2023-04-18 14:06:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,305 +9,30 @@
 #![allow(clippy::borrow_as_ptr)]
 #![allow(clippy::ptr_as_ptr)]
 #![allow(clippy::ptr_eq)]
+use emg_native::EventWithFlagType;
 // ────────────────────────────────────────────────────────────────────────────────
 use indented::indented;
 use std::fmt::Write;
 mod event_builder;
-use derive_more::From;
 
-use emg_common::{mouse, IdStr, Pos, TypeName, Vector};
+use emg_common::im::vector::RRBPool;
+use emg_common::{IdStr, Pos, TypeName, Vector};
 use emg_layout::EdgeCtx;
-use emg_native::{event::EventFlag, renderer::Rect, Event, WidgetState};
+
+use crate::platform::{
+    drag, event::EventIdentify, renderer::Rect, Event, WidgetState, COLLISION_DOWN,
+    EVENT_HOVER_CHECK,
+};
 use emg_shaping::EqShapingWithDebug;
-use emg_state::{Anchor, Dict, StateAnchor, StateMultiAnchor};
+use emg_state::{Anchor, AnchorMultiAnchor, Dict, StateAnchor, StateMultiAnchor};
 use tracing::{debug, debug_span, info, info_span, instrument, Span};
 
 use crate::GElement;
 use std::{fmt::Display, rc::Rc, string::String};
 
-pub use self::event_builder::EventListener;
+pub use self::event_builder::*;
 
-/// EventIdentify(emg_native::event::EventFlag::X,X::EventFlag)
-/// EventIdentify(Level1,Level2)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct EventIdentify(u32, u32);
-
-impl EventIdentify {
-    #[inline]
-    pub const fn contains(&self, other: Self) -> bool {
-        self.0 == other.0 && (self.1 & other.1) == other.1
-    }
-}
-
-impl From<mouse::EventFlag> for EventIdentify {
-    fn from(x: mouse::EventFlag) -> Self {
-        Self(emg_native::event::MOUSE.bits(), x.bits())
-    }
-}
-
-impl From<(EventFlag, u32)> for EventIdentify {
-    fn from(x: (EventFlag, u32)) -> Self {
-        Self(x.0.bits(), x.1)
-    }
-}
-
-// Rc<dyn Fn(&mut dyn RootRender, VdomWeak, web_sys::Event) -> Option<Message>>;
-//TODO in web, EventCallbackFn has 3 arg, native need same arg
-type EventCallbackFn<Message> = Rc<dyn Fn(&mut i32) -> Option<Message>>;
-type EventMessageFn<Message> = Rc<dyn Fn() -> Option<Message>>;
-
-/// 3 arg event callback
-pub struct EventCallback<Message>(EventIdentify, EventCallbackFn<Message>);
-
-impl<Message> std::fmt::Debug for EventCallback<Message> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("EventCallback")
-            .field(&self.0)
-            .field(&"EventCallbackFn<Message>")
-            .finish()
-    }
-}
-
-impl<Message> Clone for EventCallback<Message> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone())
-    }
-}
-
-impl<Message> PartialEq for EventCallback<Message>
-// where
-//     Message: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        if self.0 == other.0 {
-            debug_assert_eq!(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            );
-
-            debug_assert!(std::ptr::eq(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            ));
-            true
-        } else {
-            debug_assert_ne!(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            );
-            debug_assert!(!std::ptr::eq(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            ));
-            false
-        }
-    }
-}
-
-impl<Message> EventCallback<Message> {
-    #[must_use]
-    pub fn new(name: EventIdentify, cb: EventCallbackFn<Message>) -> Self {
-        Self(name, cb)
-    }
-}
-
-pub struct EventMessage<Message>(EventIdentify, EventMessageFn<Message>);
-
-impl<Message> std::fmt::Debug for EventMessage<Message> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("EventMessage")
-            .field(&self.0)
-            .field(&"EventMessageFn<Message>")
-            .finish()
-    }
-}
-
-impl<Message> Clone for EventMessage<Message> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone())
-    }
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-
-auto trait MsgMarker {}
-impl !MsgMarker for () {}
-impl<Message> !MsgMarker for Option<Message> {}
-
-pub trait IntoOptionMs<Message> {
-    fn into_option(self) -> Option<Message>;
-}
-
-impl<Message: MsgMarker> IntoOptionMs<Message> for Message {
-    fn into_option(self) -> Option<Message> {
-        Some(self)
-    }
-}
-
-impl<Message> IntoOptionMs<Message> for () {
-    fn into_option(self) -> Option<Message> {
-        None
-    }
-}
-
-impl<Message> IntoOptionMs<Message> for Option<Message> {
-    fn into_option(self) -> Option<Message> {
-        self
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
-
-impl<Message: 'static> EventMessage<Message> {
-    pub fn new<T: IntoOptionMs<Message> + 'static>(
-        name: EventIdentify,
-        cb: impl Fn() -> T + 'static,
-        // cb: impl FnOnce() -> T + Clone + 'static,
-    ) -> Self {
-        Self(name, Rc::new(move || cb().into_option()))
-    }
-}
-
-// impl<Message> EventMessage<Message>
-// where
-//     Message: 'static,
-// {
-//     #[must_use]
-//     pub fn new<MsU: 'static, F: Fn() -> MsU + 'static>(name: EventNameString, cb: F) -> Self {
-//         let rc_callback = map_fn_callback_return_to_option_ms!(
-//             dyn Fn() -> Option<Message>,
-//             (),
-//             cb,
-//             "Callback can return only Msg, Option<Msg> or ()!",
-//             Rc
-//         );
-//         Self(name, rc_callback)
-//     }
-// }
-
-impl<Message> PartialEq for EventMessage<Message>
-// where
-//     Message: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        // self.0 == other.0
-
-        //FIXME comparing trait object pointers compares a non-unique vtable address
-        //comparing trait object pointers compares a non-unique vtable address
-        // consider extracting and comparing data pointers only
-        // for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#vtable_address_comparisons
-        //
-        // && Rc::ptr_eq(&self.1, &other.1)
-
-        if self.0 == other.0 {
-            debug_assert_eq!(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            );
-
-            debug_assert!(std::ptr::eq(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            ));
-            true
-        } else {
-            debug_assert_ne!(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            );
-            debug_assert!(!std::ptr::eq(
-                &*self.1 as *const _ as *const u8,
-                &*other.1 as *const _ as *const u8
-            ));
-            false
-        }
-    }
-}
-#[derive(From)]
-pub enum EventNode<Message> {
-    // no arg
-    Cb(EventCallback<Message>),
-    // 3 arg
-    CbMessage(EventMessage<Message>),
-}
-
-impl<Message> EventNode<Message> {
-    pub fn get_identify(&self) -> EventIdentify {
-        match self {
-            EventNode::Cb(x) => x.0.clone(),
-            EventNode::CbMessage(x) => x.0.clone(),
-        }
-    }
-    pub fn call(&self) -> Option<Message> {
-        match self {
-            EventNode::Cb(x) => {
-                info!("EventNode::Cb call");
-                //TODO real 3 arg
-                (x.1)(&mut 1)
-            }
-            EventNode::CbMessage(x) => (x.1)(),
-        }
-    }
-}
-
-impl<Message> PartialEq for EventNode<Message> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Cb(l0), Self::Cb(r0)) => l0 == r0,
-            (Self::CbMessage(l0), Self::CbMessage(r0)) => l0 == r0,
-            _ => false,
-        }
-    }
-}
-impl<Message> Eq for EventNode<Message> where Message: PartialEq {}
-
-impl<Message> Clone for EventNode<Message> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Cb(arg0) => Self::Cb(arg0.clone()),
-            Self::CbMessage(arg0) => Self::CbMessage(arg0.clone()),
-        }
-    }
-}
-// impl<Message> PartialEq for EventNode<Message>
-// where
-//     Message: PartialEq,
-// {
-//     fn eq(&self, other: &Self) -> bool {
-//         match (self, other) {
-//             (Self::Cb(l0), Self::Cb(r0)) => l0 == r0,
-//             (Self::CbMessage(l0), Self::CbMessage(r0)) => l0 == r0,
-//             (EventNode::Cb(_), EventNode::Cb(_)) => todo!(),
-//             (EventNode::Cb(_), EventNode::CbMessage(_)) => todo!(),
-//             (EventNode::CbMessage(_), EventNode::Cb(_)) => todo!(),
-//             (EventNode::CbMessage(_), EventNode::CbMessage(_)) => todo!(),
-//         }
-//     }
-// }
-// impl<Message> From<(EventNameString, Box<dyn EventCbClone>)> for EventNode<Message> {
-//     fn from(v: (EventNameString, Box<dyn EventCbClone>)) -> Self {
-//         Self::Cb(EventCallback(v.0, v.1))
-//     }
-// }
-
-// impl<Message> From<(EventNameString, Box<dyn EventMessageCbClone<Message>>)>
-//     for EventNode<Message>
-// {
-//     fn from(v: (EventNameString, Box<dyn EventMessageCbClone<Message>>)) -> Self {
-//         Self::CbMessage(EventMessage(v.0, v.1))
-//     }
-// }
-
-impl<Message> std::fmt::Debug for EventNode<Message>
-// where
-//     Message: std::fmt::Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            EventNode::Cb(x) => f.debug_tuple("EventNode<Message>").field(x).finish(),
-            EventNode::CbMessage(x) => f.debug_tuple("EventNode<Message>").field(x).finish(),
-        }
-    }
-}
+// ─────────────────────────────────────────────────────────────────────────────
 
 #[allow(clippy::module_name_repetitions)]
 pub struct NodeBuilderWidget<Message> {
@@ -386,7 +111,8 @@ impl<Message: 'static> std::fmt::Debug for NodeBuilderWidget<Message>
     }
 }
 
-pub type EventMatchsDict<Message> = Dict<EventIdentify, (Event, Vector<EventNode<Message>>)>;
+pub type EvMatch<Message> = (EventIdentify, Event, Vector<EventNode<Message>>);
+pub type EventMatchs<Message> = Vector<EvMatch<Message>>;
 
 // impl<Message> Default for NodeBuilderWidget<Message> {
 //     fn default() -> Self {
@@ -445,12 +171,15 @@ where
                  children_layout_override: children_layout_override_sa,
                  ..
              }| {
-                let styles_sa = styles_end.map_(|_k, v| v.get_anchor()).then(|x| {
-                    x.clone()
-                        .into_iter()
-                        .collect::<Anchor<Dict<TypeName, Rc<dyn EqShapingWithDebug<WidgetState>>>>>(
-                        )
-                });
+                //TODO use cfg check when web not 0
+                // let styles_sa = styles_end.map_(0, |_k, voa| voa.get_anchor()).then(|x| {
+                //     x.clone()
+                //         .into_iter()
+                //         .collect::<Anchor<Dict<TypeName, Rc<dyn EqShapingWithDebug<WidgetState>>>>>(
+                //         )
+                // });
+                let styles_sa: Anchor<Dict<TypeName, Rc<dyn EqShapingWithDebug<WidgetState>>>> =
+                    styles_end.get_anchor().into();
 
                 //TODO 不要用 顺序pipe , 这样情况下 size trans改变 会 重新 进行全部 style 计算,使用 mut 保存 ws.
                 (layout_end, children_layout_override_sa, world_sa)
@@ -458,42 +187,19 @@ where
                         WidgetState::new(
                             (w, h),
                             trans,
-                            Rc::new(world.clone()),
+                            Rc::new(*world),
                             Rc::new(children_layout_override.clone()),
                         )
                     })
                     .then(move |ws| {
-                        styles_sa
-                            .increment_reduction(ws.clone(), |out_ws, _k, v| {
-                                debug!("increment_reduction ------  {:?}", v);
-                                v.as_ref().shaping(out_ws);
-                                // out_ws.shaping_use(v.as_ref());
-                                // out_ws.shape_of_use(v.as_ref() as &dyn Shaping<WidgetState>);
-                            })
-                            .into_anchor()
+                        styles_sa.increment_reduction(ws.clone(), |out_ws, _k, v| {
+                            debug!("increment_reduction ------  {:?}", v);
+                            v.as_ref().shaping(out_ws)
+                        })
                     })
                     .into_anchor()
-
-                // (styles_end, layout_end)
-                //     .map(move |styles, &(trans, w, h)| {
-                //         let new_widget_state = WidgetState::new(
-                //             (w, h),
-                //             trans,
-                //             world_clone.clone(),
-                //             children_layout_override_clone.clone(),
-                //         );
-
-                //         styles.values().fold(new_widget_state, |mut ws, x| {
-                //             // x.shaping(&mut ws);
-                //             ws.shape_of_use(x);
-                //             // ws.shaping_use(x);
-                //             ws
-                //         })
-                //     })
-                //     .into_anchor()
             },
         );
-        // let widget_state = layout_end.map(|&(trans, w, h)| WidgetState::new((w, h), trans));
 
         Self {
             id: ix.clone(),
@@ -504,30 +210,6 @@ where
             widget_state,
         }
     }
-    /// # Errors
-    ///
-    /// Will return `Err` if `gel` does not Layer_(_) | Button_(_) | Text_(_)
-    /// # Panics
-    ///
-    /// Will panic if xxxx
-    // #[allow(clippy::match_same_arms)]
-    // pub fn try_new_use(gel: &GElement<Message>) -> Result<Self, ()> {
-    //     use GElement::{Button_, Layer_, Text_};
-    //     match gel {
-    //         Layer_(_) | Button_(_) | Text_(_) | GElement::Generic_(_) => Ok(Self::default()),
-    //         GElement::Builder_(_) => panic!("crate builder use builder is not supported"),
-    //         GElement::Refresher_(_) | GElement::Event_(_) => Err(()),
-    //         GElement::NodeRef_(_) => {
-    //             unreachable!("crate builder use NodeRef_ is should never happened")
-    //         }
-
-    //         GElement::EmptyNeverUse => {
-    //             unreachable!("crate builder use EmptyNeverUse is should never happened")
-    //         }
-    //         GElement::SaNode_(_) => todo!(),
-    //         GElement::EvolutionaryFactor(_) => todo!(),
-    //     }
-    // }
 
     //TODO use try into
     #[allow(clippy::match_same_arms)]
@@ -549,6 +231,9 @@ where
             }
             GElement::SaNode_(_) => todo!(),
             GElement::EvolutionaryFactor(_) => todo!(),
+            //@ accesskit ─────────────────────────────────────────────────────
+            #[cfg(feature = "video-player")]
+            GElement::Video_(_) => Ok(Self::new(ix, gel, edge_ctx)),
         }
     }
 
@@ -573,147 +258,334 @@ where
     }
     pub fn event_matching(
         &self,
-        events_sa: &StateAnchor<Vector<emg_native::EventWithFlagType>>,
-        cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> StateAnchor<EventMatchsDict<Message>> {
+        events_sa: Anchor<Vector<emg_native::EventWithFlagType>>,
+        cursor_position: StateAnchor<Option<Pos>>,
+        pool: RRBPool<EvMatch<Message>>,
+    ) -> Anchor<(Vector<emg_native::EventWithFlagType>, EventMatchs<Message>)> {
         let event_callbacks = self.event_listener.event_callbacks().clone();
         //TODO move event_callbacks into sa map 不会变更, 是否考虑变更?
-        let cursor_position_clone = cursor_position.clone();
         let id = self.id.clone();
+        let id2 = self.id.clone();
+        let id3 = self.id.clone();
+        let _span = debug_span!(
+            "event_matching",
+            at = "pre run",
+            func = "event_matching",
+            info = "求 event match 的 callbacks",
+            ?id
+        )
+        .entered();
+        // let widget_is_hover = (cursor_position, &self.widget_state)
+        //     .map(move |c_pos, state| hover_check(state, c_pos));
 
-        (events_sa, &self.widget_state).then(move |events, state| {
-            let _span = debug_span!("event_matching...", ?id).entered();
+        // let pool = pool.clone();
 
-            let size = state.size();
+        let matchs_step1 = (events_sa).map(move |events| {
+            let _span = debug_span!("event_matching_filter").entered();
 
-            //TODO don't do this many times
-            let  event_filtered_matchs = events
+            let _span = debug_span!(
+                "event_matching",
+                at = "filter new event",
+                func = "event_matching",
+                info = "确定是否在该节点触发(该节点是否有对应callback)",
+                ?id
+            )
+            .entered();
+
+            debug!("events: {:#?}", events);
+            let mut ev_matchs = Vector::<EvMatch<Message>>::with_pool(&pool);
+
+            //NOTE event_callbacks 含有 if_cb, 并且 events 含有 l 和  r  则选择 l 移除 r
+            let need_removes = COLLISION_DOWN.iter().filter_map(|(if_cb, l, r)| {
+                // debug!("COLLISION_DOWN: {:?} {:?}", l, r);
+
+                if events.iter().any(|(ei, _)| l.involve(ei))
+                    && events.iter().any(|(ei, _)| r.involve(ei))
+                    && event_callbacks
+                        .iter()
+                        .any(|(cb_ei, _)| if_cb.involve(cb_ei))
+                {
+                    Some(r) //remove right
+                } else {
+                    None
+                }
+            });
+
+            // let nr = need_removes.clone().collect::<Vec<_>>();
+            // if !nr.is_empty() {
+            //     debug!("need_removes: {:?}", nr);
+            // }
+
+            //TODO don't do this many times  ,events change to Dict
+            //已经根据event 事件 筛选出来的 callbacks
+            events
                 .iter()
-                .map(|(ef, event)| (EventIdentify::from(*ef), event))
-                .filter_map(|(ev_id, event)| {
-                    //FIXME use filter_map instead,because filter can match multiple matches cb
-                    event_callbacks.iter().find_map(|(&cb_ev_id, cb)| {
-                        if ev_id.contains(cb_ev_id) {
-                            Some((cb_ev_id, (event.clone(), cb.clone())))
-                        } else {
-                            None
-                        }
-                    })
+                .filter(|(ei, _)| !need_removes.clone().any(|n_remove| n_remove.involve(ei)))
+                .flat_map(|(ef, event)| {
+                    event_callbacks
+                        .iter()
+                        .filter_map(move |(cb_ev_id_wide, cb)| {
+                            //ev_id 具体, cb_ev_id 宽泛
+                            if ef.contains(cb_ev_id_wide) {
+                                Some((*ef, event.clone(), cb.clone()))
+                                // debug!(target :"winit_event",id=?id3, ?intersects,?is_hover);
+                            } else {
+                                None
+                            }
+
+                            // ─────────────────────
+                        })
                 })
-                .collect::<EventMatchsDict<Message>>();
+                // .flatten()
+                .collect_into(&mut ev_matchs);
+            debug!(target :"winit_event",id=?id2, ?ev_matchs);
+            debug!(
+                target : "winit_event",
+                "==============================================================="
+            );
+            ev_matchs
+        });
 
-            // let mut cb_matchs = event_callbacks
-            //     .iter()
-            //     .filter_map(|(e_name, cb)| {
-            //         if let Some(x)=  e_str_s.iter().find(|(k,v)|) {
-            //             Some((e_name.clone(), cb.clone()))
-            //         } else {
-            //             None
-            //         }
-            //     })
-            //     .collect::<Dict<IdStr, Vector<EventNode<Message>>>>();
+        //NOTE 检查 EVENT_HOVER_CHECK 这些需要覆盖测试的 event 是否 在 cb event 里
+        let matchs_step2_split = matchs_step1.map(|x| {
+            x.iter()
+                .cloned()
+                .partition::<Vector<_>, _>(|(cb_ev_id_wide, _, _)| {
+                    EVENT_HOVER_CHECK.involve(cb_ev_id_wide)
+                })
+        });
+        let widget_state = self.widget_state.clone();
+        // let cursor_position = cursor_position.clone();
 
-            // 提取 clicks
-            let (click_group, other_event_cb_matchs): (EventMatchsDict<Message>, EventMatchsDict<Message>) =
-                event_filtered_matchs.into_iter().partition(|(ev_id, _x)| {
-                    ev_id.contains(EventIdentify::from(mouse::EventFlag::CLICK))
-                });
+        let event_long_state = self.event_listener.event_long_state.clone();
 
-                // let click_group = cb_matchs.remove_with_key("click");
-            // let cursor_position_clone = cursor_position.clone();
+        matchs_step2_split.then(move |(need_hover_ck, no_need_hover_check)| {
+            let id3 = id3.clone();
 
-            let clicked_a = click_group
-                .into_iter()
-                .map(|(cb_ev_id, (ev_, click_cb_vec))| {
+            let events_sa = events_sa.clone();
+            if need_hover_ck.is_empty() {
+                // matchs_step1.get_anchor()
+                (&events_sa, &matchs_step1).map(|ev, m| (ev.clone(), m.clone()))
+            } else {
+                // let cursor_position = cursor_position.clone();
+                let need_hover_ck = need_hover_ck.clone();
+                let no_need_hover_check = no_need_hover_check.clone();
+                let event_long_state = event_long_state.clone();
+                //NOTE event allway change
 
-                    let id3 = id.clone();
-                    let opt_layout_override2 =state.children_layout_override.clone();
-                    let world =state.world.clone();
+                //TODO 细分 widget_state 中 的值,只监听 这里需要用到的.
+                (&cursor_position, &widget_state)
+                    .then(move |c_pos, widget_state| {
+                        // let id3 = id3.clone();
+                        let event_long_state2 = event_long_state.clone();
 
+                        let long_state = &event_long_state.borrow().long_state;
 
-                        cursor_position_clone
-                        .map(move |c_pos| {
+                        let no_need_hover_check = no_need_hover_check.clone();
 
-                            let id = id3.clone();
+                        let mut is_hover = None;
+                        let _span = debug_span!(
+                            "event_matching",
+                            at = "hover filter all vec---------",
+                            func = "event_matching",
+                            info = ?need_hover_ck,
+                            id=?id3
+                        )
+                        .entered();
 
-                            let ev = ev_.clone();
+                        let mut draging = false;
 
-                            let click_cb_clone2 = click_cb_vec.clone();
-                            let rect = Rect::from_origin_size((world.x as f64, world.y as f64), size);
+                        let hover_cbs = need_hover_ck
+                            .iter()
+                            .filter(|(_ei, ev, _cb)| {
+                                let _span = debug_span!(
+                                    "event_matching",
+                                    at = "hover filter - in filter",
+                                    func = "event_matching",
+                                    info = ?ev,
+                                    id=?id3
+                                )
+                                .entered();
 
-
-
-
-                            c_pos.and_then( |pos| {
-                                debug!(target:"event::click",?pos);
-
-                                let _span = debug_span!("LayoutOverride",?id,func="event_matching").entered();
-
-
-                                    debug!(target:"event::click",?world,?size,?rect,?pos);
-
-
-                                let pos_p = pos.cast::<f64>();
-
-                                if rect.contains(emg_native::renderer::Point::new(pos_p.x, pos_p.y))
-                                {
-                                    debug!("⭕️ rect contains pos");
-
-
-                                    if let Some(layout_override) = &*opt_layout_override2 {
-                                        debug!("⭕️ rect has layout_override");
-                                        debug!("layout_override --> {:#?}",layout_override);
-
-                                        if !layout_override.contains(&pos_p) {
-
-                                            debug!("❌ layout_override not contains pos ,not override, 🔔 ");
-                                            Some((cb_ev_id, ev, click_cb_clone2))
-
-                                        } else {
-
-                                            debug!("⭕️ layout_override contains pos,override, 🔕 ");
-                                            None
-                                        }
-                                    } else {
-                                        debug!("❌ rect no layout_override, 🔔");
-                                        Some((cb_ev_id, ev, click_cb_clone2))
+                                match ev {
+                                    //NOTE  cb will run if return true.
+                                    Event::DragDrop(drag::Event::DragStart {
+                                        prior,
+                                        position: _,
+                                    }) => {
+                                        draging = hover_check(widget_state, &Some(*prior));
+                                        draging
                                     }
-                                } else {
-                                    debug!("❌ rect not contains pos, 🔕 ");
 
-                                    None
+                                    //NOTE use long_state check
+                                    Event::DragDrop(drag::Event::Drag(drag::Drag {
+                                        prior: _,
+                                        position: _,
+                                        trans: _,
+                                        offset: _,
+                                    })) => {
+                                        if draging {
+                                            draging = false;
+                                            return true;
+                                        }
+                                        let long_on = long_state.involves(&drag::DRAG.into());
+                                        debug!("Drag long_on:{:?}", long_on);
+                                        long_on
+                                    }
+                                    //NOTE use long_state check
+                                    Event::DragDrop(drag::Event::DragEnd) => {
+                                        draging = false;
+                                        let long_on = long_state.involves(&drag::DRAG.into());
+                                        debug!("DragEnd long_on:{:?}", long_on);
+                                        long_on
+                                    }
+
+                                    // ─────────────────────
+                                    _ => {
+                                        // debug_assert!(
+                                        //     !other.is_drag_drop(),
+                                        //     "other is drag_drop, is {other:?}"
+                                        // );
+                                        if is_hover.is_none() {
+                                            is_hover = Some(hover_check(widget_state, c_pos));
+                                        }
+                                        is_hover.unwrap()
+                                    }
                                 }
                             })
-                        }).into_anchor()
-                })
-                .collect::<Anchor<Vector<Option<(EventIdentify, Event, Vector<EventNode<Message>>)>>>>()
-                .map(|clicked| {
-                    clicked.clone()
-                        .into_iter()
-                        .flatten()
-                        .collect::<Vector<_>>()
-                });
+                            .cloned()
+                            .collect::<Vector<_>>();
 
-                //TODO clicked_a can make dict_sa?
-                clicked_a
-                    .map(move |clicked| {
+                        events_sa.map(move |evs| {
+                            let no_need_hover_check = no_need_hover_check.clone();
+                            let hover_cbs = hover_cbs.clone();
+                            // let event_long_state2 = event_long_state2.clone();
 
-                        clicked.clone().into_iter().fold(other_event_cb_matchs.clone(),|cb_matchs_add_x,(cb_ev_id,ev,cb_vec)|{
-                            cb_matchs_add_x.update_with(cb_ev_id, (ev,cb_vec), |(old_ev,mut old_cb_vec),(new_ev,new_cb_vec)|{
-                                assert_eq!(old_ev, new_ev);
-                                old_cb_vec.extend(new_cb_vec);
-                                (old_ev,old_cb_vec)
-                            })
+                            (
+                                evs.iter()
+                                    .filter(|(ei, _)| {
+                                        let used =
+                                            hover_cbs.iter().any(|(hover_ei, _, _)| ei == hover_ei);
+                                        if used {
+                                            let penetrate = &event_long_state2.borrow().penetrate;
+                                            penetrate.involves(ei)
+                                        } else {
+                                            true
+                                        }
+                                    })
+                                    .cloned()
+                                    .collect::<Vector<_>>(),
+                                hover_cbs
+                                    .into_iter()
+                                    .chain(no_need_hover_check.into_iter())
+                                    // .cloned()
+                                    .collect::<Vector<_>>(), //TODO pool
+                            )
                         })
                     })
-
-
+                    .into_anchor()
+            }
         })
     }
 
     pub fn event_callbacks(&self) -> &Dict<EventIdentify, Vector<EventNode<Message>>> {
         self.event_listener.event_callbacks()
     }
+
+    pub fn hover_state_check(
+        &self,
+        events: &Anchor<Vector<EventWithFlagType>>,
+        pos_sa: &StateAnchor<Option<Pos>>,
+    ) -> StateAnchor<HoverState> {
+        (pos_sa, &self.widget_state).map(|opt_pos, state| hover_state_check(state, opt_pos))
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum HoverState {
+    Hover,
+    NotHover,
+    HoverOverride,
+}
+
+fn hover_check(state: &WidgetState, opt_pos: &Option<Pos>) -> bool {
+    HoverState::Hover == hover_state_check(state, opt_pos)
+}
+
+fn hover_state_check(state: &WidgetState, opt_pos: &Option<Pos>) -> HoverState {
+    let size = state.size();
+    let world = &state.world;
+    let rect = Rect::from_origin_size((world.x as f64, world.y as f64), size);
+
+    // let _span = debug_span!("LayoutOverride",id=?id,func="event_matching").entered();
+    let _span = debug_span!("LayoutOverride", func = "event_matching").entered();
+
+    opt_pos.map_or(HoverState::NotHover,|pos|{
+        debug!(target:"widget_is_hover",?world,?size,?rect,?pos);
+
+        let pos_p = pos.cast::<f64>();
+
+        let rect_hover = if rect.contains(emg_native::renderer::Point::new(pos_p.x, pos_p.y)) {
+            debug!("⭕️ 点在矩形内 🔔");
+            HoverState::Hover
+        } else {
+            debug!("❌ 点不在矩形, 🔕 ");
+            HoverState::NotHover
+        };
+
+        if let Some(layout_override) = &*state.children_layout_override && layout_override.contains(&pos_p) {
+
+                debug!("⭕️ 点在子层上 🔔 ");
+                HoverState::HoverOverride
+
+        } else {
+            debug!("矩形没有子层遮挡");
+            rect_hover
+        }
+    })
+}
+
+fn hover_check_old(
+    state: &WidgetState,
+    c_pos: &Option<Pos>,
+    // id: &IdStr,
+) -> bool {
+    let size = state.size();
+    let world = &state.world;
+    let rect = Rect::from_origin_size((world.x as f64, world.y as f64), size);
+
+    c_pos.is_some_and(|pos| {
+        // let _span = debug_span!("LayoutOverride",id=?id,func="event_matching").entered();
+        let _span = debug_span!("LayoutOverride", func = "event_matching").entered();
+
+        debug!(target:"widget_is_hover",?world,?size,?rect,?pos);
+
+        let pos_p = pos.cast::<f64>();
+
+        if rect.contains(emg_native::renderer::Point::new(pos_p.x, pos_p.y)) {
+            debug!("⭕️ rect contains pos");
+
+            if let Some(layout_override) = &*state.children_layout_override {
+                debug!("⭕️ rect has layout_override");
+                // debug!("layout_override --> {:#?}", layout_override);
+
+                if !layout_override.contains(&pos_p) {
+                    debug!("❌ layout_override not contains pos ,not override, 🔔 ");
+                    true
+                } else {
+                    debug!("⭕️ layout_override contains pos,override, 🔕 ");
+                    false
+                }
+            } else {
+                debug!("❌ rect no layout_override, 🔔");
+                true
+            }
+        } else {
+            debug!("❌ rect not contains pos, 🔕 ");
+
+            false
+        }
+    })
 }
 
 #[cfg(all(feature = "gpu"))]
@@ -722,11 +594,11 @@ where
     Message: 'static,
     // Message: PartialEq + 'static + std::clone::Clone,
 {
-    type SceneCtxType = crate::SceneFrag;
+    type SceneCtxType = crate::renderer::SceneFrag;
     #[instrument(skip(self, painter), name = "NodeBuilderWidget paint")]
     fn paint_sa(
         &self,
-        painter: &StateAnchor<crate::PaintCtx>,
+        painter: &StateAnchor<crate::platform::PaintCtx>,
     ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id1 = self.id.clone();
         let opt_span = illicit::get::<Span>().ok();

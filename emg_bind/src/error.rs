@@ -36,8 +36,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn assert_send_sync() {
-        fn _assert<T: Send + Sync>() {}
+    const fn assert_send_sync() {
+        #[allow(clippy::extra_unused_type_parameters)]
+        const fn _assert<T: Send + Sync>() {}
         _assert::<Error>();
     }
 }

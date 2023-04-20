@@ -1,57 +1,62 @@
-use color_eyre::{eyre::Report, eyre::WrapErr};
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+// ─────────────────────────────────────────────────────────────────────────────
+
+use color_eyre::{eyre::Report, eyre::Result, eyre::WrapErr};
 use emg_bind::{
     element::*,
-    emg::{edge_index, Direction::Incoming},
+    emg::{edge_index, edge_index_no_source, Direction::Incoming},
     emg_msg,
     emg_msg_macro_prelude::*,
     graph_edit::*,
+    layout::EdgeIndex,
     runtime::OrdersContainer,
     Sandbox, Settings,
 };
 use std::{cell::Cell, rc::Rc};
 use tracing::{debug_span, instrument};
-#[cfg(feature = "debug")]
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
     let error_layer =
         tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR);
 
-    #[cfg(not(feature = "debug"))]
-    let out_layer = tracing_tree::HierarchicalLayer::new(2)
-        .with_indent_lines(true)
-        .with_indent_amount(4)
-        .with_targets(true)
-        .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
-            |metadata, _cx| {
-                tracing::debug!(target: "tracing", "metadata.level() = {:?}, metadata.is_span() = {:?}, metadata.name() = {:?}", metadata.level(), metadata.is_span(), metadata.name());
-                // if metadata.level() <= &tracing::Level::DEBUG{
-                //     // If this *is* "interesting_span", make sure to enable it.
-                //     if metadata.is_span() && metadata.name() == "LayoutOverride" {
-                //         return true;
-                //     }
+    // #[cfg(not(feature = "debug"))]
+    // let out_layer = tracing_tree::HierarchicalLayer::new(2)
+    //     .with_indent_lines(true)
+    //     .with_indent_amount(4)
+    //     .with_targets(true)
+    //     .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
+    //         |metadata, _cx| {
+    //             tracing::debug!(target: "tracing", "metadata.level() = {:?}, metadata.is_span() = {:?}, metadata.name() = {:?}", metadata.level(), metadata.is_span(), metadata.name());
+    //             // if metadata.level() <= &tracing::Level::DEBUG{
+    //             //     // If this *is* "interesting_span", make sure to enable it.
+    //             //     if metadata.is_span() && metadata.name() == "LayoutOverride" {
+    //             //         return true;
+    //             //     }
 
-                //     // Otherwise, are we in an interesting span?
-                //     if let Some(current_span) = cx.lookup_current()  {
-                //         return current_span.name() == "LayoutOverride";
-                //     }
-                // }
-                // ─────────────────────────────────────────────────────
+    //             //     // Otherwise, are we in an interesting span?
+    //             //     if let Some(current_span) = cx.lookup_current()  {
+    //             //         return current_span.name() == "LayoutOverride";
+    //             //     }
+    //             // }
+    //             // ─────────────────────────────────────────────────────
 
-                // #[cfg(feature = "debug")]
-                // return false;
+    //             // #[cfg(feature = "debug")]
+    //             // return false;
 
-                !metadata.target().contains("anchors")
-                    && !metadata.target().contains("emg_layout")
-                    && !metadata.target().contains("emg_state")
-                    && !metadata.target().contains("cassowary")
-                    && !metadata.target().contains("wgpu")
-                    && metadata.level() <= &tracing::Level::INFO // global tracing level
-                // && !metadata.target().contains("winit event")
-                // && !metadata.fields().field("event").map(|x|x.to_string())
-                // && !metadata.target().contains("winit event: DeviceEvent")
-            },
-        ));
+    //             !metadata.target().contains("anchors")
+    //                 && !metadata.target().contains("emg_layout")
+    //                 && !metadata.target().contains("emg_state")
+    //                 && !metadata.target().contains("cassowary")
+    //                 && !metadata.target().contains("wgpu")
+    //                 && metadata.level() <= &tracing::Level::INFO // global tracing level
+    //             // && !metadata.target().contains("winit_event")
+    //             // && !metadata.fields().field("event").map(|x|x.to_string())
+    //             // && !metadata.target().contains("winit event: DeviceEvent")
+    //         },
+    //     ));
 
     // #[cfg(feature = "debug")]
     // let layout_override_layer = tracing_tree::HierarchicalLayer::new(2)
@@ -65,7 +70,7 @@ fn tracing_init() -> Result<(), Report> {
     //     .with_indent_lines(true)
     //     .with_indent_amount(4)
     //     .with_targets(true)
-    //     .with_filter(EnvFilter::new("[event_matching...]=debug"));
+    //     .with_filter(EnvFilter::new("[event_matching]=debug"));
 
     // #[cfg(feature = "debug")]
     // let touch_layer = tracing_tree::HierarchicalLayer::new(2)
@@ -89,34 +94,35 @@ fn tracing_init() -> Result<(), Report> {
         ));
     // ─────────────────────────────────────────────────────────────────────────────
 
-    #[cfg(feature = "debug")]
     tracing_subscriber::registry()
         // .with(layout_override_layer)
         // .with(event_matching_layer)
         // .with(touch_layer)
         .with(error_layer)
-        .with(emg_layout_layer)
+        // .with(emg_layout_layer)
         // .with(out_layer)
         .init();
 
-    #[cfg(not(feature = "debug"))]
-    tracing_subscriber::registry().with(out_layer).init();
     // ─────────────────────────────────────────────────────────────────────────────
 
     color_eyre::install()
 }
 
 // pub fn main() -> emg_bind::Result {
-#[instrument]
+// #[instrument]
+
 pub fn main() -> Result<(), Report> {
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
+
     // pub fn main() -> Result<(), Error> {
-    // #[cfg(debug_assertions)]
+    #[cfg(debug_assertions)]
     tracing_init()?;
-    Counter::run(Settings::default()).wrap_err("saw a downstream error")
+    App::run(Settings::default()).wrap_err("saw a downstream error")
 }
 
 #[derive(Default)]
-struct Counter {
+struct App {
     value: i32,
 }
 
@@ -129,7 +135,7 @@ enum Message {
     DecrementPressed,
 }
 
-impl Sandbox for Counter {
+impl Sandbox for App {
     type Message = Message;
 
     fn update(
@@ -147,15 +153,20 @@ impl Sandbox for Counter {
             Message::DecrementPressed => {
                 self.value -= 1;
             }
-            Message::Empty => {
-                // insta::assert_display_snapshot!("graph_def", graph.borrow());
+            Message::Empty => graph
+                .edit(edge_index("a", "b"))
+                .moving(Incoming, "m")
+                .or_else(|editor, e| match e {
+                    ElementError::GraphError(ee) => match ee {
+                        emg_bind::emg::Error::CanNotGetEdge => editor
+                            .edit(edge_index("m", "b"))
+                            .moving(Incoming, "a")
+                            .into_result(),
 
-                graph
-                    .edit::<EdgeMode>()
-                    .moving(edge_index("a", "b"), Incoming, "m");
-
-                // insta::assert_display_snapshot!("graph_moved", graph.borrow());
-            }
+                        _ => todo!(),
+                    },
+                })
+                .unwrap(),
         }
     }
 
@@ -168,15 +179,14 @@ impl Sandbox for Counter {
         gtree! {
             @="root" Layer [
                 @E=[
-
-                origin_x(px(0)),
-                origin_y(px(0)),
-                align_x(px(0)),
-                align_y(px(0)),
-                w(pc(40)),h(pc(40)),
-                b_width(px(2)),
-                b_color(rgb(0,0,1)),
-                fill(rgba(0, 0, 1, 1))
+                    origin_x(px(0)),
+                    origin_y(px(0)),
+                    align_x(px(0)),
+                    align_y(px(0)),
+                    w(pc(40)),h(pc(40)),
+                    b_width(px(2)),
+                    b_color(rgb(0,0,1)),
+                    fill(rgba(0, 0, 1, 1))
                 ]
                 @="y" Layer [
                     // node_ref("b")
@@ -222,6 +232,13 @@ impl Sandbox for Counter {
                         ]
                         @="b" Layer [
 
+
+                            @E=[
+                                w(px(50)),h(px(50)),
+                            ]
+                            @="b-check" Checkbox::new(false,"b-abcd",|_|{})=>[
+                            ],
+
                         ],
                     ],
                     @E=[
@@ -264,15 +281,15 @@ impl Sandbox for Counter {
         }
     }
 
-    fn root_id(&self) -> &str {
-        "root"
+    fn root_eix(&self) -> EdgeIndex {
+        edge_index_no_source("root")
     }
 
     // #[instrument(skip(self, g), ret)]
     // fn view(&self, g: &GraphType<Self::Message>) -> GelType<Self::Message> {
     //     g.get_node_item_use_ix(&IdStr::new_inline("debug_layer"))
     //         .unwrap()
-    //         .get_view_gelement_sa(&EPath::<IdStr>::new(vector![edge_index_no_source("debug_layer")]))
+    //         .get_view_gelement_sa(&EPath::new(vector![edge_index_no_source("debug_layer")]))
     //         .get()
     // }
 }

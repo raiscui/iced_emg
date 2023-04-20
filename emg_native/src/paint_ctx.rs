@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 15:57:30
- * @LastEditTime: 2023-02-01 21:15:17
+ * @LastEditTime: 2023-03-11 12:29:54
  * @LastEditors: Rais
  * @Description:
  */
@@ -188,6 +188,7 @@ pub struct WidgetState {
     pub translation: Translation3<Precision>,
     pub world: Rc<Translation3<Precision>>,
     // pub background_color: CssBackgroundColor,
+    //TODO 区分 fill 和 bg color
     pub fill: Option<CssFill>,
     pub border_width: Option<CssBorderWidth>,
     pub border_color: Option<CssBorderColor>,

@@ -7,6 +7,7 @@
 // #![feature(min_specialization)]
 #![feature(auto_traits)]
 #![feature(negative_impls)]
+#![feature(allocator_api)]
 // #![feature(trivial_bounds)]
 #[cfg(test)]
 mod test;
@@ -32,6 +33,7 @@ pub use shaping_use::ShapingUse;
 
 #[cfg(test)]
 mod tests {
+
     #[test]
     fn it_works() {
         let x = 2 + 2;

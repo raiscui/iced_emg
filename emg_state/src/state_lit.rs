@@ -3,19 +3,24 @@ use std::rc::Rc;
 /*
  * @Author: Rais
  * @Date: 2022-06-14 11:38:22
- * @LastEditTime: 2023-01-13 15:55:34
+ * @LastEditTime: 2023-03-17 11:41:42
  * @LastEditors: Rais
  * @Description:
  */
-pub use anchors::singlethread::Anchor;
-pub use anchors::singlethread::Engine;
-pub use anchors::singlethread::Var;
+
+use anchors::singlethread::Var;
 
 use crate::StateAnchor;
 
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(PartialEq, Eq, Clone)]
 pub struct StateVarLit<T>(Var<T>);
+
+impl<T: Default + 'static> Default for StateVarLit<T> {
+    fn default() -> Self {
+        Self(Var::new(Default::default()))
+    }
+}
 
 impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVarLit<T> {
     default fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -54,13 +59,19 @@ impl<T: 'static> StateVarLit<T> {
         self.0.set(val);
     }
 
-    pub fn update<F: FnOnce(&mut T)>(&self, func: F)
+    //todo can true false update
+
+    pub fn update<F: FnOnce(&mut T) -> R, R>(&self, func: F) -> R
     where
         T: Clone,
     {
         let mut v = self.0.get().as_ref().clone();
-        func(&mut v);
+        let r = func(&mut v);
         self.0.set(v);
+        r
+    }
+    pub fn set_with<F: FnOnce(&T) -> T>(&self, func: F) {
+        self.set(func(self.0.get().as_ref()));
     }
 
     #[must_use]
@@ -69,6 +80,7 @@ impl<T: 'static> StateVarLit<T> {
     }
 }
 
+#[allow(clippy::redundant_clone)]
 #[cfg(test)]
 mod state_var_lit_test {
     use std::rc::Rc;
@@ -93,7 +105,7 @@ mod state_var_lit_test {
         assert_eq!(a.get(), b.get());
         println!("{} {}", a.get(), b.get());
         let f = Rc::new(FF("a".to_string()));
-        let f2 = f.clone();
+        let f2 = Rc::clone(&f);
         assert_eq!(f, f2);
 
         assert!(Rc::ptr_eq(&f, &f2));
@@ -113,13 +125,13 @@ mod state_var_lit_test {
     }
 }
 
-// impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVar<T> {
+// impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVarEA<T> {
 //     default fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 //         let v = self.get();
 //         write!(f, "\u{2726} ({})", &v)
 //     }
 // }
-// impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVar<T> {
+// impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVarEA<T> {
 //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 //         let v = self.get();
 //         f.debug_tuple("StateVar").field(&v).finish()

@@ -1,14 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-20 12:06:12
- * @LastEditTime: 2023-01-13 23:05:28
+ * @LastEditTime: 2023-03-21 12:22:53
  * @LastEditors: Rais
  * @Description:
  */
 
-use emg_common::{
-    measures::ExactLengthSimplex, num_traits::AsPrimitive, GenericSize, NotNan, TypeCheck, TypeName,
-};
+use emg_common::{measures::ExactLengthSimplex, GenericSize, TypeCheck, TypeName};
 use seed_styles::{CssHeight, CssWidth, LogicLength, Unit};
 
 use crate::init_motion;

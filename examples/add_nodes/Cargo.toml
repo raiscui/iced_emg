@@ -1,0 +1,51 @@
+[package]
+name = "add_nodes"
+version = "0.1.0"
+authors = ["Rais"]
+edition = "2021"
+publish = false
+resolver = "2"
+
+[profile.dev]
+split-debuginfo = "unpacked"
+opt-level = 1
+
+# [profile.dev.package.backtrace]
+# opt-level = 3
+
+[features]
+default = ["gpu"]
+gpu = ["emg_bind/gpu"]
+debug = ["emg_bind/debug"]
+dhat-heap = []             # if you are doing heap profiling
+dhat-ad-hoc = []           # if you are doing ad hoc profiling
+
+
+[dependencies.emg_bind]
+path = "../../emg_bind"
+features = [
+    "gpu",
+    #  "no_default_shaping"
+]
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+tracing-tree = { path = "../../../tracing-tree" }
+color-eyre = "0.6.2"
+insta = "1"
+# https://docs.rs/dhat/latest/dhat/
+dhat = "0.3.2"
+
+
+[profile.release]
+opt-level = 3
+#NOTE for dhat-heap need true
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = false

@@ -3,6 +3,11 @@ name = "emg-msg-impl"
 version = "0.1.0"
 edition = "2021"
 
+
+[features]
+insta = []
+
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [profile.dev]
 split-debuginfo = "unpacked"
@@ -10,7 +15,7 @@ split-debuginfo = "unpacked"
 # crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-syn = { version = "1", features = ["full", "extra-traits"] }
+syn = { version = "2.0", features = ["full", "extra-traits"] }
 quote = "1"
 proc-macro2 = { version = "1.0", features = ["nightly"] }
 [dev-dependencies]

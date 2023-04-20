@@ -4,10 +4,14 @@
 //
 #![feature(auto_traits)]
 #![feature(negative_impls)] //for event callback;
-
+#![feature(is_some_and)]
+#![feature(iter_collect_into)]
+#![feature(cell_update)]
+#![feature(let_chains)]
 //
 // ────────────────────────────────────────────────────────────────────────────────
 
+pub mod component;
 mod error;
 mod g_element;
 mod g_node;
@@ -20,21 +24,24 @@ pub mod widget;
 pub use g_element::{node_ref, GElement};
 pub use g_node::{EventMatchsSa, GelType, GraphMethods, GraphType, NItem, E, N};
 
-pub use g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn, GTreeInit, InitTree};
-pub use graph_program::GraphProgram;
+pub use g_tree_builder::{GTreeBuilderElement, GTreeBuilderFn, GTreeInit, InitdTree};
+pub use graph_program::{EventAndCtx, GraphProgram};
 pub use node_builder::{EventCallback, EventMessage, EventNode, IntoOptionMs, NodeBuilderWidget};
 pub use widget::Widget;
 pub mod graph_edit;
 // ────────────────────────────────────────────────────────────────────────────────
 #[cfg(all(feature = "gpu"))]
-use emg_native::{renderer, PaintCtx};
+use emg_native as platform;
+
 #[cfg(all(feature = "gpu"))]
-use emg_vello::SceneFrag;
+use emg_vello as renderer;
+// #[cfg(all(feature = "gpu"))]
+// use emg_vello::SceneFrag;
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod prelude {
     pub use crate::{
-        graph_edit, node_ref, widget::*, EventCallback, EventMessage, GElement,
-        GTreeBuilderElement, GelType, GraphType,
+        component::*, error::Error as ElementError, graph_edit, node_ref, widget::*, EventCallback,
+        EventMessage, GElement, GTreeBuilderElement, GelType, GraphType, InitdTree,
     };
 }
 pub mod gtree_macro_prelude {
@@ -46,10 +53,12 @@ pub mod gtree_macro_prelude {
         better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
         IdStr, TypeCheck,
     };
-    pub use emg_layout::{add_values::*, css, styles::*, EmgEdgeItem};
+    pub use emg_layout::{add_values::*, ccsa_macro_prelude, css, styles::*, EmgEdgeItem};
     pub use emg_shaping::{EqShaping, Shaper, Shaping, ShapingUse};
-    pub use emg_state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor};
+    pub use emg_state::{use_state, CloneState, CloneStateAnchor, StateMultiAnchor};
 }
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 // #[macro_export]

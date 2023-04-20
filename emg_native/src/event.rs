@@ -1,19 +1,23 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 18:22:19
- * @LastEditTime: 2023-01-13 12:16:14
+ * @LastEditTime: 2023-04-09 15:24:21
  * @LastEditors: Rais
  * @Description:
  */
 //! Handle events of a user interface.
-
+mod ev_identify;
+use crate::drag;
 use crate::keyboard;
 use crate::mouse;
 use crate::touch;
 use crate::window;
 use bitflags::bitflags;
+use emg_common::Affine;
+pub use ev_identify::*;
 
-pub type EventWithFlagType = ((EventFlag, u32), Event);
+///u32 是 二级 事件 flag
+pub type EventWithFlagType = (EventIdentify, Event);
 
 // Event bigflags
 bitflags! {
@@ -24,6 +28,7 @@ bitflags! {
         const WINDOW =              1<<2;
         const TOUCH =               1<<3;
         const PLATFORM_SPECIFIC =   1<<4;
+        const DND =                1<<5;//Drag and Drop
 
     }
 }
@@ -35,6 +40,7 @@ bitflags! {
 ///
 /// [open an issue]: https://github.com/iced-rs/iced/issues
 #[derive(Debug, Clone, PartialEq)]
+//TODO global refpool
 pub enum Event {
     /// A keyboard event
     Keyboard(keyboard::Event),
@@ -50,21 +56,40 @@ pub enum Event {
 
     /// A platform specific event
     PlatformSpecific(PlatformSpecific),
+
+    /// A drag event
+    DragDrop(drag::Event),
 }
 
 impl Event {
-    // pub fn to_str(&self) -> IdStr {
-    //     match self {
-    //         Event::Keyboard(_) => todo!(),
-    //         Event::Mouse(x) => match x {
-    //             emg_common::mouse::Event::ButtonReleased(_) => IdStr::new_inline("click"),
-    //             other => other.to_compact_string(),
-    //         },
-    //         Event::Window(_) => IdStr::new_inline("Window"), //TODO  make it right
-    //         Event::Touch(_) => todo!(),
-    //         Event::PlatformSpecific(_) => todo!(),
-    //     }
-    // }
+    #[must_use]
+    pub fn as_drag_drop(&self) -> Option<&drag::Event> {
+        if let Self::DragDrop(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+    pub fn get_drag_offset(&self) -> &Affine {
+        self.as_drag_drop()
+            .and_then(|x| x.as_drag())
+            .map(|x| x.offset())
+            .unwrap()
+    }
+    pub fn get_drag_trans(&self) -> &Affine {
+        self.as_drag_drop()
+            .and_then(|x| x.as_drag())
+            .map(|x| x.trans())
+            .unwrap()
+    }
+
+    /// Returns `true` if the event is [`DragDrop`].
+    ///
+    /// [`DragDrop`]: Event::DragDrop
+    #[must_use]
+    pub fn is_drag_drop(&self) -> bool {
+        matches!(self, Self::DragDrop(..))
+    }
 }
 
 /// A platform specific event
@@ -83,36 +108,4 @@ pub enum MacOS {
     ///
     /// [bundled]: https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html#//apple_ref/doc/uid/10000123i-CH101-SW19
     ReceivedUrl(String),
-}
-
-//TODO  disabled this
-/// The status of an [`Event`] after being processed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    /// The [`Event`] was **NOT** handled by any widget.
-    Ignored,
-
-    /// The [`Event`] was handled and processed by a widget.
-    Captured,
-}
-
-impl Status {
-    /// Merges two [`Status`] into one.
-    ///
-    /// `Captured` takes precedence over `Ignored`:
-    ///
-    /// ```
-    /// use iced_native::event::Status;
-    ///
-    /// assert_eq!(Status::Ignored.merge(Status::Ignored), Status::Ignored);
-    /// assert_eq!(Status::Ignored.merge(Status::Captured), Status::Captured);
-    /// assert_eq!(Status::Captured.merge(Status::Ignored), Status::Captured);
-    /// assert_eq!(Status::Captured.merge(Status::Captured), Status::Captured);
-    /// ```
-    pub fn merge(self, b: Self) -> Self {
-        match self {
-            Status::Ignored => b,
-            Status::Captured => Status::Captured,
-        }
-    }
 }

@@ -1,23 +1,23 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-02-01 12:39:18
+ * @LastEditTime: 2023-04-19 17:20:53
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive cross-platform applications.
 
-use emg_common::{IdStr, Pos, Vector};
+use emg::EdgeIndex;
+use emg_common::{Pos, Vector};
 use emg_element::{
     graph_edit::{GraphEdit, GraphEditManyMethod},
     GTreeBuilderFn, GraphMethods,
 };
 use emg_orders::Orders;
-use emg_state::StateAnchor;
+use emg_state::{state_lit::StateVarLit, StateAnchor};
 use tracing::instrument;
 
 use crate::{element, window, Command, Executor, Settings};
-use std::{cell::RefCell, rc::Rc};
 
 // pub use emg_native::application::StyleSheet;
 
@@ -39,7 +39,7 @@ pub trait Application: Sized {
     /// The data needed to initialize your [`Application`].
     type Flags;
 
-    type GraphType: GraphMethods<Self::Message> + Default;
+    type GraphType: GraphMethods<Self::Message> + Default + Clone;
     type GraphEditor: GraphEdit + GraphEditManyMethod;
     type Orders: Orders<Self::Message>;
 
@@ -81,7 +81,7 @@ pub trait Application: Sized {
     // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
     // fn view(&mut self) -> GElement<Self::Message>;
 
-    fn root_id(&self) -> &str;
+    fn root_eix(&self) -> EdgeIndex;
 
     // fn ctx(
     //     &self,
@@ -197,7 +197,7 @@ pub trait Application: Sized {
     }
 }
 
-pub struct Instance<A: Application>(A);
+pub struct Instance<A: Application>(A, StateVarLit<Option<EdgeIndex>>);
 
 impl<A> crate::runtime::Program for Instance<A>
 where
@@ -226,23 +226,21 @@ where
     A: Application,
 
     <A as Application>::GraphType: GraphMethods<
-        <A as Application>::Message,
-        SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
-    >,
+            <A as Application>::Message,
+            SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
+        > + GTreeBuilderFn<
+            <A as Application>::Message,
+            GraphType = <A as Application>::GraphType,
+            GraphEditor = <A as Application>::GraphEditor,
+        >,
 
     // ─────────────────────────────────────────────────────────────────────
     <A as Application>::Message: 'static,
     // ─────────────────────────────────────────────────────────────────────
-    Rc<RefCell<<A as Application>::GraphType>>: GTreeBuilderFn<
-        <A as Application>::Message,
-        GraphType = <A as Application>::GraphType,
-        GraphEditor = <A as Application>::GraphEditor,
-    >,
-    // ─────────────────────────────────────────────────────────────────────
 {
     type Renderer = crate::Renderer;
 
-    type GTreeWithBuilder = Rc<RefCell<<A as Application>::GraphType>>;
+    type GTreeWithBuilder = <A as Application>::GraphType;
 
     fn graph_setup(
         &self,
@@ -251,13 +249,13 @@ where
     ) -> Self::GTreeWithBuilder {
         let emg_graph = <Self::GraphType>::default();
         let tree = self.0.tree_build(orders);
-        let emg_graph_rc_refcell: Self::GTreeWithBuilder = Rc::new(RefCell::new(emg_graph));
+        let emg_graph_rc_refcell: Self::GTreeWithBuilder = emg_graph;
         emg_graph_rc_refcell.handle_root_in_topo(&tree);
         emg_graph_rc_refcell
     }
 
-    fn root_id(&self) -> &str {
-        self.0.root_id()
+    fn root_eix(&self) -> EdgeIndex {
+        self.0.root_eix()
     }
 
     // #[instrument(skip(self, g))]
@@ -271,16 +269,18 @@ where
     fn build_ctx(
         &self,
         g: &Self::GraphType,
-        painter: &StateAnchor<crate::runtime::PaintCtx>,
-        events: &StateAnchor<Vector<crate::runtime::EventWithFlagType>>,
+        painter: StateAnchor<crate::runtime::PaintCtx>,
+        events: StateAnchor<Vector<crate::runtime::EventWithFlagType>>,
         cursor_position: &StateAnchor<Option<Pos>>,
-    ) -> (
-        crate::runtime::EventMatchsSa<Self::Message>,
-        StateAnchor<Rc<<Self::Renderer as crate::runtime::renderer::Renderer>::SceneCtx>>,
-    ) {
-        let root_id = self.root_id();
+    ) -> crate::runtime::EventAndCtx<Self::Message, Self::Renderer> {
+        self.1.set(Some(self.root_eix()));
 
-        g.runtime_prepare(&IdStr::new(root_id), painter, events, cursor_position)
+        g.runtime_prepare(
+            self.1.watch(),
+            painter,
+            events.into_anchor(),
+            cursor_position,
+        )
     }
 }
 
@@ -290,22 +290,19 @@ where
     <A as Application>::Message: 'static,
 
     <A as Application>::GraphType: GraphMethods<
-        <A as Application>::Message,
-        SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
-    >,
-
-    Rc<RefCell<<A as Application>::GraphType>>: GTreeBuilderFn<
-        <A as Application>::Message,
-        GraphType = <A as Application>::GraphType,
-        GraphEditor = <A as Application>::GraphEditor,
-    >,
+            <A as Application>::Message,
+            SceneCtx = <crate::Renderer as crate::runtime::renderer::Renderer>::SceneCtx,
+        > + GTreeBuilderFn<
+            <A as Application>::Message,
+            GraphType = <A as Application>::GraphType,
+            GraphEditor = <A as Application>::GraphEditor,
+        >,
 {
     type Flags = A::Flags;
 
     fn new(flags: Self::Flags) -> (Self, Command<<A as Application>::Message>) {
         let (app, command) = A::new(flags);
-
-        (Self(app), command)
+        (Self(app, StateVarLit::new(None)), command)
     }
 
     fn title(&self) -> String {

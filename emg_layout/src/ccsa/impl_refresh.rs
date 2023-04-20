@@ -1,35 +1,47 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 18:16:47
- * @LastEditTime: 2023-02-03 18:10:54
+ * @LastEditTime: 2023-03-31 16:29:27
  * @LastEditors: Rais
  * @Description:
  */
 
 use emg_common::Vector;
 use emg_shaping::{Shaping, ShapingUseNoWarper, ShapingWhoNoWarper};
-use emg_state::CloneStateVar;
+use emg_state::CloneState;
 
 use crate::EmgEdgeItem;
 
 use super::{CassowaryVar, GeneralVar, NameCharsOrNumber, ScopeViewVariable, Virtual, CCSS};
 
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for (Vector<CCSS>, Vector<ScopeViewVariable>)
+impl Shaping<EmgEdgeItem> for (Vector<CCSS>, Vector<ScopeViewVariable>)
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
+    EmgEdgeItem: ShapingWhoNoWarper,
 {
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let (added_vec_ccss, added_vec_selector) = self.clone();
-        let vec_ccss = who.layout.cassowary_constants.get_inner_anchor();
-        let new_vec_ccss = vec_ccss.map(move |old| {
-            let mut new = old.clone();
-            new.append(added_vec_ccss.clone());
-            new
-        });
+        // let vec_ccss = who.layout.cassowary_constants.get_inner_anchor();
+        // let new_vec_ccss = vec_ccss.map(move |old| {
+        //     let mut new = old.clone();
+        //     new.append(added_vec_ccss.clone());
+        //     new
+        // });
 
-        who.layout.cassowary_constants.set(new_vec_ccss);
+        // who.layout.cassowary_constants.set(new_vec_ccss);
+
+        //TODO check,使用 update 而不是 map 意味着 当 cassowary_constants 原值set的时候,不会追加 added_vec_ccss,但原方案 使用 constant 意味着本来就无法更改原始值
+
+        who.layout.cassowary_constants.update(|x| match x {
+            emg_state::anchors::expert::ValOrAnchor::Val(v) => v.append(added_vec_ccss),
+            emg_state::anchors::expert::ValOrAnchor::Anchor(an) => {
+                *an = an.map(move |v| {
+                    let mut new = v.clone();
+                    new.append(added_vec_ccss.clone());
+                    new
+                });
+            }
+        });
 
         who.layout
             .cassowary_selectors
@@ -41,15 +53,14 @@ where
 
 impl ShapingUseNoWarper for GeneralVar {}
 
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for GeneralVar
+impl Shaping<EmgEdgeItem> for GeneralVar
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
+    EmgEdgeItem: ShapingWhoNoWarper,
     Self: ShapingUseNoWarper,
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let Self(
             name,
             ScopeViewVariable {
@@ -88,15 +99,14 @@ where
 
 impl ShapingUseNoWarper for Virtual {}
 
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for Virtual
+impl Shaping<EmgEdgeItem> for Virtual
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
+    EmgEdgeItem: ShapingWhoNoWarper,
     Self: ShapingUseNoWarper,
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         let virtual_name = self.name();
         let (gvs_match_props, (top_constants, constants), not_match) = self.process();
 
@@ -161,15 +171,14 @@ where
 
 impl ShapingUseNoWarper for CassowaryVar {}
 
-impl<Ix> Shaping<EmgEdgeItem<Ix>> for CassowaryVar
+impl Shaping<EmgEdgeItem> for CassowaryVar
 where
-    Ix: Clone + std::hash::Hash + Eq + Ord + 'static + Default,
-    EmgEdgeItem<Ix>: ShapingWhoNoWarper,
+    EmgEdgeItem: ShapingWhoNoWarper,
     Self: ShapingUseNoWarper,
 {
     #[allow(clippy::match_same_arms)]
     #[track_caller]
-    fn shaping(&self, who: &mut EmgEdgeItem<Ix>) -> bool {
+    fn shaping(&self, who: &mut EmgEdgeItem) -> bool {
         match self {
             Self::General(gv) => gv.shaping(who),
             Self::Virtual(vv) => vv.shaping(who),

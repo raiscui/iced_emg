@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-12 11:27:18
- * @LastEditTime: 2023-01-20 16:51:14
+ * @LastEditTime: 2023-02-21 21:44:32
  * @LastEditors: Rais
  * @Description:
  */
@@ -9,6 +9,7 @@
 mod code_test {
 
     use emg_common::{IdStr, VecDisp, VectorDisp};
+    use emg_layout::ccsa_macro_prelude;
     use gtree_macro::cassowary::*;
     use quote::ToTokens;
     use std::path::Path;
@@ -17,6 +18,7 @@ mod code_test {
 
     use tracing_subscriber::{prelude::*, registry::Registry};
 
+    #[track_caller]
     fn token_2_code_test(name: &str, input: &str) -> String {
         // ────────────────────────────────────────────────────────────────────────────────
 
@@ -24,56 +26,63 @@ mod code_test {
         // .with(subscriber1);
         tracing::subscriber::set_global_default(subscriber).ok();
 
-        let mut s = String::new();
+        let mut macro_disp_string = String::new();
 
         // ─────────────────────────────────────────────────────────────────
 
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
 
-            info!("=========== parse \n {:?}\n",&input);
+                            info!("=========== parse \n {:?}\n",&input);
 
-            match syn::parse_str::<VFLStatement>(input) {
-                Ok( ok) => {
-                    info!("=============VFLStatement ok \n{:#?}\n", &ok);
-                    let x = format!("{}", ok.to_token_stream());
-
-                    info!("=================== build-code \n {}\n", &x);
-
-                    let disp = VecDisp(ok.ccsss);
-                    info!("=================== build---display \n {}\n", &disp);
-                    insta::assert_display_snapshot!(name.to_string()+"_build_display", &disp);
+                            match syn::parse_str::<VFLStatement>(input) {
+                                Ok( ok) => {
+                                    info!("=============VFLStatement ok \n{:#?}\n", &ok);
 
 
-                    insta::assert_display_snapshot!(name.to_string()+"_code", x);
-                    s = format!("{}",disp);
+                                    let macro_disp = VecDisp(ok.ccsss.clone());
+                                    info!("=================== display--macro-build \n {}\n", &macro_disp);
+
+                                    let rust_code = format!("{}", ok.to_token_stream());
+                                    info!("=================== rust_code \n {}\n", &rust_code);
+                // ─────────────────────────────────────────────────────────────────────────────
 
 
-                }
-                Err(error) => panic!("...{:?}", error),
-            }
-        });
-        s
+                                    #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string()+"_build_display", &macro_disp);
+                                    #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string()+"_code", rust_code);
+                                    macro_disp_string = format!("{}",macro_disp);
+
+
+                                }
+                                Err(error) => panic!("...{:?}", error),
+                            }
+                        });
+        macro_disp_string
     }
 
-    fn cass_code_test<T: ToTokens + Parse + std::fmt::Debug>(name: &str, input: &str) {
+    #[track_caller]
+    fn cass_code_test<T: ToTokens + Parse + std::fmt::Debug>(name: &str, input: &str) -> String {
         let subscriber = Registry::default().with(tracing_tree::HierarchicalLayer::new(2));
         // .with(subscriber1);
         tracing::subscriber::set_global_default(subscriber).ok();
 
         insta::with_settings!({snapshot_path => Path::new("./vfl_code_snap")}, {
-            debug!("=========== parse \n {:?}\n", &input);
+                    debug!("=========== parse \n {:?}\n", &input);
 
-            match syn::parse_str::<T>(input) {
-                Ok(ok) => {
-                    println!("============= parsed\n{:#?}\n", &ok);
+                    match syn::parse_str::<T>(input) {
+                        Ok(ok) => {
+                            println!("============= parsed\n{:#?}\n", &ok);
 
-                    let x = format!("{}", ok.to_token_stream());
-                    println!("token_stream result:\n{}", x);
-                    insta::assert_display_snapshot!(name.to_string() + "_ccss_code", x);
-                }
-                Err(error) => panic!("...{:?}", error),
-            }
-        });
+                            let rust_code = format!("{}", ok.to_token_stream());
+                            println!("token_stream result:\n{}", rust_code);
+                            #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string() + "_ccss_code", rust_code);
+                            rust_code
+                        }
+                        Err(error) => panic!("...{:?}", error),
+                    }
+                })
     }
 
     #[test]
@@ -81,7 +90,7 @@ mod code_test {
         println!();
         let input = r#"#button"#;
 
-        cass_code_test::<NameCharsOrNumber>("name_chars", input);
+        let macro_2_code_string = cass_code_test::<NameCharsOrNumber>("name_chars", input);
         let code = emg_layout::ccsa::NameCharsOrNumber::Id(IdStr::new("button"));
         println!("{}", code);
         assert_eq!(input, format!("{}", code));
@@ -111,6 +120,7 @@ mod code_test {
     fn ccss_svv_op_svv_expr() {
         println!();
         let input = r#"#button[width] + 10"#;
+        //TODO CCSS parse
 
         let code = emg_layout::ccsa::ScopeViewVariable::new_id_var("button", "width");
         let res = code + emg_layout::ccsa::ScopeViewVariable::new_number(10.0);
@@ -121,12 +131,14 @@ mod code_test {
     fn ccss_svv_op_svv_expr2() {
         println!();
         let input = r#"#button[width] + #button2[height]"#;
+        //TODO CCSS parse
 
         let code = emg_layout::ccsa::ScopeViewVariable::new_id_var("button", "width");
         let res = code + emg_layout::ccsa::ScopeViewVariable::new_id_var("button2", "height");
         println!("{}", res);
         assert_eq!(input, format!("{}", res));
     }
+
     #[test]
     fn base1() {
         let input = r#"
@@ -134,7 +146,7 @@ mod code_test {
             "#;
 
         let name = &"base1";
-        let parsed = token_2_code_test(name, input);
+        let parsed_macro_disp = token_2_code_test(name, input);
 
         let (res, selector) = (
             emg_common::im::vector![emg_layout::ccsa::CCSS::new(
@@ -187,11 +199,12 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
-            insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                    #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
+                });
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
-        assert_eq!(parsed, format!("{}", res_disp));
+        assert_eq!(parsed_macro_disp, format!("{}", res_disp));
     }
 
     #[test]
@@ -254,8 +267,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
@@ -486,8 +500,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
@@ -583,8 +598,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
@@ -716,8 +732,9 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
@@ -845,21 +862,109 @@ mod code_test {
 
         info!("selector: {}", VectorDisp(selector.clone()));
         insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
         insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
-        });
+                });
 
         let res_disp = VectorDisp(res);
         info!("res===\n{}", &res_disp);
         assert_eq!(parsed, format!("{}", res_disp));
     }
+    #[test]
+    fn parent() {
+        let input = r#"
+        @v |(#sub)|
+            "#;
 
-    // #[test]
-    // fn base4() {
-    //     let input = r#"
-    //     @v (#b1)-(#b2)  -  (#b3)- (#b4) -(#b5) !weak
-    //         "#;
+        let name = &"parent";
+        let parsed = token_2_code_test(name, input);
 
-    //     let name = &"base3";
-    //     let parsed = token_2_code_test(name, input);
-    // }
+        let (res, selector) = (
+            ccsa_macro_prelude::common::im::vector![
+                ccsa_macro_prelude::ccsa::CCSS::new(
+                    ccsa_macro_prelude::ccsa::CCSSSvvOpSvvExpr::new(
+                        ccsa_macro_prelude::ccsa::ScopeViewVariable::new(
+                            ::std::option::Option::Some(ccsa_macro_prelude::ccsa::Scope::Local),
+                            ::std::option::Option::None,
+                            ::std::option::Option::Some(ccsa_macro_prelude::ccsa::PredVariable(
+                                ccsa_macro_prelude::common::IdStr::new("top")
+                            ))
+                        ),
+                        vec![]
+                    ),
+                    vec![ccsa_macro_prelude::ccsa::CCSSEqExpression::new(
+                        ccsa_macro_prelude::ccsa::PredEq::Eq,
+                        ccsa_macro_prelude::ccsa::CCSSSvvOpSvvExpr::new(
+                            ccsa_macro_prelude::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(
+                                    ccsa_macro_prelude::ccsa::NameCharsOrNumber::Id(
+                                        ccsa_macro_prelude::common::IdStr::new("sub")
+                                    )
+                                ),
+                                ::std::option::Option::Some(
+                                    ccsa_macro_prelude::ccsa::PredVariable(
+                                        ccsa_macro_prelude::common::IdStr::new("top")
+                                    )
+                                )
+                            ),
+                            vec![]
+                        )
+                    )],
+                    ::std::option::Option::None
+                ),
+                ccsa_macro_prelude::ccsa::CCSS::new(
+                    ccsa_macro_prelude::ccsa::CCSSSvvOpSvvExpr::new(
+                        ccsa_macro_prelude::ccsa::ScopeViewVariable::new(
+                            ::std::option::Option::None,
+                            ::std::option::Option::Some(
+                                ccsa_macro_prelude::ccsa::NameCharsOrNumber::Id(
+                                    ccsa_macro_prelude::common::IdStr::new("sub")
+                                )
+                            ),
+                            ::std::option::Option::Some(ccsa_macro_prelude::ccsa::PredVariable(
+                                ccsa_macro_prelude::common::IdStr::new("bottom")
+                            ))
+                        ),
+                        vec![]
+                    ),
+                    vec![ccsa_macro_prelude::ccsa::CCSSEqExpression::new(
+                        ccsa_macro_prelude::ccsa::PredEq::Eq,
+                        ccsa_macro_prelude::ccsa::CCSSSvvOpSvvExpr::new(
+                            ccsa_macro_prelude::ccsa::ScopeViewVariable::new(
+                                ::std::option::Option::Some(ccsa_macro_prelude::ccsa::Scope::Local),
+                                ::std::option::Option::None,
+                                ::std::option::Option::Some(
+                                    ccsa_macro_prelude::ccsa::PredVariable(
+                                        ccsa_macro_prelude::common::IdStr::new("bottom")
+                                    )
+                                )
+                            ),
+                            vec![]
+                        )
+                    )],
+                    ::std::option::Option::None
+                )
+            ],
+            ccsa_macro_prelude::common::im::vector![
+                ccsa_macro_prelude::ccsa::ScopeViewVariable::new(
+                    ::std::option::Option::None,
+                    ::std::option::Option::Some(ccsa_macro_prelude::ccsa::NameCharsOrNumber::Id(
+                        ccsa_macro_prelude::common::IdStr::new("sub")
+                    )),
+                    ::std::option::Option::None
+                )
+            ],
+        );
+
+        info!("selector: {}", VectorDisp(selector.clone()));
+        insta::with_settings!({snapshot_path => Path::new("./vfl_to_code_snap")}, {
+                #[cfg(feature="insta")]
+        insta::assert_display_snapshot!(name.to_string()+"_selector_display", &VectorDisp(selector));
+                });
+
+        let res_disp = VectorDisp(res);
+        info!("res===\n{}", &res_disp);
+        assert_eq!(parsed, format!("{}", res_disp));
+    }
 }

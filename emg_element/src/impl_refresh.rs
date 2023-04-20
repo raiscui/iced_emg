@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2023-02-03 18:54:59
+ * @LastEditTime: 2023-04-18 17:02:15
  * @LastEditors: Rais
  * @Description:
  */
@@ -38,42 +38,8 @@ where
                 .entered();
                 panic!("check code")
             }
-            (Generic_(who), use_something) => {
-                let _span = debug_span!(
-                    "GElement-shaping",
-                    at = "Shaping<GElement> for GElement<Message>",
-                    "GElement({}) shaping-> Generic_({})",
-                    use_something,
-                    who.type_name(),
-                )
-                .entered();
-                // let mut dyn_ref = who.as_mut();
-                // use_something.shaping(who);
-                who.shaping_use(use_something)
-            }
-            (who, Generic_(use_something)) => {
-                let _span = debug_span!(
-                    "GElement-shaping",
-                    at = "Shaping<GElement> for GElement<Message>",
-                    "Generic_({}) shaping-> GElement({})",
-                    use_something.type_name(),
-                    who
-                )
-                .entered();
-                use_something.shaping(who)
-                // let something = use_something.as_refresh_for();
-                // who.shaping_use(use_something);
-            }
 
-            // @ Single explicit match
-            //TODO event 只和 builder 起作用
-            // (_gel, _g_event_callback @ Event_(_)) => {
-            //     // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
-            //     // .shaping_use(g_event_callback)
-            //     panic!("should never directly use event_callback for GElement");
-            // }
-
-            //其他任何 el 刷新, 包括 el=shaper
+            //el 刷新, 包括 el=shaper
             //refreshing use any impl Shaping
             (gel, Shaper_(shaper)) => {
                 let _span = debug_span!(
@@ -87,6 +53,42 @@ where
                 trace!("{} refresh use shaper", gel);
                 gel.shaping_use_dyn(shaper.as_ref() as &dyn Shaping<Self>)
             }
+
+            (Generic_(who), use_not_shaper) => {
+                let _span = debug_span!(
+                    "GElement-shaping",
+                    at = "Shaping<GElement> for GElement<Message>",
+                    "GElement({}) shaping-> Generic_({})",
+                    use_not_shaper,
+                    who.type_name(),
+                )
+                .entered();
+                // let mut dyn_ref = who.as_mut();
+                // use_something.shaping(who);
+                who.shaping_use(use_not_shaper)
+            }
+            (who_not_generic, Generic_(use_something)) => {
+                let _span = debug_span!(
+                    "GElement-shaping",
+                    at = "Shaping<GElement> for GElement<Message>",
+                    "Generic_({}) shaping-> GElement({})",
+                    use_something.type_name(),
+                    who_not_generic
+                )
+                .entered();
+                use_something.shaping(who_not_generic)
+                // let something = use_something.as_refresh_for();
+                // who.shaping_use(use_something);
+            }
+
+            // @ Single explicit match
+            //TODO event 只和 builder 起作用
+            // (_gel, _g_event_callback @ Event_(_)) => {
+            //     // gel.try_convert_into_gelement_node_builder_widget_().expect("can't convert to NodeBuilderWidget,Allowing this can cause performance problems")
+            //     // .shaping_use(g_event_callback)
+            //     panic!("should never directly use event_callback for GElement");
+            // }
+
             // TODO: do not many clone event_callback
 
             // layer 包裹 任何除了shaper的el
@@ -179,7 +181,7 @@ where
 
                 // self.try_refresh_for(x);
                 // w.try_shaping_use(Box::new(*self));
-                (**w).shaping_use(self)
+                w.shaping_use(self)
 
                 // w.shape_of_use(self);
             }
@@ -187,6 +189,9 @@ where
             GElement::SaNode_(_) => todo!(),
             GElement::EvolutionaryFactor(_) => todo!(),
             GElement::EmptyNeverUse => todo!(),
+            //@ accesskit ─────────────────────────────────────────────────────
+            #[cfg(feature = "video-player")]
+            GElement::Video_(x) => todo!(),
             // other => {
             //     warn!("====> {} refreshing use i32,no effect", other);
             // }

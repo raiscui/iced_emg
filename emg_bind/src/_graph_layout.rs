@@ -16,12 +16,12 @@ pub trait GraphMethods {
     type Ix;
     fn edge_item_set_size(
         &self,
-        e: &EdgeIndex<Self::Ix>,
+        e: &EdgeIndex<Self::IdStr>,
         w: impl Into<GenericSizeAnchor>,
         h: impl Into<GenericSizeAnchor>,
     );
 }
-impl<N, Ix> GraphMethods for Graph<N, EmgEdgeItem<Ix>, Ix>
+impl<N, IdStr> GraphMethods for Graph<N, EmgEdgeItem, IdStr>
 where
     N: Clone,
     Ix: PartialOrd + 'static,
@@ -32,7 +32,7 @@ where
     type Ix = Ix;
     fn edge_item_set_size(
         &self,
-        e: &EdgeIndex<Self::Ix>,
+        e: &EdgeIndex<Self::IdStr>,
         w: impl Into<GenericSizeAnchor>,
         h: impl Into<GenericSizeAnchor>,
     ) {

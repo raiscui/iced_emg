@@ -2,14 +2,14 @@ use std::{clone::Clone, cmp::PartialEq, rc::Rc};
 
 use emg_common::{
     better_any::{Tid, TidAble},
-    IdStr, Vector,
+    im, IdStr, Vector,
 };
 use emg_layout::EmgEdgeItem;
 use emg_shaping::Shaping;
 use emg_state::{Anchor, StateAnchor, StateMultiAnchor};
 use tracing::{info, Span};
 
-use crate::{g_tree_builder::GTreeInit, GElement, InitTree};
+use crate::{g_tree_builder::GTreeInit, GElement, InitdTree};
 
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -110,30 +110,35 @@ where
     fn tree_init(
         self,
         _id: &IdStr,
-        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
-        _children: &Vec<crate::GTreeBuilderElement<Message>>,
-    ) -> InitTree<Message> {
+        _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
+        _children: &[crate::GTreeBuilderElement<Message>],
+    ) -> InitdTree<Message> {
         GElement::Layer_(self).into()
     }
 }
 
 #[cfg(all(feature = "gpu"))]
-use crate::renderer::*;
+use crate::platform::renderer::*;
 #[cfg(all(feature = "gpu"))]
 impl<Message> crate::Widget for Layer<Message>
 where
     Message: 'static,
 {
-    type SceneCtxType = crate::SceneFrag;
-    fn paint_sa(&self, ctx: &StateAnchor<crate::PaintCtx>) -> StateAnchor<Rc<Self::SceneCtxType>> {
+    type SceneCtxType = crate::renderer::SceneFrag;
+    fn paint_sa(
+        &self,
+        ctx: &StateAnchor<crate::platform::PaintCtx>,
+    ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let id = self.id.clone();
         let span = illicit::expect::<Span>();
 
-        let children_sc_list_sa: StateAnchor<Vec<Rc<crate::SceneFrag>>> = self
+        //@ paint children first ─────────────────────────────────────────────────────────────
+
+        let children_sc_list_sa: StateAnchor<Vector<Rc<crate::renderer::SceneFrag>>> = self
             .children
             .iter()
             .map(|child| child.paint_sa(ctx).into_anchor())
-            .collect::<Anchor<Vec<_>>>()
+            .collect::<Anchor<Vector<_>>>()
             .into();
 
         //TODO 分离 ctx, &children_sc_list_sa
@@ -164,13 +169,14 @@ where
                 }
             }
 
+            //@ append children last ─────────────────────────────────────────────────────────────
+
             children_sc_list
                 .iter()
                 .for_each(|sc| builder.append(sc, sc.get_transform()));
 
             // ─────────────────────────────────────────────
 
-            builder.finish();
             Rc::new(sc)
         })
     }

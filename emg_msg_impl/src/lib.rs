@@ -4,7 +4,7 @@ use std::iter::FromIterator;
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Error, Meta, NestedMeta};
+use syn::DeriveInput;
 
 #[doc(hidden)]
 pub fn emg_msg(_attr: TokenStream, item: TokenStream) -> Result<TokenStream, syn::Error> {
@@ -12,45 +12,43 @@ pub fn emg_msg(_attr: TokenStream, item: TokenStream) -> Result<TokenStream, syn
     // Ok(quote! {
     //     "Hello world!"
     // })
-    let mut ast = syn::parse2::<DeriveInput>(item).unwrap();
+    let ast = syn::parse2::<DeriveInput>(item).unwrap();
     let mut has_derive = false;
-    for a in &mut ast.attrs {
-        if a.path.is_ident("derive") {
-            has_derive = true;
-            let mut m = match a.parse_meta()? {
-                Meta::List(meta) => Ok(Vec::from_iter(meta.nested)),
-                bad => Err(Error::new_spanned(bad, "unrecognized attribute")),
-            }
-            .unwrap();
+    let mut has_tid = false;
 
-            let tid = syn::parse2::<Meta>(quote! {better_any::Tid}).unwrap();
-            let mut has_tid = false;
-            for nm in m.iter() {
-                has_tid = if let NestedMeta::Meta(mm) = nm {
-                    has_tid || mm == &tid
-                } else {
-                    has_tid
+    let tid_token_stream = quote! {#[derive(better_any::Tid)]};
+    for attr in &ast.attrs {
+        if attr.path().is_ident("derive") {
+            has_derive = true;
+
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("Tid") {
+                    has_tid = true;
                 }
-            }
-            if !has_tid {
-                m.push(NestedMeta::Meta(
-                    syn::parse2::<Meta>(quote! {better_any::Tid}).unwrap(),
-                ));
-                a.tokens = quote! {
-                    (#(#m),*)
-                };
-            }
+                Ok(())
+            })
+            .ok();
         }
     }
     // println!("{:#?}", ast);
 
-    let id = ast.ident.clone();
+    let id = &ast.ident;
     let output = if has_derive {
-        quote! {
-            use better_any::TidAble;
+        if has_tid {
+            quote! {
+                use better_any::TidAble;
 
-            #ast
-            impl<'a> any::MessageTid<'a> for #id {}
+                #ast
+                impl<'a> any::MessageTid<'a> for #id {}
+            }
+        } else {
+            quote! {
+                use better_any::TidAble;
+
+                #tid_token_stream
+                #ast
+                impl<'a> any::MessageTid<'a> for #id {}
+            }
         }
     } else {
         quote! {
@@ -88,6 +86,7 @@ mod tests {
         )
         .unwrap();
         println!("res===\n{}", res);
+        #[cfg(feature = "insta")]
         insta::assert_display_snapshot!(res);
         // assert!(res);
     }

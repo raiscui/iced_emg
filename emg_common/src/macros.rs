@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-08-31 11:58:58
- * @LastEditTime: 2023-01-23 22:47:50
+ * @LastEditTime: 2023-03-15 12:51:46
  * @LastEditors: Rais
  * @Description:
  */
@@ -46,7 +46,7 @@ macro_rules! into_smvec {
         }
     };
 }
-/// ## use parent type to generate GenericSize::Parent(T::static_type_name())
+///use parent type to generate `GenericSize::Parent(T::static_type_name())`
 #[macro_export]
 macro_rules! parent {
     ( $type_name:ty  ) => {{

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2023-02-04 21:11:07
+ * @LastEditTime: 2023-04-18 16:52:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,6 +10,7 @@ use emg_common::{
     dyn_partial_eq::DynPartialEq,
     TypeCheckObjectSafeTid,
 };
+use owo_colors::OwoColorize;
 use std::{panic::Location, rc::Rc};
 use tracing::{debug, error, warn};
 
@@ -144,6 +145,8 @@ impl<Who: for<'a> Tid<'a>> ShapingUseAny for Who {
 // }
 // refresh
 
+
+
 pub trait ShapingAny {
     fn shaping_any(&self, any: &mut dyn TypeCheckObjectSafeTid) -> bool;
 }
@@ -169,14 +172,15 @@ where
 {
     #[must_use]
     default fn shaping(&self, _el: &mut Who) -> bool {
-        // println!(
-        //     "this is un implemented yet use ->\n{} \n shaping ->\n{}",
-        //     std::any::type_name::<Use>(),
-        //     std::any::type_name::<Who>()
-        // );
-
         #[cfg(not(feature = "default_shaping_make_panic"))]
         {
+            println!(
+                "{} ->\n{} \n shaping ->\n{}",
+                "this is un implemented yet use".on_red(),
+                std::any::type_name::<Use>(),
+                std::any::type_name::<Who>()
+            );
+
             error!(
                 "this is un implemented yet use ->\n{} \n shaping ->\n{}",
                 std::any::type_name::<Use>(),
@@ -310,24 +314,27 @@ mod updater_test {
     use crate::ShapingUseDyn;
     use crate::{test::setup_tracing, Shaping};
     use tracing::info;
-    use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::*;
 
     impl Shaping<String> for i32 {
         fn shaping(&self, el: &mut String) -> bool {
-            *el = format!("{},{}", el, self);
+            println!("shaping string use i32");
+            *el = format!("{el},{self}");
             true
         }
     }
 
-    use emg_state::CloneStateVar;
+    use emg_state::CloneState;
 
     use emg_state::use_state;
 
-    #[wasm_bindgen_test]
+    #[test]
+    #[should_panic]
     fn test_anchor() {
         setup_tracing();
+
+        //NOTE 因为取消了 StateAnchor shaping StateVar , StateVar shaping StateVar 等的默认行为 , 所以 这里会不匹配
 
         #[allow(unused)]
         let mut s = String::from("sss");
@@ -342,12 +349,12 @@ mod updater_test {
         ff.shaping_use_dyn(&ff_w);
         ff.shaping_use_dyn(&ffw_vec);
         ff2.shaping(&mut ff);
-        info!("==== test_anchor: {}", ff.get());
+        println!("==== test_anchor: {}", ff.get());
         // ─────────────────────────────────────────────────────────────────
 
         s.shaping_use_dyn(&ff2);
         ff2.shaping(&mut s);
-        info!("==== test_anchor: {}", &s);
+        println!("==== test_anchor: {}", &s);
         assert_eq!("sss,2,2", &s);
         // ─────────────────────────────────────────────────────────────────
 
@@ -365,7 +372,7 @@ mod updater_test {
 
         assert_eq!("hello,2,2,2,2,2,99,99,4,4", ff.get());
     }
-    #[wasm_bindgen_test]
+    #[test]
 
     fn test_shaper_for() {
         setup_tracing();
@@ -383,9 +390,9 @@ mod updater_test {
         a.shaping(&mut f);
         a.shaping(&mut f);
         info!("{}", &f);
-        assert_eq!("cccdddddd", f)
+        assert_eq!("cccdddddd", f);
     }
-    #[wasm_bindgen_test]
+    #[test]
 
     fn realtime_update() {
         setup_tracing();

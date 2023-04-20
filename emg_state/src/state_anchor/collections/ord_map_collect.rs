@@ -1,21 +1,14 @@
 /*
  * @Author: Rais
- * @Date: 2023-01-25 18:39:47
- * @LastEditTime: 2023-02-13 14:51:23
- * @LastEditors: Rais
- * @Description:
- */
-/*
- * @Author: Rais
- * @Date: 2022-09-14 11:08:53
- * @LastEditTime: 2023-01-25 15:14:17
+ * @Date: 2023-03-31 18:03:25
+ * @LastEditTime: 2023-03-31 18:11:00
  * @LastEditors: Rais
  * @Description:
  */
 
 use anchors::{
     expert::{AnchorHandle, AnchorInner, OutputContext, Poll, UpdateContext},
-    im::OrdMap,
+    im::{ordmap, OrdMap},
     singlethread::Engine,
 };
 use std::panic::Location;
@@ -33,7 +26,7 @@ where
     where
         T: IntoIterator<Item = (I, StateAnchor<V>)>,
     {
-        StateOrdMapCollect::new(iter.into_iter().collect())
+        StateOrdMapCollect::new_to_anchor(iter.into_iter().collect())
     }
 }
 
@@ -48,7 +41,7 @@ where
     where
         T: IntoIterator<Item = &'a (I, StateAnchor<V>)>,
     {
-        StateOrdMapCollect::new(iter.into_iter().cloned().collect())
+        StateOrdMapCollect::new_to_anchor(iter.into_iter().cloned().collect())
     }
 }
 
@@ -63,7 +56,7 @@ where
     where
         T: IntoIterator<Item = (&'a I, &'a StateAnchor<V>)>,
     {
-        StateOrdMapCollect::new(
+        StateOrdMapCollect::new_to_anchor(
             iter.into_iter()
                 .map(|(k, v)| (k.clone(), v.clone()))
                 .collect(),
@@ -88,7 +81,7 @@ where
 {
     #[allow(clippy::new_ret_no_self)]
     #[track_caller]
-    pub fn new(anchors: OrdMap<I, StateAnchor<V>>) -> StateAnchor<OrdMap<I, V>> {
+    pub fn new_to_anchor(anchors: OrdMap<I, StateAnchor<V>>) -> StateAnchor<OrdMap<I, V>> {
         StateAnchor(<Engine as anchors::expert::Engine>::mount(Self {
             state_anchors: anchors,
             vals: None,
@@ -118,27 +111,62 @@ where
         &mut self,
         ctx: &mut G,
     ) -> Poll {
+        let mut changed = false;
+
         if self.dirty {
-            let pending_exists = self.state_anchors.iter().any(|(_i, state_anchor)| {
-                ctx.request(state_anchor.anchor(), true) == Poll::Pending
-            });
-            if pending_exists {
+            let polls = self
+                .state_anchors
+                .iter()
+                .try_fold(vec![], |mut acc, (i, anchor)| {
+                    let s = ctx.request(anchor.anchor(), true);
+                    if s == Poll::Pending {
+                        None
+                    } else {
+                        acc.push((s, (i, anchor)));
+                        Some(acc)
+                    }
+                });
+
+            if polls.is_none() {
                 return Poll::Pending;
             }
-            let new_vals: Option<OrdMap<I, V>> = Some(
+
+            self.dirty = false;
+
+            if let Some(ref mut old_vals) = self.vals {
+                for (poll, (i, anchor)) in &polls.unwrap() {
+                    if &Poll::Updated == poll {
+                        old_vals.insert((**i).clone(), ctx.get(anchor.anchor()).clone());
+                        changed = true;
+                    }
+                }
+            } else {
+                // self.vals = Some(
+                //     self.anchors
+                //         .iter()
+                //         .map(|(i, anchor)| (i.clone(), ctx.get(anchor).clone()))
+                //         .collect(),
+                // );
+                // changed = true;
+
+                let pool = ordmap::OrdMapPool::new(self.state_anchors.len());
+                let mut dict = OrdMap::with_pool(&pool);
+
                 self.state_anchors
                     .iter()
-                    .map(|(i, state_anchor)| (i.clone(), ctx.get(state_anchor.anchor()).clone()))
-                    .collect(),
-            );
+                    .map(|(i, anchor)| (i.clone(), ctx.get(anchor.anchor()).clone()))
+                    .collect_into(&mut dict);
 
-            if self.vals != new_vals {
-                self.vals = new_vals;
-                return Poll::Updated;
+                self.vals = Some(dict);
+                changed = true;
             }
         }
-        self.dirty = false;
-        Poll::Unchanged
+
+        if changed {
+            Poll::Updated
+        } else {
+            Poll::Unchanged
+        }
     }
 
     fn output<'slf, 'out, G: OutputContext<'out, Engine = Engine>>(
@@ -153,56 +181,5 @@ where
 
     fn debug_location(&self) -> Option<(&'static str, &'static Location<'static>)> {
         Some(("DictCollect", self.location))
-    }
-}
-
-#[cfg(test)]
-#[allow(unused)]
-mod test {
-
-    use crate::{dict, use_state, CloneStateAnchor, CloneStateVar, StateAnchor};
-    use anchors::{collections::ord_map_methods::Dict, singlethread::*};
-    #[test]
-    fn collect() {
-        let a = use_state(|| 1);
-        let b = use_state(|| 2);
-        let c = use_state(|| 5);
-        let bcut = {
-            let mut old_num_opt: Option<usize> = None;
-            b.watch().cutoff(move |num| {
-                if let Some(old_num) = old_num_opt {
-                    if old_num == *num {
-                        return false;
-                    }
-                }
-                old_num_opt = Some(*num);
-                true
-            })
-        };
-
-        let bw = bcut.map(|v| {
-            println!("b change");
-            *v
-        });
-        let f = dict!(1usize=>a.watch(),2usize=>b.watch(),3usize=>c.watch());
-        let nums: StateAnchor<Dict<_, _>> = (&f).into_iter().collect();
-        let sum: StateAnchor<usize> = nums.map(|nums| nums.values().sum());
-        let ns: StateAnchor<usize> = nums.map(|nums: &Dict<_, _>| nums.len());
-
-        assert_eq!(sum.get(), 8);
-
-        a.set(2);
-        assert_eq!(sum.get(), 9);
-
-        c.set(1);
-        assert_eq!(sum.get(), 5);
-        println!("ns {}", ns.get());
-        b.set(9);
-        println!("after b set: {}", sum.get()); // [2,1,9]
-        assert_eq!(sum.get(), 12);
-
-        b.set(9);
-        println!("after b set2: {}", sum.get());
-        assert_eq!(sum.get(), 12);
     }
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-07-21 10:50:01
- * @LastEditTime: 2023-01-24 17:51:49
+ * @LastEditTime: 2023-04-04 23:10:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,6 +21,8 @@ use emg_hasher::CustomHasher;
 use emg_state::{Dict, StateAnchor};
 use tracing::{debug_span, instrument, warn};
 use Either::{Left, Right};
+
+use crate::ChildrenCassMap;
 
 use super::{
     CCSSOpSvv, CCSSSvvOpSvvExpr, CassowaryGeneralMap, CassowaryMap, ConstraintList,
@@ -52,23 +54,11 @@ type SvvOpSvvsToExpr = (
 );
 
 #[instrument(skip(children_cass_maps))]
-pub(crate) fn svv_op_svvs_to_expr<Ix>(
+pub(crate) fn svv_op_svvs_to_expr(
     svv_op_svvs: &CCSSSvvOpSvvExpr,
-    children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
+    children_cass_maps: &ChildrenCassMap,
     current_cassowary_inherited_generals: &Rc<CassowaryGeneralMap>,
-) -> SvvOpSvvsToExpr
-where
-    Ix: std::fmt::Debug
-        + Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + Default
-        // + std::fmt::Display
-        + std::borrow::Borrow<str>,
-{
+) -> SvvOpSvvsToExpr {
     let CCSSSvvOpSvvExpr {
         svv: main_svv,
         op_exprs,
@@ -134,23 +124,11 @@ where
 }
 
 #[instrument(skip(children_cass_maps))]
-fn svv_to_var<Ix>(
+fn svv_to_var(
     scope_view_variable: &ScopeViewVariable,
-    children_cass_maps: &Dict<Ix, (Rc<CassowaryMap>, StateAnchor<Vec<Constraint>>)>,
+    children_cass_maps: &ChildrenCassMap,
     current_cassowary_inherited_generals: &Rc<CassowaryGeneralMap>,
-) -> (Option<Either<Variable, Expression>>, Option<ConstraintList>)
-where
-    Ix: std::fmt::Debug
-        + Clone
-        + Hash
-        + Eq
-        + PartialEq
-        + PartialOrd
-        + Ord
-        + Default
-        // + std::fmt::Display
-        + std::borrow::Borrow<str>,
-{
+) -> (Option<Either<Variable, Expression>>, Option<ConstraintList>) {
     let ScopeViewVariable {
         scope,
         view,
@@ -305,18 +283,21 @@ fn scope_parent_val(
     prop: &IdStr,
     current_cassowary_inherited_generals: &Rc<CassowaryGeneralMap>,
 ) -> Option<Either<Variable, Expression>> {
-    let mut opt_p = &current_cassowary_inherited_generals.parent;
+    let mut opt_p = current_cassowary_inherited_generals.parent.clone();
     let mut n = 1u8;
-    while let Some(p) = opt_p && n < lv {
+    while let Some(p) = &opt_p && n < lv {
                         warn!("[svv_to_var] [parent] {}: {}",lv,n);
-
-                        opt_p = &p.parent;
+                        let rc_p   = p.upgrade().unwrap();
+                        opt_p = rc_p.parent.clone();
                         n+=1;
                     }
     warn!("[svv_to_var] [parent] end, {}: {}", lv, n);
 
-    opt_p.as_ref().and_then(|p| p.var(prop)).map_or_else(
-        || panic!("parent {lv}:{n} can't get prop:{prop}"),
-        |v| Some(Left(v)),
-    )
+    opt_p
+        // .as_ref()
+        .and_then(|p| p.upgrade().unwrap().var(prop))
+        .map_or_else(
+            || panic!("parent {lv}:{n} can't get prop:{prop}"),
+            |v| Some(Left(v)),
+        )
 }

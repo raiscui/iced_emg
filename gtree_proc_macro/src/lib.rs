@@ -1,6 +1,5 @@
 // #![feature(proc_macro_diagnostic)]
 extern crate proc_macro;
-// use proc_macro_error::*;
 // use proc_quote::quote;
 use syn::parse_macro_input;
 

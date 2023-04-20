@@ -11,7 +11,7 @@ split-debuginfo = "unpacked"
 
 [features]
 default = ["gpu"]
-gpu = ["emg_element/gpu", "emg_layout/gpu"]
+gpu = ["emg_element/gpu"]
 debug = ["emg_native/debug"]
 system = ["sysinfo"]
 
@@ -22,8 +22,9 @@ emg_common = { path = "../emg_common" }
 emg_native = { path = "../emg_native" }
 emg_futures = { path = "../emg_futures" }
 emg_graphics_backend = { path = "../emg_graphics_backend" }
-emg_layout = { path = "../emg_layout" }
+# emg_layout = { path = "../emg_layout" }
 emg_state = { path = "../emg_state" }
+emg_global = { path = "../emg_global" }
 #---
 emg_element = { path = "../emg_element" }
 
@@ -33,12 +34,13 @@ tracing = "0.1"
 thiserror = "1.0"
 #--------------
 #for orders
-indexmap = "1.9.2"
+indexmap = "1.9"
 #--------------
+winit = "0.28.3"
+owo-colors = "3.5.0"
+# illicit = "1.1.2"
 
-
-[dependencies.winit]
-version = "0.28.1"
+flume = "0.10.14"
 
 [dependencies.sysinfo]
 version = "0.23"

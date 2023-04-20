@@ -1,9 +1,9 @@
-use std::{clone::Clone, rc::Rc};
+use std::{alloc::Global, clone::Clone, rc::Rc};
 
 /*
  * @Author: Rais
  * @Date: 2021-02-19 16:16:22
- * @LastEditTime: 2023-02-03 17:23:01
+ * @LastEditTime: 2023-03-16 16:55:37
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@ use crate::{EqShaping, Shaping};
 
 use crate::{Shaper, ShaperFor, ShapingUseDyn};
 use dyn_partial_eq::DynPartialEq;
-use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
+use emg_state::{CloneState, CloneStateAnchor, StateAnchor, StateVar};
 use tracing::{debug, warn};
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -33,9 +33,8 @@ pub auto trait ShapingUseNoWarper {}
 
 // ────────────────────────────────────────────────────────────────────────────────
 
-// impl<Use> !ShapingUseNoWarper for Vec<Use> {}
-impl<Use> !ShapingUseNoWarper for Box<Use> {}
-impl<Use> !ShapingUseNoWarper for Vec<Box<Use>> {}
+impl<Use, A> !ShapingUseNoWarper for Box<Use, A> {}
+impl<Use, A> !ShapingUseNoWarper for Vec<Use, A> {}
 impl<Use> !ShapingUseNoWarper for Rc<Use> {}
 impl<Use> !ShapingUseNoWarper for StateVar<Use> {}
 impl<Use> !ShapingUseNoWarper for StateAnchor<Use> {}
@@ -44,21 +43,7 @@ impl<Use> !ShapingWhoNoWarper for StateAnchor<Use> {}
 impl<'a, Use> !ShapingUseNoWarper for ShaperFor<'a, Use> {}
 impl<Use> !ShapingUseNoWarper for Shaper<Use> {}
 // ────────────────────────────────────────────────────────────────────────────────
-// impl<Who> Shaping<Who> for Vector<Box<dyn Shaping<Who>>>
-// where
-//     Who: ShapingWhoNoWarper,
-// {
-//     default fn shaping(&self, who: &mut Who) {
-//         self.iter().for_each(|i| {
-//             let ii = i.as_ref();
-//             who.shape_of_use(ii);
-//         });
-//         // for i in self.iter() {
-//         //     let ii = i.as_ref();
-//         //     who.shape_of_use(ii);
-//         // }
-//     }
-// }
+
 impl<Who> Shaping<Who> for Vec<Box<dyn Shaping<Who>>>
 where
     Who: ShapingWhoNoWarper,
@@ -161,52 +146,41 @@ where
     }
 }
 // ────────────────────────────────────────────────────────────────────────────────
-// impl<Who, Use> EqShaping<Who> for StateVar<Use>
+//NOTE  禁用,因为某些情况 用户是希望 使用 StateVar watch 变更 到 who,在这里默认行为并不唯一
+// impl<Who, Use> Shaping<Who> for StateVar<Use>
 // where
 //     Who: ShapingWhoNoWarper,
-//     Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static + PartialEq,
+//     Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static,
 // {
-// }
+//     default fn shaping(&self, who: &mut Who) -> bool {
+//         warn!(
+//             "who:{:?} Refresh use StateVar:{:?}",
+//             &std::any::type_name::<Who>(),
+//             &std::any::type_name::<Use>()
+//         );
 
-impl<Who, Use> Shaping<Who> for StateVar<Use>
-where
-    Who: ShapingWhoNoWarper,
-    Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static,
-{
-    default fn shaping(&self, who: &mut Who) -> bool {
-        warn!(
-            "who:{:?} Refresh use StateVar:{:?}",
-            &std::any::type_name::<Who>(),
-            &std::any::type_name::<Use>()
-        );
-
-        who.shaping_use_dyn(&self.get())
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
-
-impl<Who, Use> Shaping<StateVar<Who>> for StateVar<Use>
-where
-    Who: ShapingWhoNoWarper + Clone + 'static + std::fmt::Debug,
-    Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static,
-{
-    fn shaping(&self, who: &mut StateVar<Who>) -> bool {
-        let mut w = who.get();
-        let is_changed = w.shaping_use_dyn(&self.get());
-
-        if is_changed {
-            who.set(w);
-        }
-        is_changed
-    }
-}
-// ────────────────────────────────────────────────────────────────────────────────
-
-// impl<Who> Shaping<Who> for RefresherForSelf<Who> {
-//     fn shaping(&self, who: &mut Who) {
-//         self.get()(who);
+//         who.shaping_use_dyn(&self.get())
 //     }
 // }
+// ────────────────────────────────────────────────────────────────────────────────
+//NOTE 不确定默认行为
+// impl<Who, Use> Shaping<StateVar<Who>> for StateVar<Use>
+// where
+//     Who: ShapingWhoNoWarper + Clone + 'static + std::fmt::Debug,
+//     Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static,
+// {
+//     fn shaping(&self, who: &mut StateVar<Who>) -> bool {
+//         let mut w = who.get();
+//         let is_changed = w.shaping_use_dyn(&self.get());
+
+//         if is_changed {
+//             who.set(w);
+//         }
+//         is_changed
+//     }
+// }
+// ────────────────────────────────────────────────────────────────────────────────
+
 impl<'a, Who> Shaping<Who> for ShaperFor<'a, Who>
 where
     Who: ShapingWhoNoWarper,
@@ -226,46 +200,41 @@ where
         who.shaping_use_dyn(&self.get())
     }
 }
-// impl<Who, Use> EqShaping<Who> for Shaper<Use>
-// where
-//     Who: ShapingWhoNoWarper,
-//     Use: ShapingUseNoWarper + Shaping<Who> + 'static,
-// {
-// }
 
 // ────────────────────────────────────────────────────────────────────────────────
-
-impl<Who, Use> Shaping<StateVar<Who>> for StateAnchor<Use>
-where
-    Who: ShapingWhoNoWarper + Clone + 'static + std::fmt::Debug,
-    Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static + std::fmt::Debug,
-{
-    fn shaping(&self, who: &mut StateVar<Who>) -> bool {
-        let mut w = who.get();
-        let is_changed = w.shaping_use_dyn(&self.get());
-        if is_changed {
-            who.set(w);
-        }
-        is_changed
-    }
-}
-impl<Who, Use> Shaping<StateVar<Who>> for Vec<Rc<StateAnchor<Use>>>
-where
-    Who: ShapingWhoNoWarper + Clone + 'static + std::fmt::Debug,
-    Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static + std::fmt::Debug,
-{
-    fn shaping(&self, who: &mut StateVar<Who>) -> bool {
-        let mut is_changed = false;
-        let mut w = who.get();
-        for sa in self {
-            is_changed |= w.shaping_use_dyn(&sa.get());
-        }
-        if is_changed {
-            who.set(w);
-        }
-        is_changed
-    }
-}
+//NOTE 不确定默认行为
+// impl<Who, Use> Shaping<StateVar<Who>> for StateAnchor<Use>
+// where
+//     Who: ShapingWhoNoWarper + Clone + 'static + std::fmt::Debug,
+//     Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static + std::fmt::Debug,
+// {
+//     fn shaping(&self, who: &mut StateVar<Who>) -> bool {
+//         let mut w = who.get();
+//         let is_changed = w.shaping_use_dyn(&self.get());
+//         if is_changed {
+//             who.set(w);
+//         }
+//         is_changed
+//     }
+// }
+//NOTE 不确定默认行为
+// impl<Who, Use> Shaping<StateVar<Who>> for Vec<Rc<StateAnchor<Use>>>
+// where
+//     Who: ShapingWhoNoWarper + Clone + 'static + std::fmt::Debug,
+//     Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static + std::fmt::Debug,
+// {
+//     fn shaping(&self, who: &mut StateVar<Who>) -> bool {
+//         let mut is_changed = false;
+//         let mut w = who.get();
+//         for sa in self {
+//             is_changed |= w.shaping_use_dyn(&sa.get());
+//         }
+//         if is_changed {
+//             who.set(w);
+//         }
+//         is_changed
+//     }
+// }
 impl<Who> Shaping<StateVar<Who>> for Vec<Box<(dyn Shaping<Who> + 'static)>>
 where
     Who: ShapingWhoNoWarper + Clone + 'static + std::fmt::Debug,
@@ -301,28 +270,23 @@ where
     }
 }
 
-impl<Who, Use> Shaping<StateVar<Who>> for Vec<Box<StateAnchor<Use>>>
-where
-    Who: ShapingWhoNoWarper + Clone + 'static + std::fmt::Debug,
-    Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static + std::fmt::Debug,
-{
-    fn shaping(&self, who: &mut StateVar<Who>) -> bool {
-        let mut is_changed = false;
-        let mut w = who.get();
-        for sa in self {
-            is_changed |= w.shaping_use_dyn(&sa.get());
-        }
-        if is_changed {
-            who.set(w);
-        }
-        is_changed
-    }
-}
-// impl<Who, Use> EqShaping<Who> for StateAnchor<Use>
+//NOTE 不确定默认行为
+// impl<Who, Use> Shaping<StateVar<Who>> for Vec<Box<StateAnchor<Use>>>
 // where
-//     Who: ShapingWhoNoWarper,
-//     Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static + std::cmp::PartialEq,
+//     Who: ShapingWhoNoWarper + Clone + 'static + std::fmt::Debug,
+//     Use: ShapingUseNoWarper + Shaping<Who> + Clone + 'static + std::fmt::Debug,
 // {
+//     fn shaping(&self, who: &mut StateVar<Who>) -> bool {
+//         let mut is_changed = false;
+//         let mut w = who.get();
+//         for sa in self {
+//             is_changed |= w.shaping_use_dyn(&sa.get());
+//         }
+//         if is_changed {
+//             who.set(w);
+//         }
+//         is_changed
+//     }
 // }
 
 impl<Who, Use> Shaping<Who> for StateAnchor<Use>
@@ -341,9 +305,3 @@ where
     Use: Shaping<Who> + DynPartialEq,
 {
 }
-// impl<Who, Use> EqShaping<Who> for Use
-// where
-//     Who: ShapingWhoNoWarper,
-//     Use: Shaping<Who> + 'static + PartialEq,
-// {
-// }

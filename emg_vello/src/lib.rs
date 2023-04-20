@@ -1,5 +1,6 @@
 mod backend;
 mod scene_ctx;
+mod scenes;
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub mod settings;

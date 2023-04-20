@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-02-14 18:05:33
+ * @LastEditTime: 2023-04-18 17:00:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,7 +10,8 @@
 use gtree::gtree;
 
 use crate::{
-    g_element::DynGElement, g_tree_builder::GTreeInit, GElement, GTreeBuilderElement, InitTree,
+    g_element::DynGElement, g_tree_builder::GTreeInit, GElement, GTreeBuilderElement, InitdTree,
+    IntoOptionMs,
 };
 
 use emg_common::{
@@ -28,13 +29,10 @@ use std::{panic::Location, rc::Rc};
 
 #[allow(missing_debug_implementations)]
 #[derive(Tid)]
-pub struct Checkbox<Message>
-// where
-//     dyn std::ops::Fn(bool) -> Message + 'static: std::cmp::PartialEq,
-{
+pub struct Checkbox<Message> {
     is_checked: StateVar<bool>,
     //FIXME use cow for Rc 防止 克隆对象和 原始对象使用同一个 callback
-    on_toggle: Option<Rc<dyn Fn(bool) -> Message>>,
+    on_toggle: Option<Rc<dyn Fn(bool) -> Option<Message>>>,
     label: IdStr,
     id: Option<IdStr>,
     width: LogicLength,
@@ -99,13 +97,17 @@ impl<Message> Checkbox<Message>
     ///     will receive the new state of the [`Checkbox`] and must produce a
     ///     `Message`.
     #[topo::nested]
-    pub fn new<F>(is_checked: bool, label: impl Into<IdStr>, f: F) -> Self
+    pub fn new<T>(
+        is_checked: bool,
+        label: impl Into<IdStr>,
+        f: impl Fn(bool) -> T + 'static,
+    ) -> Self
     where
-        F: 'static + Fn(bool) -> Message,
+        T: IntoOptionMs<Message>,
     {
         Self {
             is_checked: use_state(|| is_checked),
-            on_toggle: Some(Rc::new(f)),
+            on_toggle: Some(Rc::new(move |is_checked| f(is_checked).into_option())),
             label: label.into(),
             id: None,
             width: LogicLength::default(),
@@ -144,24 +146,33 @@ impl<Message> Checkbox<Message>
 impl<Message> GTreeInit<Message> for Checkbox<Message>
 where
     Message: Clone + PartialEq + for<'a> emg_common::any::MessageTid<'a>,
-    // Ix: std::clone::Clone + std::hash::Hash + std::cmp::Ord + std::default::Default,
 {
     #[topo::nested]
+    #[allow(clippy::useless_conversion)]
     fn tree_init(
         mut self,
-        id: &IdStr,
-        _es: &Vec<Rc<dyn Shaping<EmgEdgeItem<IdStr>>>>,
-        _children: &Vec<GTreeBuilderElement<Message>>,
-    ) -> InitTree<Message> {
+        id: &IdStr, //outSide generated id
+        _es: &[Rc<dyn Shaping<EmgEdgeItem>>],
+        _children: &[GTreeBuilderElement<Message>],
+    ) -> InitdTree<Message> {
         use crate::gtree_macro_prelude::*;
         let is_checked = self.is_checked;
         let on_toggle = self.on_toggle.take().unwrap();
-
         gtree! {
+            //TODO add str default id
             @SkipInit self =>[
                 @=id.clone() + "|CLICK" On:CLICK  move||{
-                    is_checked.set_with(|v| !*v);
-                    (on_toggle)(true);
+
+                    // is_checked.update_and_return(|v| {
+
+                    //   let new_v =   !*v;
+                    //   *v =new_v;
+                    //   (on_toggle)(new_v)
+                    // })
+                    let _span = debug_span!("checkbox", at = "click").entered();
+                    is_checked.set_with_once(|v| !*v);
+                      (on_toggle)(is_checked.get())
+
                 },
             ]
         }
@@ -170,16 +181,16 @@ where
 }
 
 #[cfg(all(feature = "gpu"))]
-use crate::renderer::*;
+use crate::platform::renderer::*;
 #[cfg(all(feature = "gpu"))]
 impl<Message> crate::Widget for Checkbox<Message>
 where
     Message: 'static,
 {
-    type SceneCtxType = crate::SceneFrag;
+    type SceneCtxType = crate::renderer::SceneFrag;
     fn paint_sa(
         &self,
-        painter: &StateAnchor<crate::PaintCtx>,
+        painter: &StateAnchor<crate::platform::PaintCtx>,
     ) -> StateAnchor<Rc<Self::SceneCtxType>> {
         let span = illicit::expect::<Span>();
 
@@ -250,7 +261,6 @@ where
 
             // ─────────────────────────────────────────────
 
-            builder.finish();
             Rc::new(sc)
         })
     }
@@ -344,7 +354,7 @@ where
                 let is_changed = who_checkbox.shaping_use_any(g_self);
 
                 if !is_changed {
-                    debug!("===================== 向上更新");
+                    debug!("===================== 被any下更新");
                     g_self.shaping_any(who_checkbox)
                 } else {
                     false
@@ -363,6 +373,9 @@ where
             Self::EvolutionaryFactor(_) => todo!(),
 
             GElement::Shaper_(_) => todo!(),
+            //@ accesskit ─────────────────────────────────────────────────────
+            #[cfg(feature = "video-player")]
+            GElement::Video_(_) => todo!(),
         }
     }
 }
@@ -432,35 +445,6 @@ where
 //     }
 // }
 
-//@ 向上更新, ---- 处于下游的 self 向上更新 who - 具体上层类型 ------------------------------------
-impl<Message> ShapingAny for Checkbox<Message>
-where
-    Message: 'static + Clone + for<'a> MessageTid<'a>,
-{
-    #[track_caller]
-    fn shaping_any(&self, any: &mut dyn TypeCheckObjectSafeTid) -> bool {
-        let _span = debug_span!(
-            "better_any_shaping",
-            at = "ShapingAny",
-            note = "向上更新",
-            "Checkbox shaping ====> any"
-        )
-        .entered();
-
-        if let Some(who) = any.downcast_mut::<Checkbox<Message>>() {
-            debug!("who 成功 downcast to Self: Checkbox<Message>");
-            return self.shaping(who);
-        }
-
-        warn!(
-            "any - type_name: {}, not match any role,\nLocation:{}",
-            any.type_name(),
-            Location::caller(),
-        );
-        false
-    }
-}
-
 //@ 被下更新  下游 Box<dyn DynGElement<Message>> 更新 self
 impl<Message> ShapingUseAny for Checkbox<Message>
 where
@@ -479,7 +463,7 @@ where
             debug!("成功 downcast to any Box<dyn DynGElement<Message>>");
 
             // self.shaping_use(x);
-            if let Some(x2) = (&**x).downcast_ref::<Self>() {
+            if let Some(x2) = (**x).downcast_ref::<Self>() {
                 debug!("1 ** 成功 downcast to Self");
                 return self.shaping_use(x2);
             }
@@ -555,6 +539,35 @@ where
         //     debug!("成功 downcast to any box Self");
         //     self.shaping_use(x);
         // }
+    }
+}
+
+//@ 向上更新, ---- 处于下游的 self 向上更新 who - 具体上层类型 ------------------------------------
+impl<Message> ShapingAny for Checkbox<Message>
+where
+    Message: 'static + Clone + for<'a> MessageTid<'a>,
+{
+    #[track_caller]
+    fn shaping_any(&self, any: &mut dyn TypeCheckObjectSafeTid) -> bool {
+        let _span = debug_span!(
+            "better_any_shaping",
+            at = "ShapingAny",
+            note = "向上更新",
+            "Checkbox shaping ====> any"
+        )
+        .entered();
+
+        if let Some(who) = any.downcast_mut::<Checkbox<Message>>() {
+            debug!("who 成功 downcast to Self: Checkbox<Message>");
+            return self.shaping(who);
+        }
+
+        warn!(
+            "any - type_name: {}, not match any role,\nLocation:{}",
+            any.type_name(),
+            Location::caller(),
+        );
+        false
     }
 }
 
@@ -652,6 +665,7 @@ mod tests {
             @="default_id" checkbox=>[]
         };
         println!("{:#?}", gtree);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("test_gtree_macro", gtree);
     }
 }

@@ -8,15 +8,17 @@ resolver = "2"
 
 [profile.dev]
 split-debuginfo = "unpacked"
+opt-level = 1
 
-[profile.dev.package.backtrace]
-opt-level = 3
-
+# [profile.dev.package.backtrace]
+# opt-level = 3
 
 [features]
-default = ["gpu", "debug"]
+default = ["gpu"]
 gpu = ["emg_bind/gpu"]
 debug = ["emg_bind/debug"]
+dhat-heap = []             # if you are doing heap profiling
+dhat-ad-hoc = []           # if you are doing ad hoc profiling
 
 
 [dependencies.emg_bind]
@@ -32,3 +34,8 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 tracing-tree = { path = "../../../tracing-tree" }
 color-eyre = "0.6.2"
 insta = "1"
+# https://docs.rs/dhat/latest/dhat/
+dhat = "0.3.2"
+
+[profile.release]
+debug = 1

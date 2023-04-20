@@ -20,14 +20,13 @@ use std::collections::VecDeque;
 // ────────────────────────────────────────────────────────────────────────────────
 // use emg_debuggable::dbg4;
 pub use emg_common;
-use emg_common::{animation::Tick, im::vector, SmallVec};
+use emg_common::{animation::Tick, im::vector, NotNan, SmallVec};
 use emg_common::{
     num_traits::{cast, AsPrimitive, NumCast},
     Precision,
 };
 use models::update_animation;
 use models::{map_to_motion, Animation, Interpolation, Property, Step};
-use ordered_float::NotNan;
 use props::warn_for_double_listed_properties;
 use seed_styles::Unit;
 use std::{f64::consts::PI, fmt, rc::Rc, time::Duration};
@@ -352,7 +351,7 @@ mod tests {
     #[test]
     fn it_works() {
         let styles: AmState<Message> = style(smallvec![fill(Color::new(0, 0, 0, 1.))]);
-        println!("{:#?}", styles);
+        println!("{styles:#?}");
     }
     #[test]
     fn test_extract_initial_wait() {
@@ -361,7 +360,7 @@ mod tests {
             Step::_Step,
             Step::Send(Message::A),
         ];
-        println!("{:#?}", xx);
+        println!("{xx:#?}");
         let ff = extract_initial_wait(VecDeque::from([
             Step::Wait(Duration::from_millis(16)),
             Step::_Step,
@@ -372,26 +371,31 @@ mod tests {
             Duration::from_millis(16),
             vec![Step::_Step, Step::Send(Message::A)],
         );
-        assert_eq!(format!("{:?}", v), format!("{:?}", ff))
+        assert_eq!(format!("{v:?}"), format!("{ff:?}"));
     }
     #[test]
     fn test_update_animation() {
         let mut am_state: AmState<Message> = style(smallvec![opacity(1.)]);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("init", &am_state);
 
         interrupt([to![opacity(0.)], to![opacity(1.)]], &mut am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("interrupt", &am_state);
 
         let mut now = Duration::from_millis(10000);
         update_animation(Tick(now), &mut am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("am1-first", &am_state);
 
         now += Duration::from_millis(16);
         update_animation(Tick(now), &mut am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("am2", &am_state);
 
         now += Duration::from_millis(17);
         update_animation(Tick(now), &mut am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("am3", &am_state);
 
         for _ in 0..180 {
@@ -399,6 +403,7 @@ mod tests {
             update_animation(Tick(now), &mut am_state);
         }
         println!("{:#?}", &am_state);
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("am_last", &am_state);
     }
 }

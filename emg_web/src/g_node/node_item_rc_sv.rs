@@ -27,7 +27,7 @@ const POOL_SIZE: usize = 1;
 
 pub type GelType<Message> = Rc<GElement<Message>>;
 
-pub type NItem<Message> = StateVar<StateAnchor<GelType<Message>>>;
+pub type NItem<Message> = StateVOA<<GelType<Message>>;
 pub type N<Message, Ix> = EmgNodeItem<NItem<Message>, GelType<Message>, Ix>;
 pub type E<Ix> = EmgEdgeItem<Ix>;
 pub type GraphType<Message, Ix = IdStr> = Graph<N<Message, Ix>, E<Ix>, Ix>;

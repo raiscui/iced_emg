@@ -11,6 +11,7 @@ default = ["gpu"]
 gpu = ["emg_native"]
 pool = []
 debug = []
+insta = []
 
 
 [profile.dev]
@@ -29,12 +30,13 @@ emg = { path = "../emg" }
 emg_animation = { path = "../emg_animation" }
 emg_common = { path = "../emg_common" }
 emg_hasher = { path = "../emg_hasher" }
+emg_global = { path = "../emg_global" }
 #----------------
 emg_native = { path = "../emg_native", optional = true }
 
 #----------------
 float-cmp = { version = "0.9.0", features = ["std"] }
-either = "1.8.0"
+either = "1.8.1"
 parse-display = "0.8.0"
 slotmap = "1.0.6"
 derive_more = "0.99"
@@ -50,6 +52,9 @@ illicit = "1.1.2"
 cassowary = { path = "../../cassowary-rs" }
 # tinyvec = { version = "1.5.1", features = ["alloc"] }
 nom = "7.1.3"
+static_init = "1.0.3"
+
+
 [dev-dependencies]
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 tracing-flame = "0.2.0"

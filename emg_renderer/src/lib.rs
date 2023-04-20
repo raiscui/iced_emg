@@ -1,23 +1,5 @@
-// ────────────────────────────────────────────────────────────────────────────────
-// pub use piet::kurbo::Affine;
-// pub use piet::kurbo::Point;
-// pub use piet::kurbo::Rect;
-// pub use piet::kurbo::Size;
-// pub use piet::kurbo::Vec2;
-
-// pub use piet::{Color, Error, RenderContext};
-
-// #[cfg(test)]
-// mod tests {
-
-//     #[test]
-//     fn it_works() {}
-// }
-
-pub use peniko::{
-    kurbo::{Affine, PathEl, Point, Rect, Shape, Size, Vec2},
-    BlendMode, Brush, BrushRef, Color, Fill, Stroke,
-};
+pub use peniko::kurbo::*;
+pub use peniko::*;
 
 pub trait SceneCtx {
     type Ctx<'a>: SceneBuilder
@@ -61,9 +43,9 @@ pub trait SceneBuilder {
         shape: &impl Shape,
     );
 
+    fn draw_image(&mut self, image: &Image, transform: Affine);
+    fn draw_glyphs(&mut self, font: &Font) -> vello::DrawGlyphs;
+
     /// Appends a fragment to the scene.
     fn append(&mut self, fragment: &Self::SceneCtx, transform: Option<Affine>);
-
-    /// Completes construction and finalizes the underlying scene.
-    fn finish(self);
 }

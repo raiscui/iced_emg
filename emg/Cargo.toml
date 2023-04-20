@@ -15,12 +15,10 @@ bench = false
 
 [features]
 default = []
-pool = ["im-rc/pool"]
+# pool = ["imbl/pool"]
+insta = []
 
 [dependencies]
-im-rc = { version = "15.1.0" }
-# imbl = { path = "../imbl" }
-# smallvec = { version = "1.8.0", features = ["const_generics"] }
 indexmap = "1.9"
 
 
@@ -37,6 +35,7 @@ nom = "7.1.3"
 
 indented = "0.1.0"
 thiserror = "1.0"
+anyhow = "1.0.70"
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }

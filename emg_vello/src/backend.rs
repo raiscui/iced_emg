@@ -1,11 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 15:29:14
- * @LastEditTime: 2023-02-01 15:21:27
+ * @LastEditTime: 2023-03-16 12:42:58
  * @LastEditors: Rais
  * @Description:
  */
-use vello::{util::RenderSurface as VelloRenderSurface, Renderer as VelloRenderer};
+use vello::{
+    util::RenderSurface as VelloRenderSurface, RenderParams, Renderer as VelloRenderer,
+    RendererOptions,
+};
 use vello::{
     util::{block_on_wgpu, DeviceHandle},
     Scene,
@@ -23,8 +26,11 @@ pub struct Backend {
 
 impl Backend {
     /// Creates a new [`Backend`].
-    pub fn new(device_handle: &DeviceHandle) -> Result<Self, Error> {
-        let renderer = VelloRenderer::new(&device_handle.device)
+    pub fn new(
+        device_handle: &DeviceHandle,
+        render_options: &RendererOptions,
+    ) -> Result<Self, Error> {
+        let renderer = VelloRenderer::new(&device_handle.device, render_options)
             .map_err(|e| Error::BackendError(e.to_string()))?;
 
         Ok(Self { renderer })
@@ -36,6 +42,7 @@ impl Backend {
         device_handle: &DeviceHandle,
         scene: &Scene,
         surface: &VelloRenderSurface,
+        render_params: &RenderParams,
     ) {
         let surface_texture = surface
             .surface
@@ -62,11 +69,20 @@ impl Backend {
                     &device_handle.queue,
                     scene,
                     &surface_texture,
-                    surface.config.width,
-                    surface.config.height,
+                    render_params,
                 ),
             )
             .expect("failed to render to surface");
+
+            // self.renderer
+            //     .render_to_surface(
+            //         &device_handle.device,
+            //         &device_handle.queue,
+            //         scene,
+            //         &surface_texture,
+            //         render_params,
+            //     )
+            //     .expect("failed to render to surface");
         }
         // Note: in the wasm case, we're currently not running the robust
         // pipeline, as it requires more async wiring for the readback.

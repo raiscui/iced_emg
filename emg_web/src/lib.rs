@@ -1,7 +1,8 @@
+#![cfg(target_arch = "wasm32")]
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:05:39
- * @LastEditTime: 2022-09-06 16:26:57
+ * @LastEditTime: 2023-02-20 17:31:16
  * @LastEditors: Rais
  * @Description:
  */

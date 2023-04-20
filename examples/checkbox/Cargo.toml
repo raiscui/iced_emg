@@ -9,14 +9,15 @@ resolver = "2"
 [profile.dev]
 split-debuginfo = "unpacked"
 
-[profile.dev.package.backtrace]
-opt-level = 3
+# [profile.dev.package.backtrace]
+# opt-level = 3
 
 
 [features]
-default = ["gpu", "debug"]
+default = ["gpu"]
 gpu = ["emg_bind/gpu"]
 debug = ["emg_bind/debug"]
+insta = []
 
 
 [dependencies.emg_bind]

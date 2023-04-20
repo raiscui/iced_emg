@@ -1,9 +1,10 @@
 use crate::Orders;
 use emg_common::animation::Tick;
+use emg_global::{global_anima_running_sa, global_elapsed, global_height, global_width};
 // use fxhash::FxBuildHasher;
 use emg_hasher::CustomHasher;
-use emg_layout::{global_anima_running_sa, global_clock, global_height, global_width};
-use emg_state::{CloneStateAnchor, CloneStateVar, StateAnchor, StateVar};
+
+use emg_state::{CloneState, CloneStateAnchor, StateAnchor, StateVar};
 
 use crate::Bus;
 use indexmap::IndexMap;
@@ -143,6 +144,14 @@ pub struct OrdersContainer<Message>
     // app: App<Ms, Mdl, INodes>
 }
 
+impl<Message> std::fmt::Debug for OrdersContainer<Message> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OrdersContainer")
+            // .field("should_render", &self.should_render).field("data", &self.data).field("bus", &self.bus).field("re_render_msg", &self.re_render_msg)
+            .finish()
+    }
+}
+
 impl<Message> Clone for OrdersContainer<Message> {
     fn clone(&self) -> Self {
         Self {
@@ -176,7 +185,7 @@ impl<Message> OrdersContainer<Message>
                     1,
                     BuildHasherDefault::<CustomHasher>::default(),
                 )),
-                now: global_clock(),
+                now: global_elapsed(),
                 am_running: global_anima_running_sa(),
                 width: global_width(),
                 height: global_height(), //
@@ -185,6 +194,9 @@ impl<Message> OrdersContainer<Message>
             bus,
             re_render_msg: Rc::new(RefCell::new(None)),
         }
+    }
+    pub fn bus(&self) -> Bus<Message> {
+        self.bus.clone()
     }
 
     fn has_anima_running(&self) -> bool {
@@ -244,6 +256,7 @@ where
         // None
     }
 
+    #[inline]
     fn publish(&self, msg: Message) {
         self.bus.publish(msg);
     }

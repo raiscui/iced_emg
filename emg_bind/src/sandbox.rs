@@ -1,5 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
+use emg::EdgeIndex;
 use emg_element::{
     graph_edit::{GraphEdit, GraphEditManyMethod, GraphEditor},
     GraphMethods,
@@ -11,8 +12,7 @@ use crate::{application::Instance, element, Application, Command, Settings};
 pub trait Sandbox: std::default::Default {
     /// The type of __messages__ your [`Sandbox`] will produce.
     type Message: std::fmt::Debug + Send + 'static;
-    type GraphType = element::GraphType<Self::Message>;
-    // type GraphType: GraphMethods<Self::Message> + Default;
+    type GraphType = Rc<RefCell<element::GraphType<Self::Message>>>;
     type Orders = crate::runtime::OrdersContainer<Self::Message>;
     type GraphEditor: GraphEdit + GraphEditManyMethod = GraphEditor<Self::Message>;
 
@@ -21,6 +21,7 @@ pub trait Sandbox: std::default::Default {
     /// Initializes the [`Sandbox`].
     ///
     /// Here is where you should return the initial state of your app.
+    #[must_use]
     fn new() -> Self {
         Self::default()
     }
@@ -43,7 +44,7 @@ pub trait Sandbox: std::default::Default {
     ///
     /// These widgets can produce __messages__ based on user interaction.
     // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message>;
-    fn root_id(&self) -> &str;
+    fn root_eix(&self) -> EdgeIndex;
 
     // fn ctx(
     //     &self,
@@ -101,8 +102,7 @@ pub trait Sandbox: std::default::Default {
     /// Error: [`crate::Error`]
     fn run(settings: Settings<()>) -> crate::Result
     where
-        Self: 'static,
-        Self: Application<Flags = ()>,
+        Self: Application<Flags = ()> + 'static,
         Instance<Self>: crate::runtime::Application<
             Flags = (),
             Message = <Self as Application>::Message,
@@ -120,7 +120,7 @@ impl<SB> Application for SB
 where
     SB: Sandbox,
     <SB as Sandbox>::Message: 'static,
-    <SB as Sandbox>::GraphType: GraphMethods<<SB as Sandbox>::Message> + Default,
+    <SB as Sandbox>::GraphType: GraphMethods<<SB as Sandbox>::Message> + Default + Clone,
     <SB as Sandbox>::Orders: Orders<<SB as Sandbox>::Message>,
     <SB as Sandbox>::GraphEditor: GraphEdit + GraphEditManyMethod, // <SB as Sandbox>::RcRefCellGraphType: GraphEdit + GraphEditManyMethod,
 {
@@ -157,8 +157,8 @@ where
     // fn view(&self, g: &element::GraphType<Self::Message>) -> element::GelType<Self::Message> {
     //     T::view(self, g)
     // }
-    fn root_id(&self) -> &str {
-        SB::root_id(self)
+    fn root_eix(&self) -> EdgeIndex {
+        SB::root_eix(self)
     }
 
     // fn ctx(

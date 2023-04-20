@@ -1,32 +1,54 @@
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::Cell,
+    rc::{Rc, Weak},
+};
 
+use either::Either::{self, Left, Right};
 use emg_animation::{models::Property, Debuggable};
-use emg_state::{state_store, topo, use_state, CloneStateVar, StateVar};
+use emg_common::GenericSize;
+use emg_state::{
+    anchors::expert::CastIntoValOrAnchor, general_traits::BiState, topo, use_state, use_state_voa,
+    CloneState, StateVOA, StateVar,
+};
 // use emg_state::{state_store, topo, use_state, CloneStateVar, StateVar, StorageKey};
 use tracing::{debug, debug_span, trace};
 
-use crate::GenericSizeAnchor;
-
-/// 第一个 StateVarProperty Drop 将会 Drop 内部StateVar,以及相关依赖 before_fn after_fn,
-/// clone的其他 StateVarProperty drop将没有任何额外操作
+#[derive(Debug, PartialEq, Eq)]
+struct StateVarPropertyDropMark;
+/// 第一个 [`StateVarProperty`] Drop 将会 Drop 内部StateVar,以及相关依赖 `before_fn` `after_fn`,
+/// clone的其他 [`StateVarProperty`] drop将没有任何额外操作
 /// *建议 第一个用来 储存 和使用 ,clone的仅用来 使用
 // TODO change to enum :DropEffect/ DropNoneEffect
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct StateVarProperty {
     prop_sv: StateVar<Property>,
-    // ref_count: Rc<Cell<usize>>,
+
+    drop_mark: Either<Rc<StateVarPropertyDropMark>, Weak<StateVarPropertyDropMark>>,
     trace_id: usize,
+}
+
+impl Eq for StateVarProperty {}
+
+impl PartialEq for StateVarProperty {
+    fn eq(&self, other: &Self) -> bool {
+        self.prop_sv == other.prop_sv
+    }
 }
 
 impl Clone for StateVarProperty {
     fn clone(&self) -> Self {
         let _span = debug_span!("StateVarProperty clone").entered();
 
-        // self.ref_count.set(self.ref_count.get() + 1);
+        // self.ref_count.update(|x| x + 1);
+        let drop_mark = match &self.drop_mark {
+            Either::Left(l) => Rc::downgrade(l),
+            Right(r) => r.clone(),
+        };
 
         Self {
             prop_sv: self.prop_sv,
-            // ref_count: self.ref_count.clone(),
+
+            drop_mark: Right(drop_mark),
             trace_id: self.trace_id + 1,
         }
     }
@@ -36,7 +58,7 @@ impl StateVarProperty {
     fn new(prop_sv: StateVar<Property>) -> Self {
         Self {
             prop_sv,
-            // ref_count: Rc::new(Cell::new(1)),
+            drop_mark: Left(Rc::new(StateVarPropertyDropMark)),
             trace_id: 1,
         }
     }
@@ -44,6 +66,10 @@ impl StateVarProperty {
 
 impl Drop for StateVarProperty {
     fn drop(&mut self) {
+        // let mut ref_count = self.ref_count.get();
+        // let _span =
+        //     debug_span!("StateVarProperty drop",ref_count=%ref_count,trace_id=%self.trace_id)
+        //         .entered();
         let _span = debug_span!("StateVarProperty drop",trace_id=%self.trace_id).entered();
 
         // let new_count = self.ref_count.get() - 1;
@@ -57,12 +83,33 @@ impl Drop for StateVarProperty {
         //     self.ref_count.set(new_count);
         // }
 
+        //TODO if weak StateVarProperty , when get set , check can upgrade some (master is drop or not) like this.
+        // match &self.ref_count {
+        //     Left(l) => {
+        //         debug!("will use sv var manually_drop");
+        //         self.prop_sv.manually_drop();
+        //     }
+        //     Right(_) => (),
+
+        // }
+
         if self.trace_id == 1 {
             debug!("will use sv var manually_drop");
             self.prop_sv.manually_drop();
-        } else {
-            debug!("skip drop trace_id:{}", self.trace_id);
         }
+
+        // if ref_count == 1 {
+        //     debug!("will use sv var manually_drop");
+        //     self.prop_sv.manually_drop();
+        // } else {
+        //     debug!(
+        //         "skip drop ref_count:{} trace_id:{}",
+        //         ref_count, self.trace_id
+        //     );
+        //     ref_count -= 1;
+
+        //     self.ref_count.set(ref_count);
+        // }
     }
 }
 
@@ -86,13 +133,14 @@ impl<T> NotStateVar for Debuggable<T> {}
 
 impl<T> From<StateVar<T>> for StateVarProperty
 where
-    T: Clone + 'static + From<Property> + std::fmt::Debug,
+    T: Clone + 'static + From<Property> + std::fmt::Debug + std::cmp::PartialEq,
     Property: From<T>,
 {
     #[topo::nested]
     fn from(sv: StateVar<T>) -> Self {
         trace!("StateVar to StateVarProperty");
         let _span = debug_span!("sv to svp").entered();
+        //TODO  可以使用 stateVOA的 bi
         let bi_self = sv.build_bi_similar_use_into_in_topo::<Property>();
         debug!("bi_self.id: {:?}", bi_self.id());
         Self::new(bi_self)
@@ -111,33 +159,30 @@ where
     }
 }
 
-impl From<StateVarProperty> for StateVar<GenericSizeAnchor> {
-    #[topo::nested]
-    fn from(sv: StateVarProperty) -> Self {
-        trace!("StateVarProperty to StateVar<GenericSizeAnchor>");
+//TODO re enable this
+// impl From<StateVarProperty> for StateVOA<GenericSize> {
+//     #[topo::nested]
+//     fn from(sv: StateVarProperty) -> Self {
+//         trace!("StateVarProperty to StateVar<GenericSizeAnchor>");
 
-        use_state(||
-            //
-            //TODO impl new_from
-            GenericSizeAnchor(sv.watch().map(|p| p.clone().into())))
-    }
-}
-impl std::ops::ShlAssign<&StateVarProperty> for StateVar<GenericSizeAnchor> {
-    fn shl_assign(&mut self, rhs: &StateVarProperty) {
-        self.set(GenericSizeAnchor(
-            // rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
-            //TODO impl new_from
-            rhs.watch().map(|p| p.clone().into()),
-        ));
-    }
-}
-impl std::ops::ShlAssign<StateVarProperty> for StateVar<GenericSizeAnchor> {
-    fn shl_assign(&mut self, rhs: StateVarProperty) {
-        self.set(GenericSizeAnchor(
-            //TODO impl new_from
-            //TODO check performance
-            // rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
-            rhs.watch().map(|p| p.clone().into()),
-        ));
-    }
-}
+//         use_state_voa(||
+//             sv.watch().map(|v| v.clone().into()))
+//     }
+// }
+
+// impl std::ops::ShlAssign<&StateVarProperty> for StateVOA<GenericSize> {
+//     fn shl_assign(&mut self, rhs: &StateVarProperty) {
+//         self.set(rhs.watch().cast_into());
+//     }
+// }
+
+// impl std::ops::ShlAssign<StateVarProperty> for StateVar<GenericSizeAnchor> {
+//     fn shl_assign(&mut self, rhs: StateVarProperty) {
+//         self.set(GenericSizeAnchor(
+//             //TODO impl new_from
+//             //TODO check performance
+//             // rhs.get_var_with(|v| v.watch().map(|p| p.clone().into()).into()),
+//             rhs.watch().map(|p| p.clone().into()),
+//         ));
+//     }
+// }

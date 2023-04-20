@@ -33,6 +33,8 @@ pub mod settings;
 pub use emg_element::graph_edit;
 
 // ────────────────────────────────────────────────────────────────────────────────
+#[cfg(all(feature = "gpu", feature = "wasm32"))]
+compile_error!("current no support");
 
 #[cfg(all(feature = "gpu"))]
 // pub use emg_piet_gpu as renderer;
@@ -72,7 +74,9 @@ pub use sandbox::Sandbox;
 pub use settings::Settings;
 
 // ─────────────────────────────────────────────────────────────────────────────
-
+pub mod trait_prelude {
+    pub use crate::Orders;
+}
 pub mod gtree_macro_prelude {
     pub use crate::{common::mouse::CLICK, element::gtree_macro_prelude::*};
 }
@@ -91,7 +95,6 @@ mod test1 {
     }
 
     #[test]
-
     fn aa() {
         let n = "xx";
         aaaa(n);
@@ -100,7 +103,6 @@ mod test1 {
     fn xx() {
         let f = mouse::CLICK;
         println!("{f:?}");
-        return;
     }
 }
 
@@ -127,8 +129,8 @@ mod tests {
     use emg_msg_macro::emg_msg;
 
     use crate::element::GTreeBuilderElement;
-    use crate::emg_msg_macro_prelude::*;
-    use crate::gtree_macro_prelude::*;
+    use crate::emg_msg_macro_prelude::{any, better_any};
+    use crate::gtree_macro_prelude::{gtree, Checkbox, GtreeInitCall, IdStr, Layer, Tid};
 
     #[emg_msg]
     enum M {
@@ -153,8 +155,10 @@ mod tests {
     #[test]
     fn tree_build_tests() {
         let a = tree_build();
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("tree-a", a);
         let b = tree_build2();
+        #[cfg(feature = "insta")]
         insta::assert_debug_snapshot!("tree-b", b);
     }
 }
@@ -170,7 +174,7 @@ mod tests {
         layout::{add_values::*, css, styles::*, EmgEdgeItem},
         runtime::{node_ref, EventCallback, EventMessage, GElement, GTreeBuilderElement},
         shaping::{EqShaping, Shaper, Shaping, ShapingUse},
-        state::{use_state, CloneStateAnchor, CloneStateVar, StateMultiAnchor},
+        state::{use_state, CloneState, CloneStateAnchor, StateMultiAnchor},
     };
 
     #[allow(unused)]

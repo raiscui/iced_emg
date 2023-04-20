@@ -1,38 +1,51 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-02-01 15:28:33
+ * @LastEditTime: 2023-04-20 12:02:45
  * @LastEditors: Rais
  * @Description:
  */
 //! Create interactive, native cross-platform applications.
 mod state;
 
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    hash::BuildHasherDefault,
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
-use emg_common::Vector;
-use emg_orders::Orders;
+use emg_common::{
+    im::{hashmap::HashMapPool, vector::RRBPool, HashMap},
+    Vector,
+};
+use emg_global::global_anima_running;
+use emg_hasher::CustomHasher;
+
 pub use state::State;
 use winit::event_loop::EventLoopBuilder;
 
-use crate::conversion;
+use crate::conversion::{self, ev::EventState};
 use crate::mouse;
 use crate::{
     clipboard::{self, Clipboard},
     orders::OrdersContainer,
 };
 use crate::{Command, Debug, Executor, FutureRuntime, Mode, Proxy, Settings};
-use emg_element::{GTreeBuilderFn, GraphMethods, GraphProgram, GraphType};
+use emg_element::{GTreeBuilderFn, GraphProgram};
 use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
 use emg_graphics_backend::window::{
     compositor::{self, CompositorSetting},
     Compositor,
 };
-use emg_native::{event::EventWithFlagType, renderer::Renderer, Bus, Program};
+use emg_native::{
+    event::{EventIdentify, EventWithFlagType},
+    renderer::Renderer,
+    Bus, Program, EVENT_DEBOUNCE,
+};
+use emg_state::state_lit::StateVarLit;
 use emg_state::CloneStateAnchor;
-use emg_state::{state_lit::StateVarLit, topo};
-use tracing::{debug_span, info, info_span, instrument};
+use tracing::{debug, debug_span, info, info_span, instrument, warn};
 
 // use emg_native::user_interface::{self, UserInterface};
 // ────────────────────────────────────────────────────────────────────────────────
@@ -222,14 +235,16 @@ where
 
     // future_runtime.track(subscription);
 
-    let (mut sender, receiver) = mpsc::unbounded();
+    let (sender, receiver) = flume::unbounded();
 
     // let emg_graph = A::GraphType::default();
     // let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
     // emg_graph_rc_refcell.handle_root_in_topo(&root);
 
     let orders2 = orders.clone();
+    let orders3 = orders.clone();
     let emg_graph_rc_refcell = application.graph_setup(&renderer, orders2);
+    // let emg_graph_rc_refcell = application.graph_setup(&renderer, orders2);
 
     let mut instance = Box::pin(run_instance::<A, E, C>(
         application,
@@ -247,6 +262,9 @@ where
     ));
 
     let mut context = task::Context::from_waker(task::noop_waker_ref());
+    let mut is_rendered = false;
+    let mut rendered_skiped = true;
+    let mut is_redraw_events_cleared = false;
 
     platform::run(event_loop, move |event, _, control_flow| {
         use winit::event_loop::ControlFlow;
@@ -268,19 +286,46 @@ where
         };
 
         if let Some(event) = opt_event {
-            sender.start_send(event).expect("Send event error");
+            // sender.start_send(event).expect("Send event error");
+            // println!("{event:?}");
+            // is_rendered = &winit::event::Event::RedrawEventsCleared == &event;
+
+            match event {
+                winit::event::Event::NewEvents(_) => {
+                    is_rendered = false;
+                    is_redraw_events_cleared = false;
+                }
+                winit::event::Event::RedrawRequested(_) => {
+                    is_rendered = true;
+                }
+                winit::event::Event::RedrawEventsCleared => {
+                    rendered_skiped = !is_rendered;
+                    is_redraw_events_cleared = true;
+                }
+                _ => {}
+            }
+
+            sender.send(event).expect("Send event error");
 
             let poll = instance.as_mut().poll(&mut context);
 
             *control_flow = match poll {
-                task::Poll::Pending => ControlFlow::Wait,
+                task::Poll::Pending => {
+                    if is_redraw_events_cleared && rendered_skiped && global_anima_running() {
+                        ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16))
+                    } else {
+                        ControlFlow::Wait
+                    }
+
+                    // ControlFlow::Wait
+                }
                 task::Poll::Ready(_) => ControlFlow::Exit,
             };
         }
     })
 }
 
-#[instrument(skip_all)]
+// #[instrument(skip_all)]
 async fn run_instance<A, E, C>(
     mut application: A,
     mut compositor: C,
@@ -288,7 +333,8 @@ async fn run_instance<A, E, C>(
     mut future_runtime: FutureRuntime<E, Proxy<A::Message>, A::Message>,
     mut proxy: winit::event_loop::EventLoopProxy<A::Message>,
     mut debug: Debug,
-    mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
+    // mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
+    receiver: flume::Receiver<winit::event::Event<'static, A::Message>>,
     init_command: Command<A::Message>,
     window: winit::window::Window,
     exit_on_close_request: bool,
@@ -312,6 +358,7 @@ async fn run_instance<A, E, C>(
     let mut surface = compositor.create_surface(&window);
     let mut state = State::new(&application, &window);
     let mut viewport_version = state.viewport_version();
+    let mut event_state = EventState::default();
 
     // let physical_size = state.physical_size();
 
@@ -330,20 +377,97 @@ async fn run_instance<A, E, C>(
         .map(|sf| crate::PaintCtx::new(*sf));
 
     //view
-
     // let native_events: StateVar<Vector<EventWithFlagType>> = use_state(||Vector::new());
-    let native_events: StateVarLit<Vector<EventWithFlagType>> = StateVarLit::new(Vector::new());
+    let event_vec_pool = RRBPool::new(8);
+    let event_hm_pool = HashMapPool::new(8);
+
+    let native_events: StateVarLit<Vector<EventWithFlagType>> =
+        StateVarLit::new(Vector::with_pool(&event_vec_pool));
+    //
+    let mut latest_event_state: HashMap<
+        EventIdentify,
+        emg_native::Event,
+        BuildHasherDefault<CustomHasher>,
+    > = HashMap::with_pool_hasher(
+        &event_hm_pool,
+        BuildHasherDefault::<CustomHasher>::default(),
+    );
+
+    //
+    let event_debouncer =
+        native_events
+            .watch()
+            .map_mut(Vector::with_pool(&event_vec_pool), move |out, ev_list| {
+                let mut changed = false;
+                if !out.is_empty() {
+                    out.clear();
+                    changed = true;
+                }
+                let iter = ev_list.iter();
+                for (evf, ev) in iter {
+                    if  EVENT_DEBOUNCE.involve(evf) {
+
+                        latest_event_state
+                        .entry(*evf)
+                        .and_modify(|latest_ev| {
+                        debug!(target:"winit_event","has old state,\nevf:{:?}\nold:\n{:?}\nnew:\n{:?}",evf,latest_ev,ev);
+
+                            if latest_ev != ev {
+                                *latest_ev = ev.clone();
+                                out.push_back((*evf, ev.clone()));
+                                changed = true;
+                            }
+                            else{
+                                debug!(target:"winit_event","same,ignored");
+                            }
+                        })
+                        .or_insert_with(|| {
+                            out.push_back((*evf, ev.clone()));
+                            changed = true;
+                            ev.clone()
+                        });
+
+                    }else{
+                        debug!(target:"winit_event",?evf,?ev);
+
+                        out.push_back((*evf, ev.clone()));
+                            changed = true;
+                    }
+
+
+                    // let latest_ev = latest_event_state.get_mut(evf);
+                    // if latest_ev.is_none() {
+                    //     latest_event_state.insert(*evf, ev.clone());
+                    //     out.push_back((*evf, ev.clone()));
+                    //     changed = true;
+                    // } else {
+                    //     let latest_ev = latest_ev.unwrap();
+                    //     if latest_ev != ev {
+                    //         latest_event_state.insert(*evf, ev.clone());
+                    //         out.push_back((*evf, ev.clone()));
+                    //         changed = true;
+                    //     }
+                    // }
+                }
+                debug!(target:"winit_event",?changed);
+
+                changed
+            });
+
+    // let native_events_is_empty = native_events.watch().map(|v| v.is_empty());
+    let native_events_is_empty = event_debouncer.map(|v| v.is_empty());
+
     let (event_matchs_sa, ctx_sa) = application.build_ctx(
-        &g.graph(),
-        &painter,
-        &native_events.watch(),
+        g.graph(),
+        painter,
+        // &native_events.watch(),
+        event_debouncer,
         state.cursor_position(),
     );
     let mut ctx = ctx_sa.get();
     // let mut element = application.view(&g.graph());
 
     let mouse_interaction = mouse::Interaction::default();
-    let native_events_is_empty = native_events.watch().map(|v| v.is_empty());
     let mut messages = Vec::new();
 
     debug.startup_finished();
@@ -356,32 +480,37 @@ async fn run_instance<A, E, C>(
         &window,
         || compositor.fetch_information(),
     );
-
-    while let Some(winit_event) = receiver.next().await {
-        // info!(target:"winit event", ?winit_event);
-
+    //@------------------------------------
+    while let Ok(winit_event) = receiver.recv_async().await {
         match winit_event {
             event::Event::MainEventsCleared => {
-                let _span = info_span!(target:"winit event","MainEventsCleared").entered();
+                let _span = info_span!(target:"winit_event","MainEventsCleared").entered();
+                state.global_clock_update();
 
                 if !native_events_is_empty.get() {
-                    info!(target:"winit event","native_events:{:?}", native_events);
-                    debug.event_processing_started();
+                    info!(target:"winit_event",?native_events);
+
                     let event_matchs = event_matchs_sa.get();
                     //清空 native_events, 因为 event_matchs 已经获得, native_events使用完毕;
-                    native_events.set(Vector::new());
+                    native_events.set(Default::default());
 
                     if !event_matchs.is_empty() {
-                        for ev in event_matchs.values().flat_map(|x| x.1.clone()) {
-                            if let Some(msg) = ev.call() {
-                                messages.push(msg);
+                        for (_ei, ev, en_list) in event_matchs.iter()
+                        // .flatten().flatten()
+                        {
+                            for en in en_list {
+                                //NOTE event callback called
+                                if let Some(msg) = en.call(ev) {
+                                    messages.push(msg);
+                                }
                             }
                         }
                     }
-
-                    debug.event_processing_finished();
                 }
-
+                {
+                    use owo_colors::OwoColorize;
+                    debug!(target:"winit_event","{}","============= event processed end =============================".on_red());
+                }
                 //NOTE  has events or messages now -------------------
 
                 // for event in events.drain(..).zip(statuses.into_iter()) {
@@ -399,7 +528,7 @@ async fn run_instance<A, E, C>(
                         &mut application,
                         &mut future_runtime,
                         &mut clipboard,
-                        &mut proxy,
+                        &mut proxy, //TODO remove, use orders
                         &mut debug,
                         &mut messages,
                         &window,
@@ -429,59 +558,8 @@ async fn run_instance<A, E, C>(
                     }
                 }
 
-                let new_ctx = ctx_sa.get();
-                if new_ctx == ctx {
-                    continue;
-                } else {
-                    ctx = new_ctx;
-                }
-
                 debug.draw_started();
-                // let new_mouse_interaction = user_interface.draw(
-                //     &mut renderer,
-                //     state.theme(),
-                //     &renderer::Style {
-                //         text_color: state.text_color(),
-                //     },
-                //     state.cursor_position(),
-                // );
-                info!(target:"winit event","element painting");
-                // element.paint(&mut ctx);
-                // ctx = ctx_sa.get();
 
-                debug.draw_finished();
-
-                // if new_mouse_interaction != mouse_interaction {
-                //     window.set_cursor_icon(conversion::mouse_interaction(new_mouse_interaction));
-
-                //     mouse_interaction = new_mouse_interaction;
-                // }
-
-                window.request_redraw();
-            }
-            // event::Event::PlatformSpecific(event::PlatformSpecific::MacOS(
-            //     event::MacOS::ReceivedUrl(url),
-            // )) => {
-            //     use emg_native::event;
-            //     events.push(iced_native::Event::PlatformSpecific(
-            //         event::PlatformSpecific::MacOS(event::MacOS::ReceivedUrl(url)),
-            //     ));
-            // }
-            event::Event::UserEvent(message) => {
-                // let _span = info_span!(target:"winit event","UserEvent").entered();
-                info!(target:"winit event","UserEvent:{:?}",message);
-
-                messages.push(message);
-            }
-            event::Event::RedrawRequested(_) => {
-                // let _span = info_span!(target:"winit event","RedrawRequested").entered();
-                info!(target:"winit event","RedrawRequested");
-
-                // if physical_size.x == 0 || physical_size.y == 0 {
-                //     continue;
-                // }
-
-                debug.render_started();
                 let current_viewport_version = state.viewport_version();
 
                 if viewport_version != current_viewport_version {
@@ -530,6 +608,63 @@ async fn run_instance<A, E, C>(
 
                     viewport_version = current_viewport_version;
                 }
+
+                let new_ctx = ctx_sa.get();
+                //new_ctx == ctx
+                if Rc::ptr_eq(&new_ctx, &ctx) {
+                    //NOTE 不渲染,提前跳过,持续渲染就注释掉
+                    // println!("....skip........");
+                    continue;
+                } else {
+                    ctx = new_ctx;
+                    info!(target:"winit_event","has element repaint");
+                }
+
+                // let new_mouse_interaction = user_interface.draw(
+                //     &mut renderer,
+                //     state.theme(),
+                //     &renderer::Style {
+                //         text_color: state.text_color(),
+                //     },
+                //     state.cursor_position(),
+                // );
+                // element.paint(&mut ctx);
+                // ctx = ctx_sa.get();
+
+                debug.draw_finished();
+
+                // if new_mouse_interaction != mouse_interaction {
+                //     window.set_cursor_icon(conversion::mouse_interaction(new_mouse_interaction));
+
+                //     mouse_interaction = new_mouse_interaction;
+                // }
+
+                window.request_redraw();
+            }
+            // event::Event::PlatformSpecific(event::PlatformSpecific::MacOS(
+            //     event::MacOS::ReceivedUrl(url),
+            // )) => {
+            //     use emg_native::event;
+            //     events.push(iced_native::Event::PlatformSpecific(
+            //         event::PlatformSpecific::MacOS(event::MacOS::ReceivedUrl(url)),
+            //     ));
+            // }
+            event::Event::UserEvent(message) => {
+                // let _span = info_span!(target:"winit_event","UserEvent").entered();
+                info!(target:"winit_event","UserEvent:{:?}",message);
+
+                messages.push(message);
+            }
+            event::Event::RedrawRequested(_) => {
+                // let _span = info_span!(target:"winit_event","RedrawRequested").entered();
+                info!(target:"winit_event","RedrawRequested");
+
+                // if physical_size.x == 0 || physical_size.y == 0 {
+                //     continue;
+                // }
+
+                debug.render_started();
+
                 match compositor.present(
                     &mut renderer,
                     &*ctx,
@@ -540,9 +675,6 @@ async fn run_instance<A, E, C>(
                 ) {
                     Ok(()) => {
                         debug.render_finished();
-
-                        // TODO: Handle animations!
-                        // Maybe we can use `ControlFlow::WaitUntil` for this.
                     }
                     Err(error) => match error {
                         // This is an unrecoverable error.
@@ -559,7 +691,7 @@ async fn run_instance<A, E, C>(
                 }
             }
             event::Event::LoopDestroyed => {
-                let _span = info_span!(target:"winit event","LoopDestroyed").entered();
+                let _span = info_span!(target:"winit_event","LoopDestroyed").entered();
 
                 renderer.on_loop_destroyed();
             }
@@ -568,9 +700,9 @@ async fn run_instance<A, E, C>(
                 event: window_event,
                 ..
             } => {
-                // let _span = info_span!(target:"winit event","WindowEvent").entered();
-                info!(target:"winit event","WindowEvent:{:?}",window_event);
-                // info!(target:"winit event","window.scale_factor():{}",window.scale_factor());//2
+                let _span = info_span!(target:"winit_event","WindowEvent").entered();
+                debug!(target:"winit_event",?window_event);
+                // info!(target:"winit_event","window.scale_factor():{}",window.scale_factor());//2
 
                 if requests_exit(&window_event, state.modifiers()) && exit_on_close_request {
                     break;
@@ -579,18 +711,28 @@ async fn run_instance<A, E, C>(
                 state.update(&window, &window_event, &mut debug);
 
                 if let Some(event_with_flag) = conversion::window_event(
-                    &window_event,
+                    window_event,
                     state.vp_scale_factor(),
                     state.modifiers(),
+                    &mut event_state, //TODO move to state
                 ) {
                     // native_events.push(event);
-                    native_events.update(|ev| ev.push_back(event_with_flag));
+                    native_events.update(
+                        |ev| ev.extend(event_with_flag.iter().cloned()), // ev.push_back(event_with_flag)
+                    );
                 }
 
                 if viewport_version != state.viewport_version() {
+                    info!(target:"winit_event","new viewport_version");
+
                     window.request_redraw();
                 }
             }
+            // event::Event::RedrawEventsCleared => {
+            //     if global_anima_running() {
+            //         window.request_redraw();
+            //     }
+            // }
             _ => {}
         }
     }

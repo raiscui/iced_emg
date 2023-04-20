@@ -1,105 +1,83 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-19 17:43:32
- * @LastEditTime: 2023-01-31 21:24:17
+ * @LastEditTime: 2023-02-23 23:33:20
  * @LastEditors: Rais
  * @Description:
  */
 
 mod impls;
-use std::{cell::RefCell, marker::PhantomData, ops::Deref, rc::Rc};
-
-use emg::{Direction, EdgeIndex};
-use emg_common::IdStr;
-pub use impls::*;
-
-use crate::GraphType;
+mod mode;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+use std::{cell::RefCell, rc::Rc};
+
+use crate::{error::Error, GTreeBuilderElement, GraphType};
+use emg::{Direction, EdgeIndex};
+use emg_common::IdStr;
+pub use impls::*;
+pub use mode::*;
+
+// ─────────────────────────────────────────────────────────────────────────────
+//NOTE: not object safe
 pub trait GraphEdit {
-    type Ix;
-    fn edit<M: Mode>(&self) -> M::Interface<'_, Self::Ix>;
+    type Message;
+
+    fn edit<M: Mode<Self::Message>>(&self, mode: M) -> M::Interface<'_>;
 }
-impl<'a, T> GraphEdit for T
+impl<T> GraphEdit for T
 where
     T: GraphEditManyMethod,
 {
-    type Ix = T::Ix;
-    fn edit<M: Mode>(&self) -> M::Interface<'_, Self::Ix> {
-        M::interface(self)
+    type Message = T::Message;
+    fn edit<M: Mode<Self::Message>>(&self, mode: M) -> M::Interface<'_> {
+        mode.interface(self)
     }
 }
 
 pub trait GraphEditManyMethod {
-    type Ix;
+    type Message;
+
     //实例连源枝移动( 某 path edge 原 edge 更改 source node) ,枝上其他node 不动(clone edge?)
-    fn edge_plug_edit(&self, who: &EdgeIndex<Self::Ix>, dir: Direction, to: Self::Ix);
+    fn edge_plug_edit(&self, who: &EdgeIndex, dir: Direction, to: IdStr) -> Result<(), Error>;
 
     //实例嫁接(实例不连源枝移动 , 某 path node 原 edge 断开, xin edge 接上)
     fn edge_path_node_change_edge(&mut self);
+    fn insert_node_in_topo(&self, tree_element: &'_ GTreeBuilderElement<Self::Message>, to: IdStr);
 }
 
 // Editor ─────────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
-pub struct GraphEditor<Message, Ix = IdStr>(pub(crate) Rc<RefCell<GraphType<Message, Ix>>>)
+pub struct GraphEditor<Message>(pub(crate) Rc<RefCell<GraphType<Message>>>)
 where
-    Ix: std::hash::Hash + Clone + Ord + Default + 'static,
-    Message: 'static; //for Debug derive
+    Message: 'static;
 
-impl<Message, Ix> Deref for GraphEditor<Message, Ix>
+impl<Message> GraphEditor<Message>
 where
-    Ix: std::hash::Hash + Clone + Ord + Default + 'static,
+    Message: 'static,
 {
-    type Target = Rc<RefCell<GraphType<Message, Ix>>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    pub fn graph(&self) -> std::cell::Ref<GraphType<Message>> {
+        self.0.borrow()
     }
-}
+} //for Debug derive
 
-// EdgeMode ─────────────────────────────────────────────────────────────────────────────
-// I :实例?
-pub struct EdgeMode<I = ()>(PhantomData<I>);
+// impl<Message> Deref for GraphEditor<Message> {
+//     type Target = Rc<RefCell<GraphType<Message>>>;
 
-pub trait Mode {
-    type Interface<'a, Ix>
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
+
+pub trait Mode<Message> {
+    type Interface<'a>
     where
-        Ix: 'a;
+        Self: 'a,
+        Message: 'a;
 
-    fn interface<'a, Ix, G>(g: &'a G) -> Self::Interface<'a, Ix>
-    where
-        G: GraphEditManyMethod<Ix = Ix>;
-}
-
-impl Mode for EdgeMode {
-    type Interface<'a, Ix> = EdittingGraphEdge<'a, Ix, Self> where Ix:'a;
-
-    fn interface<'a, Ix, G>(g: &'a G) -> Self::Interface<'a, Ix>
-    where
-        G: GraphEditManyMethod<Ix = Ix>,
-    {
-        let inner = g;
-        let phantom_data = PhantomData;
-        EdittingGraphEdge {
-            inner,
-            phantom_data,
-        }
-    }
-}
-
-pub struct EdittingGraphEdge<'a, Ix, M> {
-    inner: &'a dyn GraphEditManyMethod<Ix = Ix>,
-    phantom_data: PhantomData<M>,
-}
-
-impl<'a, Ix, M> EdittingGraphEdge<'a, Ix, M> {
-    pub fn moving(&self, who: impl Into<EdgeIndex<Ix>>, dir: Direction, to: impl Into<Ix>) {
-        self.inner.edge_plug_edit(&who.into(), dir, to.into());
-    }
-
-    //TODO fn edit to edit other eg. node
+    fn interface(self, g: &dyn GraphEditManyMethod<Message = Message>) -> Self::Interface<'_>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -12,7 +12,44 @@ pub enum LogicLength {
     #[display(fmt = "{}", _0)]
     Simplex(ExactLengthSimplex),
     #[display(fmt = "{}", _0)]
+    ///单位绝对不同
     Calculation(Box<CalcOp<LogicLength>>),
+}
+
+impl LogicLength {
+    pub fn get_unit(&self) -> Option<crate::measures::Unit> {
+        match self {
+            Self::Simplex(v) => Some(v.unit),
+            Self::Calculation(_) => None,
+        }
+    }
+    pub fn has_add_unit(&self, unit: crate::measures::Unit) -> bool {
+        match self {
+            Self::Simplex(v) => v.unit == unit,
+            Self::Calculation(v) => v.has_add_unit(unit),
+        }
+    }
+    #[inline]
+    ///this is directly no optimization op
+    fn add_directly(l: Self, r: Self) -> Self {
+        LogicLength::Calculation(Box::new(CalcOp::add(l, r)))
+    }
+
+    pub fn try_into_simplex(self) -> Result<ExactLengthSimplex, Self> {
+        if let Self::Simplex(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the logic length is [`Simplex`].
+    ///
+    /// [`Simplex`]: LogicLength::Simplex
+    #[must_use]
+    pub fn is_simplex(&self) -> bool {
+        matches!(self, Self::Simplex(..))
+    }
 }
 impl Default for LogicLength {
     fn default() -> Self {
@@ -25,6 +62,35 @@ impl Default for LogicLength {
 pub struct ExactLengthSimplex {
     pub unit: Unit,
     pub value: NotNan<Precision>,
+}
+
+impl core::ops::Add for ExactLengthSimplex {
+    type Output = LogicLength;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.unit == rhs.unit {
+            LogicLength::Simplex(ExactLengthSimplex {
+                unit: self.unit,
+                value: self.value + rhs.value,
+            })
+        } else {
+            LogicLength::add_directly(self.into(), rhs.into())
+        }
+    }
+}
+impl core::ops::Add<&Self> for ExactLengthSimplex {
+    type Output = LogicLength;
+
+    fn add(self, rhs: &Self) -> Self::Output {
+        if self.unit == rhs.unit {
+            LogicLength::Simplex(ExactLengthSimplex {
+                unit: self.unit,
+                value: self.value + rhs.value,
+            })
+        } else {
+            LogicLength::add_directly(self.into(), (*rhs).into())
+        }
+    }
 }
 impl Default for ExactLengthSimplex {
     fn default() -> Self {
@@ -60,22 +126,172 @@ where
 }
 
 impl ::core::ops::Add for LogicLength {
-    type Output = LogicLength;
-    fn add(self, rhs: LogicLength) -> LogicLength {
-        Self::Calculation(Box::new(CalcOp::add(self, rhs)))
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self {
+        match (self, rhs) {
+            (Self::Simplex(l), Self::Simplex(r)) => l + r,
+            (Self::Simplex(l), calculation) => calculation + l,
+            (calculation, Self::Simplex(r)) => calculation + r,
+            (Self::Calculation(l), Self::Calculation(r)) => {
+                Self::add_directly(Self::Calculation(l), Self::Calculation(r))
+            }
+        }
+    }
+}
+impl ::core::ops::Add<&Self> for LogicLength {
+    type Output = Self;
+    fn add(self, rhs: &Self) -> Self {
+        match (self, rhs) {
+            (Self::Simplex(l), Self::Simplex(r)) => l + r,
+            (Self::Simplex(l), calculation) => calculation.clone() + l,
+            (calculation, Self::Simplex(r)) => calculation + *r,
+            (Self::Calculation(l), Self::Calculation(r)) => {
+                Self::add_directly(Self::Calculation(l), Self::Calculation(r.clone()))
+            }
+        }
+    }
+}
+impl ::core::ops::Add<ExactLengthSimplex> for LogicLength {
+    type Output = Self;
+
+    //TODO optimization mul like this
+    fn add(self, rhs: ExactLengthSimplex) -> Self {
+        match self {
+            Self::Simplex(l) => l + rhs,
+            Self::Calculation(x) => {
+                if x.has_add_unit(rhs.unit) {
+                    match *x {
+                        CalcOp::Add { a, b } => {
+                            //
+                            if a.has_add_unit(rhs.unit) {
+                                return a + rhs + b;
+                            }
+                            if b.has_add_unit(rhs.unit) {
+                                return a + (b + rhs);
+                            }
+                            unreachable!("...");
+                        }
+
+                        CalcOp::Mul { .. } => {
+                            unreachable!("...");
+                        }
+                    }
+                } else {
+                    Self::add_directly(Self::Calculation(x), Self::Simplex(rhs))
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod logic_length_test {
+    use ordered_float::NotNan;
+
+    use crate::{pc, px, vh, CalcOp, ExactLengthSimplex, LogicLength, Unit};
+
+    #[test]
+    fn add_test() {
+        let a: LogicLength = px(11);
+        let b: LogicLength = pc(100);
+        let end = a + b;
+        // let res assert  match eq the end
+        let res = LogicLength::Calculation(Box::new(CalcOp::Add {
+            a: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Px,
+                value: NotNan::new(11.0).unwrap(),
+            }),
+            b: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Pc,
+                value: NotNan::new(100.0).unwrap(),
+            }),
+        }));
+        assert_eq!(end, res);
+
+        let c = vh(20);
+        let end = end + c;
+        // let res assert  match eq the end
+        let res = LogicLength::Calculation(Box::new(CalcOp::Add {
+            a: LogicLength::Calculation(Box::new(CalcOp::Add {
+                a: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Px,
+                    value: NotNan::new(11.0).unwrap(),
+                }),
+                b: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Pc,
+                    value: NotNan::new(100.0).unwrap(),
+                }),
+            })),
+            b: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Vh,
+                value: NotNan::new(20.0).unwrap(),
+            }),
+        }));
+        assert_eq!(end, res);
+
+        let c = pc(200);
+        let end = end + c;
+        // let res assert  match eq the end
+        let res = LogicLength::Calculation(Box::new(CalcOp::Add {
+            a: LogicLength::Calculation(Box::new(CalcOp::Add {
+                a: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Px,
+                    value: NotNan::new(11.0).unwrap(),
+                }),
+                b: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Pc,
+                    value: NotNan::new(300.0).unwrap(),
+                }),
+            })),
+            b: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Vh,
+                value: NotNan::new(20.0).unwrap(),
+            }),
+        }));
+        assert_eq!(end, res);
+
+        let c = px(10);
+        let end = end + c;
+        // let res assert  match eq the end
+        let res = LogicLength::Calculation(Box::new(CalcOp::Add {
+            a: LogicLength::Calculation(Box::new(CalcOp::Add {
+                a: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Px,
+                    value: NotNan::new(21.0).unwrap(),
+                }),
+                b: LogicLength::Simplex(ExactLengthSimplex {
+                    unit: Unit::Pc,
+                    value: NotNan::new(300.0).unwrap(),
+                }),
+            })),
+            b: LogicLength::Simplex(ExactLengthSimplex {
+                unit: Unit::Vh,
+                value: NotNan::new(20.0).unwrap(),
+            }),
+        }));
+        assert_eq!(end, res);
+
+        let end = end.clone() + end;
+        // println!("{end:?}");
+
+        let a: LogicLength = px(11);
+        let b: LogicLength = pc(100);
+        let end = a + b;
+        let end = end.clone() + end;
+        // println!("{end:?}");
+        let a: LogicLength = px(11);
+        let end = end + a;
+        println!("{end:?}");
     }
 }
 
 impl LogicLength {
     pub fn try_get_number(&self) -> Result<Precision, &Self> {
         match self {
-            LogicLength::Simplex(l) => {
-                if matches!(l.unit, Unit::Px | Unit::Empty) {
-                    Ok(l.value.into_inner())
-                } else {
-                    Err(self)
-                }
-            }
+            LogicLength::Simplex(l) => match l.unit {
+                Unit::Px | Unit::Empty => Ok(l.value.into_inner()),
+                _ => Err(self),
+            },
             LogicLength::Calculation(_) => Err(self),
         }
     }

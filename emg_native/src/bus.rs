@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 00:21:57
- * @LastEditTime: 2023-01-15 14:18:13
+ * @LastEditTime: 2023-04-20 11:08:31
  * @LastEditors: Rais
  * @Description:
  */
@@ -12,18 +12,17 @@
  * @LastEditors: Rais
  * @Description:
  */
-use emg_futures::futures::channel::mpsc;
-use std::rc::Rc;
+
+use std::sync::{Arc, Mutex, RwLock};
 
 /// A publisher of messages.
 ///
 /// It can be used to route messages back to the [`Application`].
 ///
 /// [`Application`]: crate::Application
-#[allow(missing_debug_implementations)]
 
 pub struct Bus<Message> {
-    publish: Rc<dyn Fn(Message)>,
+    publish: Arc<Mutex<dyn Fn(Message) + Send>>,
 }
 
 impl<Message> Clone for Bus<Message> {
@@ -34,33 +33,34 @@ impl<Message> Clone for Bus<Message> {
     }
 }
 
-impl<Message> Bus<Message>
-where
-    Message: 'static,
-{
-    pub fn new(publish: impl Fn(Message) + 'static) -> Self {
-        Self {
-            publish: Rc::new(publish),
+impl<Message: 'static> Bus<Message> {
+    pub fn new(publish: impl Fn(Message) + Send + 'static) -> Self {
+        Bus {
+            publish: Arc::new(Mutex::new(publish)) as Arc<Mutex<dyn Fn(Message) + Send>>,
         }
     }
 
-    /// Publishes a new message for the [`Application`].
-    ///
-    /// [`Application`]: crate::Application
     pub fn publish(&self, message: Message) {
-        (self.publish)(message);
+        self.publish.lock().unwrap()(message)
     }
 
-    /// Creates a new [`Bus`] that applies the given function to the messages
-    /// before publishing.
-    pub fn map<B>(&self, mapper: Rc<dyn Fn(B) -> Message>) -> Bus<B>
+    pub fn map<B>(&self, mapper: Arc<Mutex<dyn Fn(B) -> Message + Send + 'static>>) -> Bus<B>
     where
         B: 'static,
     {
-        let publish = self.publish.clone();
+        let self_publish = self.publish.clone();
 
-        Bus {
-            publish: Rc::new(move |message| publish(mapper(message))),
-        }
+        let publish_fn = move |message: B| {
+            let message = mapper.lock().unwrap()(message);
+            let self_publish_fn = self_publish.lock().unwrap();
+            self_publish_fn(message);
+        };
+        let publish = Arc::new(Mutex::new(publish_fn)) as Arc<Mutex<dyn Fn(B) + Send + 'static>>;
+
+        Bus { publish }
     }
 }
+
+unsafe impl<Message> Sync for Bus<Message> {}
+
+unsafe impl<Message: Send> Send for Bus<Message> {}

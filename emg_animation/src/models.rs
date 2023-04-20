@@ -6,13 +6,12 @@ use emg_common::{
     im::HashSet,
     measures::Unit,
     num_traits::{AsPrimitive, ToPrimitive, Zero},
-    smallvec, IdStr, SmallVec, TypeName, Vector,
+    smallvec, IdStr, NotNan, SmallVec, TypeName, Vector,
 };
 use emg_hasher::CustomHasher;
 // use iter_fixed::IntoIteratorFixed;
 use crate::{Debuggable, Precision, MOTION_SIZE, PROP_SIZE};
 use derive_more::Display;
-use ordered_float::NotNan;
 use std::{
     collections::VecDeque,
     hash::BuildHasherDefault,
@@ -156,28 +155,6 @@ pub enum PathCommand {
     SmoothQuadraticTo(SmallVec<[[Motion; DIM2]; MOTION_SIZE]>),
     Smooth(SmallVec<[[Motion; DIM2]; MOTION_SIZE]>),
     SmoothTo(SmallVec<[[Motion; DIM2]; MOTION_SIZE]>),
-    ClockwiseArc(ArcMotion),
-    AntiClockwiseArc(ArcMotion),
-    Close,
-}
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PathCommandOG {
-    Move(Vector<Motion>),
-    MoveTo(Vector<Motion>),
-    Line(Vector<Motion>),
-    LineTo(Vector<Motion>),
-    Horizontal(Motion),
-    HorizontalTo(Motion),
-    Vertical(Motion),
-    VerticalTo(Motion),
-    Curve(CubicCurveMotionOG),
-    CurveTo(CubicCurveMotionOG),
-    Quadratic(QuadraticCurveMotionOG),
-    QuadraticTo(QuadraticCurveMotionOG),
-    SmoothQuadratic(Vector<[Motion; DIM2]>),
-    SmoothQuadraticTo(Vector<[Motion; DIM2]>),
-    Smooth(Vector<[Motion; DIM2]>),
-    SmoothTo(Vector<[Motion; DIM2]>),
     ClockwiseArc(ArcMotion),
     AntiClockwiseArc(ArcMotion),
     Close,
@@ -1133,12 +1110,12 @@ mod tests_zip_all {
         let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
 
         for i in &initial_props {
-            println!("{}", i);
+            println!("{i}");
         }
         println!("===================");
         for r in &res {
             if let Some(prop) = r {
-                println!("{}", prop);
+                println!("{prop}");
             } else {
                 println!("None");
             }
@@ -1168,7 +1145,7 @@ mod tests_zip_all {
         let res = zip_properties_greedy_mut(&mut initial_props, new_target_props);
 
         for i in initial_props {
-            println!("{:#?}", i);
+            println!("{i:#?}");
         }
         println!("===================");
         for r in res {

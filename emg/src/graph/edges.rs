@@ -1,33 +1,24 @@
 use crate::graph::{dir::HasDir, neighbors::NodeNeighborsIter, Direction, EdgeIndex, NodeIndex};
 use crate::im::vector;
-use std::{clone::Clone, cmp::Eq, hash::Hash};
+use std::clone::Clone;
 
-// type ConsumingIter<Ix> = vector::ConsumingIter<EdgeIndex<Ix>>;
-type ConsumingIter<Ix> = indexmap::set::IntoIter<EdgeIndex<Ix>>;
+// type ConsumingIter = vector::ConsumingIter<EdgeIndex>;
+type ConsumingIter = indexmap::set::IntoIter<EdgeIndex>;
 
-pub struct NodeEdgesIter<'a, Ix>
-where
-    Ix: 'a + Clone + Hash + Eq,
-{
+pub struct NodeEdgesIter<'a> {
     dir: Direction,
-    edge_iter: vector::Iter<'a, EdgeIndex<Ix>>,
-    current_next: Option<&'a EdgeIndex<Ix>>,
+    edge_iter: vector::Iter<'a, EdgeIndex>,
+    current_next: Option<&'a EdgeIndex>,
 }
 
-impl<Ix> HasDir for NodeEdgesIter<'_, Ix>
-where
-    Ix: Clone + Hash + Eq,
-{
+impl HasDir for NodeEdgesIter<'_> {
     fn dir(&self) -> Direction {
         self.dir
     }
 }
 
-impl<'a, Ix> NodeEdgesIter<'a, Ix>
-where
-    Ix: 'a + Clone + Hash + Eq,
-{
-    pub fn new(dir: Direction, edge_iter: vector::Iter<'a, EdgeIndex<Ix>>) -> Self {
+impl<'a> NodeEdgesIter<'a> {
+    pub fn new(dir: Direction, edge_iter: vector::Iter<'a, EdgeIndex>) -> Self {
         Self {
             dir,
             edge_iter,
@@ -35,26 +26,19 @@ where
         }
     }
 
-    pub fn node(&self) -> Option<NodeIndex<Ix>> {
-        self.current_next
-            .and_then(|e| e.nix_by_dir(self.dir()).clone())
+    pub fn node(&self) -> Option<&NodeIndex> {
+        self.current_next.and_then(|e| e.nix_by_dir(self.dir()))
     }
 }
 
-impl<'a, Ix> From<NodeNeighborsIter<Ix, NodeEdgesIter<'a, Ix>>> for NodeEdgesIter<'a, Ix>
-where
-    Ix: Clone + Hash + Eq,
-{
-    fn from(nn: NodeNeighborsIter<Ix, NodeEdgesIter<'a, Ix>>) -> Self {
+impl<'a> From<NodeNeighborsIter<NodeEdgesIter<'a>>> for NodeEdgesIter<'a> {
+    fn from(nn: NodeNeighborsIter<NodeEdgesIter<'a>>) -> Self {
         nn.edges()
     }
 }
 
-impl<'a, Ix> Iterator for NodeEdgesIter<'a, Ix>
-where
-    Ix: 'a + Clone + Hash + Eq,
-{
-    type Item = &'a EdgeIndex<Ix>;
+impl<'a> Iterator for NodeEdgesIter<'a> {
+    type Item = &'a EdgeIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.current_next = self.edge_iter.next();
@@ -63,29 +47,20 @@ where
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-pub struct NodeEdgesConsumingIter<Ix>
-where
-    Ix: Clone + Hash + Eq,
-{
+pub struct NodeEdgesConsumingIter {
     dir: Direction,
-    edge_iter: ConsumingIter<Ix>,
-    current_next: Option<EdgeIndex<Ix>>,
+    edge_iter: ConsumingIter,
+    current_next: Option<EdgeIndex>,
 }
 
-impl<Ix> HasDir for NodeEdgesConsumingIter<Ix>
-where
-    Ix: Clone + Hash + Eq,
-{
+impl HasDir for NodeEdgesConsumingIter {
     fn dir(&self) -> Direction {
         self.dir
     }
 }
 
-impl<Ix> NodeEdgesConsumingIter<Ix>
-where
-    Ix: Clone + Hash + Eq,
-{
-    pub fn new(dir: Direction, edge_iter: ConsumingIter<Ix>) -> Self {
+impl NodeEdgesConsumingIter {
+    pub fn new(dir: Direction, edge_iter: ConsumingIter) -> Self {
         Self {
             dir,
             edge_iter,
@@ -93,49 +68,24 @@ where
         }
     }
 
-    pub fn node(&self) -> Option<NodeIndex<Ix>> {
+    pub fn node(&self) -> Option<NodeIndex> {
         self.current_next
             .as_ref()
-            .and_then(|e| e.nix_by_dir(self.dir()).clone())
+            .and_then(|e| e.nix_by_dir(self.dir()).cloned())
     }
 }
 
-impl<Ix> From<NodeNeighborsIter<Ix, NodeEdgesConsumingIter<Ix>>> for NodeEdgesConsumingIter<Ix>
-where
-    Ix: Clone + Hash + Eq,
-{
-    fn from(nn: NodeNeighborsIter<Ix, NodeEdgesConsumingIter<Ix>>) -> Self {
+impl From<NodeNeighborsIter<NodeEdgesConsumingIter>> for NodeEdgesConsumingIter {
+    fn from(nn: NodeNeighborsIter<NodeEdgesConsumingIter>) -> Self {
         nn.edges()
     }
 }
 
-impl<Ix> Iterator for NodeEdgesConsumingIter<Ix>
-where
-    Ix: Clone + Hash + Eq,
-{
-    type Item = EdgeIndex<Ix>;
+impl Iterator for NodeEdgesConsumingIter {
+    type Item = EdgeIndex;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.current_next = self.edge_iter.next();
         self.current_next.clone()
     }
 }
-
-// ────────────────────────────────────────────────────────────────────────────────
-
-// pub trait IntoNodeEdges<'a, IterItem> {
-//     type EdgesIter: Iterator<Item = IterItem>;
-//     fn into_edges(self, n: IterItem, dir: Direction) -> Self::EdgesIter;
-// }
-
-// impl<'a, N, E, Ix> IntoNodeEdges<'a, NodeIndex<Ix>> for &'a Graph<N, E, Ix>
-// where
-//     E: Clone,
-//     Ix: Eq + Clone + Hash + Debug,
-//     N: Clone,
-// {
-//     type EdgesIter = NodeEdgesIter<'a, Ix>;
-//     fn into_edges(self, n: &'a NodeIndex<Ix>, dir: Direction) -> Self::EdgesIter {
-
-//     }
-// }

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-01-13 12:31:02
- * @LastEditTime: 2023-01-13 12:44:42
+ * @LastEditTime: 2023-03-13 15:26:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,10 +14,10 @@ bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct EventFlag: u32 {
 
-        const FINGER_PRESSED =           1<<0;
+        const FINGER_PRESSED =          1<<0;
         const FINGER_MOVED =            1<<1;
         const FINGER_LIFTED =           1<<2;
-        const FINGER_LOST =         1<<3 ;
+        const FINGER_LOST =             1<<3 ;
 
     }
 }
