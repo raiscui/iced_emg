@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-04-13 13:08:30
- * @LastEditTime: 2023-04-14 17:32:30
+ * @LastEditTime: 2023-04-19 19:14:53
  * @LastEditors: Rais
  * @Description:
  */
@@ -21,12 +21,27 @@ use crate::{g_tree_builder::GTreeInit, platform::renderer::Image, GElement, Init
 // ─────────────────────────────────────────────────────────────────────────────
 use crate::platform::features::VideoPlayer;
 // ────────────────────────────────────────────────────────────────────────────────
+mod control;
+
+pub use control::VideoController;
+
 #[derive(Tid)]
 pub struct Video {
     id: IdStr,
     player: Rc<VideoPlayer>,
     //TODO vec?
     // children: LayerChildren<Message>,
+}
+
+impl Video {
+    pub fn with_setup(mut self, some: &dyn Shaping<Self>) -> Self {
+        let _ = some.shaping(&mut self);
+        self
+    }
+
+    pub fn player(&self) -> &Rc<VideoPlayer> {
+        &self.player
+    }
 }
 
 impl Eq for Video {}
@@ -58,19 +73,20 @@ impl PartialEq for Video {
 }
 
 impl Video {
-    pub fn new(id: impl Into<IdStr>, uri: &str, live: bool) -> Self
+    pub fn new<F>(id: impl Into<IdStr>, uri: &str, live: bool, render_signal: F) -> Self
     where
-        Self: Sized,
+        // Self: Sized,
+        F: Fn() + Send + 'static,
     {
-        let player = VideoPlayer::new(uri, live).expect("video_player new");
+        let player = VideoPlayer::new(uri, live, render_signal).expect("video_player new fn");
         Self {
             id: id.into(),
             player: Rc::new(player),
         }
     }
 
-    pub fn frame_image(&self) -> Image {
-        self.player.frame_image()
+    pub fn frame_image_sa(&self) -> &StateAnchor<Image> {
+        self.player.frame_image_sa()
     }
 }
 
@@ -101,9 +117,14 @@ impl crate::Widget for Video {
         let span = illicit::expect::<Span>();
 
         // let player = self.player.clone();
-        let frame_sa = self.player.watch_frame();
+        let frame_sa = self.frame_image_sa();
+        let pause = self.player.paused().watch();
+        let player = self.player.clone();
+        let mut old_pause = false;
 
-        (ctx, &frame_sa).map(move |incoming_ctx, image| {
+        (ctx, frame_sa, &pause).map(move |incoming_ctx, image, &paused| {
+            // ─────────────────────────────────────────────────────
+
             let mut sc = Self::SceneCtxType::new(incoming_ctx.get_translation());
             let mut builder = sc.gen_builder();
 

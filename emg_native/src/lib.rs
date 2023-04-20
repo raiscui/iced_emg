@@ -2,6 +2,7 @@
 #![feature(iter_intersperse)]
 //for trait Program
 #![feature(specialization)]
+#![feature(let_chains)]
 // #![feature(trivial_bounds)] // for emg_state::StateAnchor<emg_common::nalgebra::Translation<f64, 3>>: emg_shaping::ShapingWhoNoWarper;
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod bus;

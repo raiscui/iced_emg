@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-28 16:36:33
- * @LastEditTime: 2023-03-31 16:05:37
+ * @LastEditTime: 2023-04-18 22:55:03
  * @LastEditors: Rais
  * @Description:
  */
@@ -22,7 +22,7 @@ use crate::{
         start_set_var_and_run_before_after, state_store_with,
     },
     general_struct::TopoKey,
-    general_traits::{BiState, CloneState, StateFn},
+    general_traits::{BiState, CloneState, CloneStateOut, StateFn},
     state_store, use_state_voa, GStateStore, SkipKeyCollection, StateTypeCheck, StateVOA,
     StorageKey,
 };
@@ -39,6 +39,32 @@ where
 impl<T> StateFn<ValOrAnchor<T>> for StateVOA<T> {
     fn id(&self) -> &TopoKey {
         &self.id
+    }
+}
+
+impl<T> CloneStateOut for ValOrAnchor<T>
+where
+    T: Clone + 'static,
+{
+    type GetOut = T;
+
+    fn get_out_val(&self) -> Self::GetOut {
+        match self {
+            Self::Val(v) => v.clone(),
+            Self::Anchor(an) => {
+                state_store_with(|g_state_store_refcell: &Rc<RefCell<GStateStore>>| {
+                    let store = g_state_store_refcell.borrow();
+                    store.engine_get(an)
+                })
+            }
+        }
+    }
+
+    fn store_get_out_val(&self, store: &GStateStore) -> Self::GetOut {
+        match self {
+            Self::Val(v) => v.clone(),
+            Self::Anchor(an) => store.engine_get(an),
+        }
     }
 }
 
@@ -262,6 +288,7 @@ where
             .opt_get_var_and_bf_af_use_id::<VarVOA<T>, ValOrAnchor<T>>(self.id)
             .unwrap();
         let current = var.get();
+        // let t = current.store_get_out_val(store);
 
         let mut edited_v = (*current).clone();
 
@@ -432,6 +459,7 @@ where
         b
     }
 
+    //TODO use topo make only run once , 其他bi方法也是.
     fn bi<B>(&self, b: StateVOA<B>)
     where
         T: std::fmt::Debug + PartialEq + 'static,

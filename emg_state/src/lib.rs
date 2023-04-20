@@ -33,10 +33,13 @@ pub use anchors::singlethread::Anchor;
 pub use anchors::singlethread::Engine;
 pub use anchors::singlethread::MultiAnchor as AnchorMultiAnchor;
 pub use anchors::singlethread::Var;
+
 pub use g_store::DepsVarTopoKey;
 pub use g_store::GStateStore;
 pub use g_store::SkipKeyCollection;
 pub use general_fns::state_store;
+pub use general_fns::state_store_try_with;
+pub use general_fns::state_store_with;
 pub use general_struct::StorageKey;
 pub use general_traits::CloneState;
 pub use general_traits::CloneStateAnchor;

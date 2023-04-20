@@ -40,8 +40,8 @@ use emg_vello as renderer;
 // ────────────────────────────────────────────────────────────────────────────────
 pub mod prelude {
     pub use crate::{
-        error::Error as ElementError, graph_edit, node_ref, widget::*, EventCallback, EventMessage,
-        GElement, GTreeBuilderElement, GelType, GraphType, InitdTree,
+        component::*, error::Error as ElementError, graph_edit, node_ref, widget::*, EventCallback,
+        EventMessage, GElement, GTreeBuilderElement, GelType, GraphType, InitdTree,
     };
 }
 pub mod gtree_macro_prelude {

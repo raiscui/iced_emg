@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 17:58:00
- * @LastEditTime: 2023-04-13 23:44:18
+ * @LastEditTime: 2023-04-19 12:52:42
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,8 +16,9 @@ use crate::{
 use emg::{edge_index_no_source, node_index, Edge, EdgeIndex, EdgePlugsCollect, NodeIndex};
 
 use emg_common::{im::vector, GenericSize, IdStr};
+use emg_global::{global_height, global_width};
 use emg_hasher::CustomHasher;
-use emg_layout::{global_height, global_width, EPath, EmgEdgeItem};
+use emg_layout::{EPath, EmgEdgeItem};
 use emg_shaping::ShapingUseDyn;
 use emg_state::{
     anchors::{expert::CastIntoValOrAnchor, singlethread::ValOrAnchor},
@@ -34,7 +35,7 @@ where
 {
     ix: IdStr,
 
-    opt_gel_sa: Option<NItem<Message>>,
+    opt_gel: Option<NItem<Message>>,
     opt_incoming_eix_set: Option<EdgePlugsCollect>,
     opt_outgoing_eix_set: Option<EdgePlugsCollect>,
 }
@@ -46,15 +47,15 @@ where
     pub fn new(ix: IdStr) -> Self {
         Self {
             ix,
-            opt_gel_sa: None,
+            opt_gel: None,
             opt_incoming_eix_set: None,
             opt_outgoing_eix_set: None,
         }
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    pub fn with_gel_sa(mut self, gel_state: NItem<Message>) -> Self {
-        self.opt_gel_sa = Some(gel_state);
+    pub fn with_gel(mut self, gel_state: NItem<Message>) -> Self {
+        self.opt_gel = Some(gel_state);
         self
     }
 
@@ -92,7 +93,7 @@ where
         let node_item = |key: IdStr| {
             EmgNodeItem::<NItem<Message>, GelType<Message>>::new(
                 key,
-                self.opt_gel_sa.unwrap(),
+                self.opt_gel.unwrap(),
                 &incoming_eix_set.watch(),
                 &outgoing_eix_set.watch(),
                 graph_rc.clone(),
@@ -249,7 +250,7 @@ where
 
                 let edge_ix = edge_index_no_source(root_id.clone());
                 GraphNodeBuilder::new(root_id.clone())
-                    .with_gel_sa(use_state_voa(|| Rc::new(gel.clone())))
+                    .with_gel(use_state_voa(|| Rc::new(gel.clone())))
                     // .with_gel_sa(use_state(|| {
                     //     StateAnchor::constant(Rc::new(
                     //         Layer::<Message>::new(root_id.clone()).into(),
@@ -444,12 +445,13 @@ where
                     GElement::SaNode_(gel_sa) => {
                         GraphNodeBuilder::new(id.clone())
                         //TODO GTreeBuilderElement use Rc
-                        .with_gel_sa(use_state_voa(||gel_sa.clone()))
+                        .with_gel(use_state_voa(||gel_sa.clone()))
                         .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                         .with_outgoing_eix_set_with_default()
                         .build_in_topo(self);
                     },
-                    //NOTE 这个节点篡改 parent ,
+                    //NOTE 这个节点篡改 parent ,属于一种 build 期间一次性 set parent 节点,而不是运行时不间断set parent.
+                    //NOTE 设置过以后 ,原 parent item 就不在了,被覆盖了,找不回来了
                     //TODO 目前 get_gel_sa ,修改,再set_gel_sa 会丢失原 gel_sa , 这不是正确的逻辑
                     //TODO not dyn ,make it dyn
                     GElement::EvolutionaryFactor(evo) => {
@@ -457,7 +459,7 @@ where
                         let parent_item = g.get_node_item(&parent_nix.expect("parent nix must have in EvolutionaryFactor builder")).unwrap();
                         let sa_rc_parent = parent_item.get_gel_sa();
                         warn!("---- parent anchor: {}",&sa_rc_parent);
-                        let gel_sa = evo.evolution(&sa_rc_parent);
+                        let gel_sa = evo.evolution_bind(&sa_rc_parent);
                         warn!("---- before run evolution , anchor: {}",&sa_rc_parent);
                         //TODO 可能可以不在这里设置 parent, 在运行时设置? 这样可以变更parent 后,可以动态应用,这样做 需要check与 Dyn的区别
                         parent_item.set_gel_sa( gel_sa);
@@ -476,7 +478,7 @@ where
                       =>{
                         GraphNodeBuilder::new(id.clone())
                         //TODO GTreeBuilderElement use Rc
-                        .with_gel_sa(use_state_voa(||Rc::new(gel.clone())))
+                        .with_gel(use_state_voa(||Rc::new(gel.clone())))
                         .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                         .with_outgoing_eix_set_with_default_capacity(1)
                         .build_in_topo(self);
@@ -489,7 +491,7 @@ where
                        =>{
                          GraphNodeBuilder::new(id.clone())
                          //TODO GTreeBuilderElement use Rc
-                         .with_gel_sa(use_state_voa(||Rc::new(gel.clone())))
+                         .with_gel(use_state_voa(||Rc::new(gel.clone())))
                          .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                          .with_outgoing_eix_set_with_default_capacity(1)
                          .build_in_topo(self);
@@ -672,7 +674,7 @@ where
                 let nix: NodeIndex = node_index(id.clone());
                 let edge_ix = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(id.clone())
-                    .with_gel_sa(use_state_voa(|| Rc::new(u.clone().into())))
+                    .with_gel(use_state_voa(|| Rc::new(u.clone().into())))
                     .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                     .with_outgoing_eix_set(IndexSet::with_hasher(
                         BuildHasherDefault::<CustomHasher>::default(),
@@ -718,7 +720,7 @@ where
                 let nix: NodeIndex = node_index(id.clone());
                 let edge_ix = EdgeIndex::new(parent_nix, nix);
                 GraphNodeBuilder::new(id.clone())
-                    .with_gel_sa(use_state_voa(|| Rc::new(callback.clone().into())))
+                    .with_gel(use_state_voa(|| Rc::new(callback.clone().into())))
                     .with_incoming_eix_set([edge_ix.clone()].into_iter().collect())
                     .with_outgoing_eix_set_with_default()
                     .build_in_topo(self);
@@ -790,7 +792,7 @@ mod tests {
         // ────────────────────────────────────────────────────────────────────────────────
 
         GraphNodeBuilder::new(root_id.clone())
-            .with_gel_sa(use_state_voa(|| {
+            .with_gel(use_state_voa(|| {
                 Rc::new(Layer::<Message>::new(root_id.clone()).into())
             }))
             .with_incoming_eix_set([root_edge_ix].into_iter().collect())

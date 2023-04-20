@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-03-29 19:22:19
- * @LastEditTime: 2023-04-03 12:39:12
+ * @LastEditTime: 2023-04-18 11:39:19
  * @LastEditors: Rais
  * @Description:
  */
@@ -370,6 +370,7 @@ mod refresh_test {
     use emg::{edge_index_no_source, node_index};
     use emg_animation::to;
     use emg_common::{im::vector, into_smvec, IdStr};
+    use emg_global::global_elapsed;
     use emg_shaping::ShapingUseDyn;
     use emg_state::{use_state, CloneState, Dict, StateVar};
     use seed_styles as styles;
@@ -380,7 +381,6 @@ mod refresh_test {
     #[allow(unused)]
     use styles::{pc, width};
 
-    use crate::global_clock;
     use crate::EPath;
     use crate::GraphEdgesDict;
     use crate::{anima, AnimationE, EmgEdgeItem};
@@ -413,7 +413,7 @@ mod refresh_test {
                 // root_e.shaping_use(&a);
             });
 
-        let now = global_clock();
+        let now = global_elapsed();
 
         a.interrupt([to(into_smvec![width(px(0))]), to(into_smvec![width(px(1))])]);
 

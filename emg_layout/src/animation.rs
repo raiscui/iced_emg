@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-05-28 11:50:10
- * @LastEditTime: 2023-04-03 23:10:43
+ * @LastEditTime: 2023-04-18 22:22:34
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,6 +10,7 @@ mod define;
 mod func;
 
 use emg_common::{im::vector, Precision, SmallVec, Vector};
+use emg_global::{global_anima_running_add, global_elapsed};
 use emg_state::{
     anchors::expert::CastIntoValOrAnchor, general_struct::TopoKey, state_lit::StateVarLit,
     state_store, topo, Anchor, CloneState, CloneStateAnchor, StateAnchor, StateMultiAnchor,
@@ -29,7 +30,7 @@ use emg_animation::{
 };
 use tracing::{debug, trace};
 
-use crate::{global_anima_running_add, global_clock, EPath, EmgEdgeItem};
+use crate::{EPath, EmgEdgeItem};
 
 use self::{define::StateVarProperty, func::props::warn_for_double_listed_properties};
 
@@ -291,7 +292,7 @@ where
     where
         Message: Clone + std::fmt::Debug + 'static + PartialEq,
     {
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
         // let sv_now = use_state(||Duration::ZERO);
         let cb_fn_deps = props.iter().map(|p| *p.id()).collect::<Vec<_>>();
         debug!("cb_fn_deps:{:?}", &cb_fn_deps);
@@ -583,6 +584,9 @@ where
                 debug!("after callback running ");
 
                 //TODO remove clone, 每一次都克隆 比较重 , get_with? sized?
+                //TODO sv.seting_in_b_a_callback 是否可以用 either 类型 替换?
+                //TODO add new type: StateVarLit with VOA
+                //TODO 也许可以 将 props_init等初始化值的更改 变成 在闭包内部的 RefCell 更改.
                 // let revised_value = revised.get();
                 revised.store_get_with(&state_store().borrow(), |(a, _b, c, _d)| {
                     props_init.iter().zip(c.iter()).for_each(|(sv, prop)| {
@@ -697,6 +701,7 @@ mod tests {
     use emg::{edge_index, edge_index_no_source, node_index, Edge, EdgeIndex};
     use emg_animation::{interrupt, models::Property, opacity, style, to};
     use emg_common::{animation::Tick, im::vector, into_smvec, smallvec, IdStr};
+    use emg_global::global_elapsed;
     use emg_state::{
         state_store, topo, use_state, CloneState, CloneStateAnchor, Dict, GStateStore, StateVar,
     };
@@ -704,7 +709,7 @@ mod tests {
     use styles::{pc, width};
     use styles::{px, CssWidth};
 
-    use crate::{animation::global_clock, tests::tracing_init};
+    use crate::tests::tracing_init;
     use crate::{EPath, EdgeItemNode, EmgEdgeItem, GraphEdgesDict};
 
     use super::AnimationE;
@@ -783,7 +788,7 @@ mod tests {
         //     1920,
         //     1080,
         // );
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
 
         b.iter(move || {
             sv_now.set(Duration::from_millis(0));
@@ -867,7 +872,7 @@ mod tests {
         //     1080,
         // );
         // let sv_now = use_state(||Duration::ZERO);
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
 
         b.iter(move || {
             sv_now.set(Duration::from_millis(0));
@@ -886,7 +891,7 @@ mod tests {
         let _g = tracing_init();
 
         // let sv_now = use_state(||Duration::ZERO);
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
         sv_now.set(Duration::from_millis(0));
         let w1 = use_state(|| width(px(2)));
         let w2 = use_state(|| width(px(99)));
@@ -916,7 +921,7 @@ mod tests {
         let _g = tracing_init();
 
         // let sv_now = use_state(||Duration::ZERO);
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
         // let edge_item1 = edge_item.clone();
         sv_now.set(Duration::from_millis(0));
 
@@ -1052,7 +1057,7 @@ mod tests {
             //     1080,
             // );
 
-            let sv_now = global_clock();
+            let sv_now = global_elapsed();
             sv_now.set(Duration::from_millis(0));
 
             let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![opacity(1.)]);
@@ -1229,7 +1234,7 @@ mod tests {
                     //                 .styles_string.clone();
                     //                 // .get();
 
-                    let sv_now = global_clock();
+                    let sv_now = global_elapsed();
                     sv_now.set(Duration::from_millis(0));
 
                     let a: AnimationE< Message> =
@@ -1390,7 +1395,7 @@ mod tests {
         let _g = tracing_init();
 
         anima_macro_for_bench();
-        global_clock().set(Duration::from_millis(0));
+        global_elapsed().set(Duration::from_millis(0));
 
         anima_macro_for_bench();
     }
@@ -1422,7 +1427,7 @@ mod tests {
     #[topo::nested]
     fn anima_macro_for_anchor_error() {
         let _g = tracing_init();
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
         sv_now.set(Duration::from_millis(0));
 
         let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
@@ -1461,7 +1466,7 @@ mod tests {
     #[topo::nested]
     fn anima_macro_for_bench() {
         // let _g = _init();
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
         sv_now.set(Duration::from_millis(0));
         let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
         let a: AnimationE<Message> = anima![css_w];
@@ -1507,7 +1512,7 @@ mod tests {
     #[topo::nested]
     fn anima_macro() {
         // let _g = tracing_init();
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
         sv_now.set(Duration::from_millis(0));
 
         let css_w: StateVar<CssWidth> = use_state(|| width(px(1)));
@@ -1607,7 +1612,7 @@ mod tests {
                                     .styles_string.clone();
                     //                 // .get();
 
-                    let sv_now = global_clock();
+                    let sv_now = global_elapsed();
                     sv_now.set(Duration::from_millis(0));
 
                     let a: AnimationE< Message> =

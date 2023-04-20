@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-28 16:25:08
- * @LastEditTime: 2023-03-29 15:42:45
+ * @LastEditTime: 2023-04-18 18:05:39
  * @LastEditors: Rais
  * @Description:
  */
@@ -31,6 +31,11 @@ pub trait StateFn<VOA> {
     /// Get a reference to the state var's id.
     #[must_use]
     fn id(&self) -> &TopoKey;
+}
+pub trait CloneStateOut {
+    type GetOut;
+    fn get_out_val(&self) -> Self::GetOut;
+    fn store_get_out_val(&self, store: &GStateStore) -> Self::GetOut;
 }
 
 pub trait CloneState<VOA> {

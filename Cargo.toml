@@ -6,6 +6,7 @@ members = [
     "gtree_macro",
     "gtree",
     "emg_common",
+    "emg_global",
     "emg_element",
     "emg_layout",
     "emg_bind",

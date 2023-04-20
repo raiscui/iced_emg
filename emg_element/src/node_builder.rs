@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 18:05:52
- * @LastEditTime: 2023-04-13 15:44:57
+ * @LastEditTime: 2023-04-18 14:06:45
  * @LastEditors: Rais
  * @Description:
  */
@@ -428,14 +428,14 @@ where
                                             draging = false;
                                             return true;
                                         }
-                                        let long_on = long_state.involve(&drag::DRAG.into());
+                                        let long_on = long_state.involves(&drag::DRAG.into());
                                         debug!("Drag long_on:{:?}", long_on);
                                         long_on
                                     }
                                     //NOTE use long_state check
                                     Event::DragDrop(drag::Event::DragEnd) => {
                                         draging = false;
-                                        let long_on = long_state.involve(&drag::DRAG.into());
+                                        let long_on = long_state.involves(&drag::DRAG.into());
                                         debug!("DragEnd long_on:{:?}", long_on);
                                         long_on
                                     }
@@ -468,7 +468,7 @@ where
                                             hover_cbs.iter().any(|(hover_ei, _, _)| ei == hover_ei);
                                         if used {
                                             let penetrate = &event_long_state2.borrow().penetrate;
-                                            penetrate.involve(ei)
+                                            penetrate.involves(ei)
                                         } else {
                                             true
                                         }

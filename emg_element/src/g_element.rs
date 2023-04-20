@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-18 10:47:07
- * @LastEditTime: 2023-04-14 11:01:27
+ * @LastEditTime: 2023-04-19 12:57:44
  * @LastEditors: Rais
  * @Description:
  */
@@ -162,7 +162,7 @@ impl<Message> Clone for GElement<Message> {
 }
 
 pub trait Evolution<Who>: DynPartialEq {
-    fn evolution(&self, who: &Who) -> Who;
+    fn evolution_bind(&self, who: &Who) -> Who;
 }
 
 impl<Who> core::cmp::Eq for dyn Evolution<Who> + '_ {}
@@ -215,7 +215,7 @@ where
     Use: PartialEq + 'static,
     Message: 'static,
 {
-    fn evolution(
+    fn evolution_bind(
         &self,
         who: &StateAnchor<Rc<GElement<Message>>>,
     ) -> StateAnchor<Rc<GElement<Message>>> {
@@ -232,7 +232,7 @@ where
     Message: 'static,
     // Message: PartialEq + Clone + 'static + std::fmt::Debug,
 {
-    fn evolution(
+    fn evolution_bind(
         &self,
         who: &StateAnchor<Rc<GElement<Message>>>,
     ) -> StateAnchor<Rc<GElement<Message>>> {
@@ -457,6 +457,14 @@ impl<Message> GElement<Message>
     #[must_use]
     pub fn is_builder(&self) -> bool {
         matches!(self, Self::Builder_(..))
+    }
+
+    /// Returns `true` if the gelement is [`Shaper_`].
+    ///
+    /// [`Shaper_`]: GElement::Shaper_
+    #[must_use]
+    pub fn is_shaper(&self) -> bool {
+        matches!(self, Self::Shaper_(..))
     }
 }
 

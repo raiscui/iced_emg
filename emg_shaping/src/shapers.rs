@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-02-10 16:20:21
- * @LastEditTime: 2023-03-31 12:18:33
+ * @LastEditTime: 2023-04-18 16:52:28
  * @LastEditors: Rais
  * @Description:
  */
@@ -144,6 +144,8 @@ impl<Who: for<'a> Tid<'a>> ShapingUseAny for Who {
 //     }
 // }
 // refresh
+
+
 
 pub trait ShapingAny {
     fn shaping_any(&self, any: &mut dyn TypeCheckObjectSafeTid) -> bool;

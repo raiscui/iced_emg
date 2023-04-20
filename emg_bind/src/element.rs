@@ -9,6 +9,3 @@
 
 pub use emg_element::gtree_macro_prelude;
 pub use emg_element::prelude::*;
-
-#[cfg(feature = "video-player")]
-pub use emg_element::component::Video;

@@ -4,6 +4,8 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+use std::{rc::Rc, sync::Arc};
+
 use tracing_error::ErrorLayer;
 use tracing_subscriber::prelude::*;
 // ─────────────────────────────────────────────────────────────────────────────
@@ -16,9 +18,12 @@ use emg_bind::{
     emg_msg_macro_prelude::*,
     graph_edit::*,
     runtime::{drag::DRAG, Affine, OrdersContainer, Pos},
+    state::{use_state_voa, StateVar},
+    trait_prelude::*,
     Sandbox, Settings,
 };
 use tracing::{debug_span, info, instrument, warn};
+
 fn tracing_init() -> Result<(), Report> {
     // use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
@@ -69,7 +74,8 @@ fn tracing_init() -> Result<(), Report> {
         .with_filter(tracing_subscriber::EnvFilter::new(
             // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
             // "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
-            "[event_matching]=debug,[event_matching_filter]=debug",
+            // "[event_matching]=debug,[event_matching_filter]=debug",
+            "[VideoPlayer]=debug,render-node-action=debug",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
@@ -126,6 +132,7 @@ struct App {
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[allow(dead_code)]
 enum Message {
+    Ignored,
     Empty,
     IncrementPressed,
     DecrementPressed,
@@ -143,6 +150,7 @@ impl Sandbox for App {
         message: Self::Message,
     ) {
         match message {
+            Message::Ignored => (),
             Message::IncrementPressed => {
                 self.value += 1;
             }
@@ -211,7 +219,10 @@ impl Sandbox for App {
         }
     }
 
-    fn tree_build(&self, _orders: Self::Orders) -> GTreeBuilderElement<Self::Message> {
+    fn tree_build(
+        &self,
+        orders: OrdersContainer<Self::Message>,
+    ) -> GTreeBuilderElement<Self::Message> {
         use emg_bind::gtree_macro_prelude::*;
 
         let fill_var = use_state(|| fill(hsl(150, 100, 30)));
@@ -219,6 +230,24 @@ impl Sandbox for App {
         let ax = use_state(|| align_x(pc(50)));
         let ay = use_state(|| align_y(pc(50)));
         let width = use_state(|| w(px(50)));
+        let bus = orders.bus();
+
+        let video_el = Video::new(
+            "video-player",
+            "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+            false,
+            move || bus.publish(Message::Ignored),
+        );
+        let vp = video_el.player().clone();
+
+        let pause_voa = use_state_voa(|| false);
+
+        let vp_node: StateVar<Rc<GElement<Message>>> = use_state(|| {
+            Rc::new(
+                (Rc::new((VideoController::Pause, false)) as Rc<dyn EqShaping<GElement<Message>>>)
+                    .into(),
+            )
+        });
 
         gtree! {
             @="root" Layer [
@@ -278,10 +307,22 @@ impl Sandbox for App {
                     ]
                 @="x" Layer [
 
-                    @="x_click" On:CLICK  ||{
+                    @="x_click" On:CLICK  move||{
                         let _span = debug_span!("CLICK", "on [x] click, moving a->b to m->b")
                                 .entered();
 
+                                // pause_voa.set(true);
+                                pause_voa.set(!pause_voa.get_out_val());
+
+
+                                // vp_node.set(
+                                //     Rc::new(
+                                //         (Rc::new((VideoController::Pause, true)) as Rc<dyn EqShaping<GElement<Message>>>)
+                                //             .into(),
+                                //     )
+                                // )
+
+                                // vp.set_source_paused(true);
                         Message::Empty
                     },
 
@@ -338,6 +379,25 @@ impl Sandbox for App {
                     ]
                     @="w" Layer [
 
+                        // @E=[
+                        //     w(px(50)),
+                        //     // width,
+                        //     h(px(50)),
+                        //     ax,
+                        //     ay,
+                        //     fill(rgb(1,0,0))
+                        // ]
+                        // @="b-check2" Checkbox::new(false,"b-abcd2",|_|{
+                        //     println!("b2 checkbox");
+                        // })=>[
+
+                        //     // Checkbox::new(false,"b-abcd22",|_|{
+                        //     //     //FIXME ,find why not call this
+                        //     //     println!("b22 checkbox");
+                        //     // })
+                        // ]
+
+
                         @E=[
                             // origin_x(pc(100)),
                             // origin_y(pc(100)),
@@ -347,7 +407,11 @@ impl Sandbox for App {
                             h(pc(100)),
                             // fill(rgba(0, 1, 0, 1))
                         ]
-                        Video::new("video-player", "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4", false)
+                        video_el
+                        .with_setup(&(VideoController::Pause,pause_voa)) =>[
+                            // GElement::SaNode_( vp_node.watch())
+                        ]
+
                         // @E=[
                         //     origin_x(pc(100)),
                         //     origin_y(pc(50)),

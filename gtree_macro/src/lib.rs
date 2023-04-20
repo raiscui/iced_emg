@@ -475,7 +475,7 @@ impl ToTokens for GShapingUse {
 #[derive(Debug, Clone)]
 struct SaGel {
     pub left: Box<Expr>,
-    pub _map_fn_token: token::FatArrow,
+    pub _map_fn_token: Token!(=>),
     pub right: Box<syn::ExprClosure>,
 }
 
@@ -671,6 +671,7 @@ impl ToTokens for GTreeSurface {
             )
             .to_tokens(tokens);
         } else {
+            //NOTE not module
             let id_token = id.get("GEl");
 
             match (opt_sa_gel, opt_expr) {

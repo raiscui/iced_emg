@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-04-13 23:41:15
+ * @LastEditTime: 2023-04-18 17:00:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -354,7 +354,7 @@ where
                 let is_changed = who_checkbox.shaping_use_any(g_self);
 
                 if !is_changed {
-                    debug!("===================== 向上更新");
+                    debug!("===================== 被any下更新");
                     g_self.shaping_any(who_checkbox)
                 } else {
                     false
@@ -444,35 +444,6 @@ where
 //         }
 //     }
 // }
-
-//@ 向上更新, ---- 处于下游的 self 向上更新 who - 具体上层类型 ------------------------------------
-impl<Message> ShapingAny for Checkbox<Message>
-where
-    Message: 'static + Clone + for<'a> MessageTid<'a>,
-{
-    #[track_caller]
-    fn shaping_any(&self, any: &mut dyn TypeCheckObjectSafeTid) -> bool {
-        let _span = debug_span!(
-            "better_any_shaping",
-            at = "ShapingAny",
-            note = "向上更新",
-            "Checkbox shaping ====> any"
-        )
-        .entered();
-
-        if let Some(who) = any.downcast_mut::<Checkbox<Message>>() {
-            debug!("who 成功 downcast to Self: Checkbox<Message>");
-            return self.shaping(who);
-        }
-
-        warn!(
-            "any - type_name: {}, not match any role,\nLocation:{}",
-            any.type_name(),
-            Location::caller(),
-        );
-        false
-    }
-}
 
 //@ 被下更新  下游 Box<dyn DynGElement<Message>> 更新 self
 impl<Message> ShapingUseAny for Checkbox<Message>
@@ -568,6 +539,35 @@ where
         //     debug!("成功 downcast to any box Self");
         //     self.shaping_use(x);
         // }
+    }
+}
+
+//@ 向上更新, ---- 处于下游的 self 向上更新 who - 具体上层类型 ------------------------------------
+impl<Message> ShapingAny for Checkbox<Message>
+where
+    Message: 'static + Clone + for<'a> MessageTid<'a>,
+{
+    #[track_caller]
+    fn shaping_any(&self, any: &mut dyn TypeCheckObjectSafeTid) -> bool {
+        let _span = debug_span!(
+            "better_any_shaping",
+            at = "ShapingAny",
+            note = "向上更新",
+            "Checkbox shaping ====> any"
+        )
+        .entered();
+
+        if let Some(who) = any.downcast_mut::<Checkbox<Message>>() {
+            debug!("who 成功 downcast to Self: Checkbox<Message>");
+            return self.shaping(who);
+        }
+
+        warn!(
+            "any - type_name: {}, not match any role,\nLocation:{}",
+            any.type_name(),
+            Location::caller(),
+        );
+        false
     }
 }
 

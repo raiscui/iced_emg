@@ -74,7 +74,9 @@ pub use sandbox::Sandbox;
 pub use settings::Settings;
 
 // ─────────────────────────────────────────────────────────────────────────────
-
+pub mod trait_prelude {
+    pub use crate::Orders;
+}
 pub mod gtree_macro_prelude {
     pub use crate::{common::mouse::CLICK, element::gtree_macro_prelude::*};
 }

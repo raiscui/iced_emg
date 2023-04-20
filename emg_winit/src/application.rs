@@ -1,22 +1,26 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-04-14 15:33:27
+ * @LastEditTime: 2023-04-20 12:02:45
  * @LastEditors: Rais
  * @Description:
  */
 //! Create interactive, native cross-platform applications.
 mod state;
 
-use std::{hash::BuildHasherDefault, rc::Rc};
+use std::{
+    hash::BuildHasherDefault,
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
 use emg_common::{
     im::{hashmap::HashMapPool, vector::RRBPool, HashMap},
     Vector,
 };
+use emg_global::global_anima_running;
 use emg_hasher::CustomHasher;
 
-use owo_colors::OwoColorize;
 pub use state::State;
 use winit::event_loop::EventLoopBuilder;
 
@@ -231,14 +235,16 @@ where
 
     // future_runtime.track(subscription);
 
-    let (mut sender, receiver) = mpsc::unbounded();
+    let (sender, receiver) = flume::unbounded();
 
     // let emg_graph = A::GraphType::default();
     // let emg_graph_rc_refcell = Rc::new(RefCell::new(emg_graph));
     // emg_graph_rc_refcell.handle_root_in_topo(&root);
 
     let orders2 = orders.clone();
+    let orders3 = orders.clone();
     let emg_graph_rc_refcell = application.graph_setup(&renderer, orders2);
+    // let emg_graph_rc_refcell = application.graph_setup(&renderer, orders2);
 
     let mut instance = Box::pin(run_instance::<A, E, C>(
         application,
@@ -256,6 +262,9 @@ where
     ));
 
     let mut context = task::Context::from_waker(task::noop_waker_ref());
+    let mut is_rendered = false;
+    let mut rendered_skiped = true;
+    let mut is_redraw_events_cleared = false;
 
     platform::run(event_loop, move |event, _, control_flow| {
         use winit::event_loop::ControlFlow;
@@ -277,12 +286,39 @@ where
         };
 
         if let Some(event) = opt_event {
-            sender.start_send(event).expect("Send event error");
+            // sender.start_send(event).expect("Send event error");
+            // println!("{event:?}");
+            // is_rendered = &winit::event::Event::RedrawEventsCleared == &event;
+
+            match event {
+                winit::event::Event::NewEvents(_) => {
+                    is_rendered = false;
+                    is_redraw_events_cleared = false;
+                }
+                winit::event::Event::RedrawRequested(_) => {
+                    is_rendered = true;
+                }
+                winit::event::Event::RedrawEventsCleared => {
+                    rendered_skiped = !is_rendered;
+                    is_redraw_events_cleared = true;
+                }
+                _ => {}
+            }
+
+            sender.send(event).expect("Send event error");
 
             let poll = instance.as_mut().poll(&mut context);
 
             *control_flow = match poll {
-                task::Poll::Pending => ControlFlow::Wait,
+                task::Poll::Pending => {
+                    if is_redraw_events_cleared && rendered_skiped && global_anima_running() {
+                        ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16))
+                    } else {
+                        ControlFlow::Wait
+                    }
+
+                    // ControlFlow::Wait
+                }
                 task::Poll::Ready(_) => ControlFlow::Exit,
             };
         }
@@ -297,7 +333,8 @@ async fn run_instance<A, E, C>(
     mut future_runtime: FutureRuntime<E, Proxy<A::Message>, A::Message>,
     mut proxy: winit::event_loop::EventLoopProxy<A::Message>,
     mut debug: Debug,
-    mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
+    // mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
+    receiver: flume::Receiver<winit::event::Event<'static, A::Message>>,
     init_command: Command<A::Message>,
     window: winit::window::Window,
     exit_on_close_request: bool,
@@ -443,11 +480,12 @@ async fn run_instance<A, E, C>(
         &window,
         || compositor.fetch_information(),
     );
-
-    while let Some(winit_event) = receiver.next().await {
+    //@------------------------------------
+    while let Ok(winit_event) = receiver.recv_async().await {
         match winit_event {
             event::Event::MainEventsCleared => {
                 let _span = info_span!(target:"winit_event","MainEventsCleared").entered();
+                state.global_clock_update();
 
                 if !native_events_is_empty.get() {
                     info!(target:"winit_event",?native_events);
@@ -470,6 +508,7 @@ async fn run_instance<A, E, C>(
                     }
                 }
                 {
+                    use owo_colors::OwoColorize;
                     debug!(target:"winit_event","{}","============= event processed end =============================".on_red());
                 }
                 //NOTE  has events or messages now -------------------
@@ -489,7 +528,7 @@ async fn run_instance<A, E, C>(
                         &mut application,
                         &mut future_runtime,
                         &mut clipboard,
-                        &mut proxy,
+                        &mut proxy, //TODO remove, use orders
                         &mut debug,
                         &mut messages,
                         &window,
@@ -519,61 +558,8 @@ async fn run_instance<A, E, C>(
                     }
                 }
 
-                let new_ctx = ctx_sa.get();
-                //new_ctx == ctx
-                if Rc::ptr_eq(&new_ctx, &ctx) {
-                    //NOTE 不渲染,提前跳过,持续渲染就注释掉
-                    continue;
-                } else {
-                    ctx = new_ctx;
-                    info!(target:"winit_event","has element repaint");
-                }
-
                 debug.draw_started();
-                // let new_mouse_interaction = user_interface.draw(
-                //     &mut renderer,
-                //     state.theme(),
-                //     &renderer::Style {
-                //         text_color: state.text_color(),
-                //     },
-                //     state.cursor_position(),
-                // );
-                // element.paint(&mut ctx);
-                // ctx = ctx_sa.get();
 
-                debug.draw_finished();
-
-                // if new_mouse_interaction != mouse_interaction {
-                //     window.set_cursor_icon(conversion::mouse_interaction(new_mouse_interaction));
-
-                //     mouse_interaction = new_mouse_interaction;
-                // }
-
-                window.request_redraw();
-            }
-            // event::Event::PlatformSpecific(event::PlatformSpecific::MacOS(
-            //     event::MacOS::ReceivedUrl(url),
-            // )) => {
-            //     use emg_native::event;
-            //     events.push(iced_native::Event::PlatformSpecific(
-            //         event::PlatformSpecific::MacOS(event::MacOS::ReceivedUrl(url)),
-            //     ));
-            // }
-            event::Event::UserEvent(message) => {
-                // let _span = info_span!(target:"winit_event","UserEvent").entered();
-                info!(target:"winit_event","UserEvent:{:?}",message);
-
-                messages.push(message);
-            }
-            event::Event::RedrawRequested(_) => {
-                // let _span = info_span!(target:"winit_event","RedrawRequested").entered();
-                info!(target:"winit_event","RedrawRequested");
-
-                // if physical_size.x == 0 || physical_size.y == 0 {
-                //     continue;
-                // }
-
-                debug.render_started();
                 let current_viewport_version = state.viewport_version();
 
                 if viewport_version != current_viewport_version {
@@ -622,6 +608,63 @@ async fn run_instance<A, E, C>(
 
                     viewport_version = current_viewport_version;
                 }
+
+                let new_ctx = ctx_sa.get();
+                //new_ctx == ctx
+                if Rc::ptr_eq(&new_ctx, &ctx) {
+                    //NOTE 不渲染,提前跳过,持续渲染就注释掉
+                    // println!("....skip........");
+                    continue;
+                } else {
+                    ctx = new_ctx;
+                    info!(target:"winit_event","has element repaint");
+                }
+
+                // let new_mouse_interaction = user_interface.draw(
+                //     &mut renderer,
+                //     state.theme(),
+                //     &renderer::Style {
+                //         text_color: state.text_color(),
+                //     },
+                //     state.cursor_position(),
+                // );
+                // element.paint(&mut ctx);
+                // ctx = ctx_sa.get();
+
+                debug.draw_finished();
+
+                // if new_mouse_interaction != mouse_interaction {
+                //     window.set_cursor_icon(conversion::mouse_interaction(new_mouse_interaction));
+
+                //     mouse_interaction = new_mouse_interaction;
+                // }
+
+                window.request_redraw();
+            }
+            // event::Event::PlatformSpecific(event::PlatformSpecific::MacOS(
+            //     event::MacOS::ReceivedUrl(url),
+            // )) => {
+            //     use emg_native::event;
+            //     events.push(iced_native::Event::PlatformSpecific(
+            //         event::PlatformSpecific::MacOS(event::MacOS::ReceivedUrl(url)),
+            //     ));
+            // }
+            event::Event::UserEvent(message) => {
+                // let _span = info_span!(target:"winit_event","UserEvent").entered();
+                info!(target:"winit_event","UserEvent:{:?}",message);
+
+                messages.push(message);
+            }
+            event::Event::RedrawRequested(_) => {
+                // let _span = info_span!(target:"winit_event","RedrawRequested").entered();
+                info!(target:"winit_event","RedrawRequested");
+
+                // if physical_size.x == 0 || physical_size.y == 0 {
+                //     continue;
+                // }
+
+                debug.render_started();
+
                 match compositor.present(
                     &mut renderer,
                     &*ctx,
@@ -632,9 +675,6 @@ async fn run_instance<A, E, C>(
                 ) {
                     Ok(()) => {
                         debug.render_finished();
-
-                        // TODO: Handle animations!
-                        // Maybe we can use `ControlFlow::WaitUntil` for this.
                     }
                     Err(error) => match error {
                         // This is an unrecoverable error.
@@ -688,6 +728,11 @@ async fn run_instance<A, E, C>(
                     window.request_redraw();
                 }
             }
+            // event::Event::RedrawEventsCleared => {
+            //     if global_anima_running() {
+            //         window.request_redraw();
+            //     }
+            // }
             _ => {}
         }
     }

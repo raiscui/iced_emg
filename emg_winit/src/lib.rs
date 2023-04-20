@@ -1,12 +1,12 @@
 #![feature(is_some_and)]
 // ─────────────────────────────────────────────────────────────────────────────
 
+mod bus;
 mod error;
 mod mode;
 mod orders;
 mod proxy;
 mod semantic_position;
-
 // ────────────────────────────────────────────────────────────────────────────────
 
 pub mod application;

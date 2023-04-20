@@ -167,7 +167,7 @@ impl MultiLevelIdentifyWithSwitch {
     }
     ///self 宽泛 , ei 具体 ,check self 是否涉及到 ei的flag 且完全在 ev 的 flag 之内 ?
     // #[tracing::instrument]
-    pub fn involve(&self, ei: &EventIdentify) -> bool {
+    pub fn involves(&self, ei: &EventIdentify) -> bool {
         if self.union & ei.0 == ei.0 {
             //包含
             let vs = self.map.get(&ei.0).unwrap();

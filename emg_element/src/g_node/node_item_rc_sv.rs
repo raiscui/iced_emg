@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-24 12:41:26
- * @LastEditTime: 2023-04-08 15:27:10
+ * @LastEditTime: 2023-04-19 12:58:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -308,7 +308,7 @@ where
                 &gel_sa_no_sv,
 
             )
-            //TODO out the edge_layout_end_sa , edge change 不影响 不rebuild [NodeBuilderWidget]
+            //TODO out the edge_layout_end_sa , edge change 不影响 不rebuild [NodeBuilderWidget],(需要考虑 如果是 layer ,layer children的push顺序)
                 .map(move |out_eix_s, children, gel| {
                     let _span = info_span!("building [NodeBuilderWidget] recalculation",current = %path3).entered();
 
@@ -322,6 +322,7 @@ where
                     debug!("children:\n{:#?}",children);
 
                     let mut gel_clone = (**gel).clone();
+                    debug!(target:"render-node-action","gel clone");
 
 
                     for eix in out_eix_s {
@@ -336,7 +337,7 @@ where
                             //TODO 用children dict 去 修改 mut gel, 而不是 重新 for循环 重建整个 gel
                             //NOTE should all builder
                             debug!("child: {:?}",child_gel);
-                            debug_assert!(child_gel.is_builder());
+                            debug_assert!(child_gel.is_builder() || child_gel.is_shaper());
                             // if child_gel.is_node_ref_() {
                             //     let refs =child_gel.as_node_ref_().unwrap();
                             //     error!("child_gel is node ref:{} ",refs);

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-01-20 09:35:37
- * @LastEditTime: 2023-02-20 14:48:22
+ * @LastEditTime: 2023-04-18 11:39:40
  * @LastEditors: Rais
  * @Description:
  */
@@ -19,7 +19,8 @@ use emg_animation::{
 use emg_common::{
     animation::Tick, im::vector, into_smvec, into_vector, smallvec, IdStr, SmallVec, Vector,
 };
-use emg_layout::{global_clock, AnimationE};
+use emg_global::global_elapsed;
+use emg_layout::AnimationE;
 use emg_state::{topo, CloneState};
 use seed_styles::{height, px, width, Unit};
 use std::{collections::VecDeque, time::Duration};
@@ -62,7 +63,7 @@ pub fn ame_benchmark(c: &mut Criterion) {
     // ────────────────────────────────────────────────────────────────────────────────
 
     group.bench_function("animationE-get", |b| {
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
 
         topo::call(move || {
             b.iter(|| {
@@ -115,7 +116,7 @@ pub fn ame_initd_benchmark(c: &mut Criterion) {
     });
 
     group.bench_function("animationE-initd-get", |b| {
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
 
         let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![opacity(1.)]);
 
@@ -146,7 +147,7 @@ pub fn ame_new_benchmark(c: &mut Criterion) {
     // ────────────────────────────────────────────────────────────────────────────────
 
     group.bench_function("animationE-initd-get", |b| {
-        let sv_now = global_clock();
+        let sv_now = global_elapsed();
 
         let a: AnimationE<Message> = AnimationE::new_in_topo(into_smvec![opacity(1.)]);
 

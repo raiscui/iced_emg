@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-27 18:08:54
- * @LastEditTime: 2023-03-29 16:54:19
+ * @LastEditTime: 2023-04-19 12:51:14
  * @LastEditors: Rais
  * @Description:
  */
@@ -24,7 +24,7 @@ use crate::{
 #[track_caller]
 pub fn use_state<F, T>(func: F) -> StateVar<T>
 where
-    T: 'static + std::fmt::Debug,
+    T: 'static,
     F: FnOnce() -> T,
 {
     let loc = Location::caller();
@@ -37,14 +37,15 @@ where
         #[cfg(debug_assertions)]
         {
             if state_exists_for_topo_id::<T>(id) {
-                let old = StateVar::<T>::new(id);
-                let old_v = old.get_rc();
-                let v = func();
+                // let old = StateVar::<T>::new(id);
+                // let old_v = old.get_rc();
+                // let v = func();
 
-                warn!(target:"use_state","this is checker: use_state call again, StateVarVal already settled state ->{} ,\n Location: {},\n old_v:{:?},\n new V:{:?}",std::any::type_name::<T>(),loc,old_v,v);
-                if format!("{old_v:?}") != format!("{v:?}") {
-                    warn!("val changed !!!!!!!!!!!!!!!!!!!!!!!!");
-                }
+                warn!(target:"use_state","this is checker: use_state call again, StateVarVal already settled state ->{} ,\n Location: {}",std::any::type_name::<T>(),loc);
+                // warn!(target:"use_state","this is checker: use_state call again, StateVarVal already settled state ->{} ,\n Location: {},\n old_v:{:?},\n new V:{:?}",std::any::type_name::<T>(),loc,old_v,v);
+                // if format!("{old_v:?}") != format!("{v:?}") {
+                //     warn!("val changed !!!!!!!!!!!!!!!!!!!!!!!!");
+                // }
                 return StateVar::new(id);
             }
         }

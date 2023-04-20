@@ -31,8 +31,8 @@ impl Viewport {
             //     (size.y as f64 / scale_factor) as f32,
             // ),
             vp_scale_factor: StateVarLit::new(vp_scale_factor),
-            global_width: emg_layout::global_width(),
-            global_height: emg_layout::global_height(),
+            global_width: emg_global::global_width(),
+            global_height: emg_global::global_height(),
             // projection: Transformation::orthographic(size.width, size.height),
         };
         //TODO when multiple window, will have multiple global_size

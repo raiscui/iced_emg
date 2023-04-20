@@ -30,6 +30,7 @@ emg_shaping = { path = "../emg_shaping" }
 emg_layout = { path = "../emg_layout" }
 emg_hasher = { path = "../emg_hasher" }
 emg_orders = { path = "../emg_orders" }
+emg_global = { path = "../emg_global" }
 emg = { path = "../emg" }
 gtree = { path = "../gtree" }
 

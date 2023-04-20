@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-29 11:12:34
- * @LastEditTime: 2023-04-07 09:34:20
+ * @LastEditTime: 2023-04-19 15:11:02
  * @LastEditors: Rais
  * @Description:
  */
@@ -348,6 +348,24 @@ where
         cutoff::Cutoff<(Anchor<T>,), F>: AnchorInner<Engine, Output = Out>,
     {
         StateAnchor(self.0.cutoff(f))
+    }
+    #[track_caller]
+    #[inline]
+    #[must_use]
+    pub fn debounce(&self) -> Self
+    where
+        T: Copy + PartialEq,
+    {
+        Self(self.0.debounce())
+    }
+    #[track_caller]
+    #[inline]
+    #[must_use]
+    pub fn debounce_clone(&self) -> Self
+    where
+        T: Clone + PartialEq,
+    {
+        Self(self.0.debounce_clone())
     }
 }
 

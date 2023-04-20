@@ -1,9 +1,11 @@
 use crate::conversion;
 use crate::{Application, Debug, Mode, Viewport};
 use emg_common::{na, Pos};
+
+use emg_global::{global_elapsed, global_elapsed_set, G_START};
 use emg_native::G_POS;
-use emg_state::{CloneState, StateAnchor, StateMultiAnchor};
-use std::marker::PhantomData;
+use emg_state::{state_lit::StateVarLit, CloneState, StateAnchor, StateMultiAnchor, StateVar};
+use std::{marker::PhantomData, time::Duration};
 use tracing::debug_span;
 use winit::event::{Touch, WindowEvent};
 use winit::window::Window;
@@ -18,6 +20,7 @@ pub struct State<A: Application> {
     viewport_version: usize,
     cursor_position: StateAnchor<Option<Pos>>,
     modifiers: winit::event::ModifiersState,
+    clock: StateVar<Duration>,
     application: PhantomData<A>,
 }
 
@@ -45,6 +48,7 @@ impl<A: Application> State<A> {
                     .map(|pos| conversion::cursor_na_position(pos, *vp_scale_factor))
             })
         };
+        let clock = global_elapsed();
 
         Self {
             title,
@@ -52,11 +56,16 @@ impl<A: Application> State<A> {
             user_scale_factor,
             viewport,
             viewport_version: 0,
-            // TODO: Encode cursor availability in the type-system
             cursor_position,
             modifiers: winit::event::ModifiersState::default(),
+            clock,
             application: PhantomData,
         }
+    }
+
+    pub fn global_clock_update(&self) {
+        let elapsed = G_START.elapsed();
+        global_elapsed_set(elapsed);
     }
 
     /// Returns the current [`Viewport`] of the [`State`].
