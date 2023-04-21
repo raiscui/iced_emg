@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{cell::RefCell, rc::Rc, time::Instant};
 
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use vello::{
@@ -14,12 +14,12 @@ use crate::{scenes::SimpleText, Backend, Renderer, SceneFrag, Settings};
 
 use super::stats;
 // ────────────────────────────────────────────────────────────────────────────────
-#[cfg(feature = "show-fps")]
-use static_init::dynamic;
+// #[cfg(feature = "show-fps")]
+// use static_init::dynamic;
 
-#[cfg(feature = "show-fps")]
-#[dynamic]
-static mut FRAME_START_TIME: std::time::Instant = Instant::now();
+// #[cfg(feature = "show-fps")]
+// #[dynamic]
+// static mut FRAME_START_TIME: std::time::Instant = Instant::now();
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ pub struct Compositor {
     render_params: RenderParams,
     simple_text: SimpleText,
     #[cfg(feature = "show-fps")]
-    stats: stats::Stats,
+    stats: Rc<RefCell<stats::Stats>>,
 }
 
 impl Compositor {
@@ -63,7 +63,7 @@ impl Compositor {
         )
         .in_scope(|| {});
 
-        let mut surface = render_cx
+        let surface = render_cx
             .create_surface(
                 &window, //NOTE 物理尺寸
                 (settings.width as f64 * vp_scale_factor).round() as u32,
@@ -86,7 +86,7 @@ impl Compositor {
 
         // ─────────────────────────────────────────────────────────────────────────────
         #[cfg(feature = "show-fps")]
-        let stats = stats::Stats::new();
+        let stats = Rc::new(RefCell::new(stats::Stats::new()));
         // ─────────────────────────────────────────────────────────────
 
         Ok(Compositor {
@@ -121,6 +121,13 @@ impl compositor_arch::Compositor for Compositor {
     type Renderer = Renderer;
     // type Surface = Option<()>;
     type Surface = ();
+    #[cfg(feature = "show-fps")]
+    type State = stats::Stats;
+
+    #[cfg(feature = "show-fps")]
+    fn state(&self) -> std::rc::Rc<std::cell::RefCell<Self::State>> {
+        self.stats.clone()
+    }
 
     #[instrument(skip(window), name = "Compositor::new")]
     fn new<W>(settings: Self::Settings, window: &W) -> Result<(Self, Self::Renderer), Error>
@@ -176,7 +183,7 @@ impl compositor_arch::Compositor for Compositor {
 
         #[cfg(feature = "show-fps")]
         {
-            let snapshot = self.stats.snapshot();
+            let snapshot = self.stats.borrow().snapshot();
             let stats_shown = true;
             let vsync_on = true;
 
@@ -188,7 +195,7 @@ impl compositor_arch::Compositor for Compositor {
                     &mut self.simple_text,
                     self.render_params.width as f64,
                     self.render_params.height as f64,
-                    self.stats.samples(),
+                    self.stats.borrow().samples(),
                     vsync_on,
                 );
             }
@@ -204,16 +211,16 @@ impl compositor_arch::Compositor for Compositor {
             &self.render_params,
         );
 
-        #[cfg(feature = "show-fps")]
-        {
-            let new_time = Instant::now();
+        // #[cfg(feature = "show-fps")]
+        // {
+        //     let new_time = Instant::now();
 
-            self.stats.add_sample(stats::Sample {
-                frame_time_us: (new_time - *FRAME_START_TIME.read()).as_micros() as u64,
-            });
-            let mut w = FRAME_START_TIME.write();
-            *w = new_time;
-        }
+        //     self.stats
+        //         .borrow_mut()
+        //         .add_sample((new_time - *FRAME_START_TIME.read()).as_micros() as u64);
+        //     let mut w = FRAME_START_TIME.write();
+        //     *w = new_time;
+        // }
 
         Ok(())
     }

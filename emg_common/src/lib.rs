@@ -6,8 +6,11 @@
 mod func;
 mod layout;
 mod macros;
+mod render_loop;
 mod tools;
+
 // ────────────────────────────────────────────────────────────────────────────────
+
 pub mod animation;
 pub mod any;
 pub mod display;
@@ -36,6 +39,7 @@ pub use im::Vector;
 pub use layout::*;
 pub use measures::*;
 use num_traits::AsPrimitive;
+pub use render_loop::*;
 
 pub use num_traits;
 pub use ordered_float::NotNan;

@@ -31,7 +31,11 @@ pool = []
 no_default_shaping = ["emg_shaping/no_default_shaping"]
 insta = []
 video-player = ["emg_element/video-player"]
-
+show-fps = [
+    "emg_winit?/show-fps",
+    "emg_vello?/show-fps",
+    "emg_graphics_backend?/show-fps",
+]
 
 [dependencies]
 emg_layout = { path = "../emg_layout" }

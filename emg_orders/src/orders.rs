@@ -13,13 +13,13 @@ pub trait Orders<Message> {
     // fn re_render(&self);
     // fn set_re_render_msg(&self, msg: Message) -> &Self;
 
-    fn schedule_render(&self) -> Option<Message>;
+    fn schedule_render(&self);
     fn schedule_render_then<MsU: 'static, F: FnOnce(Tick) -> MsU + 'static>(
         &self,
         task_name: &'static str,
         // debuggable_callback: Debuggable<F>,
         after_render_cb: F,
-    ) -> Option<Message>;
+    );
     fn publish(&self, msg: Message);
     fn reset_render(&self);
     // fn process_after_render_queue(&self);

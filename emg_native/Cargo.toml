@@ -27,6 +27,7 @@ emg_state = { path = "../emg_state" }
 emg_shaping = { path = "../emg_shaping" }
 emg_hasher = { path = "../emg_hasher" }
 emg_global = { path = "../emg_global" }
+emg_orders = { path = "../emg_orders" }
 
 # emg_orders = { path = "../emg_orders" }
 #---------------
@@ -44,5 +45,3 @@ gstreamer-app = { version = "0.20.0", optional = true } # appsink
 derive_more = { version = "0.99.5", optional = true }
 # glib = { git = "https://github.com/gtk-rs/gtk-rs-core", branch = "0.17", version = "0.17" }
 num-traits = { version = "0.2", optional = true } # convert rationals to floats (ToPrimitive)
-
-fragile = "2.0.0"

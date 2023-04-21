@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-04-20 12:02:45
+ * @LastEditTime: 2023-04-21 22:55:41
  * @LastEditors: Rais
  * @Description:
  */
@@ -16,11 +16,13 @@ use std::{
 
 use emg_common::{
     im::{hashmap::HashMapPool, vector::RRBPool, HashMap},
-    Vector,
+    RenderLoopCommand, Vector,
 };
-use emg_global::global_anima_running;
+use emg_global::{global_anima_running, G_START};
 use emg_hasher::CustomHasher;
 
+use emg_orders::Orders;
+use illicit::AsContext;
 pub use state::State;
 use winit::event_loop::EventLoopBuilder;
 
@@ -35,7 +37,7 @@ use emg_element::{GTreeBuilderFn, GraphProgram};
 use emg_futures::futures;
 use emg_futures::futures::channel::mpsc;
 use emg_graphics_backend::window::{
-    compositor::{self, CompositorSetting},
+    compositor::{self, CompositorSetting, CompositorState},
     Compositor,
 };
 use emg_native::{
@@ -49,7 +51,7 @@ use tracing::{debug, debug_span, info, info_span, instrument, warn};
 
 // use emg_native::user_interface::{self, UserInterface};
 // ────────────────────────────────────────────────────────────────────────────────
-
+const FPS: u128 = 16666u128;
 // ────────────────────────────────────────────────────────────────────────────────
 
 /// An interactive, native cross-platform application.
@@ -160,6 +162,15 @@ where
 {
     use futures::task;
     use futures::Future;
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    let run_start_t = *G_START;
+    // let mut prev_seconds = now.elapsed().as_secs();
+    let mut latest_render_end_dt = run_start_t.elapsed().as_micros();
+    let mut wait_dt = 0u128;
+    let mut main_start_t = run_start_t;
+    let mut render_dt = 0u128;
+    // ─────────────────────────────────────────────────────────────────────
 
     let mut debug = Debug::new();
     debug.startup_started();
@@ -179,11 +190,16 @@ where
 
     let bus_sender = user_event_proxy.clone();
 
-    let orders: A::Orders = OrdersContainer::new(Bus::new(move |msg| {
-        bus_sender
-            .send_event(msg)
-            .expect("OrdersContainer Send user message");
-    }));
+    let (control_sender, control_receiver) = flume::unbounded();
+
+    let orders: A::Orders = OrdersContainer::new(
+        Bus::new(move |msg| {
+            bus_sender
+                .send_event(msg)
+                .expect("OrdersContainer Send user message");
+        }),
+        control_sender.clone(),
+    );
     // ─────────────────────────────────────────────────────────────────────────────
     // app
 
@@ -232,6 +248,8 @@ where
     // ────────────────────────────────────────────────────────────────────────────────
     compositor_settings.set_vp_scale_factor(application.scale_factor() * window.scale_factor());
     let (compositor, renderer) = C::new(compositor_settings, &window)?;
+    #[cfg(feature = "show-fps")]
+    let fps_state = compositor.state();
 
     // future_runtime.track(subscription);
 
@@ -243,7 +261,8 @@ where
 
     let orders2 = orders.clone();
     let orders3 = orders.clone();
-    let emg_graph_rc_refcell = application.graph_setup(&renderer, orders2);
+
+    let emg_graph_rc_refcell = control_sender.offer(|| application.graph_setup(&renderer, orders2));
     // let emg_graph_rc_refcell = application.graph_setup(&renderer, orders2);
 
     let mut instance = Box::pin(run_instance::<A, E, C>(
@@ -262,9 +281,21 @@ where
     ));
 
     let mut context = task::Context::from_waker(task::noop_waker_ref());
-    let mut is_rendered = false;
-    let mut rendered_skiped = true;
+    let mut current_is_rendered = false;
+    let mut in_user_main = false;
     let mut is_redraw_events_cleared = false;
+
+    // thread::spawn(move || {
+    //     while let Ok(cmd) =  control_receiver.recv(){
+    //         match cmd {
+    //             RenderLoopCommand::Schedule => {
+    //                 orders3.p
+    //             }
+    //             RenderLoopCommand::Immediately => todo!(),
+    //             RenderLoopCommand::Nothing => todo!(),
+    //         }
+    //     }
+    // });
 
     platform::run(event_loop, move |event, _, control_flow| {
         use winit::event_loop::ControlFlow;
@@ -287,20 +318,46 @@ where
 
         if let Some(event) = opt_event {
             // sender.start_send(event).expect("Send event error");
-            // println!("{event:?}");
+
+            debug!(target:"run-loop","===---------------[ {event:?} ]");
+
             // is_rendered = &winit::event::Event::RedrawEventsCleared == &event;
 
             match event {
                 winit::event::Event::NewEvents(_) => {
-                    is_rendered = false;
-                    is_redraw_events_cleared = false;
+                    debug!(target:"run-loop","@ New ============================================================================================================================================");
+
+                    current_is_rendered = false;
+                    in_user_main = false;
+                }
+                winit::event::Event::MainEventsCleared => {
+                    main_start_t = std::time::Instant::now();
+
+                    let real_wait_dt =
+                        (main_start_t - run_start_t).as_micros() - latest_render_end_dt;
+                    if wait_dt > real_wait_dt {
+                        debug!(target:"run-loop","MainEventsCleared --- wait_time > real_wait_t  {wait_dt} > {real_wait_dt}  =>skip");
+                        debug!(target:"run-loop","control_flow {:?}",control_flow);
+                        // wait_time = wait_time
+                        //     .checked_sub(real_wait_t)
+                        //     .expect("overflow when subtracting durations");
+
+                        // *control_flow = ControlFlow::WaitUntil(
+                        //     std::time::Instant::now()
+                        //         + std::time::Duration::from_micros((wait_time).max(1) as u64),
+                        // );
+                        return;
+                    } else {
+                        debug!(target:"run-loop","MainEventsCleared --- real_wait_t timeout!!  {wait_dt} not > {real_wait_dt}  =>do render");
+                        in_user_main = true;
+                    }
                 }
                 winit::event::Event::RedrawRequested(_) => {
-                    is_rendered = true;
+                    current_is_rendered = true;
                 }
                 winit::event::Event::RedrawEventsCleared => {
-                    rendered_skiped = !is_rendered;
                     is_redraw_events_cleared = true;
+                    // ─────────────────────────────────────
                 }
                 _ => {}
             }
@@ -308,19 +365,104 @@ where
             sender.send(event).expect("Send event error");
 
             let poll = instance.as_mut().poll(&mut context);
+            // ─────────────────────────────────────────────────────────────────────────────
 
-            *control_flow = match poll {
+            // ─────────────────────────────────────────────────────
+
+            match poll {
                 task::Poll::Pending => {
-                    if is_redraw_events_cleared && rendered_skiped && global_anima_running() {
-                        ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16))
-                    } else {
-                        ControlFlow::Wait
-                    }
+                    if is_redraw_events_cleared {
+                        let loop_cmd: Option<RenderLoopCommand> = control_receiver.try_iter().sum();
+                        // let loop_cmd: Option<RenderLoopCommand> = None;
+                        debug!(target:"run-loop","loop cmd------------: \n{:?}",loop_cmd);
 
-                    // ControlFlow::Wait
+                        let mut cmd_request_render = false;
+                        if let Some(cmd) = loop_cmd {
+                            match cmd {
+                                RenderLoopCommand::Schedule => {
+                                    let real_used_dt =
+                                        run_start_t.elapsed().as_micros() - latest_render_end_dt;
+
+                                    if FPS > real_used_dt {
+                                        wait_dt = FPS
+                                            .checked_sub(real_used_dt)
+                                            .expect("overflow when subtracting durations");
+                                    } else {
+                                        wait_dt = 0;
+                                    }
+                                    // ─────
+
+                                    if *control_flow != ControlFlow::Exit {
+                                        *control_flow = ControlFlow::WaitUntil(
+                                            std::time::Instant::now()
+                                                + std::time::Duration::from_micros(wait_dt as u64),
+                                        );
+                                        cmd_request_render = true;
+                                        debug!(target:"RenderLoopCommand","RenderLoopCommand::Schedule!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                                    }
+                                }
+                                RenderLoopCommand::Immediately => todo!(),
+                                RenderLoopCommand::Nothing => todo!(),
+                            }
+                        }
+
+                        if !cmd_request_render {
+                            let real_used_dt =
+                                run_start_t.elapsed().as_micros() - latest_render_end_dt;
+
+                            if FPS > real_used_dt {
+                                wait_dt = FPS
+                                    .checked_sub(real_used_dt)
+                                    .expect("overflow when subtracting durations");
+                            } else {
+                                wait_dt = 0;
+                            }
+
+                            if global_anima_running() {
+                                //NOTE global_anima_running 意味着现在 ctx一样了,但是过一会儿可能就不一样了 ,还是要继续渲染
+                                // ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16))
+
+                                if *control_flow != ControlFlow::Exit {
+                                    *control_flow = ControlFlow::WaitUntil(
+                                        std::time::Instant::now()
+                                            + std::time::Duration::from_micros(wait_dt as u64),
+                                    );
+                                }
+                            } else {
+                                //NOTE no global_anima_running - rendered
+                                //NOTE 但是如果有  window event等触发了, 不到时间 main跳过了, 然后呢? 不能暂停
+
+                                if *control_flow != ControlFlow::Exit {
+                                    *control_flow = ControlFlow::Wait;
+                                }
+                            }
+                        }
+                        if in_user_main {
+                            let f_end = run_start_t.elapsed().as_micros();
+
+                            if current_is_rendered {
+                                //real end
+                                render_dt = main_start_t.elapsed().as_micros();
+
+                                #[cfg(feature = "show-fps")]
+                                if f_end > latest_render_end_dt {
+                                    fps_state.borrow_mut().add_sample(f_end, render_dt as u64)
+                                }
+                            }
+
+                            latest_render_end_dt = f_end;
+
+                            debug!(target:"run-loop","end-- current_is_rendered:{current_is_rendered} ,  latest_render_end_dt:{latest_render_end_dt}");
+                        }
+
+                        debug!(target:"run-loop","end ============== control_flow: {control_flow:?}");
+                        debug!(target:"run-loop","end ==============================================================================");
+                    }
+                    is_redraw_events_cleared = false;
                 }
-                task::Poll::Ready(_) => ControlFlow::Exit,
+                task::Poll::Ready(_) => *control_flow = ControlFlow::Exit,
             };
+            //reset  ─────────────────────────────────────────────────────
         }
     })
 }
@@ -485,6 +627,9 @@ async fn run_instance<A, E, C>(
         match winit_event {
             event::Event::MainEventsCleared => {
                 let _span = info_span!(target:"winit_event","MainEventsCleared").entered();
+                if window.inner_size().width == 0 {
+                    continue;
+                }
                 state.global_clock_update();
 
                 if !native_events_is_empty.get() {
@@ -721,18 +866,9 @@ async fn run_instance<A, E, C>(
                         |ev| ev.extend(event_with_flag.iter().cloned()), // ev.push_back(event_with_flag)
                     );
                 }
-
-                if viewport_version != state.viewport_version() {
-                    info!(target:"winit_event","new viewport_version");
-
-                    window.request_redraw();
-                }
+                //TODO 检查 native_events_is_empty 和 messages 因为新来了 WindowEvent ,是否要 order.send loop cmd 约定渲染?
             }
-            // event::Event::RedrawEventsCleared => {
-            //     if global_anima_running() {
-            //         window.request_redraw();
-            //     }
-            // }
+
             _ => {}
         }
     }

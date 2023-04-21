@@ -1,12 +1,14 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 16:06:48
- * @LastEditTime: 2023-02-01 15:13:20
+ * @LastEditTime: 2023-04-21 10:52:51
  * @LastEditors: Rais
  * @Description:
  */
 //! A compositor is responsible for initializing a renderer and managing window
 //! surfaces.
+
+use std::time::Duration;
 
 use emg_native::renderer::Renderer;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
@@ -16,6 +18,10 @@ use crate::Error;
 
 pub trait CompositorSetting {
     fn set_vp_scale_factor(&mut self, scale_factor: f64);
+}
+
+pub trait CompositorState {
+    fn add_sample(&mut self, frame_time: u128, frame_duration_us: u64);
 }
 
 /// A graphics compositor that can draw to windows.
@@ -28,6 +34,12 @@ pub trait Compositor: Sized {
 
     /// The surface of the backend.
     type Surface;
+
+    #[cfg(feature = "show-fps")]
+    type State: CompositorState;
+
+    #[cfg(feature = "show-fps")]
+    fn state(&self) -> std::rc::Rc<std::cell::RefCell<Self::State>>;
 
     /// Creates a new [`Compositor`].
     fn new<W>(settings: Self::Settings, window: &W) -> Result<(Self, Self::Renderer), Error>

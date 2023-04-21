@@ -44,3 +44,6 @@ window_clipboard = { path = "../window_clipboard" }
 
 [patch."https://github.com/linebender/peniko"]
 peniko = { path = "../peniko" }
+
+[patch."https://github.com/dfrg/fount"]
+fello = { path = "../fount/fello" }

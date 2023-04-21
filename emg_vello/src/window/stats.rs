@@ -15,6 +15,7 @@
 // Also licensed under MIT license, at your choice.
 
 use crate::scenes::SimpleText;
+use emg_graphics_backend::window::compositor::CompositorState;
 use std::collections::VecDeque;
 use vello::{
     kurbo::{Affine, PathEl, Rect},
@@ -27,6 +28,7 @@ const SLIDING_WINDOW_SIZE: usize = 100;
 #[derive(Debug)]
 pub struct Snapshot {
     pub fps: f64,
+    pub fps_ability: f64,
     pub frame_time_ms: f64,
     pub frame_time_min_ms: f64,
     pub frame_time_max_ms: f64,
@@ -88,6 +90,14 @@ impl Snapshot {
             Some(&Brush::Solid(Color::WHITE)),
             offset * Affine::translate((width * 0.67, text_height)),
             &format!("FPS: {:.2}", self.fps),
+        );
+        text.add(
+            sb,
+            None,
+            text_size,
+            Some(&Brush::Solid(Color::WHITE)),
+            offset * Affine::translate((width * 0.61, text_height + text_height)),
+            &format!("FPS ability: {:.2}", self.fps_ability),
         );
 
         // Plot the samples with a bar graph
@@ -179,7 +189,15 @@ pub struct Stats {
     sum: u64,
     min: u64,
     max: u64,
-    samples: VecDeque<u64>,
+    st: u128,
+    et: u128,
+    samples: VecDeque<(u128, u64)>,
+}
+
+impl CompositorState for Stats {
+    fn add_sample(&mut self, frame_time: u128, frame_duration_us: u64) {
+        self.add_sample(frame_time, frame_duration_us)
+    }
 }
 
 impl Stats {
@@ -189,19 +207,24 @@ impl Stats {
             sum: 0,
             min: u64::MAX,
             max: u64::MIN,
+            st: 0,
+            et: 0,
             samples: VecDeque::with_capacity(SLIDING_WINDOW_SIZE),
         }
     }
 
     pub fn samples(&self) -> impl Iterator<Item = &u64> {
-        self.samples.iter()
+        self.samples.iter().map(|(_st, dt)| dt)
     }
 
     pub fn snapshot(&self) -> Snapshot {
         let frame_time_ms = (self.sum as f64 / self.count as f64) * 0.001;
-        let fps = 1000. / frame_time_ms;
+        let fps_ability = 1000. / frame_time_ms;
+
+        let fps = 1000. / ((self.et - self.st) as f64 / self.count as f64 * 0.001);
         Snapshot {
             fps,
+            fps_ability,
             frame_time_ms,
             frame_time_min_ms: self.min as f64 * 0.001,
             frame_time_max_ms: self.max as f64 * 0.001,
@@ -213,18 +236,21 @@ impl Stats {
         self.max = u64::MIN;
     }
 
-    pub fn add_sample(&mut self, sample: Sample) {
+    pub fn add_sample(&mut self, frame_time: u128, frame_duration_us: u64) {
         let oldest = if self.count < SLIDING_WINDOW_SIZE {
             self.count += 1;
             None
         } else {
             self.samples.pop_front()
         };
-        let micros = sample.frame_time_us;
+        let micros = frame_duration_us;
         self.sum += micros;
-        self.samples.push_back(micros);
-        if let Some(oldest) = oldest {
-            self.sum -= oldest;
+        self.samples.push_back((frame_time, micros));
+        self.et = frame_time;
+        self.st = self.samples.front().unwrap().0;
+
+        if let Some((_oldest_ft, oldest_dt)) = oldest {
+            self.sum -= oldest_dt;
         }
         self.min = self.min.min(micros);
         self.max = self.max.max(micros);

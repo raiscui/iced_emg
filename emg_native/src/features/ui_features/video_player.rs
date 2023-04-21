@@ -1,12 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2023-04-13 15:52:29
- * @LastEditTime: 2023-04-20 11:22:36
+ * @LastEditTime: 2023-04-21 22:10:14
  * @LastEditors: Rais
  * @Description:
  */
 
-use emg_global::{global_anima_running_add, global_elapsed};
+use emg_global::{global_anima_running_add, global_elapsed, global_loop_controller};
 
 use emg_state::{
     general_traits::CloneStateOut, state_store_with, topo, use_state_voa, CloneState,
@@ -15,7 +15,7 @@ use emg_state::{
 use std::sync::{Arc, Mutex};
 use std::{rc::Rc, sync::RwLock};
 
-use emg_common::{IdStr, NotNan};
+use emg_common::{IdStr, NotNan, RenderLoopCommand};
 use emg_renderer::{Blob, Format, Image};
 use emg_state::{state_lit::StateVarLit, use_state, StateAnchor};
 use num_traits::ToPrimitive;
@@ -173,8 +173,7 @@ impl VideoPlayer {
             let running = !is_paused;
             running
         });
-        global_anima_running_add(&running);
-        // state_store_with(|store| store.borrow().engine_mut().mark_observed(pw.anchor()));
+        // global_anima_running_add(&running);
 
         let frame_image_sa = global_elapsed().watch().map_mut(
             from_pixels(1, 1, vec![0, 0, 0, 1]),
@@ -203,6 +202,7 @@ impl VideoPlayer {
         // ─────────────────────────────────────────────────────────────
 
         // let (notify, wait) = mpsc::channel();
+        let loop_controller = global_loop_controller();
         // ─────────────────────────────────────────────────────────────
         app_sink.set_callbacks(
             gst_app::AppSinkCallbacks::builder()
@@ -230,6 +230,11 @@ impl VideoPlayer {
                     ));
 
                     // render_signal();
+                    debug!(target:"RenderLoopCommand","will send schedule_render message...");
+                    loop_controller
+                        .send(RenderLoopCommand::Schedule)
+                        .expect("video send new frame got");
+                    debug!(target:"RenderLoopCommand","schedule_render message sended .");
 
                     Ok(gst::FlowSuccess::Ok)
                 })

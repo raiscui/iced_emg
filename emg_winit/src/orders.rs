@@ -1,5 +1,5 @@
 use crate::Orders;
-use emg_common::animation::Tick;
+use emg_common::{animation::Tick, RenderLoopCommand};
 use emg_global::{global_anima_running_sa, global_elapsed, global_height, global_width};
 // use fxhash::FxBuildHasher;
 use emg_hasher::CustomHasher;
@@ -139,7 +139,7 @@ pub struct OrdersContainer<Message>
     pub(crate) should_render: Rc<Cell<ShouldRender>>,
     pub(crate) data: Rc<OrdersData<Message, Tick>>,
     bus: Bus<Message>,
-    pub(crate) re_render_msg: Rc<RefCell<Option<Message>>>,
+    loop_control: flume::Sender<RenderLoopCommand>,
     // pub(crate) effects: VecDeque<Effect<Ms>>,
     // app: App<Ms, Mdl, INodes>
 }
@@ -158,7 +158,7 @@ impl<Message> Clone for OrdersContainer<Message> {
             should_render: self.should_render.clone(),
             data: self.data.clone(),
             bus: self.bus.clone(),
-            re_render_msg: self.re_render_msg.clone(),
+            loop_control: self.loop_control.clone(),
         }
     }
 }
@@ -167,7 +167,7 @@ impl<Message> OrdersContainer<Message>
 // where
 // Message: 'static,
 {
-    pub fn new(bus: Bus<Message>) -> Self {
+    pub fn new(bus: Bus<Message>, loop_control: flume::Sender<RenderLoopCommand>) -> Self {
         Self {
             should_render: Rc::new(Cell::new(ShouldRender::Render)),
             // effects: VecDeque::<Effect<Ms>>::new(),
@@ -192,7 +192,7 @@ impl<Message> OrdersContainer<Message>
                                          // render_info: Cell::new(None),
             }),
             bus,
-            re_render_msg: Rc::new(RefCell::new(None)),
+            loop_control,
         }
     }
     pub fn bus(&self) -> Bus<Message> {
@@ -228,15 +228,11 @@ where
         self
     }
 
-    fn schedule_render(&self) -> Option<Message> {
-        debug!("in orders::schedule_render");
-        todo!();
-        // self.vdom
-        //     .borrow()
-        //     .as_ref()
-        //     .unwrap()
-        //     .schedule_render_with_orders(self.clone());
-        None
+    fn schedule_render(&self) {
+        debug!(target:"orders","schedule_render");
+        self.loop_control
+            .send(RenderLoopCommand::Schedule)
+            .expect("orders send RenderLoopCommand");
     }
 
     fn schedule_render_then<MsU: 'static, F: FnOnce(Tick) -> MsU + 'static>(
@@ -244,9 +240,9 @@ where
         task_name: &'static str,
         // debuggable_callback: Debuggable<F>,
         after_render_cb: F,
-    ) -> Option<Message> {
+    ) {
         self.after_next_render(task_name, after_render_cb);
-        self.schedule_render()
+        self.schedule_render();
         // .vdom
         // .borrow()
         // .as_ref()

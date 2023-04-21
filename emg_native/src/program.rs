@@ -1,11 +1,13 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-12 14:43:52
- * @LastEditTime: 2023-01-30 18:40:53
+ * @LastEditTime: 2023-04-21 15:48:18
  * @LastEditors: Rais
  * @Description:
  */
 //! Build interactive programs using The Elm Architecture.
+
+use emg_orders::Orders;
 
 // use crate::renderer::SceneCtx;
 use crate::Command;
@@ -17,7 +19,7 @@ pub trait Program: Sized {
     /// The type of __messages__ your [`Program`] will produce.
     type Message: std::fmt::Debug + Send;
     type GraphType;
-    type Orders;
+    type Orders: Orders<Self::Message>;
     type GraphEditor;
 
     // type GElement: Widget<Self::Message, Self::ImplRenderContext>;

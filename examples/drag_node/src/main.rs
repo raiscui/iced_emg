@@ -75,7 +75,7 @@ fn tracing_init() -> Result<(), Report> {
             // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
             // "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
             // "[event_matching]=debug,[event_matching_filter]=debug",
-            "[VideoPlayer]=debug,render-node-action=debug",
+            "run-loop=debug,RenderLoopCommand=debug,",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {

@@ -26,6 +26,7 @@ path = "../../emg_bind"
 features = [
     "gpu",
     "video-player",
+    "show-fps",
     #  "no_default_shaping"
 ]
 

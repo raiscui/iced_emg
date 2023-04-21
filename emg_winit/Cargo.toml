@@ -14,6 +14,7 @@ default = ["gpu"]
 gpu = ["emg_element/gpu"]
 debug = ["emg_native/debug"]
 system = ["sysinfo"]
+show-fps = ["emg_graphics_backend/show-fps"]
 
 [dependencies]
 emg_hasher = { path = "../emg_hasher" }
@@ -38,7 +39,7 @@ indexmap = "1.9"
 #--------------
 winit = "0.28.3"
 owo-colors = "3.5.0"
-# illicit = "1.1.2"
+illicit = "1.1.2"
 
 flume = "0.10.14"
 

@@ -1,5 +1,6 @@
 use std::time::{Duration, Instant};
 
+pub use emg_common::RenderLoopCommand;
 use emg_state::{anchors::im::Vector, use_state, Anchor, CloneState, StateAnchor, StateVar};
 use static_init::dynamic;
 
@@ -41,6 +42,13 @@ pub fn global_anima_running() -> bool {
 fn global_anima_running_build() -> StateAnchor<bool> {
     let watch: Anchor<Vector<bool>> = G_ANIMA_RUNNING_STATE.with(|am| am.watch().anchor().into());
     watch.map(|list: &Vector<bool>| list.contains(&true)).into()
+}
+
+#[must_use]
+pub fn global_loop_controller() -> flume::Sender<RenderLoopCommand> {
+    (*illicit::get::<flume::Sender<RenderLoopCommand>>()
+        .expect("get global loop controller use fn global_loop_controller()"))
+    .clone()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
