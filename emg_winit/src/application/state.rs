@@ -128,7 +128,7 @@ impl<A: Application> State<A> {
 
     /// Processes the provided window event and updates the [`State`]
     /// accordingly.
-    pub fn update(&mut self, window: &Window, event: &WindowEvent<'_>, _debug: &mut Debug) {
+    pub fn update(&mut self, window: &Window, event: &WindowEvent<'_>) {
         match event {
             WindowEvent::Resized(new_size) => {
                 let _span = debug_span!("onWindowEvent",at="State", event = ?event).entered();

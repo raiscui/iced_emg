@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-04-26 15:36:17
+ * @LastEditTime: 2023-04-26 15:48:08
  * @LastEditors: Rais
  * @Description:
  */
@@ -34,7 +34,7 @@ use crate::{
     clipboard::{self, Clipboard},
     orders::OrdersContainer,
 };
-use crate::{Command, Debug, Executor, FutureRuntime, Mode, Proxy, Settings};
+use crate::{Command, Executor, FutureRuntime, Mode, Proxy, Settings};
 use emg_element::{GTreeBuilderFn, GraphProgram};
 use emg_futures::futures;
 
@@ -175,9 +175,6 @@ where
     let mut main_start_t = run_start_t;
     // ─────────────────────────────────────────────────────────────────────
 
-    let mut debug = Debug::new();
-    debug.startup_started();
-
     // let event_loop = EventLoop::with_user_event();
     let event_loop = EventLoopBuilder::with_user_event().build();
     let user_event_proxy = event_loop.create_proxy();
@@ -288,7 +285,6 @@ where
         compositor,
         renderer,
         future_runtime,
-        debug,
         receiver,
         init_command,
         window,
@@ -494,7 +490,6 @@ async fn run_instance<A, E, C>(
     mut compositor: C,
     mut renderer: A::Renderer,
     mut future_runtime: FutureRuntime<E, Proxy<A::Message>, A::Message>,
-    mut debug: Debug,
     // mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
     receiver: flume::Receiver<winit::event::Event<'static, LoopMessage<A::Message>>>,
     init_command: Command<A::Message>,
@@ -595,43 +590,20 @@ async fn run_instance<A, E, C>(
                             changed = true;
                     }
 
-
-                    // let latest_ev = latest_event_state.get_mut(evf);
-                    // if latest_ev.is_none() {
-                    //     latest_event_state.insert(*evf, ev.clone());
-                    //     out.push_back((*evf, ev.clone()));
-                    //     changed = true;
-                    // } else {
-                    //     let latest_ev = latest_ev.unwrap();
-                    //     if latest_ev != ev {
-                    //         latest_event_state.insert(*evf, ev.clone());
-                    //         out.push_back((*evf, ev.clone()));
-                    //         changed = true;
-                    //     }
-                    // }
                 }
                 debug!(target:"winit_event",?changed);
 
                 changed
             });
 
-    // let native_events_is_empty = native_events.watch().map(|v| v.is_empty());
     let native_events_is_empty = event_debouncer.map(|v| v.is_empty());
 
-    let (event_matchs_sa, ctx_sa) = application.build_ctx(
-        g.graph(),
-        painter,
-        // &native_events.watch(),
-        event_debouncer,
-        state.cursor_position(),
-    );
+    let (event_matchs_sa, ctx_sa) =
+        application.build_ctx(g.graph(), painter, event_debouncer, state.cursor_position());
     let mut ctx = ctx_sa.get();
-    // let mut element = application.view(&g.graph());
 
     let mouse_interaction = mouse::Interaction::default();
     let mut messages = Vec::new();
-
-    debug.startup_finished();
 
     run_command::<A, E>(
         init_command,
@@ -692,7 +664,6 @@ async fn run_instance<A, E, C>(
                         &mut application,
                         &mut future_runtime,
                         &mut clipboard,
-                        &mut debug,
                         &mut messages,
                         &window,
                         &g,
@@ -720,8 +691,6 @@ async fn run_instance<A, E, C>(
                         break;
                     }
                 }
-
-                debug.draw_started();
 
                 let current_viewport_version = state.viewport_version();
 
@@ -794,8 +763,6 @@ async fn run_instance<A, E, C>(
                 // element.paint(&mut ctx);
                 // ctx = ctx_sa.get();
 
-                debug.draw_finished();
-
                 // if new_mouse_interaction != mouse_interaction {
                 //     window.set_cursor_icon(conversion::mouse_interaction(new_mouse_interaction));
 
@@ -827,8 +794,6 @@ async fn run_instance<A, E, C>(
                 //     continue;
                 // }
 
-                debug.render_started();
-
                 match compositor.present(
                     &mut renderer,
                     &*ctx,
@@ -837,17 +802,13 @@ async fn run_instance<A, E, C>(
                     // state.background_color(),
                     // &debug.overlay(),
                 ) {
-                    Ok(()) => {
-                        debug.render_finished();
-                    }
+                    Ok(()) => {}
                     Err(error) => match error {
                         // This is an unrecoverable error.
                         compositor::SurfaceError::OutOfMemory => {
                             panic!("{error:?}");
                         }
                         _ => {
-                            debug.render_finished();
-
                             // Try rendering again next frame.
                             window.request_redraw();
                         }
@@ -872,7 +833,7 @@ async fn run_instance<A, E, C>(
                     break;
                 }
 
-                state.update(&window, &window_event, &mut debug);
+                state.update(&window, &window_event);
 
                 match &window_event {
                     event::WindowEvent::KeyboardInput { input, .. }
@@ -907,7 +868,6 @@ async fn run_instance<A, E, C>(
                         |ev| ev.extend(event_with_flag.iter().cloned()), // ev.push_back(event_with_flag)
                     );
                 }
-                //TODO 检查 native_events_is_empty 和 messages 因为新来了 WindowEvent ,是否要 order.send loop cmd 约定渲染?
             }
 
             _ => {}
@@ -970,7 +930,6 @@ pub fn update<A: Application, E: Executor>(
     future_runtime: &mut FutureRuntime<E, Proxy<A::Message>, A::Message>,
     clipboard: &mut Clipboard,
 
-    debug: &mut Debug,
     messages: &mut Vec<A::Message>,
     window: &winit::window::Window,
     graph: &A::GTreeWithBuilder,
@@ -978,11 +937,7 @@ pub fn update<A: Application, E: Executor>(
     graphics_info: impl FnOnce() -> compositor::Information + Copy,
 ) {
     for message in messages.drain(..) {
-        debug.log_message(&message);
-
-        debug.update_started();
         let command = future_runtime.enter(|| application.update(graph.editor(), orders, message));
-        debug.update_finished();
 
         run_command::<A, E>(
             command,
