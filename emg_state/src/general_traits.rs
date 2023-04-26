@@ -132,7 +132,7 @@ pub trait BiState<T> {
         T: std::fmt::Debug + PartialEq + 'static,
         B: Clone + From<T> + Into<T> + 'static + std::fmt::Debug + PartialEq;
 
-    fn bi<B>(&self, b: Self::SV<B>)
+    fn bi_in_topo<B>(&self, b: Self::SV<B>)
     where
         T: std::fmt::Debug + PartialEq + 'static,
         B: Clone + From<T> + Into<T> + 'static + std::fmt::Debug + PartialEq;

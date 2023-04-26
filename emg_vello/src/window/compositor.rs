@@ -63,7 +63,7 @@ impl Compositor {
         )
         .in_scope(|| {});
 
-        let surface = render_cx
+        let mut surface = render_cx
             .create_surface(
                 &window, //NOTE 物理尺寸
                 (settings.width as f64 * vp_scale_factor).round() as u32,
@@ -73,6 +73,8 @@ impl Compositor {
             )
             .await;
 
+        render_cx.set_present_mode(&mut surface, settings.present_mode);
+
         let render_params = RenderParams {
             base_color: vello::peniko::Color::BLACK,
             width: surface.config.width,
@@ -81,8 +83,6 @@ impl Compositor {
 
         // ─────────────────────────────────────────────────────────────────────────────
         let simple_text = crate::scenes::SimpleText::new();
-
-        // render_cx.set_present_mode(&mut surface, wgpu::PresentMode::AutoNoVsync);
 
         // ─────────────────────────────────────────────────────────────────────────────
         #[cfg(feature = "show-fps")]
@@ -103,6 +103,11 @@ impl Compositor {
 
     pub fn device_handle(&self) -> &DeviceHandle {
         &self.render_cx.devices[self.surface.dev_id]
+    }
+
+    pub fn set_present_mode(&mut self, mode: wgpu::PresentMode) {
+        self.settings.present_mode = mode;
+        self.render_cx.set_present_mode(&mut self.surface, mode);
     }
 
     /// Creates a new rendering [`Backend`] for this [`Compositor`].
@@ -171,12 +176,27 @@ impl compositor_arch::Compositor for Compositor {
         todo!()
     }
 
+    fn set_vsync_mode(&mut self, vsync_on: bool) {
+        self.set_present_mode(if vsync_on {
+            wgpu::PresentMode::AutoVsync
+        } else {
+            wgpu::PresentMode::AutoNoVsync
+        });
+    }
+
+    fn is_vsync(&self) -> bool {
+        self.settings.present_mode == wgpu::PresentMode::AutoVsync
+    }
+
     fn present(
         &mut self,
         renderer: &mut Renderer,
         scene_ctx: &SceneFrag,
         _surface: &mut Self::Surface,
     ) -> Result<(), compositor_arch::SurfaceError> {
+        #[cfg(feature = "show-fps")]
+        let vsync_on = self.is_vsync();
+
         let backend = renderer.backend_mut();
         let mut sb = SceneBuilder::for_scene(&mut self.scene);
         sb.append(&scene_ctx.0, scene_ctx.1);
@@ -185,7 +205,6 @@ impl compositor_arch::Compositor for Compositor {
         {
             let snapshot = self.stats.borrow().snapshot();
             let stats_shown = true;
-            let vsync_on = true;
 
             // ─────────────────────────────────────────────────────────────────────────────
 

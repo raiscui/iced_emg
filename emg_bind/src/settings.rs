@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 17:53:01
- * @LastEditTime: 2022-08-23 15:47:31
+ * @LastEditTime: 2023-04-25 22:48:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -10,6 +10,7 @@ use crate::window;
 
 /// The settings of an application.
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Settings<Flags> {
     /// The identifier of the application.
     ///
@@ -62,6 +63,8 @@ pub struct Settings<Flags> {
     ///
     /// [`Application`]: crate::Application
     pub exit_on_close_request: bool,
+
+    pub vsync: bool,
 }
 
 impl<Flags> Settings<Flags> {
@@ -80,6 +83,7 @@ impl<Flags> Settings<Flags> {
             text_multithreading: default_settings.text_multithreading,
             antialiasing: default_settings.antialiasing,
             exit_on_close_request: default_settings.exit_on_close_request,
+            vsync: default_settings.vsync,
         }
     }
 }
@@ -98,6 +102,7 @@ where
             text_multithreading: false,
             antialiasing: false,
             exit_on_close_request: true,
+            vsync: true,
         }
     }
 }

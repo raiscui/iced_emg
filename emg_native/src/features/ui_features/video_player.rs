@@ -1,12 +1,12 @@
 /*
  * @Author: Rais
  * @Date: 2023-04-13 15:52:29
- * @LastEditTime: 2023-04-21 22:10:14
+ * @LastEditTime: 2023-04-25 19:12:51
  * @LastEditors: Rais
  * @Description:
  */
 
-use emg_global::{global_anima_running_add, global_elapsed, global_loop_controller};
+use emg_global::{global_anima_running_add, global_anima_running_remove, global_elapsed};
 
 use emg_state::{
     general_traits::CloneStateOut, state_store_with, topo, use_state_voa, CloneState,
@@ -19,7 +19,7 @@ use emg_common::{IdStr, NotNan, RenderLoopCommand};
 use emg_renderer::{Blob, Format, Image};
 use emg_state::{state_lit::StateVarLit, use_state, StateAnchor};
 use num_traits::ToPrimitive;
-use tracing::{debug, debug_span};
+use tracing::{debug, debug_span, trace};
 
 use thiserror::Error;
 // use byte_slice_cast::*;
@@ -27,6 +27,8 @@ use derive_more::Display;
 use gst::{element_error, glib, prelude::*, Element};
 use gstreamer as gst;
 use gstreamer_app as gst_app;
+
+use crate::global_loop_controller;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -82,6 +84,13 @@ pub struct VideoPlayer {
     looping: bool,
     is_eos: bool,
     restart_stream: bool,
+    running: StateAnchor<bool>,
+}
+
+impl Drop for VideoPlayer {
+    fn drop(&mut self) {
+        global_anima_running_remove(&self.running)
+    }
 }
 
 impl std::fmt::Debug for VideoPlayer {
@@ -107,9 +116,9 @@ impl std::fmt::Debug for VideoPlayer {
 
 impl VideoPlayer {
     #[topo::nested]
-    pub fn new<F>(uri: &str, live: bool, render_signal: F) -> Result<Self, Error>
-    where
-        F: Fn() + 'static + Send,
+    pub fn new(uri: &str, live: bool) -> Result<Self, Error>
+// where
+        // F: Fn() + 'static + Send,
     {
         let _span = debug_span!("VideoPlayer").entered();
         gst::init()?;
@@ -135,7 +144,9 @@ impl VideoPlayer {
         let frame_weak = Arc::downgrade(&frame);
         let frame_weak2 = std::sync::Weak::clone(&frame_weak);
 
-        let paused = use_state_voa(|| false);
+        let paused = use_state_voa(|| true);
+        debug!(target:"video-player"," paused:{:?}", paused);
+
         //NOTE 如果stateVOA设置内部为 anchor 或者 做了 bi, 那么这种 before_fn 不管用
         // let source2 = source.clone();
         // let af = paused
@@ -161,7 +172,7 @@ impl VideoPlayer {
         let source_wk = Rc::downgrade(&source);
 
         let running = paused.watch().debounce().map(move |&is_paused| {
-            debug!(target:"video-player","------------- paused change ==========={}", is_paused);
+            trace!(target:"video-player-global-check","------------- paused change ==========={}", is_paused);
 
             source_wk.upgrade().expect("source is can't up to Rc now").set_state(if is_paused {
                     gst::State::Paused
@@ -170,10 +181,13 @@ impl VideoPlayer {
                 })
                 .unwrap(/* state was changed in ctor; state errors caught there */);
 
-            let running = !is_paused;
-            running
+
+            !is_paused
         });
-        // global_anima_running_add(&running);
+        let use_am_watch = true;
+        if use_am_watch {
+            global_anima_running_add(&running);
+        }
 
         let frame_image_sa = global_elapsed().watch().map_mut(
             from_pixels(1, 1, vec![0, 0, 0, 1]),
@@ -231,41 +245,45 @@ impl VideoPlayer {
 
                     // render_signal();
                     debug!(target:"RenderLoopCommand","will send schedule_render message...");
-                    loop_controller
-                        .send(RenderLoopCommand::Schedule)
-                        .expect("video send new frame got");
+                    // loop_controller
+                    // .send(RenderLoopCommand::Schedule)
+                    // .expect("video send new frame got");
+                    if !use_am_watch {
+                        loop_controller.publish(RenderLoopCommand::Schedule);
+                    }
                     debug!(target:"RenderLoopCommand","schedule_render message sended .");
 
                     Ok(gst::FlowSuccess::Ok)
                 })
                 .build(),
         );
-        debug!(target: "video-player", "set_state");
-        source.set_state(gst::State::Playing)?;
+        trace!(target: "video-player", "set_state");
+        // source.set_state(gst::State::Playing)?;
+        source.set_state(gst::State::Paused)?;
 
-        debug!(target: "video-player", "state set wait");
+        trace!(target: "video-player", "state set wait");
         source.state(gst::ClockTime::from_seconds(15)).0?;
 
-        debug!(target: "video-player", "0");
+        trace!(target: "video-player", "0");
 
         // extract resolution and framerate
         // TODO(jazzfool): maybe we want to extract some other information too?
         let caps = pad.current_caps().ok_or(Error::Caps)?;
-        debug!(target: "video-player", "1");
+        trace!(target: "video-player", "1");
 
         let s = caps.structure(0).ok_or(Error::Caps)?;
-        debug!(target: "video-player", "2");
+        trace!(target: "video-player", "2");
 
         let width = s.get::<i32>("width").map_err(|_| Error::Caps)?;
-        debug!(target: "video-player", "3");
+        trace!(target: "video-player", "3");
 
         let height = s.get::<i32>("height").map_err(|_| Error::Caps)?;
-        debug!(target: "video-player", "4");
+        trace!(target: "video-player", "4");
 
         let framerate = s
             .get::<gst::Fraction>("framerate")
             .map_err(|_| Error::Caps)?;
-        debug!(target: "video-player", "5");
+        trace!(target: "video-player", "5");
 
         let duration = if !live {
             std::time::Duration::from_nanos(
@@ -296,7 +314,17 @@ impl VideoPlayer {
             looping: false,
             is_eos: false,
             restart_stream: false,
+            running,
         })
+    }
+
+    pub fn set_paused(&self, is_pause: bool) -> Result<(), Error> {
+        self.source.set_state(if is_pause {
+            gst::State::Paused
+        } else {
+            gst::State::Playing
+        })?;
+        Ok(())
     }
 
     // pub fn watch_frame(&self) -> StateAnchor<Image> {
@@ -322,15 +350,6 @@ impl VideoPlayer {
     pub fn paused(&self) -> StateVOA<bool> {
         self.paused
     }
-
-    pub fn set_source_paused(&self, paused: bool) {
-        self.source.set_state(if paused {
-            gst::State::Paused
-        } else {
-            gst::State::Playing
-        })
-        .unwrap(/* state was changed in ctor; state errors caught there */);
-    }
 }
 
 //TODO bump pool
@@ -338,4 +357,119 @@ fn from_pixels(width: u32, height: u32, pixels: Vec<u8>) -> Image {
     let data = Arc::new(pixels);
     let blob = Blob::new(data);
     Image::new(blob, Format::Rgba8, width, height)
+}
+
+#[cfg(test)]
+mod test_video {
+    use crate::Bus;
+
+    use super::VideoPlayer;
+    use color_eyre::{eyre::Report, eyre::Result, eyre::WrapErr};
+
+    use emg_common::RenderLoopCommand;
+    use tracing::{debug, debug_span, info, instrument, warn};
+
+    fn tracing_init() -> Result<()> {
+        println!("tracing init");
+        // use tracing_error::ErrorLayer;
+        use tracing_subscriber::prelude::*;
+
+        let filter_layer = tracing_tree::HierarchicalLayer::new(2)
+            .with_indent_lines(true)
+            .with_indent_amount(4)
+            .with_targets(true)
+            .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
+                |metadata, cx| {
+                    let skip_target = ["emg_state", "underlay", "to_layout_override"];
+                    for t in skip_target {
+                        if metadata.target().contains(t) {
+                            return false;
+                        }
+                    }
+
+                    let skip_span = ["xxx"];
+                    for t in skip_span {
+                        if metadata.name().contains(t) {
+                            return false;
+                        }
+                    }
+
+                    let skip_fields = ["native_events"];
+                    // let skip_fields = ["window_event"];
+
+                    for x in metadata.fields() {
+                        let f_str = format!("{}", x);
+                        if skip_fields.contains(&f_str.as_str()) {
+                            return false;
+                        }
+                    }
+
+                    // let keep_target = ["emg_element"];
+                    // if !keep_target.iter().any(|t| metadata.target().starts_with(t)) {
+                    //     return false;
+                    // }
+
+                    // let keep_span = ["event_matching"];
+                    // if metadata.is_span() && keep_span.contains(&metadata.name()) {
+                    //     return true;
+                    // }
+
+                    true
+                },
+            ))
+            .with_filter(tracing_subscriber::EnvFilter::new(
+                // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
+                // "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
+                // "[event_matching]=debug,[event_matching_filter]=debug",
+                "video-player=debug,run-loop=debug,RenderLoopCommand=debug,",
+            ))
+            .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
+                |metadata, cx| {
+                    // let keep_target = ["emg_element"];
+                    // if !keep_target.iter().any(|t| metadata.target().starts_with(t)) {
+                    //     return false;
+                    // }
+
+                    let keep_span = [];
+                    if metadata.is_span() && keep_span.contains(&metadata.name()) {
+                        return true;
+                    }
+
+                    keep_span.is_empty()
+                },
+            ));
+
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        tracing_subscriber::registry()
+            // .with(layout_override_layer)
+            // .with(event_matching_layer)
+            // .with(touch_layer)
+            // .with(tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR))
+            .with(filter_layer)
+            // .with(out_layer)
+            // .with(ErrorLayer::default())
+            .init();
+
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        color_eyre::install()
+    }
+
+    #[test]
+    fn video_test() {
+        tracing_init().unwrap();
+        let bus = Bus::new(|x: RenderLoopCommand| {});
+        illicit::Layer::new().offer(bus).enter(|| {
+            debug!(target:"video-player","xxxx");
+            let x = VideoPlayer::new(
+                "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                false,
+            );
+            let x = VideoPlayer::new(
+                "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                false,
+            );
+        });
+    }
 }

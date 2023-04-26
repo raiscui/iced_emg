@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 16:06:48
- * @LastEditTime: 2023-04-21 10:52:51
+ * @LastEditTime: 2023-04-25 17:32:50
  * @LastEditors: Rais
  * @Description:
  */
@@ -60,6 +60,10 @@ pub trait Compositor: Sized {
 
     /// Returns [`GraphicsInformation`] used by this [`Compositor`].
     fn fetch_information(&self) -> Information;
+
+    // fn set_present_mode(&mut self, mode: Self::Mode);
+    fn set_vsync_mode(&mut self, vsync_on: bool);
+    fn is_vsync(&self) -> bool;
 
     /// Presents the [`Renderer`] primitives to the next frame of the given [`Surface`].
     ///

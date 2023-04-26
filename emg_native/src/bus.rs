@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-23 00:21:57
- * @LastEditTime: 2023-04-20 11:08:31
+ * @LastEditTime: 2023-04-22 00:01:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,6 +23,12 @@ use std::sync::{Arc, Mutex, RwLock};
 
 pub struct Bus<Message> {
     publish: Arc<Mutex<dyn Fn(Message) + Send>>,
+}
+
+impl<Message> std::fmt::Debug for Bus<Message> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Bus").finish()
+    }
 }
 
 impl<Message> Clone for Bus<Message> {

@@ -24,8 +24,9 @@ use emg_bind::{
 };
 use tracing::{debug_span, info, instrument, warn};
 
-fn tracing_init() -> Result<(), Report> {
+fn tracing_init() -> Result<()> {
     // use tracing_error::ErrorLayer;
+    use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::prelude::*;
 
     let filter_layer = tracing_tree::HierarchicalLayer::new(2)
@@ -75,7 +76,7 @@ fn tracing_init() -> Result<(), Report> {
             // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
             // "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
             // "[event_matching]=debug,[event_matching_filter]=debug",
-            "run-loop=debug,RenderLoopCommand=debug,",
+            "video-player=debug,run-loop=debug,RenderLoopCommand=debug,",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
@@ -94,16 +95,30 @@ fn tracing_init() -> Result<(), Report> {
         ));
 
     // ─────────────────────────────────────────────────────────────────────────────
+    #[cfg(feature = "tracy")]
+    let tracy_layer = emg_tracy::tracing_tracy::TracyLayer::new().with_filter(
+        tracing_subscriber::EnvFilter::new(
+            // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
+            // "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
+            // "[event_matching]=debug,[event_matching_filter]=debug",
+            "loop-tracy=debug",
+        ),
+    );
+    // ─────────────────────────────────────────────────────────────────────
 
-    tracing_subscriber::registry()
+    let ts = tracing_subscriber::registry()
         // .with(layout_override_layer)
         // .with(event_matching_layer)
         // .with(touch_layer)
         // .with(tracing_subscriber::fmt::layer().with_filter(tracing::metadata::LevelFilter::ERROR))
         .with(filter_layer)
         // .with(out_layer)
-        .with(ErrorLayer::default())
-        .init();
+        .with(ErrorLayer::default());
+    #[cfg(feature = "tracy")]
+    let ts = ts.with(tracy_layer);
+    // ─────────────────────────────────────────────────────────────
+
+    ts.init();
 
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -113,14 +128,18 @@ fn tracing_init() -> Result<(), Report> {
 // pub fn main() -> emg_bind::Result {
 // #[instrument]
 
-pub fn main() -> Result<(), Report> {
+pub fn main() -> Result<()> {
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
 
     // pub fn main() -> Result<(), Error> {
     #[cfg(debug_assertions)]
     tracing_init()?;
-    App::run(Settings::default()).wrap_err("saw a downstream error")
+    App::run(Settings {
+        vsync: false,
+        ..Settings::default()
+    })
+    .wrap_err("saw a downstream error")
 }
 
 #[derive(Default)]
@@ -232,13 +251,12 @@ impl Sandbox for App {
         let width = use_state(|| w(px(50)));
         let bus = orders.bus();
 
-        let video_el = Video::new(
-            "video-player",
-            "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
-            false,
-            move || bus.publish(Message::Ignored),
-        );
-        let vp = video_el.player().clone();
+        // let video_el = Video::new(
+        //     "video-player",
+        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+        //     false,
+        // );
+        // let vp = video_el.player().clone();
 
         let pause_voa = use_state_voa(|| false);
 
@@ -311,7 +329,6 @@ impl Sandbox for App {
                         let _span = debug_span!("CLICK", "on [x] click, moving a->b to m->b")
                                 .entered();
 
-                                // pause_voa.set(true);
                                 pause_voa.set(!pause_voa.get_out_val());
 
 
@@ -398,19 +415,174 @@ impl Sandbox for App {
                         // ]
 
 
-                        @E=[
-                            // origin_x(pc(100)),
-                            // origin_y(pc(100)),
-                            // align_x(pc(100)),
-                            // align_y(pc(50)),
-                            w(pc(100)),
-                            h(pc(100)),
-                            // fill(rgba(0, 1, 0, 1))
-                        ]
-                        video_el
-                        .with_setup(&(VideoController::Pause,pause_voa)) =>[
-                            // GElement::SaNode_( vp_node.watch())
-                        ]
+                        // @E=[
+                        //     // origin_x(pc(100)),
+                        //     // origin_y(pc(100)),
+                        //     // align_x(pc(100)),
+                        //     // align_y(pc(50)),
+                        //     w(pc(100)),
+                        //     h(pc(100)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // )
+                        // .with_setup(&(VideoController::Pause,pause_voa)) =>[
+                        //     // GElement::SaNode_( vp_node.watch())
+                        // ],
+                        // @E=[
+                        //     // origin_x(pc(100)),
+                        //     // origin_y(pc(100)),
+                        //     align_x(pc(20)),
+                        //     align_y(pc(20)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+                        // @E=[
+                        //     // origin_x(pc(30)),
+                        //     // origin_y(pc(30)),
+                        //     align_x(pc(40)),
+                        //     align_y(pc(40)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+                        // @E=[
+                        //     // origin_x(pc(30)),
+                        //     // origin_y(pc(30)),
+                        //     align_x(pc(60)),
+                        //     align_y(pc(60)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+                        // @E=[
+                        //     // origin_x(pc(30)),
+                        //     // origin_y(pc(30)),
+                        //     align_x(pc(80)),
+                        //     align_y(pc(80)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+                        // @E=[
+                        //     // origin_x(pc(30)),
+                        //     // origin_y(pc(30)),
+                        //     align_x(pc(100)),
+                        //     align_y(pc(100)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+                        // @E=[
+                        //     // origin_x(pc(30)),
+                        //     // origin_y(pc(30)),
+                        //     align_x(pc(120)),
+                        //     align_y(pc(120)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+                        // @E=[
+                        //     // origin_x(pc(30)),
+                        //     // origin_y(pc(30)),
+                        //     align_x(pc(140)),
+                        //     align_y(pc(140)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+                        // ─────────────────────────────
+
+                        // ─────────────────────────────
+
+                        // ─────────────────────────────
+
+
+                        // @E=[
+                        //     // origin_x(pc(30)),
+                        //     // origin_y(pc(30)),
+                        //     align_x(pc(160)),
+                        //     align_y(pc(160)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+                        // @E=[
+                        //     // origin_x(pc(30)),
+                        //     // origin_y(pc(30)),
+                        //     align_x(pc(180)),
+                        //     align_y(pc(180)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+                        // @E=[
+                        //     // origin_x(pc(30)),
+                        //     // origin_y(pc(30)),
+                        //     align_x(pc(200)),
+                        //     align_y(pc(200)),
+                        //     w(pc(30)),
+                        //     h(pc(30)),
+                        //     // fill(rgba(0, 1, 0, 1))
+                        // ]
+                        // Video::new(
+                        //     "video-player",
+                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                        //     false,
+                        // ).with_setup(&(VideoController::Pause,pause_voa)),
+
+
+
+
 
                         // @E=[
                         //     origin_x(pc(100)),

@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-29 11:04:56
- * @LastEditTime: 2023-04-18 22:42:44
+ * @LastEditTime: 2023-04-24 17:47:01
  * @LastEditors: Rais
  * @Description:
  */
@@ -78,8 +78,12 @@ impl<T: 'static + std::fmt::Display + Clone> std::fmt::Display for StateVOA<T> {
 
 impl<T: 'static + std::fmt::Debug + Clone> std::fmt::Debug for StateVOA<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let v = self.get();
-        f.debug_tuple("StateVar").field(&v).finish()
+        // let v = self.get();
+        let type_str = format!("ValOrAnchor<{}>", std::any::type_name::<T>());
+        f.debug_tuple("StateVar")
+            .field(&type_str)
+            .field(&self.id)
+            .finish()
     }
 }
 

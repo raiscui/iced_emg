@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-14 00:09:14
- * @LastEditTime: 2023-04-09 22:16:11
+ * @LastEditTime: 2023-04-25 17:20:06
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,8 +23,7 @@ pub struct Settings {
     // /// The present mode of the [`Backend`].
     // ///
     // /// [`Backend`]: crate::Backend
-    // pub present_mode: wgpu::PresentMode,
-
+    pub present_mode: wgpu::PresentMode,
     // /// The internal graphics backend to use.
     // pub internal_backend: wgpu::Backends,
 
@@ -65,9 +64,20 @@ impl Settings {
     ///     - `gl`
     ///     - `webgpu`
     ///     - `primary`
+    ///
+
     pub fn from_env() -> Self {
         // Settings { ..Self::default() }
         Self::default()
+    }
+
+    pub fn with_vsync_mode(mut self, vsync_on: bool) -> Self {
+        if vsync_on {
+            self.present_mode = wgpu::PresentMode::AutoVsync;
+        } else {
+            self.present_mode = wgpu::PresentMode::AutoNoVsync;
+        }
+        self
     }
 }
 impl CompositorSetting for Settings {
@@ -83,7 +93,7 @@ impl Default for Settings {
             height: 1080,
             vp_scale_factor: None,
             // flags: InstanceFlags::default(),
-            // present_mode: wgpu::PresentMode::AutoVsync,
+            present_mode: wgpu::PresentMode::AutoVsync,
             // internal_backend: wgpu::Backends::all(),
             // default_font: None,
             // default_text_size: 20,

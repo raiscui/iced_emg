@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-04-13 13:08:30
- * @LastEditTime: 2023-04-19 19:14:53
+ * @LastEditTime: 2023-04-26 11:02:58
  * @LastEditors: Rais
  * @Description:
  */
@@ -14,7 +14,7 @@ use emg_common::{
 };
 use emg_layout::EmgEdgeItem;
 use emg_shaping::Shaping;
-use emg_state::{StateAnchor, StateMultiAnchor};
+use emg_state::{topo, StateAnchor, StateMultiAnchor};
 use tracing::Span;
 
 use crate::{g_tree_builder::GTreeInit, platform::renderer::Image, GElement, InitdTree};
@@ -73,12 +73,12 @@ impl PartialEq for Video {
 }
 
 impl Video {
-    pub fn new<F>(id: impl Into<IdStr>, uri: &str, live: bool, render_signal: F) -> Self
-    where
+    #[topo::nested]
+    pub fn new(id: impl Into<IdStr>, uri: &str, live: bool) -> Self
+// where
         // Self: Sized,
-        F: Fn() + Send + 'static,
     {
-        let player = VideoPlayer::new(uri, live, render_signal).expect("video_player new fn");
+        let player = VideoPlayer::new(uri, live).expect("video_player new fn");
         Self {
             id: id.into(),
             player: Rc::new(player),
@@ -113,22 +113,18 @@ impl crate::Widget for Video {
         &self,
         ctx: &StateAnchor<crate::platform::PaintCtx>,
     ) -> StateAnchor<Rc<Self::SceneCtxType>> {
-        let id = self.id.clone();
-        let span = illicit::expect::<Span>();
+        // let id = self.id.clone();
+        // let span = illicit::expect::<Span>();
 
         // let player = self.player.clone();
         let frame_sa = self.frame_image_sa();
         let pause = self.player.paused().watch();
-        let player = self.player.clone();
-        let mut old_pause = false;
 
         (ctx, frame_sa, &pause).map(move |incoming_ctx, image, &paused| {
             // ─────────────────────────────────────────────────────
 
             let mut sc = Self::SceneCtxType::new(incoming_ctx.get_translation());
             let mut builder = sc.gen_builder();
-
-            // let image = player.frame_image();
 
             builder.draw_image(image, Affine::IDENTITY);
 

@@ -14,12 +14,12 @@ opt-level = 1
 # opt-level = 3
 
 [features]
-default = ["gpu"]
+default = ["gpu", "tracy"]
 gpu = ["emg_bind/gpu"]
 debug = ["emg_bind/debug"]
-dhat-heap = []             # if you are doing heap profiling
-dhat-ad-hoc = []           # if you are doing ad hoc profiling
-
+dhat-heap = []                                # if you are doing heap profiling
+dhat-ad-hoc = []                              # if you are doing ad hoc profiling
+tracy = ["emg-tracy/tracy", "emg_bind/tracy"]
 
 [dependencies.emg_bind]
 path = "../../emg_bind"
@@ -40,6 +40,8 @@ insta = "1"
 dhat = "0.3.2"
 owo-colors = "3.5.0"
 tracing-error = "0.2.0"
+
+emg-tracy = { path = "../../emg-tracy" }
 
 # [profile.release]
 # #NOTE for dhat-heap need true

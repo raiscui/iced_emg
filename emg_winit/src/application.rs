@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-13 13:11:58
- * @LastEditTime: 2023-04-21 22:55:41
+ * @LastEditTime: 2023-04-26 10:42:07
  * @LastEditors: Rais
  * @Description:
  */
@@ -11,7 +11,7 @@ mod state;
 use std::{
     hash::BuildHasherDefault,
     rc::Rc,
-    time::{Duration, Instant},
+    sync::{Arc, Mutex},
 };
 
 use emg_common::{
@@ -22,7 +22,9 @@ use emg_global::{global_anima_running, G_START};
 use emg_hasher::CustomHasher;
 
 use emg_orders::Orders;
+use emg_tracy::{frame_mark, non_continuous_frame};
 use illicit::AsContext;
+use instant::Instant;
 pub use state::State;
 use winit::event_loop::EventLoopBuilder;
 
@@ -35,7 +37,7 @@ use crate::{
 use crate::{Command, Debug, Executor, FutureRuntime, Mode, Proxy, Settings};
 use emg_element::{GTreeBuilderFn, GraphProgram};
 use emg_futures::futures;
-use emg_futures::futures::channel::mpsc;
+
 use emg_graphics_backend::window::{
     compositor::{self, CompositorSetting, CompositorState},
     Compositor,
@@ -52,6 +54,7 @@ use tracing::{debug, debug_span, info, info_span, instrument, warn};
 // use emg_native::user_interface::{self, UserInterface};
 // ────────────────────────────────────────────────────────────────────────────────
 const FPS: u128 = 16666u128;
+// const FPS: u128 = 1u128;
 // ────────────────────────────────────────────────────────────────────────────────
 
 /// An interactive, native cross-platform application.
@@ -163,13 +166,13 @@ where
     use futures::task;
     use futures::Future;
     // ─────────────────────────────────────────────────────────────────────────────
+    #[cfg(feature = "tracy")]
+    emg_tracy::start();
 
     let run_start_t = *G_START;
     // let mut prev_seconds = now.elapsed().as_secs();
     let mut latest_render_end_dt = run_start_t.elapsed().as_micros();
-    let mut wait_dt = 0u128;
     let mut main_start_t = run_start_t;
-    let mut render_dt = 0u128;
     // ─────────────────────────────────────────────────────────────────────
 
     let mut debug = Debug::new();
@@ -179,8 +182,33 @@ where
     let event_loop = EventLoopBuilder::with_user_event().build();
     let user_event_proxy = event_loop.create_proxy();
 
+    let bus = Bus::new(move |msg| {
+        user_event_proxy
+            .clone()
+            .send_event(msg)
+            .expect("OrdersContainer Send user message");
+    });
+    let loop_cmd_bus = bus.map(Arc::new(Mutex::new(LoopMessage::Control))
+        as Arc<
+            Mutex<
+                dyn Fn(RenderLoopCommand) -> LoopMessage<<A as Program>::Message> + Send + 'static,
+            >,
+        >);
+
+    let user_bus = bus.map(Arc::new(Mutex::new(|x: <A as Program>::Message| {
+        LoopMessage::User(x)
+    }))
+        as Arc<
+            Mutex<
+                dyn Fn(<A as Program>::Message) -> LoopMessage<<A as Program>::Message>
+                    + Send
+                    + 'static,
+            >,
+        >);
+
     let future_runtime = {
-        let proxy = Proxy::new(event_loop.create_proxy());
+        // let proxy = Proxy::new(event_loop.create_proxy());
+        let proxy = Proxy::new(user_bus.clone());
         let executor = E::new().map_err(crate::Error::ExecutorCreationFailed)?;
 
         FutureRuntime::new(executor, proxy)
@@ -188,18 +216,9 @@ where
     // ─────────────────────────────────────────────────────────────────────────────
     // bus
 
-    let bus_sender = user_event_proxy.clone();
-
     let (control_sender, control_receiver) = flume::unbounded();
 
-    let orders: A::Orders = OrdersContainer::new(
-        Bus::new(move |msg| {
-            bus_sender
-                .send_event(msg)
-                .expect("OrdersContainer Send user message");
-        }),
-        control_sender.clone(),
-    );
+    let orders: A::Orders = OrdersContainer::new(user_bus, control_sender.clone());
     // ─────────────────────────────────────────────────────────────────────────────
     // app
 
@@ -260,9 +279,8 @@ where
     // emg_graph_rc_refcell.handle_root_in_topo(&root);
 
     let orders2 = orders.clone();
-    let orders3 = orders.clone();
 
-    let emg_graph_rc_refcell = control_sender.offer(|| application.graph_setup(&renderer, orders2));
+    let emg_graph_rc_refcell = loop_cmd_bus.offer(|| application.graph_setup(&renderer, orders2));
     // let emg_graph_rc_refcell = application.graph_setup(&renderer, orders2);
 
     let mut instance = Box::pin(run_instance::<A, E, C>(
@@ -270,7 +288,6 @@ where
         compositor,
         renderer,
         future_runtime,
-        user_event_proxy,
         debug,
         receiver,
         init_command,
@@ -282,7 +299,7 @@ where
 
     let mut context = task::Context::from_waker(task::noop_waker_ref());
     let mut current_is_rendered = false;
-    let mut in_user_main = false;
+    let mut user_main_runned = false;
     let mut is_redraw_events_cleared = false;
 
     // thread::spawn(move || {
@@ -296,6 +313,7 @@ where
     //         }
     //     }
     // });
+    let mut loop_cmd: Option<RenderLoopCommand> = None;
 
     platform::run(event_loop, move |event, _, control_flow| {
         use winit::event_loop::ControlFlow;
@@ -316,149 +334,125 @@ where
             _ => event.to_static(),
         };
 
+        let _frame;
+
         if let Some(event) = opt_event {
-            // sender.start_send(event).expect("Send event error");
-
             debug!(target:"run-loop","===---------------[ {event:?} ]");
-
-            // is_rendered = &winit::event::Event::RedrawEventsCleared == &event;
-
-            match event {
+            let mut is_loop_cmd = false;
+            match &event {
                 winit::event::Event::NewEvents(_) => {
+                    _frame = non_continuous_frame!("NewEvents");
                     debug!(target:"run-loop","@ New ============================================================================================================================================");
-
                     current_is_rendered = false;
-                    in_user_main = false;
+                    user_main_runned = false;
+                    loop_cmd = None;
                 }
-                winit::event::Event::MainEventsCleared => {
-                    main_start_t = std::time::Instant::now();
-
-                    let real_wait_dt =
-                        (main_start_t - run_start_t).as_micros() - latest_render_end_dt;
-                    if wait_dt > real_wait_dt {
-                        debug!(target:"run-loop","MainEventsCleared --- wait_time > real_wait_t  {wait_dt} > {real_wait_dt}  =>skip");
-                        debug!(target:"run-loop","control_flow {:?}",control_flow);
-                        // wait_time = wait_time
-                        //     .checked_sub(real_wait_t)
-                        //     .expect("overflow when subtracting durations");
-
-                        // *control_flow = ControlFlow::WaitUntil(
-                        //     std::time::Instant::now()
-                        //         + std::time::Duration::from_micros((wait_time).max(1) as u64),
-                        // );
-                        return;
-                    } else {
-                        debug!(target:"run-loop","MainEventsCleared --- real_wait_t timeout!!  {wait_dt} not > {real_wait_dt}  =>do render");
-                        in_user_main = true;
+                winit::event::Event::UserEvent(ev) => {
+                    let opt_loop_command = get_loop_command(ev);
+                    if opt_loop_command.is_some() {
+                        is_loop_cmd = true;
+                        loop_cmd = opt_loop_command;
+                        debug!(target:"run-loop","loop cmd------------: \n{:?}",loop_cmd);
                     }
                 }
+                winit::event::Event::MainEventsCleared => {
+                    _frame = non_continuous_frame!("MainEventsCleared");
+
+                    main_start_t = Instant::now();
+
+                    debug!(target:"run-loop","MainEventsCleared ---run_start_t.elapsed:{} ",run_start_t.elapsed().as_micros());
+
+                    if let ControlFlow::WaitUntil(old_wait_t) = control_flow {
+                        if old_wait_t > &mut main_start_t {
+                            debug!(target:"loop-tracy","MainEventsCleared --- =>skip");
+
+                            return;
+                        } else {
+                            debug!(target:"loop-tracy","MainEventsCleared --- =>no sk, will run main ,old_wait_t:{old_wait_t:?},main_start_t:{main_start_t:?}",);
+                        }
+                    } else {
+                        // no global_anima_running eg. some  wait() or poll() ControlFlow type
+                        debug!(target:"loop-tracy","MainEventsCleared --- not WaitUntil !!   =>do render");
+                    }
+
+                    user_main_runned = true;
+                }
                 winit::event::Event::RedrawRequested(_) => {
+                    _frame = non_continuous_frame!("RedrawRequested");
                     current_is_rendered = true;
                 }
                 winit::event::Event::RedrawEventsCleared => {
+                    _frame = non_continuous_frame!("RedrawEventsCleared");
                     is_redraw_events_cleared = true;
                     // ─────────────────────────────────────
                 }
                 _ => {}
             }
 
-            sender.send(event).expect("Send event error");
+            let poll = if is_loop_cmd {
+                task::Poll::Pending
+            } else {
+                sender.send(event).expect("Send event error");
+                instance.as_mut().poll(&mut context)
+            };
 
-            let poll = instance.as_mut().poll(&mut context);
             // ─────────────────────────────────────────────────────────────────────────────
-
             // ─────────────────────────────────────────────────────
 
             match poll {
                 task::Poll::Pending => {
                     if is_redraw_events_cleared {
-                        let loop_cmd: Option<RenderLoopCommand> = control_receiver.try_iter().sum();
-                        // let loop_cmd: Option<RenderLoopCommand> = None;
-                        debug!(target:"run-loop","loop cmd------------: \n{:?}",loop_cmd);
-
-                        let mut cmd_request_render = false;
-                        if let Some(cmd) = loop_cmd {
-                            match cmd {
-                                RenderLoopCommand::Schedule => {
-                                    let real_used_dt =
-                                        run_start_t.elapsed().as_micros() - latest_render_end_dt;
-
-                                    if FPS > real_used_dt {
-                                        wait_dt = FPS
-                                            .checked_sub(real_used_dt)
-                                            .expect("overflow when subtracting durations");
-                                    } else {
-                                        wait_dt = 0;
-                                    }
-                                    // ─────
-
-                                    if *control_flow != ControlFlow::Exit {
-                                        *control_flow = ControlFlow::WaitUntil(
-                                            std::time::Instant::now()
-                                                + std::time::Duration::from_micros(wait_dt as u64),
-                                        );
-                                        cmd_request_render = true;
-                                        debug!(target:"RenderLoopCommand","RenderLoopCommand::Schedule!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                                    }
-                                }
-                                RenderLoopCommand::Immediately => todo!(),
-                                RenderLoopCommand::Nothing => todo!(),
-                            }
-                        }
-
-                        if !cmd_request_render {
+                        if user_main_runned {
                             let real_used_dt =
-                                run_start_t.elapsed().as_micros() - latest_render_end_dt;
+                                // run_start_t.elapsed().as_micros() - latest_render_end_dt;
+                                main_start_t.elapsed().as_micros();
 
-                            if FPS > real_used_dt {
-                                wait_dt = FPS
-                                    .checked_sub(real_used_dt)
-                                    .expect("overflow when subtracting durations");
+                            let wait_dt = if FPS > real_used_dt {
+                                FPS.checked_sub(real_used_dt)
+                                    .expect("overflow when subtracting durations")
                             } else {
-                                wait_dt = 0;
-                            }
+                                0
+                            };
+
+                            debug!(target:"loop-tracy"," in redraw_events_cleared -----wait:{wait_dt},  before edit control_flow: {control_flow:?}");
 
                             if global_anima_running() {
                                 //NOTE global_anima_running 意味着现在 ctx一样了,但是过一会儿可能就不一样了 ,还是要继续渲染
-                                // ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16))
 
-                                if *control_flow != ControlFlow::Exit {
-                                    *control_flow = ControlFlow::WaitUntil(
-                                        std::time::Instant::now()
-                                            + std::time::Duration::from_micros(wait_dt as u64),
-                                    );
-                                }
+                                control_wait_x(control_flow, wait_dt);
                             } else {
-                                //NOTE no global_anima_running - rendered
-                                //NOTE 但是如果有  window event等触发了, 不到时间 main跳过了, 然后呢? 不能暂停
+                                //NOTE no global_anima_running
 
                                 if *control_flow != ControlFlow::Exit {
                                     *control_flow = ControlFlow::Wait;
                                 }
                             }
-                        }
-                        if in_user_main {
+                            // ─────────────────────
+
                             let f_end = run_start_t.elapsed().as_micros();
+                            debug!(target:"run-loop","end-- f_end --- {}",f_end);
 
                             if current_is_rendered {
                                 //real end
-                                render_dt = main_start_t.elapsed().as_micros();
+                                let render_dt = main_start_t.elapsed().as_micros();
+                                debug!(target:"run-loop","end-- render use --- {}",render_dt as f64 * 0.001);
 
                                 #[cfg(feature = "show-fps")]
-                                if f_end > latest_render_end_dt {
-                                    fps_state.borrow_mut().add_sample(f_end, render_dt as u64)
-                                }
+                                // if f_end > latest_render_end_dt {
+                                fps_state.borrow_mut().add_sample(f_end, render_dt as u64);
+                                // }
                             }
-
                             latest_render_end_dt = f_end;
 
                             debug!(target:"run-loop","end-- current_is_rendered:{current_is_rendered} ,  latest_render_end_dt:{latest_render_end_dt}");
+
+                            frame_mark();
                         }
 
-                        debug!(target:"run-loop","end ============== control_flow: {control_flow:?}");
+                        debug!(target:"loop-tracy","end ============== control_flow: {control_flow:?}");
                         debug!(target:"run-loop","end ==============================================================================");
+                        is_redraw_events_cleared = false;
                     }
-                    is_redraw_events_cleared = false;
                 }
                 task::Poll::Ready(_) => *control_flow = ControlFlow::Exit,
             };
@@ -467,16 +461,42 @@ where
     })
 }
 
+fn control_wait_x(control_flow: &mut winit::event_loop::ControlFlow, wait_dt: u128) -> bool {
+    if *control_flow != winit::event_loop::ControlFlow::Exit {
+        if wait_dt == 0 {
+            *control_flow = winit::event_loop::ControlFlow::Poll;
+            return true;
+        }
+        *control_flow = winit::event_loop::ControlFlow::WaitUntil(
+            Instant::now() + std::time::Duration::from_micros(wait_dt as u64),
+        );
+        true
+    } else {
+        false
+    }
+}
+
+#[derive(Debug)]
+enum LoopMessage<Message> {
+    Control(RenderLoopCommand),
+    User(Message),
+}
+
+fn get_loop_command<UserMsg>(ev: &LoopMessage<UserMsg>) -> Option<RenderLoopCommand> {
+    if let LoopMessage::Control(cmd) = ev {
+        return Some(*cmd);
+    }
+    None
+}
 // #[instrument(skip_all)]
 async fn run_instance<A, E, C>(
     mut application: A,
     mut compositor: C,
     mut renderer: A::Renderer,
     mut future_runtime: FutureRuntime<E, Proxy<A::Message>, A::Message>,
-    mut proxy: winit::event_loop::EventLoopProxy<A::Message>,
     mut debug: Debug,
     // mut receiver: mpsc::UnboundedReceiver<winit::event::Event<'_, A::Message>>,
-    receiver: flume::Receiver<winit::event::Event<'static, A::Message>>,
+    receiver: flume::Receiver<winit::event::Event<'static, LoopMessage<A::Message>>>,
     init_command: Command<A::Message>,
     window: winit::window::Window,
     exit_on_close_request: bool,
@@ -487,7 +507,6 @@ async fn run_instance<A, E, C>(
     E: Executor + 'static,
     C: Compositor<Renderer = A::Renderer> + 'static,
 {
-    use emg_futures::futures::stream::StreamExt;
     use winit::event;
 
     info!(
@@ -614,11 +633,11 @@ async fn run_instance<A, E, C>(
 
     debug.startup_finished();
 
-    run_command(
+    run_command::<A, E>(
         init_command,
         &mut future_runtime,
         &mut clipboard,
-        &mut proxy,
+        &orders,
         &window,
         || compositor.fetch_information(),
     );
@@ -673,7 +692,6 @@ async fn run_instance<A, E, C>(
                         &mut application,
                         &mut future_runtime,
                         &mut clipboard,
-                        &mut proxy, //TODO remove, use orders
                         &mut debug,
                         &mut messages,
                         &window,
@@ -797,8 +815,9 @@ async fn run_instance<A, E, C>(
             event::Event::UserEvent(message) => {
                 // let _span = info_span!(target:"winit_event","UserEvent").entered();
                 info!(target:"winit_event","UserEvent:{:?}",message);
-
-                messages.push(message);
+                if let LoopMessage::User(msg) = message {
+                    messages.push(msg);
+                }
             }
             event::Event::RedrawRequested(_) => {
                 // let _span = info_span!(target:"winit_event","RedrawRequested").entered();
@@ -854,6 +873,28 @@ async fn run_instance<A, E, C>(
                 }
 
                 state.update(&window, &window_event, &mut debug);
+
+                match &window_event {
+                    event::WindowEvent::KeyboardInput { input, .. }
+                        if input.state == event::ElementState::Pressed =>
+                    {
+                        #[allow(clippy::single_match)]
+                        match input.virtual_keycode {
+                            // Some(event::VirtualKeyCode::S) => {
+                            // stats_shown = !stats_shown;
+                            // }
+                            // Some(event::VirtualKeyCode::C) => {
+                            // compositor.stats().clear_min_and_max();
+                            // }
+                            Some(event::VirtualKeyCode::V) => {
+                                compositor.set_vsync_mode(!compositor.is_vsync());
+                            }
+
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
 
                 if let Some(event_with_flag) = conversion::window_event(
                     window_event,
@@ -928,7 +969,7 @@ pub fn update<A: Application, E: Executor>(
     application: &mut A,
     future_runtime: &mut FutureRuntime<E, Proxy<A::Message>, A::Message>,
     clipboard: &mut Clipboard,
-    proxy: &mut winit::event_loop::EventLoopProxy<A::Message>,
+
     debug: &mut Debug,
     messages: &mut Vec<A::Message>,
     window: &winit::window::Window,
@@ -943,11 +984,11 @@ pub fn update<A: Application, E: Executor>(
         let command = future_runtime.enter(|| application.update(graph.editor(), orders, message));
         debug.update_finished();
 
-        run_command(
+        run_command::<A, E>(
             command,
             future_runtime,
             clipboard,
-            proxy,
+            orders,
             window,
             graphics_info,
         );
@@ -958,11 +999,12 @@ pub fn update<A: Application, E: Executor>(
 }
 
 /// Runs the actions of a [`Command`].
-pub fn run_command<Message: 'static + std::fmt::Debug + Send, E: Executor>(
-    command: Command<Message>,
-    future_runtime: &mut FutureRuntime<E, Proxy<Message>, Message>,
+pub fn run_command<A: Application, E: Executor>(
+    command: Command<A::Message>,
+    future_runtime: &mut FutureRuntime<E, Proxy<A::Message>, A::Message>,
     clipboard: &mut Clipboard,
-    proxy: &mut winit::event_loop::EventLoopProxy<Message>,
+    // proxy: &mut winit::event_loop::EventLoopProxy<Message>,
+    orders: &A::Orders,
     window: &winit::window::Window,
     _graphics_info: impl FnOnce() -> compositor::Information + Copy,
 ) {
@@ -981,9 +1023,10 @@ pub fn run_command<Message: 'static + std::fmt::Debug + Send, E: Executor>(
                 clipboard::Action::Read(tag) => {
                     let message = tag(clipboard.read());
 
-                    proxy
-                        .send_event(message)
-                        .expect("Send message to event loop");
+                    // proxy
+                    //     .send_event(message)
+                    //     .expect("Send message to event loop");
+                    orders.publish(message);
                 }
                 clipboard::Action::Write(contents) => {
                     clipboard.write(contents);
