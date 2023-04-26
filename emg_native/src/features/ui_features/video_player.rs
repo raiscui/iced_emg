@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-04-13 15:52:29
- * @LastEditTime: 2023-04-26 13:10:21
+ * @LastEditTime: 2023-04-26 15:13:43
  * @LastEditors: Rais
  * @Description:
  */
@@ -199,7 +199,7 @@ impl VideoPlayer {
                 // let frame_image_sa = global_elapsed().watch().map_mut(
                 // from_pixels(1, 1, vec![0, 0, 0, 1]),
                 // move |out, _x| {
-                // ─────────────────────────────────────
+                // ─────────────────────────────────────-
 
                 // if is_paused {
                 //     println!("============= paused change ==========={}", is_paused);
