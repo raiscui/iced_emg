@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-04-13 15:52:29
- * @LastEditTime: 2023-04-25 19:12:51
+ * @LastEditTime: 2023-04-26 13:10:21
  * @LastEditors: Rais
  * @Description:
  */
@@ -77,19 +77,18 @@ pub struct VideoPlayer {
     duration: std::time::Duration,
 
     frame: Arc<Mutex<Option<Image>>>,
-    // frame: Arc<StateVarLit<Option<Image>>>,
     frame_image_sa: StateAnchor<Image>,
     paused: StateVOA<bool>,
     muted: bool,
     looping: bool,
     is_eos: bool,
     restart_stream: bool,
-    running: StateAnchor<bool>,
+    paused_callback: StateAnchor<bool>, //Save for  global_anima_running_remove
 }
 
 impl Drop for VideoPlayer {
     fn drop(&mut self) {
-        global_anima_running_remove(&self.running)
+        global_anima_running_remove(&self.paused_callback)
     }
 }
 
@@ -147,7 +146,7 @@ impl VideoPlayer {
         let paused = use_state_voa(|| true);
         debug!(target:"video-player"," paused:{:?}", paused);
 
-        //NOTE 如果stateVOA设置内部为 anchor 或者 做了 bi, 那么这种 before_fn 不管用
+        //NOTE don't use insert_before_fn_in_topo make video Paused. 如果stateVOA设置内部为 anchor 或者 做了 bi, 那么这种 before_fn 不管用
         // let source2 = source.clone();
         // let af = paused
         //     .insert_before_fn_in_topo(
@@ -171,7 +170,7 @@ impl VideoPlayer {
         let source = Rc::new(source);
         let source_wk = Rc::downgrade(&source);
 
-        let running = paused.watch().debounce().map(move |&is_paused| {
+        let paused_callback = paused.watch().debounce().map(move |&is_paused| {
             trace!(target:"video-player-global-check","------------- paused change ==========={}", is_paused);
 
             source_wk.upgrade().expect("source is can't up to Rc now").set_state(if is_paused {
@@ -182,12 +181,17 @@ impl VideoPlayer {
                 .unwrap(/* state was changed in ctor; state errors caught there */);
 
 
-            !is_paused
+            // !is_paused
+            //不再激活 global_anima_running_add, 由 global_loop_controller 激活loop
+            // 好处是不用去管哪些什么时候片子播完了,播放错误等非paused变化导致需要停止loop的, 必须要 手动暂停
+            //只要 没有 publish(RenderLoopCommand::Schedule)  , loop就停了
+            // 被动检查变主动
+            false
         });
-        let use_am_watch = true;
-        if use_am_watch {
-            global_anima_running_add(&running);
-        }
+        let use_am_watch = false;
+        // if use_am_watch {
+        global_anima_running_add(paused_callback.clone());
+        // }
 
         let frame_image_sa = global_elapsed().watch().map_mut(
             from_pixels(1, 1, vec![0, 0, 0, 1]),
@@ -314,7 +318,7 @@ impl VideoPlayer {
             looping: false,
             is_eos: false,
             restart_stream: false,
-            running,
+            paused_callback,
         })
     }
 

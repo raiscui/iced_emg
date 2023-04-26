@@ -28,8 +28,8 @@ pub fn global_elapsed_set(now: Duration) {
     G_ELAPSED.with(|c| c.set(now));
 }
 
-pub fn global_anima_running_add(running: &StateAnchor<bool>) {
-    G_ANIMA_RUNNING_STATE.with(|sv| sv.update(|v| v.push_back(running.get_anchor())));
+pub fn global_anima_running_add(running: StateAnchor<bool>) {
+    G_ANIMA_RUNNING_STATE.with(|sv| sv.update(|v| v.push_back(running.into_anchor())));
 }
 pub fn global_anima_running_remove(running: &StateAnchor<bool>) {
     G_ANIMA_RUNNING_STATE.with(|sv| {

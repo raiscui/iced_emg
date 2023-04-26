@@ -76,7 +76,7 @@ fn tracing_init() -> Result<()> {
             // "shaping=warn,[DRAG]=debug,[CLICK]=debug,winit_event=debug,[event_matching]=debug,[LayoutOverride]=debug",
             // "shaping=warn,[DRAG]=debug,[event_matching_filter]=debug",
             // "[event_matching]=debug,[event_matching_filter]=debug",
-            "video-player=debug,run-loop=debug,RenderLoopCommand=debug,",
+            "loop-tracy=debug,video-player=debug,run-loop=debug,RenderLoopCommand=debug,",
         ))
         .with_filter(tracing_subscriber::filter::dynamic_filter_fn(
             |metadata, cx| {
@@ -415,23 +415,23 @@ impl Sandbox for App {
                         // ]
 
 
-                        // @E=[
-                        //     // origin_x(pc(100)),
-                        //     // origin_y(pc(100)),
-                        //     // align_x(pc(100)),
-                        //     // align_y(pc(50)),
-                        //     w(pc(100)),
-                        //     h(pc(100)),
-                        //     // fill(rgba(0, 1, 0, 1))
-                        // ]
-                        // Video::new(
-                        //     "video-player",
-                        //     "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
-                        //     false,
-                        // )
-                        // .with_setup(&(VideoController::Pause,pause_voa)) =>[
-                        //     // GElement::SaNode_( vp_node.watch())
-                        // ],
+                        @E=[
+                            // origin_x(pc(100)),
+                            // origin_y(pc(100)),
+                            // align_x(pc(100)),
+                            // align_y(pc(50)),
+                            w(pc(100)),
+                            h(pc(100)),
+                            // fill(rgba(0, 1, 0, 1))
+                        ]
+                        Video::new(
+                            "video-player",
+                            "file:///Users/cuiluming/Downloads/sintel_trailer-1080p.mp4",
+                            false,
+                        )
+                        .with_setup(&(VideoController::Pause,pause_voa)) =>[
+                            // GElement::SaNode_( vp_node.watch())
+                        ],
                         // @E=[
                         //     // origin_x(pc(100)),
                         //     // origin_y(pc(100)),

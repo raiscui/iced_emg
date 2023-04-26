@@ -14,7 +14,7 @@ opt-level = 1
 # opt-level = 3
 
 [features]
-default = ["gpu", "tracy"]
+default = ["gpu"]
 gpu = ["emg_bind/gpu"]
 debug = ["emg_bind/debug"]
 dhat-heap = []                                # if you are doing heap profiling
