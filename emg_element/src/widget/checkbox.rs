@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2021-09-01 09:58:44
- * @LastEditTime: 2023-04-18 17:00:21
+ * @LastEditTime: 2023-04-26 15:32:49
  * @LastEditors: Rais
  * @Description:
  */
@@ -569,70 +569,6 @@ where
         );
         false
     }
-}
-
-#[cfg(test)]
-mod test {
-
-    trait Mode {
-        type Output;
-        fn doit(&self) -> Self::Output;
-    }
-
-    impl Mode for i32 {
-        type Output = i32;
-        fn doit(&self) -> Self::Output {
-            1
-        }
-    }
-
-    impl Mode for String {
-        type Output = String;
-        fn doit(&self) -> Self::Output {
-            "xx".to_string()
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    use bevy_reflect::{reflect_trait, Reflect};
-
-    #[derive(Reflect)]
-    // #[reflect(Mode1)]
-    struct Wi32(i32);
-
-    // ─────────────────────────────────────────────────────────────────────
-    // #[reflect_trait]
-    // trait Mode1<X: Reflect> {
-    //     fn convert(&self) -> &dyn Shaping<X>;
-    // }
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    // impl<X: 'static> Mode1<X> for Wi32 {
-    //     fn convert(&self) -> &dyn Shaping<X> {
-    //         self as &dyn Shaping<X>
-    //     }
-    // }
-    // impl<X> Mode1<X> for String {
-    //     fn convert(&self) -> &dyn Shaping<X> {
-    //         self as &dyn Shaping<X>
-    //     }
-    // }
-    // #[reflect_trait]
-    trait Mode2 {
-        type O;
-        // fn convert(&self) -> &dyn Shaping<Self>;
-        fn convert(&self) -> Self::O;
-    }
-
-    impl Mode2 for i32 {
-        type O = i32;
-        fn convert(&self) -> i32 {
-            *self
-        }
-    }
-
-    #[test]
-    fn test() {}
 }
 
 #[cfg(test)]

@@ -15,6 +15,7 @@ gpu = ["emg_element/gpu"]
 debug = ["emg_native/debug"]
 system = ["sysinfo"]
 show-fps = ["emg_graphics_backend/show-fps"]
+tracy = ["emg-tracy/tracy"]
 
 [dependencies]
 emg_hasher = { path = "../emg_hasher" }
@@ -42,6 +43,10 @@ owo-colors = "3.5.0"
 illicit = "1.1.2"
 
 flume = "0.10.14"
+instant = "0.1.12"
+
+emg-tracy = { path = "../emg-tracy" }
+
 
 [dependencies.sysinfo]
 version = "0.23"

@@ -36,6 +36,7 @@ pub use debug::Debug;
 pub use emg_common::time;
 pub use emg_common::Affine;
 pub use emg_common::Pos;
+use emg_common::RenderLoopCommand;
 pub use emg_futures::{executor, futures};
 pub use event::Event;
 pub use event::EventWithFlagType;
@@ -121,6 +122,13 @@ pub static mut GLOBAL_PENETRATE_EVENTS: MultiLevelIdentifyWithSwitch = {
     // MultiLevelIdentifyWithSwitch::new(d, false) | de | cu | gc
     MultiLevelIdentifyWithSwitch::new(d, false) | de | cu | (gc, false)
 };
+
+#[must_use]
+pub fn global_loop_controller() -> Bus<RenderLoopCommand> {
+    (*illicit::get::<Bus<RenderLoopCommand>>()
+        .expect("get global loop controller use fn global_loop_controller()"))
+    .clone()
+}
 // ────────────────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]

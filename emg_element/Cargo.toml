@@ -50,7 +50,7 @@ indented = "0.1.0"
 
 
 #------------------
-bevy_reflect = "0.9.1"
+# bevy_reflect = "0.9.1"
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

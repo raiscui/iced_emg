@@ -1,14 +1,18 @@
-use emg_native::futures::{
-    channel::mpsc,
-    task::{Context, Poll},
-    Sink,
+use emg_native::{
+    futures::{
+        channel::mpsc,
+        task::{Context, Poll},
+        Sink,
+    },
+    Bus,
 };
 use std::pin::Pin;
 
 /// An event loop proxy that implements `Sink`.
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct Proxy<Message: 'static> {
-    raw: winit::event_loop::EventLoopProxy<Message>,
+    // raw: winit::event_loop::EventLoopProxy<Message>,
+    raw: Bus<Message>,
 }
 
 impl<Message: 'static> Clone for Proxy<Message> {
@@ -21,7 +25,8 @@ impl<Message: 'static> Clone for Proxy<Message> {
 
 impl<Message: 'static> Proxy<Message> {
     /// Creates a new [`Proxy`] from an `EventLoopProxy`.
-    pub fn new(raw: winit::event_loop::EventLoopProxy<Message>) -> Self {
+    // pub fn new(raw: winit::event_loop::EventLoopProxy<Message>) -> Self {
+    pub fn new(raw: Bus<Message>) -> Self {
         Self { raw }
     }
 }
@@ -34,7 +39,8 @@ impl<Message: 'static> Sink<Message> for Proxy<Message> {
     }
 
     fn start_send(self: Pin<&mut Self>, message: Message) -> Result<(), Self::Error> {
-        let _ = self.raw.send_event(message);
+        // let _ = self.raw.send_event(message);
+        let _ = self.raw.publish(message);
 
         Ok(())
     }

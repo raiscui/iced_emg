@@ -18,6 +18,7 @@ members = [
     "emg_msg_macro",
     "emg_msg_impl",
     "emg_hasher",
+    "emg-tracy",
     # "emg_web",
     "emg_futures",
     "emg_native",

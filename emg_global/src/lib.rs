@@ -1,7 +1,9 @@
 use std::time::{Duration, Instant};
 
 pub use emg_common::RenderLoopCommand;
-use emg_state::{anchors::im::Vector, use_state, Anchor, CloneState, StateAnchor, StateVar};
+use emg_state::{
+    anchors::im::Vector, state_store, use_state, Anchor, CloneState, StateAnchor, StateVar,
+};
 use static_init::dynamic;
 
 #[dynamic]
@@ -26,8 +28,19 @@ pub fn global_elapsed_set(now: Duration) {
     G_ELAPSED.with(|c| c.set(now));
 }
 
-pub fn global_anima_running_add(running: &StateAnchor<bool>) {
-    G_ANIMA_RUNNING_STATE.with(|sv| sv.update(|v| v.push_back(running.get_anchor())));
+pub fn global_anima_running_add(running: StateAnchor<bool>) {
+    G_ANIMA_RUNNING_STATE.with(|sv| sv.update(|v| v.push_back(running.into_anchor())));
+}
+pub fn global_anima_running_remove(running: &StateAnchor<bool>) {
+    G_ANIMA_RUNNING_STATE.with(|sv| {
+        sv.update(|v| {
+            let an = running.anchor();
+            v.sort();
+
+            let index = v.binary_search(an).expect("remove must find");
+            v.remove(index);
+        })
+    });
 }
 
 #[must_use]
@@ -41,14 +54,12 @@ pub fn global_anima_running() -> bool {
 #[must_use]
 fn global_anima_running_build() -> StateAnchor<bool> {
     let watch: Anchor<Vector<bool>> = G_ANIMA_RUNNING_STATE.with(|am| am.watch().anchor().into());
-    watch.map(|list: &Vector<bool>| list.contains(&true)).into()
-}
-
-#[must_use]
-pub fn global_loop_controller() -> flume::Sender<RenderLoopCommand> {
-    (*illicit::get::<flume::Sender<RenderLoopCommand>>()
-        .expect("get global loop controller use fn global_loop_controller()"))
-    .clone()
+    let running: StateAnchor<bool> = watch.map(|list: &Vector<bool>| list.contains(&true)).into();
+    state_store()
+        .borrow()
+        .engine_mut()
+        .mark_observed(running.anchor());
+    running
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

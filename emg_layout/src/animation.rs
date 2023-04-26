@@ -569,7 +569,7 @@ where
         // ─────────────────────────────────────────────────────────────────
 
         //TODO need remove when self drop
-        global_anima_running_add(&sa_running);
+        global_anima_running_add(sa_running.clone());
         let sa_running_clone = sa_running.clone();
 
         sv_now.insert_after_fn_in_topo(

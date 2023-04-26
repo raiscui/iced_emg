@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-29 14:30:01
- * @LastEditTime: 2023-04-18 23:19:05
+ * @LastEditTime: 2023-04-24 17:07:52
  * @LastEditors: Rais
  * @Description:
  */
@@ -318,7 +318,8 @@ where
         b
     }
 
-    fn bi<B>(&self, b: StateVar<B>)
+    #[topo::nested]
+    fn bi_in_topo<B>(&self, b: StateVar<B>)
     where
         T: std::fmt::Debug + PartialEq + 'static,
         B: Clone + From<T> + Into<T> + 'static + std::fmt::Debug + PartialEq,

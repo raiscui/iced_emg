@@ -200,6 +200,12 @@ impl CompositorState for Stats {
     }
 }
 
+impl Default for Stats {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Stats {
     pub fn new() -> Stats {
         Stats {

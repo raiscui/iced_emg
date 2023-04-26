@@ -1,5 +1,5 @@
 use emg_shaping::Shaping;
-use emg_state::{general_traits::BiState, CloneState, StateVOA};
+use emg_state::{general_traits::BiState, topo, CloneState, StateVOA};
 
 use crate::GElement;
 
@@ -8,7 +8,7 @@ use super::Video;
 /*
  * @Author: Rais
  * @Date: 2023-04-18 17:24:16
- * @LastEditTime: 2023-04-19 14:10:44
+ * @LastEditTime: 2023-04-26 11:00:24
  * @LastEditors: Rais
  * @Description:
  */
@@ -23,7 +23,7 @@ impl Shaping<Video> for (VideoController, bool) {
         match self {
             (VideoController::Pause, x) => {
                 who.player.paused().set(*x);
-                who.player.set_source_paused(*x);
+                who.player.set_paused(*x).ok();
             }
             (VideoController::Loop, _) => todo!(),
         }
@@ -31,9 +31,14 @@ impl Shaping<Video> for (VideoController, bool) {
     }
 }
 impl Shaping<Video> for (VideoController, StateVOA<bool>) {
+    #[topo::nested]
     fn shaping(&self, who: &mut Video) -> bool {
         match self {
-            (VideoController::Pause, x) => who.player.paused().bi(*x),
+            // (VideoController::Pause, x) => who.player.paused().bi_in_topo(*x),
+            (VideoController::Pause, x) => {
+                x.bi_in_topo(who.player.paused());
+                who.player.set_paused(x.get_out_val()).ok();
+            }
             (VideoController::Loop, _) => todo!(),
         };
         true

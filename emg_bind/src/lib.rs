@@ -74,6 +74,8 @@ pub use sandbox::Sandbox;
 pub use settings::Settings;
 
 // ─────────────────────────────────────────────────────────────────────────────
+const VEC_SMALL: usize = 4;
+
 pub mod trait_prelude {
     pub use crate::Orders;
 }
@@ -104,86 +106,69 @@ mod test1 {
         let f = mouse::CLICK;
         println!("{f:?}");
     }
-}
 
-// ────────────────────────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────────
+    #[cfg(all(test, feature = "gpu"))]
+    mod tests {
+        use emg_msg_macro::emg_msg;
 
-// pub use sandbox::Sandbox;
-// #[cfg(target_arch = "wasm32")]
-// pub use runtime::settings;
+        use crate::element::GTreeBuilderElement;
+        use crate::emg_msg_macro_prelude::{any, better_any};
+        use crate::gtree_macro_prelude::{gtree, Checkbox, GtreeInitCall, IdStr, Layer, Tid};
 
-// mod g_tree_builder_fn_for_node_item;
-// mod g_tree_builder_fn_for_node_item_rc;
-// mod graph_store;
+        #[emg_msg]
+        enum M {
+            IncrementPressed,
+        }
+        fn tree_build() -> GTreeBuilderElement<M> {
+            gtree! {
+                @="a" Layer [
+                    @="b" Checkbox::new(false,"abcd",|_|M::IncrementPressed) => [
+                        ]
+                ]
+            }
+        }
 
-// ────────────────────────────────────────────────────────────────────────────────
-// mod state_store;
-// mod topo_store;
+        fn tree_build2() -> GTreeBuilderElement<M> {
+            gtree! {
+                    @="a" Checkbox::new(false,"abcd",|_|M::IncrementPressed) => [
+                        ]
+            }
+        }
 
-const VEC_SMALL: usize = 4;
-
-// ────────────────────────────────────────────────────────────────────────────────
-// ────────────────────────────────────────────────────────────────────────────────
-#[cfg(all(test, feature = "gpu"))]
-mod tests {
-    use emg_msg_macro::emg_msg;
-
-    use crate::element::GTreeBuilderElement;
-    use crate::emg_msg_macro_prelude::{any, better_any};
-    use crate::gtree_macro_prelude::{gtree, Checkbox, GtreeInitCall, IdStr, Layer, Tid};
-
-    #[emg_msg]
-    enum M {
-        IncrementPressed,
-    }
-    fn tree_build() -> GTreeBuilderElement<M> {
-        gtree! {
-            @="a" Layer [
-                @="b" Checkbox::new(false,"abcd",|_|M::IncrementPressed) => [
-                    ]
-            ]
+        #[test]
+        fn tree_build_tests() {
+            let _a = tree_build();
+            #[cfg(feature = "insta")]
+            insta::assert_debug_snapshot!("tree-a", a);
+            let _b = tree_build2();
+            #[cfg(feature = "insta")]
+            insta::assert_debug_snapshot!("tree-b", b);
         }
     }
+    #[cfg(all(test, target_arch = "wasm32"))]
+    mod tests {
 
-    fn tree_build2() -> GTreeBuilderElement<M> {
-        gtree! {
-                @="a" Checkbox::new(false,"abcd",|_|M::IncrementPressed) => [
-                    ]
+        #[allow(unused)]
+        use crate::{
+            common::{
+                better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
+                IdStr, TypeCheck,
+            },
+            layout::{add_values::*, css, styles::*, EmgEdgeItem},
+            runtime::{node_ref, EventCallback, EventMessage, GElement, GTreeBuilderElement},
+            shaping::{EqShaping, Shaper, Shaping, ShapingUse},
+            state::{use_state, CloneState, CloneStateAnchor, StateMultiAnchor},
+        };
+
+        #[allow(unused)]
+        use std::rc::Rc;
+        // #[allow(unused)]
+        // use GElement::*;
+
+        #[test]
+        fn xx() {
+            // let f = node_ref();
         }
-    }
-
-    #[test]
-    fn tree_build_tests() {
-        let a = tree_build();
-        #[cfg(feature = "insta")]
-        insta::assert_debug_snapshot!("tree-a", a);
-        let b = tree_build2();
-        #[cfg(feature = "insta")]
-        insta::assert_debug_snapshot!("tree-b", b);
-    }
-}
-#[cfg(all(test, target_arch = "wasm32"))]
-mod tests {
-
-    #[allow(unused)]
-    use crate::{
-        common::{
-            better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt},
-            IdStr, TypeCheck,
-        },
-        layout::{add_values::*, css, styles::*, EmgEdgeItem},
-        runtime::{node_ref, EventCallback, EventMessage, GElement, GTreeBuilderElement},
-        shaping::{EqShaping, Shaper, Shaping, ShapingUse},
-        state::{use_state, CloneState, CloneStateAnchor, StateMultiAnchor},
-    };
-
-    #[allow(unused)]
-    use std::rc::Rc;
-    // #[allow(unused)]
-    // use GElement::*;
-
-    #[test]
-    fn xx() {
-        // let f = node_ref();
     }
 }

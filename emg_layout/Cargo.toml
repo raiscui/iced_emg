@@ -42,7 +42,6 @@ slotmap = "1.0.6"
 derive_more = "0.99"
 seed_styles = { path = "../../styles_hooks/seed_styles" }
 seed_style_macros = { path = "../../styles_hooks/seed_styles/seed_style_macros" }
-env_logger = "0.10.0"
 tracing = "0.1"
 indented = "0.1.0"
 # ownref = "0.3.1"

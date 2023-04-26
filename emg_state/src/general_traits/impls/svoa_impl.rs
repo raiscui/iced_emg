@@ -1,18 +1,25 @@
 /*
  * @Author: Rais
  * @Date: 2023-03-28 16:36:33
- * @LastEditTime: 2023-04-18 22:55:03
+ * @LastEditTime: 2023-04-24 18:13:48
  * @LastEditors: Rais
  * @Description:
  */
 
-use std::{cell::RefCell, panic::Location, rc::Rc};
+use std::{
+    cell::RefCell,
+    hash::{Hash, Hasher},
+    panic::Location,
+    rc::Rc,
+};
 
 use anchors::{
     expert::CastIntoValOrAnchor,
     singlethread::{ValOrAnchor, VarVOA},
 };
 use emg_common::{TypeCheck, TypeName};
+use emg_hasher::CustomHasher;
+use topo::call_in_slot;
 use tracing::trace;
 
 use crate::{
@@ -460,7 +467,9 @@ where
     }
 
     //TODO use topo make only run once , 其他bi方法也是.
-    fn bi<B>(&self, b: StateVOA<B>)
+    // #[topo::nested(slot = "&b")]
+    // #[topo::nested]
+    fn bi_in_topo<B>(&self, b: StateVOA<B>)
     where
         T: std::fmt::Debug + PartialEq + 'static,
         B: Clone + From<T> + Into<T> + 'static + std::fmt::Debug + PartialEq,
@@ -472,21 +481,42 @@ where
 
         let this = *self;
 
-        self.insert_before_fn_in_topo(
-            move |skip, _current, _value| {
-                b.seting_in_b_a_callback(skip, || sw.clone().cast_into());
-            },
-            false,
-            &[b.id],
-        );
+        // let s_id = self.id;
+        // let b_id = b.id;
 
-        b.insert_before_fn_in_topo(
-            move |skip, _current, _value| {
-                this.seting_in_b_a_callback(skip, || bw.clone().cast_into());
-            },
-            false,
-            &[this.id],
-        );
+        // let mut sh = CustomHasher::default();
+        // s_id.hash(&mut sh);
+        // let s_hash = sh.finish();
+
+        // let mut bh = CustomHasher::default();
+        // b_id.hash(&mut bh);
+        // let b_hash = bh.finish();
+
+        // let comb_hash = u128::from(s_hash) + u128::from(b_hash);
+
+        // println!("comb_hash:{comb_hash}");
+
+        //TODO should (panic/ skip) when a.bi_in_topo(b); b.bi_in_topo(a);
+
+        call_in_slot(&b.id, || {
+            self.insert_before_fn_in_topo(
+                move |skip, _current, _value| {
+                    b.seting_in_b_a_callback(skip, || sw.clone().cast_into());
+                },
+                false,
+                &[b.id],
+            );
+        });
+
+        call_in_slot(&self.id, || {
+            b.insert_before_fn_in_topo(
+                move |skip, _current, _value| {
+                    this.seting_in_b_a_callback(skip, || bw.clone().cast_into());
+                },
+                false,
+                &[this.id],
+            );
+        });
     }
 
     #[topo::nested]
@@ -623,6 +653,19 @@ mod svoa_test {
         let a = use_state_voa(|| 1);
         let b = use_state_voa(|| 2);
         assert_ne!(a.id(), b.id());
+    }
+    #[test]
+    fn bi_test() {
+        let a = use_state_voa(|| 1);
+        let b = use_state_voa(|| 2);
+        let c = use_state_voa(|| 2);
+        assert_ne!(a.id(), b.id());
+        a.bi_in_topo(b);
+        b.bi_in_topo(a);
+        a.set(3);
+        b.set(4);
+        println!("{}", b.get_out_val());
+        println!("{}", a.get_out_val());
     }
 
     #[test]

@@ -19,6 +19,7 @@ split-debuginfo = "unpacked"
 
 [features]
 default = ["gpu"]
+tracy = ["emg_winit?/tracy"]
 gpu = [
     "emg_winit",
     "emg_vello",

@@ -31,7 +31,6 @@ emg_common = { path = "../emg_common" }
 owning_ref = "0.4.1"
 tracing = "0.1"
 
-nom = "7.1.3"
 
 indented = "0.1.0"
 thiserror = "1.0"

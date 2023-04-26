@@ -1,7 +1,7 @@
 /*
  * @Author: Rais
  * @Date: 2022-08-11 14:11:24
- * @LastEditTime: 2023-04-19 17:20:53
+ * @LastEditTime: 2023-04-25 17:14:20
  * @LastEditors: Rais
  * @Description:
  */
@@ -173,7 +173,7 @@ pub trait Application: Sized {
             Renderer = <Instance<Self> as crate::runtime::GraphProgram>::Renderer,
         >,
     {
-        #[allow(clippy::needless_update)]
+        // #[allow(clippy::needless_update)]
         let renderer_settings = crate::renderer::Settings {
             // default_font: settings.default_font,
             // default_text_size: settings.default_text_size,
@@ -187,7 +187,8 @@ pub trait Application: Sized {
             height: settings.window.size.1 as usize,
 
             ..crate::renderer::Settings::from_env()
-        };
+        }
+        .with_vsync_mode(settings.vsync);
 
         Ok(crate::runtime::application::run::<
             Instance<Self>,

@@ -9,6 +9,6 @@ resolver = "2"
 split-debuginfo = "unpacked"
 
 [dependencies]
-gtree_macro = { path = "../gtree_macro" }
+# gtree_macro = { path = "../gtree_macro" }
 gtree_proc_macro = { path = "../gtree_proc_macro" }
 # [target.'cfg(target_arch = "wasm32")'.dependencies]
